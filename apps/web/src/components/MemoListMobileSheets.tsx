@@ -70,8 +70,10 @@ export const MobileListActionsSheet = ({
   listDensity,
   listTitle,
   sortMode,
+  view,
   onClose,
   onEnterSelectionMode,
+  onEmptyTrash,
   onOpenAssets,
   onOpenSettings,
   onOpenTags,
@@ -85,8 +87,10 @@ export const MobileListActionsSheet = ({
   listDensity: MemoListDensity;
   listTitle: string;
   sortMode: MemoSortMode;
+  view: string;
   onClose: () => void;
   onEnterSelectionMode: () => void;
+  onEmptyTrash: () => void;
   onOpenAssets: () => void;
   onOpenSettings: () => void;
   onOpenTags: () => void;
@@ -167,7 +171,11 @@ export const MobileListActionsSheet = ({
         <div className="my-2 h-px bg-slate-100" />
         <MobileListActionButton icon={<Tags className="h-4 w-4" />} label="标签" onClick={onOpenTags} />
         <MobileListActionButton icon={<Archive className="h-4 w-4" />} label="附件" onClick={onOpenAssets} />
-        <MobileListActionButton icon={<Trash2 className="h-4 w-4" />} label="回收站" onClick={onOpenTrash} />
+        {view === "trash" ? (
+          <MobileListActionButton icon={<Trash2 className="h-4 w-4" />} label="清空回收站" onClick={onEmptyTrash} />
+        ) : (
+          <MobileListActionButton icon={<Trash2 className="h-4 w-4" />} label="回收站" onClick={onOpenTrash} />
+        )}
         <MobileListActionButton icon={<KeyRound className="h-4 w-4" />} label="MCP Token" onClick={onOpenSettings} />
       </div>
     </DrawerContent>

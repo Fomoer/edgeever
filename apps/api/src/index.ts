@@ -185,7 +185,7 @@ const PASSWORD_SALT_BYTES = 16;
 const SESSION_TOKEN_BYTES = 32;
 const DEFAULT_SESSION_TTL_DAYS = 30;
 const DEFAULT_R2_BUCKET_NAME = "edgeever-resources";
-const MAX_IMAGE_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_UPLOAD_BYTES = 50 * 1024 * 1024;
 const REVISION_SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000;
 const API_TOKEN_BYTES = 32;
 const API_TOKEN_PREFIX = "eev";
@@ -741,6 +741,19 @@ app.post("/api/v1/memos/batch/delete", zValidator("json", DeleteMemosSchema), as
   }
 });
 
+app.delete("/api/v1/memos/trash/empty", async (c) => {
+  const denied = requireScopes(c, "write:memos");
+
+  if (denied) {
+    return denied;
+  }
+
+  const actor = getAuditActor(c);
+  const deleted = await emptyTrashMemosRecord(c.env.DB, c.env.RESOURCES, actor);
+
+  return c.json({ ok: true, deleted });
+});
+
 app.get("/api/v1/memos/:id", async (c) => {
   const denied = requireScopes(c, "read:memos");
 
@@ -926,7 +939,7 @@ app.post("/api/v1/memos/:id/resources", async (c) => {
       {
         error: {
           code: "upload_too_large",
-          message: "Image must be between 1 byte and 10 MB.",
+          message: "Image must be between 1 byte and 50 MB.",
         },
       },
       413
@@ -2590,6 +2603,51 @@ const deleteMemosRecord = async (
 
   await db.batch(statements);
   return uniqueMemoIds.length;
+};
+
+const emptyTrashMemosRecord = async (
+  db: D1Database,
+  resourcesBucket: R2Bucket,
+  actor: { actorType: "user" | "agent"; actorId: string | null }
+) => {
+  const countRow = await db
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM memos
+       WHERE is_deleted = 1`
+    )
+    .first<{ count: number }>();
+  const deleted = countRow?.count ?? 0;
+
+  if (deleted === 0) {
+    return 0;
+  }
+
+  const resourceRows = await db
+    .prepare(
+      `SELECT r.object_key
+       FROM resources r
+       INNER JOIN memos m ON m.id = r.memo_id
+       WHERE m.is_deleted = 1`
+    )
+    .all<{ object_key: string }>();
+  const objectKeys = resourceRows.results.map((resource) => resource.object_key);
+
+  if (objectKeys.length > 0) {
+    await resourcesBucket.delete(objectKeys);
+  }
+
+  await db.batch([
+    db.prepare(`DELETE FROM memos_fts WHERE memo_id IN (SELECT id FROM memos WHERE is_deleted = 1)`),
+    db.prepare(`UPDATE resources SET original_memo_id = NULL WHERE original_memo_id IN (SELECT id FROM memos WHERE is_deleted = 1)`),
+    db.prepare(`DELETE FROM resources WHERE memo_id IN (SELECT id FROM memos WHERE is_deleted = 1)`),
+    db.prepare(`DELETE FROM memo_revisions WHERE memo_id IN (SELECT id FROM memos WHERE is_deleted = 1)`),
+    db.prepare(`DELETE FROM memo_contents WHERE memo_id IN (SELECT id FROM memos WHERE is_deleted = 1)`),
+    db.prepare(`DELETE FROM memos WHERE is_deleted = 1`),
+    auditStatement(db, actor.actorType, actor.actorId, "memo.trash_empty", "trash", "memos", { deleted }),
+  ]);
+
+  return deleted;
 };
 
 const moveMemosToNotebook = async (

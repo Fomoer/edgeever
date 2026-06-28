@@ -434,6 +434,7 @@ export const WorkspaceApp = ({
   const [selectedMemoIds, setSelectedMemoIds] = useState<Set<string>>(new Set());
   const [memoSelectionMode, setMemoSelectionMode] = useState(false);
   const [memoDeleteConfirmation, setMemoDeleteConfirmation] = useState<MemoDeleteConfirmation | null>(null);
+  const [emptyTrashConfirmationOpen, setEmptyTrashConfirmationOpen] = useState(false);
   const [notebookNameDialog, setNotebookNameDialog] = useState<NotebookNameDialogState | null>(null);
   const [notebookDeleteConfirmation, setNotebookDeleteConfirmation] = useState<Notebook | null>(null);
   const [appNoticeDialog, setAppNoticeDialog] = useState<AppNoticeDialogState | null>(null);
@@ -501,6 +502,7 @@ export const WorkspaceApp = ({
       notebookDeleteConfirmation ||
 	      notebookNameDialog ||
 	      memoDeleteConfirmation ||
+      emptyTrashConfirmationOpen ||
 	      mobileNotebookPickerOpen ||
 	      mobileListActionsOpen ||
 	      mobileMoveOpen ||
@@ -803,6 +805,22 @@ export const WorkspaceApp = ({
     },
   });
 
+  const emptyTrashMutation = useMutation({
+    mutationFn: api.emptyTrash,
+    onSuccess: async () => {
+      setEmptyTrashConfirmationOpen(false);
+      clearMemoSelection();
+      setSelectedMemoId(null);
+      setActivePane("memos");
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["memos"] }),
+        queryClient.invalidateQueries({ queryKey: ["memo"] }),
+        queryClient.invalidateQueries({ queryKey: ["resources"] }),
+      ]);
+    },
+  });
+
   const restoreMemoMutation = useMutation({
     mutationFn: api.restoreMemo,
     onSuccess: async (data) => {
@@ -1047,6 +1065,18 @@ export const WorkspaceApp = ({
     restoreMemoMutation.mutate(memoId);
   };
 
+  const handleEmptyTrash = () => {
+    if (memoView !== "trash") {
+      return;
+    }
+
+    setEmptyTrashConfirmationOpen(true);
+  };
+
+  const handleConfirmEmptyTrash = () => {
+    emptyTrashMutation.mutate();
+  };
+
   const handleSelectNotebook = (notebookId: string) => {
     setMemoView("notebook");
     setSelectedNotebookId(notebookId);
@@ -1163,6 +1193,13 @@ export const WorkspaceApp = ({
       return true;
     }
 
+    if (emptyTrashConfirmationOpen) {
+      if (!emptyTrashMutation.isPending) {
+        setEmptyTrashConfirmationOpen(false);
+      }
+      return true;
+    }
+
 	    if (mobileNotebookPickerOpen) {
 	      setMobileNotebookPickerOpen(false);
 	      return true;
@@ -1228,6 +1265,8 @@ export const WorkspaceApp = ({
     deleteMemoMutation.isPending,
     deleteMemosMutation.isPending,
     deleteNotebookMutation.isPending,
+    emptyTrashConfirmationOpen,
+    emptyTrashMutation.isPending,
     handleCloseAssets,
     handleCloseSettings,
     handleCloseTemplates,
@@ -1293,6 +1332,7 @@ export const WorkspaceApp = ({
         appNoticeDialog ||
           rightView !== "editor" ||
           memoDeleteConfirmation ||
+          emptyTrashConfirmationOpen ||
           mobileNotebookPickerOpen ||
           notebookDeleteConfirmation ||
           notebookNameDialog ||
@@ -1355,6 +1395,7 @@ export const WorkspaceApp = ({
     handleCreateNotebook,
     handleCreateMemo,
     handleMobileSearch,
+    emptyTrashConfirmationOpen,
     memoDeleteConfirmation,
     memoView,
     mobileNotebookPickerOpen,
@@ -1579,6 +1620,7 @@ export const WorkspaceApp = ({
               }}
               onMerge={handleMerge}
               onDeleteMemo={handleDeleteMemoFromList}
+              onEmptyTrash={handleEmptyTrash}
               onRestoreMemo={handleRestoreMemoFromList}
               onMoveMemo={handleMoveMemoFromList}
               onTogglePinMemo={handleToggleMemoPinned}
@@ -1694,6 +1736,18 @@ export const WorkspaceApp = ({
           isDeleting={deleteMemosMutation.isPending || deleteMemoMutation.isPending}
           onCancel={() => setMemoDeleteConfirmation(null)}
           onConfirm={handleConfirmMemoDeletion}
+        />
+      )}
+      {emptyTrashConfirmationOpen && (
+        <AppConfirmDialog
+          title="清空回收站"
+          description="回收站中的全部笔记和仍关联的附件会被物理删除，这个操作不可恢复。"
+          confirmLabel="清空回收站"
+          closeOnBrowserBack={false}
+          isWorking={emptyTrashMutation.isPending}
+          tone="danger"
+          onCancel={() => setEmptyTrashConfirmationOpen(false)}
+          onConfirm={handleConfirmEmptyTrash}
         />
       )}
       {notebookNameDialog && (

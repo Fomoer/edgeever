@@ -190,6 +190,11 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  emptyTrash: () =>
+    request<{ ok: true; deleted: number }>("/api/v1/memos/trash/empty", {
+      method: "DELETE",
+    }),
+
   getMemo: (memoId: string, options?: { includeDeleted?: boolean }) => {
     const search = new URLSearchParams();
 

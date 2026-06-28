@@ -242,6 +242,7 @@ export const MemoListPane = ({
   onMoveSelectedMemos,
   onPinSelectedMemos,
   onDeleteSelectedMemos,
+  onEmptyTrash,
   onMerge,
   onEnterSelectionMode,
   onClearSelection,
@@ -300,6 +301,7 @@ export const MemoListPane = ({
   onMoveSelectedMemos: (notebookId: string) => void;
   onPinSelectedMemos: (pinned: boolean) => void;
   onDeleteSelectedMemos: () => void;
+  onEmptyTrash: () => void;
   onMerge: () => void;
   onEnterSelectionMode: () => void;
   onClearSelection: () => void;
@@ -981,6 +983,17 @@ export const MemoListPane = ({
             </ToggleGroup>
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            {view === "trash" && (
+              <Button
+                size="sm"
+                variant="danger"
+                title="物理删除回收站中的全部笔记"
+                onClick={onEmptyTrash}
+              >
+                <Trash2 className="h-4 w-4" />
+                清空
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -1009,10 +1022,10 @@ export const MemoListPane = ({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
-                  onClick={onOpenTrash}
+                  onClick={view === "trash" ? onEmptyTrash : onOpenTrash}
                 >
                   <Trash2 className="h-4 w-4 text-rose-700" />
-                  回收站
+                  {view === "trash" ? "清空回收站" : "回收站"}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
@@ -1477,7 +1490,12 @@ export const MemoListPane = ({
             listDensity={listDensity}
             listTitle={listTitle}
             sortMode={sortMode}
+            view={view}
             onClose={() => setMobileListActionsOpen(false)}
+            onEmptyTrash={() => {
+              setMobileListActionsOpen(false);
+              onEmptyTrash();
+            }}
             onEnterSelectionMode={() => {
               setMobileListActionsOpen(false);
               onEnterSelectionMode();

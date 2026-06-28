@@ -496,6 +496,33 @@
         }
       }
     },
+    "/api/v1/memos/trash/empty": {
+      "delete": {
+        "summary": "Empty trash",
+        "description": "Permanently deletes all trashed memos and their remaining resource objects.",
+        "responses": {
+          "200": {
+            "description": "Empty trash result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "deleted": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["ok", "deleted"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/memos/merge": {
       "post": {
         "summary": "Merge memos",
