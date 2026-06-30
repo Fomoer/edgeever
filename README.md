@@ -119,7 +119,7 @@ https://你的域名/api/openapi.json
 
 ## MCP
 
-先在 EdgeEver 左侧 **设置** 里创建 API Token，然后按客户端支持的方式接入。
+先在 EdgeEver 左下角 **个人中心** 的 **MCP 设置** 里创建 API Token，然后按客户端支持的方式接入。
 
 Remote MCP / Streamable HTTP：
 
@@ -127,51 +127,6 @@ Remote MCP / Streamable HTTP：
 https://你的域名/mcp
 Authorization: Bearer <api-token>
 ```
-
-stdio MCP 示例：
-
-```json
-{
-  "mcpServers": {
-    "edgeever": {
-      "command": "bun",
-      "args": ["/你的/edgeever/绝对路径/scripts/edgeever-mcp-stdio.mjs"],
-      "env": {
-        "EDGEEVER_URL": "https://你的域名",
-        "EDGEEVER_TOKEN": "<api-token>"
-      }
-    }
-  }
-}
-```
-
-说明：
-
-- `command` 需要本机已安装 Bun。
-- `args` 改成你本机 EdgeEver 仓库里的绝对路径。
-- `EDGEEVER_TOKEN` 来自 EdgeEver 左侧 **设置**。
-- 只读 Agent 建议 scopes：`read:notebooks`、`read:memos`、`read:tags`；需要写入笔记再加 `write:memos`，需要创建或移动笔记本再加 `write:notebooks`。
-
-## 开发者工具
-
-CLI 不是 EdgeEver 面向 Agent 的主入口，只作为自托管场景下的调试、批处理、备份和迁移工具使用。
-
-```sh
-EDGEEVER_URL=https://你的域名 \
-EDGEEVER_TOKEN=<api-token> \
-bun run cli -- search edgeever
-```
-
-也可以保存为本机 profile，配置文件默认写入 `~/.edgeever/config.json`：
-
-```sh
-bun run cli -- profile set prod --url https://你的域名 --token <api-token>
-bun run cli -- --profile prod notebooks
-bun run cli -- --profile prod search edgeever
-bun run cli -- --profile prod export <memo-id> --format markdown --out ./memo.md
-```
-
-从印象笔记迁移到 EdgeEver 时，请先准备开放、可读取的 ENEX 文件，再使用 PC 端应用内“导入印象笔记”入口逐个笔记本确认导入结果。入口旁的“操作指引”会在新标签页打开迁移步骤。
 
 ## 图片压缩规则
 
