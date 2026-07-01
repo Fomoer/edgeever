@@ -98,7 +98,7 @@ packages/shared   共享类型、Zod schema、TipTap / Markdown 内容转换
 scripts           Wrangler 封装、密码 hash、CLI、MCP stdio bridge、Evernote ENEX 导入
 migrations        D1 数据库迁移
 docs              OpenAPI schema、迁移指南等文档
-wrangler.toml     Cloudflare Workers、Assets、D1、R2、Workers AI 配置
+wrangler.toml     Cloudflare Workers、Assets、D1、R2 配置
 ```
 
 ## 内容格式

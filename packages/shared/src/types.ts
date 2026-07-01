@@ -104,34 +104,6 @@ export type TagSummary = {
   updatedAt: string | null;
 };
 
-export type ProfileEvidence = {
-  memoIds: string[];
-  note?: string;
-};
-
-export type ProfileInsight = {
-  label: string;
-  description: string;
-  confidence: "low" | "medium" | "high";
-  evidence: ProfileEvidence;
-};
-
-export type ProfileSection = {
-  title: string;
-  insights: ProfileInsight[];
-};
-
-export type ProfileSnapshot = {
-  id: string;
-  summary: string;
-  sections: ProfileSection[];
-  sourceMemoIds: string[];
-  memoCount: number;
-  model: string;
-  generatedAt: string;
-  createdAt: string;
-};
-
 export type AuthUser = {
   id: string;
   username: string;

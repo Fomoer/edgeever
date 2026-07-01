@@ -1,14 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Brain, ChevronLeft, Copy, HelpCircle, Image, KeyRound, LogOut, Plus, RefreshCw, ShieldCheck, Sparkles, Trash2, UploadCloud, User } from "lucide-react";
-import type { ApiToken, AuthUser, ProfileSnapshot } from "@edgeever/shared";
+import { ChevronDown, ChevronLeft, Copy, HelpCircle, Image, KeyRound, LogOut, Plus, ShieldCheck, Sparkles, Trash2, UploadCloud, User } from "lucide-react";
+import type { ApiToken, AuthUser } from "@edgeever/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { ApiRequestError, api } from "@/lib/api";
+import { api } from "@/lib/api";
 import { EVERNOTE_MIGRATION_PATH } from "@/lib/routes";
 import { cn, formatDateTime } from "@/lib/utils";
 import { AppConfirmDialog } from "./dialogs/ConfirmDialogs";
@@ -22,8 +22,6 @@ const ALL_TOKEN_SCOPES = [
   "write:resources",
   "read:tags",
   "write:tags",
-  "read:profile",
-  "write:profile",
 ];
 
 const TOKEN_SCOPE_LABELS: Record<string, string> = {
@@ -35,8 +33,6 @@ const TOKEN_SCOPE_LABELS: Record<string, string> = {
   "write:resources": "上传与修改附件",
   "read:tags": "读取标签",
   "write:tags": "创建与修改标签",
-  "read:profile": "读取人物画像",
-  "write:profile": "生成人物画像",
 };
 
 const getTokenScopeLabel = (scope: string) => TOKEN_SCOPE_LABELS[scope] ?? scope;
@@ -134,125 +130,100 @@ const PreferenceCard = ({ imageCompressionEnabled, onImageCompressionChange }: P
   </Card>
 );
 
-interface PersonaProfileCardProps {
-  profile: ProfileSnapshot | null;
-  isLoading: boolean;
-  isGenerating: boolean;
-  errorMessage?: string;
-  onGenerate: () => void;
-}
+const ADVANCED_PROMPTS = [
+  {
+    title: "人物画像",
+    prompt:
+      "请通过 EdgeEver MCP 读取我的笔记，基于真实笔记内容为我整理一份人物画像。请只根据笔记中的证据判断，不要做心理诊断，不要夸张定性。输出包括：长期关注的主题、做事偏好、能力线索、反复出现的问题、近期动向，并在每条结论后列出相关笔记标题或 memo id。",
+  },
+  {
+    title: "近期复盘",
+    prompt:
+      "请通过 EdgeEver MCP 读取我最近更新的笔记，帮我做一次近期复盘。请总结我最近在推进什么、卡在哪里、有哪些反复出现的想法、哪些事情值得继续跟进，最后给出一份简短的下一步行动清单。",
+  },
+  {
+    title: "项目整理",
+    prompt:
+      "请通过 EdgeEver MCP 读取我的笔记，找出其中和项目、产品、代码、计划相关的内容。请按项目归类，整理每个项目的目标、当前进展、待办事项、风险和相关笔记来源。不要改动我的笔记，只输出整理结果。",
+  },
+  {
+    title: "知识地图",
+    prompt:
+      "请通过 EdgeEver MCP 读取我的笔记，为我整理一份知识地图。请找出主要知识领域、每个领域下的关键概念、相关笔记、我已经掌握的部分和还需要补齐的问题。输出结构要适合后续继续学习和写作。",
+  },
+  {
+    title: "标签建议",
+    prompt:
+      "请通过 EdgeEver MCP 读取我的笔记和现有标签，帮我设计一套更清晰的标签体系。请指出重复、过细、过宽或命名不一致的标签，并给出合并、重命名和新增标签建议。先不要修改笔记，等我确认后再执行。",
+  },
+] as const;
 
-const confidenceLabel: Record<ProfileSnapshot["sections"][number]["insights"][number]["confidence"], string> = {
-  low: "线索较弱",
-  medium: "有一定依据",
-  high: "依据较多",
-};
+const AdvancedPlayCard = () => {
+  const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
-const getProfileErrorMessage = (error: unknown) => {
-  if (!error) {
-    return undefined;
-  }
-
-  if (error instanceof ApiRequestError) {
-    if (error.code === "ai_request_failed") {
-      return "生成失败了，请稍后再试。";
+  const handleCopyPrompt = async (title: string, prompt: string) => {
+    if (!(await copyTextToClipboard(prompt))) {
+      return;
     }
 
-    if (error.code === "ai_not_configured") {
-      return "生成功能暂时不可用。";
-    }
+    setCopiedPrompt(title);
+    window.setTimeout(() => {
+      setCopiedPrompt((current) => (current === title ? null : current));
+    }, 1600);
+  };
 
-    if (error.code === "no_profile_sources") {
-      return "还没有足够的有效笔记用于生成人物画像。";
-    }
-  }
-
-  return error instanceof Error ? error.message : "人物画像请求失败。";
-};
-
-const PersonaProfileCard = ({ profile, isLoading, isGenerating, errorMessage, onGenerate }: PersonaProfileCardProps) => (
-  <Card className="w-full min-w-0 overflow-hidden shadow-none">
-    <CardHeader className="p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Brain className="h-4 w-4 text-emerald-700" />
-            人物画像
-          </CardTitle>
-          <CardDescription className="mt-1 text-xs leading-4">
-            基于现有笔记手动生成，结果会缓存为快照。
-          </CardDescription>
-        </div>
-        <Button
-          size="sm"
-          variant="solid"
-          className="h-8 w-full whitespace-nowrap bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"
+  return (
+    <Card className="w-full min-w-0 overflow-hidden shadow-none">
+      <CardHeader className="p-4">
+        <button
+          className="flex w-full min-w-0 items-start justify-between gap-3 text-left"
           type="button"
-          disabled={isGenerating || isLoading}
-          onClick={onGenerate}
+          aria-expanded={expanded}
+          onClick={() => setExpanded((current) => !current)}
         >
-          {isGenerating ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          {profile ? "重新生成" : "生成画像"}
-        </Button>
-      </div>
-    </CardHeader>
-    <CardContent className="space-y-4 p-4 pt-0">
-      {errorMessage && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium leading-5 text-amber-900">
-          {errorMessage}
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
-          正在读取画像快照...
-        </div>
-      ) : profile ? (
-        <div className="space-y-4">
-          <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
-            <p className="text-sm font-medium leading-6 text-slate-800">{profile.summary}</p>
-            <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-emerald-800">
-              <span className="rounded-md bg-white px-2 py-1">分析笔记 {profile.memoCount} 条</span>
-              <span className="rounded-md bg-white px-2 py-1">{formatDateTime(profile.generatedAt)}</span>
-              <span className="max-w-full truncate rounded-md bg-white px-2 py-1" title={profile.model}>
-                {profile.model}
-              </span>
-            </div>
-          </div>
-          <div className="grid gap-3 lg:grid-cols-2">
-            {profile.sections.map((section) => (
-              <div key={section.title} className="rounded-lg border border-slate-200 bg-white p-3">
-                <h3 className="text-sm font-bold text-slate-900">{section.title}</h3>
-                <div className="mt-3 space-y-3">
-                  {section.insights.map((insight) => (
-                    <div key={`${section.title}-${insight.label}`} className="border-t border-slate-100 pt-3 first:border-t-0 first:pt-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 text-sm font-semibold text-slate-800">{insight.label}</div>
-                        <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
-                          {confidenceLabel[insight.confidence]}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs leading-5 text-slate-600">{insight.description}</p>
-                      {insight.evidence.memoIds.length > 0 && (
-                        <div className="mt-2 text-[11px] font-medium text-slate-400">
-                          来源 {insight.evidence.memoIds.length} 条笔记
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+          <span className="min-w-0">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Sparkles className="h-4 w-4 text-emerald-700" />
+              进阶玩法
+            </CardTitle>
+            <CardDescription className="mt-1 text-xs leading-4">
+              搭配AI Agent的进阶玩法。
+            </CardDescription>
+          </span>
+          <ChevronDown
+            className={cn(
+              "mt-0.5 h-4 w-4 shrink-0 text-slate-400 transition-transform",
+              expanded ? "rotate-180" : "rotate-0"
+            )}
+          />
+        </button>
+      </CardHeader>
+      {expanded && (
+        <CardContent className="grid gap-3 p-4 pt-0">
+          {ADVANCED_PROMPTS.map((item) => (
+            <div key={item.title} className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm font-bold text-slate-900">{item.title}</div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-full justify-center bg-white px-3 text-xs sm:w-auto"
+                  type="button"
+                  onClick={() => void handleCopyPrompt(item.title, item.prompt)}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  {copiedPrompt === item.title ? "已复制" : "复制 Prompt"}
+                </Button>
               </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center">
-          <div className="text-sm font-semibold text-slate-700">还没有人物画像快照</div>
-        </div>
+              <p className="mt-2 text-xs leading-5 text-slate-500">{item.prompt}</p>
+            </div>
+          ))}
+        </CardContent>
       )}
-    </CardContent>
-  </Card>
-);
+    </Card>
+  );
+};
 
 interface EvernoteImportGuideCardProps {
   onShowGuide?: () => void;
@@ -454,39 +425,71 @@ interface ScopePickerProps {
 }
 
 const ScopePicker = ({ availableScopes, selectedScopes, onToggleScope }: ScopePickerProps) => (
-  <div className="space-y-2">
-    <span className="block text-xs font-semibold text-slate-500">Token 权限范围</span>
-    <div className="grid gap-2 sm:grid-cols-2">
-      {availableScopes.map((scope) => {
-        const checked = selectedScopes.has(scope);
-        const checkboxId = `token-scope-${scope.replace(/[^a-z0-9]+/gi, "-")}`;
-
-        return (
-          <label
-            key={scope}
-            htmlFor={checkboxId}
-            className={cn(
-              "flex min-h-10 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition-colors",
-              checked
-                ? "border-emerald-500/30 bg-emerald-50/70 text-emerald-800"
-                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-            )}
-          >
-            <Checkbox
-              id={checkboxId}
-              checked={checked}
-              onCheckedChange={() => onToggleScope(scope)}
-              className="border-emerald-300"
-            />
-            <span className="min-w-0 truncate text-xs font-semibold" title={scope}>
-              {getTokenScopeLabel(scope)}
-            </span>
-          </label>
-        );
-      })}
-    </div>
-  </div>
+  <ScopePickerContent
+    availableScopes={availableScopes}
+    selectedScopes={selectedScopes}
+    onToggleScope={onToggleScope}
+  />
 );
+
+const ScopePickerContent = ({ availableScopes, selectedScopes, onToggleScope }: ScopePickerProps) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white">
+      <button
+        className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left"
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((current) => !current)}
+      >
+        <span className="min-w-0">
+          <span className="block text-xs font-semibold text-slate-700">Token 权限范围</span>
+          <span className="mt-0.5 block text-[11px] font-medium text-slate-400">
+            已选择 {selectedScopes.size}/{availableScopes.length}
+          </span>
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 text-slate-400 transition-transform",
+            expanded ? "rotate-180" : "rotate-0"
+          )}
+        />
+      </button>
+      {expanded && (
+        <div className="grid gap-2 border-t border-slate-100 p-3 sm:grid-cols-2">
+          {availableScopes.map((scope) => {
+            const checked = selectedScopes.has(scope);
+            const checkboxId = `token-scope-${scope.replace(/[^a-z0-9]+/gi, "-")}`;
+
+            return (
+              <label
+                key={scope}
+                htmlFor={checkboxId}
+                className={cn(
+                  "flex min-h-10 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 transition-colors",
+                  checked
+                    ? "border-emerald-500/30 bg-emerald-50/70 text-emerald-800"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                <Checkbox
+                  id={checkboxId}
+                  checked={checked}
+                  onCheckedChange={() => onToggleScope(scope)}
+                  className="border-emerald-300"
+                />
+                <span className="min-w-0 truncate text-xs font-semibold" title={scope}>
+                  {getTokenScopeLabel(scope)}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface TokenListProps {
   tokens: ApiToken[];
@@ -732,14 +735,8 @@ export const SettingsPane = ({
     queryFn: () => api.listApiTokens(),
   });
 
-  const profileQuery = useQuery({
-    queryKey: ["profile"],
-    queryFn: () => api.getProfile(),
-  });
-
   const availableScopes = tokensQuery.data?.availableScopes ?? ALL_TOKEN_SCOPES;
   const tokens = tokensQuery.data?.apiTokens ?? [];
-  const profile = profileQuery.data?.profile ?? null;
 
   useEffect(() => {
     if (scopeDefaultsSynced || !tokensQuery.data?.availableScopes) {
@@ -764,14 +761,6 @@ export const SettingsPane = ({
     mutationFn: api.revokeApiToken,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["api-tokens"] });
-    },
-  });
-
-  const generateProfileMutation = useMutation({
-    mutationFn: api.generateProfile,
-    onSuccess: async (data) => {
-      queryClient.setQueryData(["profile"], data);
-      await queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
   });
 
@@ -829,13 +818,7 @@ export const SettingsPane = ({
             imageCompressionEnabled={imageCompressionEnabled}
             onImageCompressionChange={onImageCompressionChange}
           />
-          <PersonaProfileCard
-            profile={profile}
-            isLoading={profileQuery.isLoading}
-            isGenerating={generateProfileMutation.isPending}
-            errorMessage={getProfileErrorMessage(generateProfileMutation.error ?? profileQuery.error)}
-            onGenerate={() => generateProfileMutation.mutate()}
-          />
+          <AdvancedPlayCard />
           <EvernoteImportGuideCard onShowGuide={onShowGuide} />
           <TokenCard
             name={name}

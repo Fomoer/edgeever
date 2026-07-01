@@ -20,8 +20,5 @@ binding = "RESOURCES"
 bucket_name = "edgeever-resources"
 preview_bucket_name = "edgeever-resources-preview"
 
-[ai]
-binding = "AI"
-
 [observability]
 enabled = true

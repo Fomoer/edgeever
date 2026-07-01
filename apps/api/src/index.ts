@@ -26,8 +26,6 @@ import {
   type Resource,
   type ResourceListItem,
   type ResourceStorageSummary,
-  type ProfileSnapshot,
-  type ProfileSection,
   type TagSummary,
   type TiptapDoc,
 } from "@edgeever/shared";
@@ -41,12 +39,10 @@ import openApiSpec from "../../../docs/openapi.json";
 type Bindings = {
   DB: D1Database;
   RESOURCES: R2Bucket;
-  AI?: Ai;
   EDGE_EVER_AUTH_USERNAME?: string;
   EDGE_EVER_AUTH_PASSWORD_HASH?: string;
   EDGE_EVER_SESSION_TTL_DAYS?: string;
   EDGE_EVER_R2_BUCKET_NAME?: string;
-  EDGE_EVER_PROFILE_MODEL?: string;
 };
 
 type AuthContext = {
@@ -188,24 +184,6 @@ type ResourceStatsRow = {
   attachment_count: number;
 };
 
-type ProfileSnapshotRow = {
-  id: string;
-  profile_json: string;
-  source_memo_ids_json: string;
-  memo_count: number;
-  model: string;
-  generated_at: string;
-  created_at: string;
-};
-
-type ProfileSourceMemoRow = {
-  id: string;
-  title: string | null;
-  tags_json: string;
-  updated_at: string;
-  content_text: string;
-};
-
 type AppContext = Context<{ Bindings: Bindings; Variables: { auth: AuthContext } }>;
 
 const SESSION_COOKIE = "edgeever_session";
@@ -216,10 +194,6 @@ const PASSWORD_SALT_BYTES = 16;
 const SESSION_TOKEN_BYTES = 32;
 const DEFAULT_SESSION_TTL_DAYS = 30;
 const DEFAULT_R2_BUCKET_NAME = "edgeever-resources";
-const DEFAULT_PROFILE_MODEL = "@cf/zai-org/glm-5.2";
-const PROFILE_MEMO_LIMIT = 200;
-const PROFILE_MEMO_TEXT_LIMIT = 1200;
-const PROFILE_CHUNK_CHAR_LIMIT = 12000;
 const MAX_IMAGE_UPLOAD_BYTES = 100 * 1024 * 1024;
 const MAX_ATTACHMENT_UPLOAD_BYTES = 100 * 1024 * 1024;
 const REVISION_SNAPSHOT_INTERVAL_MS = 5 * 60 * 1000;
@@ -234,8 +208,6 @@ const ALL_TOKEN_SCOPES = [
   "write:resources",
   "read:tags",
   "write:tags",
-  "read:profile",
-  "write:profile",
 ] as const;
 type TokenScope = (typeof ALL_TOKEN_SCOPES)[number];
 const SUPPORTED_IMAGE_MIME_TYPES = new Set([
@@ -609,41 +581,6 @@ app.delete("/api/v1/tags/:tag", async (c) => {
   const updated = await updateTagAcrossMemos(c.env.DB, tag, null, actor, actorLabel);
 
   return c.json({ ok: true, updated });
-});
-
-app.get("/api/v1/profile", async (c) => {
-  const denied = requireScopes(c, "read:profile");
-
-  if (denied) {
-    return denied;
-  }
-
-  return c.json({ profile: await getLatestProfileSnapshot(c.env.DB) });
-});
-
-app.post("/api/v1/profile/generate", async (c) => {
-  const denied = requireScopes(c, "write:profile");
-
-  if (denied) {
-    return denied;
-  }
-
-  if (!c.env.AI) {
-    return apiError(c, "ai_not_configured", "Workers AI binding is not configured for this deployment.", 501);
-  }
-
-  const actor = getAuditActor(c);
-
-  try {
-    const profile = await generateProfileSnapshot(c.env.DB, c.env.AI, c.env.EDGE_EVER_PROFILE_MODEL, actor);
-    return c.json({ profile }, 201);
-  } catch (error) {
-    if (error instanceof AppError) {
-      return apiError(c, error.code, error.message, error.status);
-    }
-
-    throw error;
-  }
 });
 
 app.get("/api/v1/memos", async (c) => {
@@ -2589,332 +2526,6 @@ const mapTagSummary = (row: TagSummaryRow): TagSummary => ({
   memoCount: row.memo_count,
   updatedAt: row.updated_at,
 });
-
-const mapProfileSnapshot = (row: ProfileSnapshotRow): ProfileSnapshot => {
-  const profile = parseProfileJson(row.profile_json);
-
-  return {
-    id: row.id,
-    summary: profile.summary,
-    sections: profile.sections,
-    sourceMemoIds: parseJsonArray(row.source_memo_ids_json),
-    memoCount: row.memo_count,
-    model: row.model,
-    generatedAt: row.generated_at,
-    createdAt: row.created_at,
-  };
-};
-
-const getLatestProfileSnapshot = async (db: D1Database): Promise<ProfileSnapshot | null> => {
-  const row = await db
-    .prepare(
-      `SELECT id, profile_json, source_memo_ids_json, memo_count, model, generated_at, created_at
-       FROM profile_snapshots
-       ORDER BY created_at DESC
-       LIMIT 1`
-    )
-    .first<ProfileSnapshotRow>();
-
-  return row ? mapProfileSnapshot(row) : null;
-};
-
-const generateProfileSnapshot = async (
-  db: D1Database,
-  ai: Ai,
-  modelOverride: string | undefined,
-  actor: AuditActor
-): Promise<ProfileSnapshot> => {
-  const memos = await listProfileSourceMemos(db);
-
-  if (memos.length === 0) {
-    throw new AppError("no_profile_sources", "At least one non-empty memo is required to generate a profile.", 400);
-  }
-
-  const model = modelOverride?.trim() || DEFAULT_PROFILE_MODEL;
-  const chunks = chunkProfileMemos(memos);
-  const chunkSummaries: string[] = [];
-
-  for (let index = 0; index < chunks.length; index += 1) {
-    const summary = await runAiText(ai, model, [
-      {
-        role: "system",
-        content:
-          "你是一个谨慎的个人知识管理分析助手。只基于用户笔记做事实归纳，不做心理诊断，不使用夸张或确定性人格判断。",
-      },
-      {
-        role: "user",
-        content:
-          "请把下面这组笔记压缩成画像证据摘要。保留主题、项目、偏好、能力、反复出现的问题和可引用的 memo_id。输出中文，控制在 900 字以内。\n\n" +
-          chunks[index],
-      },
-    ]);
-    chunkSummaries.push(summary);
-  }
-
-  const profileText = await runAiText(ai, model, [
-    {
-      role: "system",
-      content:
-        "你是 EdgeEver 的人物画像生成器。必须输出严格 JSON，不要 Markdown。画像应可追溯、克制、尊重用户隐私。避免医学、心理诊断、职业定性和无法从笔记支持的结论。",
-    },
-    {
-      role: "user",
-      content:
-        `请基于这些证据摘要生成人物画像 JSON。可引用的 memo_id 只能来自证据摘要。JSON schema:
-{
-  "summary": "一段 80-160 字中文总览",
-  "sections": [
-    {
-      "title": "关注主题",
-      "insights": [
-        {
-          "label": "短标签",
-          "description": "基于笔记的克制描述",
-          "confidence": "low|medium|high",
-          "evidence": { "memoIds": ["memo_x"], "note": "为什么引用这些笔记" }
-        }
-      ]
-    }
-  ]
-}
-请包含 4-6 个 section，优先使用这些 section 名称：关注主题、项目脉络、能力画像、偏好与原则、行为模式、近期动向。每个 section 2-5 条 insight。不要虚构 memo_id。\n\n证据摘要：\n` +
-        chunkSummaries.map((summary, index) => `【证据摘要 ${index + 1}】\n${summary}`).join("\n\n"),
-    },
-  ]);
-
-  const profile = normalizeProfileOutput(profileText, memos.map((memo) => memo.id));
-  const id = createId("profile");
-  const now = isoNow();
-  const sourceMemoIds = Array.from(new Set(profile.sections.flatMap((section) => section.insights.flatMap((insight) => insight.evidence.memoIds))));
-  const finalSourceMemoIds = sourceMemoIds.length > 0 ? sourceMemoIds : memos.map((memo) => memo.id);
-
-  await db.batch([
-    db
-      .prepare(
-        `INSERT INTO profile_snapshots (
-          id, profile_json, source_memo_ids_json, memo_count, model, generated_at, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`
-      )
-      .bind(id, JSON.stringify(profile), JSON.stringify(finalSourceMemoIds), memos.length, model, now, now),
-    auditStatement(db, actor.actorType, actor.actorId, "profile.generate", "profile", id, {
-      memoCount: memos.length,
-      model,
-    }),
-  ]);
-
-  const row = await db
-    .prepare(
-      `SELECT id, profile_json, source_memo_ids_json, memo_count, model, generated_at, created_at
-       FROM profile_snapshots
-       WHERE id = ?`
-    )
-    .bind(id)
-    .first<ProfileSnapshotRow>();
-
-  if (!row) {
-    throw new AppError("not_found", "Profile snapshot not found after generation.", 404);
-  }
-
-  return mapProfileSnapshot(row);
-};
-
-const listProfileSourceMemos = async (db: D1Database): Promise<ProfileSourceMemoRow[]> => {
-  const rows = await db
-    .prepare(
-      `SELECT m.id, m.title, m.tags_json, m.updated_at, c.content_text
-       FROM memos m
-       INNER JOIN memo_contents c ON c.memo_id = m.id
-       WHERE m.is_deleted = 0
-         AND length(trim(c.content_text)) >= 20
-         AND m.created_by <> 'system'
-       ORDER BY m.updated_at DESC
-       LIMIT ?`
-    )
-    .bind(PROFILE_MEMO_LIMIT)
-    .all<ProfileSourceMemoRow>();
-
-  return rows.results;
-};
-
-const chunkProfileMemos = (memos: ProfileSourceMemoRow[]) => {
-  const chunks: string[] = [];
-  let current = "";
-
-  for (const memo of memos) {
-    const tags = parseJsonArray(memo.tags_json);
-    const text = memo.content_text.replace(/\s+/g, " ").trim().slice(0, PROFILE_MEMO_TEXT_LIMIT);
-    const entry = [
-      `memo_id: ${memo.id}`,
-      `title: ${memo.title || DEFAULT_MEMO_TITLE}`,
-      `updated_at: ${memo.updated_at}`,
-      `tags: ${tags.join(", ") || "无"}`,
-      `content: ${text}`,
-    ].join("\n");
-    const next = current ? `${current}\n\n---\n\n${entry}` : entry;
-
-    if (next.length > PROFILE_CHUNK_CHAR_LIMIT && current) {
-      chunks.push(current);
-      current = entry;
-    } else {
-      current = next;
-    }
-  }
-
-  if (current) {
-    chunks.push(current);
-  }
-
-  return chunks;
-};
-
-const runAiText = async (
-  ai: Ai,
-  model: string,
-  messages: { role: "system" | "user"; content: string }[]
-): Promise<string> => {
-  let result: unknown;
-
-  try {
-    result = await ai.run(model, {
-      messages,
-      max_tokens: 1800,
-      temperature: 0.2,
-    });
-  } catch (error) {
-    throw new AppError(
-      "ai_request_failed",
-      error instanceof Error ? `Workers AI request failed: ${error.message}` : "Workers AI request failed.",
-      502
-    );
-  }
-
-  const response = extractAiText(result);
-
-  if (!response) {
-    throw new AppError("ai_response_invalid", "Workers AI returned an empty response.", 502);
-  }
-
-  return response;
-};
-
-const extractAiText = (value: unknown) => {
-  if (typeof value === "string") {
-    return value.trim();
-  }
-
-  if (!value || typeof value !== "object") {
-    return "";
-  }
-
-  const record = value as Record<string, unknown>;
-
-  if (typeof record.response === "string") {
-    return record.response.trim();
-  }
-
-  if (typeof record.result === "string") {
-    return record.result.trim();
-  }
-
-  return "";
-};
-
-const normalizeProfileOutput = (text: string, allowedMemoIds: string[]) => {
-  const parsed = parseJsonObject(extractJsonObject(text));
-  const allowed = new Set(allowedMemoIds);
-  const summary = typeof parsed.summary === "string" ? parsed.summary.trim().slice(0, 360) : "";
-  const rawSections = Array.isArray(parsed.sections) ? parsed.sections : [];
-  const sections: ProfileSection[] = rawSections
-    .map((section) => normalizeProfileSection(section, allowed))
-    .filter((section): section is ProfileSection => Boolean(section));
-
-  if (!summary || sections.length === 0) {
-    throw new AppError("ai_response_invalid", "Workers AI returned a profile that could not be parsed.", 502);
-  }
-
-  return {
-    summary,
-    sections: sections.slice(0, 6),
-  };
-};
-
-const normalizeProfileSection = (value: unknown, allowedMemoIds: Set<string>): ProfileSection | null => {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  const record = value as Record<string, unknown>;
-  const title = typeof record.title === "string" ? record.title.trim().slice(0, 40) : "";
-  const rawInsights = Array.isArray(record.insights) ? record.insights : [];
-  const insights = rawInsights
-    .map((insight) => normalizeProfileInsight(insight, allowedMemoIds))
-    .filter((insight): insight is ProfileSection["insights"][number] => Boolean(insight))
-    .slice(0, 5);
-
-  if (!title || insights.length === 0) {
-    return null;
-  }
-
-  return { title, insights };
-};
-
-const normalizeProfileInsight = (value: unknown, allowedMemoIds: Set<string>): ProfileSection["insights"][number] | null => {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  const record = value as Record<string, unknown>;
-  const evidence = record.evidence && typeof record.evidence === "object" ? (record.evidence as Record<string, unknown>) : {};
-  const memoIds = (Array.isArray(evidence.memoIds) ? evidence.memoIds : [])
-    .filter((memoId): memoId is string => typeof memoId === "string" && allowedMemoIds.has(memoId))
-    .slice(0, 8);
-  const confidence = record.confidence === "low" || record.confidence === "high" ? record.confidence : "medium";
-  const label = typeof record.label === "string" ? record.label.trim().slice(0, 60) : "";
-  const description = typeof record.description === "string" ? record.description.trim().slice(0, 360) : "";
-
-  if (!label || !description) {
-    return null;
-  }
-
-  return {
-    label,
-    description,
-    confidence,
-    evidence: {
-      memoIds,
-      note: typeof evidence.note === "string" ? evidence.note.trim().slice(0, 160) : undefined,
-    },
-  };
-};
-
-const parseProfileJson = (json: string): Pick<ProfileSnapshot, "summary" | "sections"> => {
-  const value = parseJsonObject(json);
-  const summary = typeof value.summary === "string" ? value.summary : "";
-  const sections = Array.isArray(value.sections) ? (value.sections as ProfileSection[]) : [];
-  return { summary, sections };
-};
-
-const extractJsonObject = (text: string) => {
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text);
-  const candidate = fenced?.[1] ?? text;
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-
-  if (start === -1 || end === -1 || end <= start) {
-    return candidate;
-  }
-
-  return candidate.slice(start, end + 1);
-};
-
-const parseJsonObject = (json: string): Record<string, unknown> => {
-  try {
-    const value = JSON.parse(json);
-    return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-  } catch {
-    return {};
-  }
-};
 
 const getApiTokenRow = async (db: D1Database, id: string): Promise<ApiTokenRow | null> =>
   db
