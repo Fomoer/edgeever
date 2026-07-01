@@ -12,7 +12,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { Home, Search, UserRound, Plus, ChevronDown, ChevronRight, RefreshCw, X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
@@ -114,6 +114,35 @@ const PaneLoadingFallback = ({ label = "正在加载" }: { label?: string }) => 
     {label}
   </div>
 );
+
+const memoDetailQueryKey = (memoId: string, view: MemoView) => ["memo", memoId, view] as const;
+
+const memoToSummary = (memo: MemoDetail): MemoSummary => ({
+  id: memo.id,
+  notebookId: memo.notebookId,
+  title: memo.title,
+  excerpt: memo.excerpt,
+  tags: memo.tags,
+  isPinned: memo.isPinned,
+  isArchived: memo.isArchived,
+  isDeleted: memo.isDeleted,
+  revision: memo.revision,
+  createdAt: memo.createdAt,
+  updatedAt: memo.updatedAt,
+  deletedAt: memo.deletedAt,
+});
+
+const cacheMemoDetail = (queryClient: QueryClient, memo: MemoDetail, view: MemoView = memo.isDeleted ? "trash" : "notebook") => {
+  queryClient.setQueryData(memoDetailQueryKey(memo.id, view), { memo });
+};
+
+const prependMemoSummaryToList = (queryClient: QueryClient, queryKey: readonly unknown[], memo: MemoDetail) => {
+  const summary = memoToSummary(memo);
+
+  queryClient.setQueryData<{ memos: MemoSummary[] }>(queryKey, (current) => ({
+    memos: [summary, ...(current?.memos ?? []).filter((item) => item.id !== memo.id)],
+  }));
+};
 
 const MobileBottomNavButton = ({
   active = false,
@@ -530,7 +559,7 @@ export const WorkspaceApp = ({
       const { syncQueuedChanges } = await import("@/lib/sync-queue");
       await syncQueuedChanges({
         onSynced: async (memo) => {
-          queryClient.setQueryData(["memo", memo.id], { memo });
+          cacheMemoDetail(queryClient, memo);
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: ["memos"] }),
             queryClient.invalidateQueries({ queryKey: ["memo", memo.id] }),
@@ -895,7 +924,7 @@ export const WorkspaceApp = ({
   }, [memos, selectedMemoId]);
 
   const memoQuery = useQuery({
-    queryKey: ["memo", selectedMemoId, memoView],
+    queryKey: selectedMemoId ? memoDetailQueryKey(selectedMemoId, memoView) : ["memo", selectedMemoId, memoView],
     queryFn: () => api.getMemo(selectedMemoId as string, { includeDeleted: memoView === "trash" }),
     enabled: Boolean(selectedMemoId),
   });
@@ -936,13 +965,24 @@ export const WorkspaceApp = ({
 
   const createMemoMutation = useMutation({
     mutationFn: api.createMemo,
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
+      const targetNotebookId =
+        selectedNotebookId && selectedNotebookId !== data.memo.notebookId ? data.memo.notebookId : selectedNotebookId;
+
       setMemoView("notebook");
-      await Promise.all([
+      setSearch("");
+      if (targetNotebookId !== selectedNotebookId) {
+        setSelectedNotebookId(targetNotebookId);
+      }
+      cacheMemoDetail(queryClient, data.memo, "notebook");
+      prependMemoSummaryToList(queryClient, ["memos", "notebook", targetNotebookId, ""], data.memo);
+      if (targetNotebookId !== null) {
+        prependMemoSummaryToList(queryClient, ["memos", "notebook", null, ""], data.memo);
+      }
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: ["memos"] }),
         queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
       ]);
-      queryClient.setQueryData(["memo", data.memo.id], { memo: data.memo });
       navigateWorkspaceHome();
       setRightView("editor");
       setCreatedMemoEditId(data.memo.id);
@@ -955,11 +995,11 @@ export const WorkspaceApp = ({
     mutationFn: api.mergeMemos,
     onSuccess: async (data) => {
       clearMemoSelection();
+      cacheMemoDetail(queryClient, data.memo, "notebook");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["memos"] }),
         queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
       ]);
-      queryClient.setQueryData(["memo", data.memo.id], { memo: data.memo });
       navigateWorkspaceHome();
       setRightView("editor");
       setSelectedMemoId(data.memo.id);
@@ -1079,13 +1119,13 @@ export const WorkspaceApp = ({
 
   const restoreMemoMutation = useMutation({
     mutationFn: api.restoreMemo,
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       setMemoView("notebook");
-      await Promise.all([
+      cacheMemoDetail(queryClient, data.memo, "notebook");
+      void Promise.all([
         queryClient.invalidateQueries({ queryKey: ["memos"] }),
         queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
       ]);
-      queryClient.setQueryData(["memo", data.memo.id], { memo: data.memo });
       setSelectedNotebookId(data.memo.notebookId);
       navigateWorkspaceHome();
       setRightView("editor");
@@ -2082,7 +2122,7 @@ export const WorkspaceApp = ({
                       }
                     }}
                     onSaved={async (memo) => {
-                      queryClient.setQueryData(["memo", memo.id], { memo });
+                      cacheMemoDetail(queryClient, memo, memoView);
                       await Promise.all([
                         queryClient.invalidateQueries({ queryKey: ["memos"] }),
                         queryClient.invalidateQueries({ queryKey: ["notebooks"] }),
