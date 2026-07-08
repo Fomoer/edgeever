@@ -911,7 +911,10 @@ export const WorkspaceScreen = () => {
         onCreated={(memo) => {
           setCreateOpen(false);
           setActiveView("notes");
-          setSelectedMemoId(memo.id);
+          setMemoView("notebook");
+          setActiveNotebookId(memo.notebookId);
+          setSelectedMemoId(null);
+          setRichEditingMemo(memo);
         }}
         visible={createOpen}
       />
@@ -924,7 +927,9 @@ export const WorkspaceScreen = () => {
           setTemplatesOpen(false);
           setActiveView("notes");
           setMemoView("notebook");
-          setSelectedMemoId(memo.id);
+          setActiveNotebookId(memo.notebookId);
+          setSelectedMemoId(null);
+          setRichEditingMemo(memo);
         }}
         visible={templatesOpen}
       />
@@ -1617,7 +1622,7 @@ const CreateMemoModal = ({
             multiline
             onChangeText={setContentMarkdown}
             onSelectionChange={(event) => setContentSelection(event.nativeEvent.selection)}
-            placeholder="先用 Markdown 写入，后续接入移动 PWA 的 TipTap 编辑器"
+            placeholder="输入正文，可用上方工具插入 Markdown 格式"
             placeholderTextColor="#94a3b8"
             selection={contentSelection}
             style={styles.markdownInput}
