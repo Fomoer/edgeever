@@ -851,6 +851,8 @@ export const WorkspaceApp = ({
   });
 
   const notebooks = notebooksQuery.data?.notebooks ?? [];
+  const mobileEditorReturnMemoId = getMobileEditorReturnMemoId(location.search);
+  const visibleActivePane: Pane = mobileEditorReturnMemoId ? "memos" : activePane;
   const defaultMemoNotebookId =
     notebooks.find(
       (notebook) => notebook.id === "nb_inbox" || notebook.slug === "inbox" || notebook.name === "等待分类"
@@ -873,12 +875,12 @@ export const WorkspaceApp = ({
       rightView !== "editor" ||
       tagsOpen ||
       memoSelectionModeActive ||
-      activePane === "editor" ||
-      activePane === "notebooks"
+      visibleActivePane === "editor" ||
+      visibleActivePane === "notebooks"
   );
   const mobilePullToRefreshActive = Boolean(
     !isDesktop &&
-      activePane === "memos" &&
+      visibleActivePane === "memos" &&
       !appNoticeDialog &&
       !notebookDeleteConfirmation &&
       !notebookNameDialog &&
@@ -2019,7 +2021,7 @@ export const WorkspaceApp = ({
       return true;
     }
 
-    if (activePane === "editor" || activePane === "notebooks") {
+    if (visibleActivePane === "editor" || visibleActivePane === "notebooks") {
       clearPendingCreatedMemo();
       setActivePane("memos");
       return true;
@@ -2027,7 +2029,7 @@ export const WorkspaceApp = ({
 
     return false;
   }, [
-    activePane,
+    visibleActivePane,
     appNoticeDialog,
     rightView,
     clearMemoSelection,
@@ -2246,7 +2248,7 @@ export const WorkspaceApp = ({
     updateMemoListWidth(nextWidth);
   };
 
-  const shouldRenderRightPane = isDesktop || activePane === "editor";
+  const shouldRenderRightPane = isDesktop || visibleActivePane === "editor";
   const rightPaneLoadingLabel =
     rightView === "settings"
       ? t("workspace.loading.settings")
@@ -2296,10 +2298,10 @@ export const WorkspaceApp = ({
           <aside
             className={cn(
               "min-h-0 border-r border-slate-200 bg-white/75 backdrop-blur-lg lg:block",
-              activePane === "notebooks" ? "block" : "hidden"
+              visibleActivePane === "notebooks" ? "block" : "hidden"
             )}
           >
-            {(isDesktop || activePane === "notebooks") && (
+            {(isDesktop || visibleActivePane === "notebooks") && (
               <Suspense fallback={<PaneLoadingFallback label={t("workspace.loading.notebooks")} />}>
                 <NotebookPane
                   authRequired={authRequired}
@@ -2362,8 +2364,8 @@ export const WorkspaceApp = ({
             className={cn(
               "relative min-w-0 overflow-hidden border-r border-slate-200 bg-slate-50",
               rightView === "editor"
-                ? (activePane === "memos" ? "block lg:block lg:bg-white/75 lg:backdrop-blur-lg" : "hidden lg:block lg:bg-white/75 lg:backdrop-blur-lg")
-                : (activePane === "memos" ? "block lg:hidden" : "hidden lg:hidden")
+                ? (visibleActivePane === "memos" ? "block lg:block lg:bg-white/75 lg:backdrop-blur-lg" : "hidden lg:block lg:bg-white/75 lg:backdrop-blur-lg")
+                : (visibleActivePane === "memos" ? "block lg:hidden" : "hidden lg:hidden")
             )}
           >
             <MemoListPane
@@ -2476,7 +2478,7 @@ export const WorkspaceApp = ({
             />
           </section>
 
-          <section className={cn("min-h-0 min-w-0 bg-white lg:block", activePane === "editor" ? "block" : "hidden")}>
+          <section className={cn("min-h-0 min-w-0 bg-white lg:block", visibleActivePane === "editor" ? "block" : "hidden")}>
             {shouldRenderRightPane && (
               <Suspense fallback={<PaneLoadingFallback label={rightPaneLoadingLabel} />}>
                 {rightView === "settings" ? (
@@ -2623,7 +2625,7 @@ export const WorkspaceApp = ({
           onConfirm={() => setAppNoticeDialog(null)}
         />
       )}
-      {activePane !== "editor" && !memoSelectionModeActive && (
+      {visibleActivePane !== "editor" && !memoSelectionModeActive && (
         <MobileBottomNav
           activeItem={mobileBottomNavActive}
           canCreateMemo={canCreateMemo && memoView !== "trash"}
