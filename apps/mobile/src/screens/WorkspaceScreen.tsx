@@ -58,6 +58,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { ApiToken, MemoDetail, MemoRevision, MemoSummary, Notebook, ResourceListItem, TagSummary } from "@edgeever/shared";
+import { clearMobileMemoDraft, readMobileMemoDraft, writeMobileMemoDraft } from "../lib/mobile-drafts";
 import { useSession } from "../lib/session";
 import {
   emptyMobileSyncQueueSummary,
@@ -2494,16 +2495,70 @@ const EditMemoModal = ({
   const [contentSelection, setContentSelection] = useState<TextSelection>({ start: 0, end: 0 });
   const [notebookId, setNotebookId] = useState("");
   const [tagsText, setTagsText] = useState("");
+  const [draftLoaded, setDraftLoaded] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
     if (memo) {
+      setDraftLoaded(false);
       setTitle(memo.title?.trim() || "");
       setContentMarkdown(memo.contentMarkdown || "");
       setContentSelection({ start: 0, end: 0 });
       setNotebookId(memo.notebookId);
       setTagsText(memo.tags.join(", "));
+      readMobileMemoDraft(memo.id).then((draft) => {
+        if (!mounted) {
+          return;
+        }
+
+        if (draft && Date.parse(draft.updatedAt) >= Date.parse(memo.updatedAt)) {
+          setTitle(draft.title);
+          setContentMarkdown(draft.contentMarkdown);
+          setNotebookId(draft.notebookId);
+          setTagsText(draft.tagsText);
+        }
+
+        setDraftLoaded(true);
+      });
+    } else {
+      setDraftLoaded(false);
     }
+
+    return () => {
+      mounted = false;
+    };
   }, [memo]);
+
+  useEffect(() => {
+    if (!memo || !draftLoaded) {
+      return;
+    }
+
+    const hasDraftChanges =
+      title !== (memo.title?.trim() || "") ||
+      contentMarkdown !== (memo.contentMarkdown || "") ||
+      notebookId !== memo.notebookId ||
+      tagsText !== memo.tags.join(", ");
+
+    if (!hasDraftChanges) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      void writeMobileMemoDraft({
+        memoId: memo.id,
+        expectedRevision: memo.revision,
+        title,
+        contentMarkdown,
+        notebookId,
+        tagsText,
+        updatedAt: new Date().toISOString(),
+      });
+    }, 350);
+
+    return () => clearTimeout(timeout);
+  }, [contentMarkdown, draftLoaded, memo, notebookId, tagsText, title]);
 
   const handleSave = () => {
     if (!memo || updateMutation.isPending) {
@@ -2521,7 +2576,10 @@ const EditMemoModal = ({
         },
       },
       {
-        onSuccess: onSaved,
+        onSuccess: async (savedMemo) => {
+          await clearMobileMemoDraft(savedMemo.id);
+          onSaved(savedMemo);
+        },
         onError: async (error) => {
           if (!shouldQueueMobileMemoSaveError(error)) {
             return;
@@ -2535,6 +2593,7 @@ const EditMemoModal = ({
             notebookId,
             tags: parseTags(tagsText),
           });
+          await clearMobileMemoDraft(memo.id);
           await onQueued();
           Alert.alert("已保存到本地队列", "网络恢复后可在设置页手动同步。");
         },
