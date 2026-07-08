@@ -1998,8 +1998,13 @@ const NotebookManagerModal = ({
   const [editingName, setEditingName] = useState("");
   const [editingParentId, setEditingParentId] = useState<string | null>(null);
   const [notebookSearchText, setNotebookSearchText] = useState("");
+  const [collapsedNotebookIds, setCollapsedNotebookIds] = useState<Set<string>>(() => new Set());
   const notebookOptions = flattenNotebooks(notebooks, notebookSortMode);
-  const visibleNotebookOptions = filterNotebookOptions(notebookOptions, notebookSearchText);
+  const notebookSearchQuery = notebookSearchText.trim();
+  const childNotebookIds = getNotebookParentIdSet(notebooks);
+  const visibleNotebookOptions = notebookSearchQuery
+    ? filterNotebookOptions(notebookOptions, notebookSearchText)
+    : filterCollapsedNotebookOptions(notebookOptions, collapsedNotebookIds);
 
   const invalidateNotebooks = async () => {
     await Promise.all([
@@ -2079,6 +2084,20 @@ const NotebookManagerModal = ({
     setTimeout(() => createNotebookInputRef.current?.focus(), 50);
   };
 
+  const toggleNotebookCollapsed = (notebookId: string) => {
+    setCollapsedNotebookIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(notebookId)) {
+        next.delete(notebookId);
+      } else {
+        next.add(notebookId);
+      }
+
+      return next;
+    });
+  };
+
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
       <SafeAreaView style={styles.modalSafeArea}>
@@ -2142,6 +2161,13 @@ const NotebookManagerModal = ({
 
             return (
               <View key={notebook.id} style={[styles.notebookManageRow, depth > 0 && { marginLeft: Math.min(depth * 14, 42) }]}>
+                {childNotebookIds.has(notebook.id) && !notebookSearchQuery ? (
+                  <Pressable accessibilityRole="button" onPress={() => toggleNotebookCollapsed(notebook.id)} style={styles.notebookTreeToggle}>
+                    {collapsedNotebookIds.has(notebook.id) ? <ChevronRight color="#64748b" size={17} /> : <ChevronDown color="#64748b" size={17} />}
+                  </Pressable>
+                ) : (
+                  <View style={styles.notebookTreeTogglePlaceholder} />
+                )}
                 {editing ? (
                   <View style={styles.notebookEditBox}>
                     <TextInput onChangeText={setEditingName} style={styles.titleInput} value={editingName} />
