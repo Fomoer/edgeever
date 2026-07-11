@@ -187,6 +187,42 @@ textarea {
   color: inherit;
 }
 
+/* Highlight.js-compatible token classes emitted by Tiptap/lowlight. */
+.ProseMirror pre .hljs-comment,
+.ProseMirror pre .hljs-quote {
+  color: #64748b;
+}
+
+.ProseMirror pre .hljs-keyword,
+.ProseMirror pre .hljs-selector-tag,
+.ProseMirror pre .hljs-literal,
+.ProseMirror pre .hljs-name,
+.ProseMirror pre .hljs-attribute {
+  color: #7c3aed;
+}
+
+.ProseMirror pre .hljs-string,
+.ProseMirror pre .hljs-title,
+.ProseMirror pre .hljs-section,
+.ProseMirror pre .hljs-built_in,
+.ProseMirror pre .hljs-type {
+  color: #047857;
+}
+
+.ProseMirror pre .hljs-number,
+.ProseMirror pre .hljs-symbol,
+.ProseMirror pre .hljs-bullet,
+.ProseMirror pre .hljs-variable,
+.ProseMirror pre .hljs-template-variable {
+  color: #c2410c;
+}
+
+.ProseMirror pre .hljs-meta,
+.ProseMirror pre .hljs-regexp,
+.ProseMirror pre .hljs-link {
+  color: #0369a1;
+}
+
 .ProseMirror hr {
   margin: 1.5rem 0;
   border: 0;

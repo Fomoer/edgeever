@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getActiveBlockValue } from "@/lib/app-helpers";
+import { CODE_BLOCK_LANGUAGES, getCodeBlockLanguageValue } from "@/lib/code-block";
 
 const EditorToolbarButton = ({
   active = false,
@@ -87,6 +88,9 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
   const editorReady = isToolbarEditorReady(editor);
   const disabled = readOnly || !editorReady;
   const blockValue = getActiveBlockValue(editor);
+  const codeBlockLanguage = editorReady
+    ? getCodeBlockLanguageValue(editor.getAttributes("codeBlock").language)
+    : "plaintext";
   const isActive = (name: string) => {
     if (!editorReady) {
       return false;
@@ -257,6 +261,29 @@ export const EditorToolbar = ({ editor, readOnly }: { editor: Editor | null; rea
           >
             <SquareCode className="h-4 w-4" />
           </EditorToolbarButton>
+          {isActive("codeBlock") && (
+            <Select
+              value={codeBlockLanguage}
+              disabled={disabled}
+              onValueChange={(value) =>
+                run((current) => current.chain().focus().updateAttributes("codeBlock", { language: value }).run())
+              }
+            >
+              <SelectTrigger
+                className="h-8 w-32 shrink-0 whitespace-nowrap border-slate-200 bg-white text-xs text-slate-800 [&>span]:truncate [&>span]:whitespace-nowrap"
+                aria-label={t("editorToolbar.codeLanguage")}
+              >
+                <SelectValue placeholder={t("editorToolbar.plainText")} />
+              </SelectTrigger>
+              <SelectContent className="bg-white border border-slate-200 rounded-md py-1 shadow-md">
+                {CODE_BLOCK_LANGUAGES.map((language) => (
+                  <SelectItem key={language.value} value={language.value}>
+                    {language.value === "plaintext" ? t("editorToolbar.plainText") : language.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <EditorToolbarButton
             title={t("editorToolbar.horizontalRule")}
             disabled={disabled}

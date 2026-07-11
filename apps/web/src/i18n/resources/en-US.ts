@@ -447,6 +447,8 @@ export const enUS = {
     orderedList: "Numbered list",
     quote: "Quote",
     codeBlock: "Code block",
+    codeLanguage: "Code language",
+    plainText: "Plain text",
     horizontalRule: "Divider",
   },
   mobileNotebookPicker: {

@@ -447,6 +447,8 @@ export const zhCN = {
     orderedList: "有序列表",
     quote: "引用",
     codeBlock: "代码块",
+    codeLanguage: "代码语言",
+    plainText: "纯文本",
     horizontalRule: "分割线",
   },
   mobileNotebookPicker: {
