@@ -43,7 +43,9 @@ Agent 应优先按 [AI Agent Cloudflare Deployment](docs/agent-deploy-cloudflare
 
 ### 手动部署
 
-关于手动安装和更新的详细步骤，请参考 [Cloudflare 手动部署指南](docs/manual-deploy.md)。
+关于手动安装和更新的详细步骤，请参考 [Cloudflare 手动部署指南](docs/manual-deploy.zh-CN.md)。
+
+推荐优先使用自动化辅助命令。如果选择完全手动创建 Cloudflare 资源，必须先在 `.env.local` 中完成 D1 ID、R2 bucket、密码 hash 和 400 天会话期限等配置，再执行 `bun run deploy`。
 
 
 ## 功能

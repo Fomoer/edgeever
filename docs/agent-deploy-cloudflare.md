@@ -86,7 +86,7 @@ Chinese version:
    bun run deploy
    ```
 
-   `bun run deploy` builds the web app, applies remote D1 migrations, and deploys the Worker. During deploy, `scripts/run-wrangler.mjs` uploads `EDGE_EVER_AUTH_PASSWORD_HASH` as a Worker secret via a generated `.env.wrangler.generated*.secrets` file.
+   `bun run deploy` builds the web app, applies remote D1 migrations, and deploys the Worker. During deploy, `scripts/run-wrangler.mjs` uploads `EDGE_EVER_AUTH_PASSWORD_HASH` as a Worker Secret via a generated `.env.wrangler.generated*.secrets` file, then synchronizes it again with `wrangler secret put` after a successful deployment so the first login does not depend on the bulk secrets upload alone.
 
 7. Verify the result.
 
@@ -109,6 +109,7 @@ EDGE_EVER_D1_DATABASE_NAME=edgeever
 EDGE_EVER_R2_BUCKET_NAME=edgeever-resources
 EDGE_EVER_R2_PREVIEW_BUCKET_NAME=edgeever-resources-preview
 EDGE_EVER_AUTH_USERNAME=admin
+EDGE_EVER_SESSION_TTL_DAYS=400
 EDGE_EVER_CUSTOM_DOMAIN=notes.example.com
 ```
 

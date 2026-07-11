@@ -1,71 +1,80 @@
-# Cloudflare 手动部署指南
+# Cloudflare Manual Deployment Guide
 
-如果你熟悉 Cloudflare 和命令行，或者想自定义/精细控制部署流程，可以按照以下指南进行手动部署与后续更新。
+If you are comfortable with Cloudflare and the command line, or prefer customized control over the deployment process, follow this guide for manual deployment and future updates.
 
-> 💡 **提示**：如果是通过 AI 助手（Claude Code、Codex、Antigravity、Cursor、Trae 等）进行部署，AI 助手应优先参考 [AI Agent Cloudflare Deployment](agent-deploy-cloudflare.md) 约定。
+> 💡 **Tip**: If you are deploying using an AI assistant (such as Claude Code, Codex, Antigravity, Cursor, or Trae), the agent should follow the [AI Agent Cloudflare Deployment](agent-deploy-cloudflare.md) runbook.
 
-## 部署步骤
+## Deployment Steps
 
-1. **Fork 官方仓库**：
-   访问并 Fork 官方仓库：[https://github.com/tianma-if/edgeever](https://github.com/tianma-if/edgeever)
+1. **Fork the official repository**:
+   Visit and fork the official repository: [https://github.com/tianma-if/edgeever](https://github.com/tianma-if/edgeever)
 
-2. **Clone 你的 Fork 仓库**：
+2. **Clone your fork**:
    ```sh
-   git clone <你的 Fork 仓库 URL>
+   git clone <your fork repository URL>
    cd edgeever
    ```
 
-3. **使用自动化辅助命令部署**：
+3. **Deploy with the automated helper commands**:
    ```sh
-   # 复制配置文件模板
+   # Copy the configuration template
    cp .env.local.example .env.local
-   
-   # 安装依赖
+
+   # Install dependencies
    bun install
-   
-   # 执行部署初始化，并设置首次登录密码
-   EDGE_EVER_PASSWORD='<你的密码>' bun run deploy:setup
-   
-   # 诊断部署环境与配置
+
+   # Initialize deployment resources and set the first login password
+   EDGE_EVER_PASSWORD='<your password>' bun run deploy:setup
+
+   # Check the deployment environment and configurations
    bun run deploy:doctor
-   
-   # 执行部署
+
+   # Deploy to Cloudflare
    bun run deploy
    ```
 
-### 完全手动创建 Cloudflare 资源
+### Creating Cloudflare Resources Manually
 
-如果你不想使用 `deploy:setup` 自动化脚本，也可以完全手动使用 Cloudflare CLI (Wrangler) 创建资源：
+If you prefer not to use the automated `deploy:setup` helper, you can create the resources manually using Cloudflare CLI (Wrangler):
 
 ```sh
-# 复制配置文件模板并安装依赖
+# Copy configuration template and install dependencies
 cp .env.local.example .env.local
 bun install
 
-# 手动创建 D1 数据库
+# Create the D1 database
 bunx wrangler d1 create edgeever
 
-# 手动创建 R2 存储桶
+# Create the R2 bucket
 bunx wrangler r2 bucket create edgeever-resources
 
-# 生成密码 hash（用于后台验证）
-bun run auth:hash -- <你的密码>
+# Generate the password hash
+bun run auth:hash -- <your password>
 
-# 执行部署
+# Edit .env.local and fill in at least the generated resource and password values
+# EDGE_EVER_D1_DATABASE_ID=<database_id returned by the D1 command>
+# EDGE_EVER_R2_BUCKET_NAME=edgeever-resources
+# EDGE_EVER_AUTH_PASSWORD_HASH=<hash generated above>
+# EDGE_EVER_SESSION_TTL_DAYS=400
+
+# Validate the completed configuration before deploying
+bun run deploy:doctor
 bun run deploy
 ```
 
-部署完成后，将 D1 创建命令返回的 `database_id` 以及生成的密码 hash 手动填入本机 `.env.local` 文件中。
+Before running `bun run deploy`, copy the D1 `database_id`, R2 bucket name, and generated password hash into your local `.env.local` file. Keep the session lifetime at the template default of `400` days; the server also caps larger values at 400 days.
+
+`bun run deploy` builds the web app, applies remote D1 migrations, deploys the Worker, and uploads `EDGE_EVER_AUTH_PASSWORD_HASH` as a Worker Secret. After a successful deployment, the script also synchronizes that Secret through `wrangler secret put` to ensure the first login works. Verify the deployment by signing in with `EDGE_EVER_AUTH_USERNAME` and the original password used to generate the hash.
 
 ---
 
-## 更新到最新版
+## Updating to the Latest Version
 
-当官方仓库发布新版本时，如果你的实例是通过 Fork 部署的，可以按照以下步骤拉取最新代码并更新：
+When a new version is released, you can sync your fork and redeploy to apply updates:
 
-1. 打开你自己的 EdgeEver Fork 仓库页面。
-2. 点击页面上的 **Sync fork**，将官方仓库的最新代码同步到你的 Fork。
-3. 在本地项目目录中拉取更新并重新部署：
+1. Open your EdgeEver fork on GitHub.
+2. Click **Sync fork** to pull the latest official code into your fork.
+3. Pull the updates locally and redeploy:
    ```sh
    git pull
    bun install
@@ -73,4 +82,4 @@ bun run deploy
    bun run deploy
    ```
 
-> ⚠️ **注意**：同步 Fork 仅仅更新了你 GitHub 仓库里的代码，并不会自动更新已经部署在 Cloudflare 的 Worker/Pages 实例。必须在本地（或通过 Agent）重新执行部署命令，更新才会生效。
+> ⚠️ **Important**: Syncing the fork on GitHub only updates your repository code. It does not redeploy your Cloudflare instance. You must redeploy locally (or via an Agent) for the updates to take effect.

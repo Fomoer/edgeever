@@ -41,7 +41,9 @@ Agents should follow [AI Agent Cloudflare Deployment](docs/agent-deploy-cloudfla
 
 ### Manual Deployment
 
-Please refer to the [Cloudflare Manual Deployment Guide](docs/manual-deploy.en-US.md) for step-by-step instructions on manual installation and updating.
+Please refer to the [Cloudflare Manual Deployment Guide](docs/manual-deploy.md) for step-by-step instructions on manual installation and updating.
+
+The automated helper commands are recommended. If you create the Cloudflare resources manually, finish configuring `.env.local`—including the D1 ID, R2 bucket, password hash, and the 400-day session limit—before running `bun run deploy`.
 
 
 ## Features
