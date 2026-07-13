@@ -354,6 +354,7 @@ export const MemoListPane = ({
   onOpenTags,
   onOpenAssets,
   onOpenTrash,
+  onBackFromTrash,
   onOpenSettings,
   onSyncMemos,
   onCreateMemo,
@@ -425,6 +426,7 @@ export const MemoListPane = ({
   onOpenTags: () => void;
   onOpenAssets: () => void;
   onOpenTrash: () => void;
+  onBackFromTrash: () => void;
   onOpenSettings: () => void;
   onSyncMemos: () => void;
   onCreateMemo: () => void;
@@ -978,6 +980,17 @@ export const MemoListPane = ({
         {!mobileSearchActive && (
           <div className="mb-3 flex items-center justify-between gap-3 lg:hidden">
             <div className="flex min-w-0 items-center gap-2">
+              {view === "trash" && (
+                <button
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                  type="button"
+                  title={t("notebookPane.backToList")}
+                  aria-label={t("notebookPane.backToList")}
+                  onClick={onBackFromTrash}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              )}
               <button
                 className="flex min-w-0 items-center gap-1 rounded-md px-1 py-1 text-left transition hover:bg-slate-100 lg:hidden"
                 type="button"
@@ -1008,10 +1021,24 @@ export const MemoListPane = ({
           </div>
         )}
 
-        <div className="mb-3 hidden min-w-0 lg:block">
-          <div className="truncate text-lg font-semibold leading-6 text-slate-950">{listTitle}</div>
-          <div className="mt-0.5 truncate text-xs text-slate-500">
-            {listContextLabel} · {listCountLabel}
+        <div className="mb-3 hidden min-w-0 lg:flex items-start gap-1">
+          {view === "trash" && (
+            <Button
+              className="-ml-2 mt-0.5 shrink-0"
+              size="icon"
+              variant="ghost"
+              title={t("notebookPane.backToList")}
+              aria-label={t("notebookPane.backToList")}
+              onClick={onBackFromTrash}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          )}
+          <div className="min-w-0">
+            <div className="truncate text-lg font-semibold leading-6 text-slate-950">{listTitle}</div>
+            <div className="mt-0.5 truncate text-xs text-slate-500">
+              {listContextLabel} · {listCountLabel}
+            </div>
           </div>
         </div>
 

@@ -2444,6 +2444,7 @@ export const WorkspaceApp = ({
                 setSelectedMemoId(null);
                 setActivePane("memos");
               }}
+              onBackFromTrash={handleSelectAllMemos}
               onOpenMemo={(memoId) => {
                 navigateWorkspaceHome();
                 setRightView("editor");
