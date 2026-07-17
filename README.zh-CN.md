@@ -72,7 +72,7 @@ Agent 应优先按 [AI Agent Cloudflare Deployment](docs/agent-deploy-cloudflare
 
 关于首次手动安装、Cloudflare 资源配置与紧急修复，请参考 [Cloudflare 手动部署指南](docs/manual-deploy.zh-CN.md)。首次部署后，请配置 Cloudflare Workers Builds；之后通过 GitHub **Sync fork** 或推送 `main` 自动更新。
 
-推荐优先使用自动化辅助命令。配置模板使用 `admin` / `admin123` 作为初始登录账号密码，之后可在个人设置中修改密码。如果选择完全手动创建 Cloudflare 资源，必须先在 `.env.local` 中完成 D1 ID、R2 bucket 和 400 天会话期限等配置，再执行 `bun run deploy`；新部署直接配置明文的 `EDGE_EVER_AUTH_PASSWORD`，已有实例仍兼容 `EDGE_EVER_AUTH_PASSWORD_HASH`。该命令仅用于首次安装和紧急修复；日常更新由 Workers Builds 自动完成。
+推荐优先使用自动化辅助命令。配置模板使用 `admin` / `admin123` 作为初始登录账号密码，之后可在个人设置中修改密码。如果选择完全手动创建 Cloudflare 资源，必须先在 `.env.local` 中完成 D1 ID、R2 bucket 和 400 天会话期限等配置，再执行 `bun run deploy`。
 
 
 ## 多账号登录

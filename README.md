@@ -75,7 +75,7 @@ After the first deployment, see [Cloudflare Workers Builds](docs/cloudflare-work
 
 Please refer to the [Cloudflare Manual Deployment Guide](docs/manual-deploy.md) for first-time manual installation, Cloudflare resource setup, and emergency recovery. After the first deployment, connect Workers Builds; future updates arrive through GitHub **Sync fork** or pushes to `main`.
 
-The automated helper commands are recommended. The template uses `admin` / `admin123` for the initial login, and the password can be changed later in Personal Settings. If you create the Cloudflare resources manually, finish configuring `.env.local`—including the D1 ID, R2 bucket, and the 400-day session limit—before running `bun run deploy`. New deployments should configure the plaintext `EDGE_EVER_AUTH_PASSWORD`; existing installations that use `EDGE_EVER_AUTH_PASSWORD_HASH` remain supported. Use that command only for first installation and emergency recovery; Workers Builds handles routine updates.
+The automated helper commands are recommended. The template uses `admin` / `admin123` for the initial login, and the password can be changed later in Personal Settings. If you create the Cloudflare resources manually, finish configuring `.env.local`—including the D1 ID, R2 bucket, and the 400-day session limit—before running `bun run deploy`.
 
 
 ## Multi-Account Login
