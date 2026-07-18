@@ -79,7 +79,7 @@ fi
 PLAY_ARCHS="${EDGE_EVER_ANDROID_ARCHS:-armeabi-v7a,arm64-v8a,x86,x86_64}"
 KEYSTORE_FILE="$(cd "$(dirname "$ANDROID_KEYSTORE_FILE")" && pwd)/$(basename "$ANDROID_KEYSTORE_FILE")"
 
-echo "构建 Play 签名 AAB（$PLAY_ARCHS）..."
+echo "构建 Play 签名 AAB（${PLAY_ARCHS}）..."
 ./gradlew bundleRelease \
   "${COMMON_ARGS[@]}" \
   -PreactNativeArchitectures="$PLAY_ARCHS" \
