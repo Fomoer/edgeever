@@ -553,7 +553,14 @@ export const WorkspaceScreen = () => {
   const canToggleVisibleSelection = visibleMemos.length > 0;
   const allVisibleMemosSelected = canToggleVisibleSelection && visibleMemos.every((memo) => selectedMemoIds.has(memo.id));
   const nextSelectionPinValue = selectedMemos.some((memo) => !memo.isPinned);
-  const canCreateMemo = memoView !== "trash" && notebooks.length > 0;
+  const defaultMemoNotebookId = notebooks.find(
+    (notebook) => notebook.id === "nb_inbox" || notebook.slug === "inbox" || notebook.name === "等待分类"
+  )?.id ?? "";
+  const canCreateMemo = memoView !== "trash" && Boolean(defaultMemoNotebookId);
+  const openCreateMemo = () => {
+    beginEditorStartup();
+    setCreateOpen(true);
+  };
 
   useEffect(() => {
     if (selectedMemo && !selectedMemo.isDeleted) {
@@ -1031,7 +1038,7 @@ export const WorkspaceScreen = () => {
           memoView={memoView}
           memos={visibleMemos}
           notebooks={notebooks}
-          onCreate={() => setCreateOpen(true)}
+          onCreate={openCreateMemo}
           onClearSelection={clearSelection}
           onFilterModeChange={setMemoFilterMode}
           onOpenActions={() => setNotesActionsOpen(true)}
@@ -1124,21 +1131,16 @@ export const WorkspaceScreen = () => {
       /> : null}
 
       {createOpen ? <CreateMemoModal
-        activeNotebookId={activeNotebookId}
         baseUrl={session?.baseUrl ?? ""}
         dataScope={dataScope}
+        defaultNotebookId={defaultMemoNotebookId}
         imageCompressionEnabled={imageCompressionEnabled}
         notebooks={notebooks}
-        onClose={() => setCreateOpen(false)}
-        onCreated={(memo) => {
+        onCreated={() => {
           setCreateOpen(false);
           setActiveView("notes");
           setMemoView("notebook");
-          setActiveNotebookId(memo.notebookId);
-          setSelectedMemoId(memo.id);
-          if (!memo.id.startsWith("local:")) {
-            void openRichEditor(memo);
-          }
+          setSelectedMemoId(null);
         }}
         onQueued={runAutomaticSync}
         syncQueueScope={syncQueueScope}
@@ -1252,7 +1254,7 @@ export const WorkspaceScreen = () => {
           accessibilityLabel="新建笔记"
           accessibilityRole="button"
           disabled={!canCreateMemo}
-          onPress={() => setCreateOpen(true)}
+          onPress={openCreateMemo}
           style={[styles.bottomCreateButton, !canCreateMemo && styles.bottomCreateButtonDisabled]}
         >
           <Plus color={canCreateMemo ? "#ffffff" : "#e2e8f0"} size={28} />
@@ -1916,23 +1918,21 @@ const SettingsGroup = ({ children, icon, title }: { children: ReactNode; icon?: 
 );
 
 const CreateMemoModal = ({
-  activeNotebookId,
   baseUrl,
   dataScope,
+  defaultNotebookId,
   imageCompressionEnabled,
   notebooks,
-  onClose,
   onCreated,
   onQueued,
   syncQueueScope,
   visible,
 }: {
-  activeNotebookId: string;
   baseUrl: string;
   dataScope: string;
+  defaultNotebookId: string;
   imageCompressionEnabled: boolean;
   notebooks: Notebook[];
-  onClose: () => void;
   onCreated: (memo: MemoDetail) => void;
   onQueued: () => void | Promise<void>;
   syncQueueScope: string;
@@ -1942,12 +1942,12 @@ const CreateMemoModal = ({
   const queryClient = useQueryClient();
   const { resolvedLocale } = useMobileLocale();
   const { resolvedTheme } = useMobileTheme();
-  const fallbackNotebookId = activeNotebookId !== ALL_NOTES_ID ? activeNotebookId : notebooks[0]?.id ?? "";
+  const fallbackNotebookId = defaultNotebookId;
   const editorRef = useRef<LocalTiptapEditorRef>(null);
   const resourceDataUrlCacheRef = useRef(new Map<string, Promise<string | null>>());
   const contentJsonRef = useRef<TiptapDoc>(markdownToDoc(""));
   const contentMarkdownRef = useRef("");
-  const dirtyRef = useRef(false);
+  const draftVersionRef = useRef(0);
   const flushResolverRef = useRef<(() => void) | null>(null);
   const materializedMemoRef = useRef<MemoDetail | null>(null);
   const [notebookId, setNotebookId] = useState(fallbackNotebookId);
@@ -1956,7 +1956,6 @@ const CreateMemoModal = ({
   const [contentMarkdown, setContentMarkdown] = useState("");
   const [notebookPickerOpen, setNotebookPickerOpen] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
-  const [draftRestored, setDraftRestored] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const [imageOperation, setImageOperation] = useState<"idle" | "creating" | "uploading">("idle");
@@ -1975,7 +1974,6 @@ const CreateMemoModal = ({
     }
     let active = true;
     setDraftLoaded(false);
-    setDraftRestored(false);
     setEditorReady(false);
     void readMobileNewMemoDraft(dataScope).then((draft) => {
       if (!active) {
@@ -1987,13 +1985,12 @@ const CreateMemoModal = ({
       const markdown = draft?.contentMarkdown ?? "";
       contentMarkdownRef.current = markdown;
       contentJsonRef.current = markdownToDoc(markdown);
-      dirtyRef.current = Boolean(draft);
+      draftVersionRef.current = 0;
       setTitle(draft?.title ?? "");
       setTagsText(draft?.tagsText ?? "");
       setContentMarkdown(markdown);
       setNotebookId(restoredNotebookId);
-      setDirty(Boolean(draft));
-      setDraftRestored(Boolean(draft));
+      setDirty(false);
       setDraftLoaded(true);
     });
     return () => {
@@ -2005,10 +2002,11 @@ const CreateMemoModal = ({
     if (!visible || !draftLoaded || !dirty) {
       return;
     }
+    const draftVersion = draftVersionRef.current;
     const timeout = setTimeout(() => {
       const materializedMemo = materializedMemoRef.current;
-      if (materializedMemo) {
-        void writeMobileMemoDraft({
+      const writeDraft = materializedMemo
+        ? writeMobileMemoDraft({
           memoId: materializedMemo.id,
           expectedRevision: materializedMemo.revision,
           title,
@@ -2016,16 +2014,19 @@ const CreateMemoModal = ({
           notebookId: targetNotebookId,
           tagsText,
           updatedAt: new Date().toISOString(),
-        });
-      } else {
-        void writeMobileNewMemoDraft(dataScope, {
+        })
+        : writeMobileNewMemoDraft(dataScope, {
           title,
           contentMarkdown: contentMarkdownRef.current,
           notebookId: targetNotebookId,
           tagsText,
           updatedAt: new Date().toISOString(),
         });
-      }
+      void writeDraft.then(() => {
+        if (draftVersionRef.current === draftVersion) {
+          setDirty(false);
+        }
+      });
     }, 350);
     return () => clearTimeout(timeout);
   }, [dataScope, dirty, draftLoaded, tagsText, targetNotebookId, title, visible, contentMarkdown]);
@@ -2105,13 +2106,13 @@ const CreateMemoModal = ({
       contentMarkdownRef.current = "";
       contentJsonRef.current = markdownToDoc("");
       materializedMemoRef.current = null;
-      dirtyRef.current = false;
+      draftVersionRef.current += 1;
       setDirty(false);
       await clearMobileNewMemoDraft(dataScope);
       if (materializedMemoId) {
         await clearMobileMemoDraft(materializedMemoId);
       }
-      await onQueued();
+      void onQueued();
       onCreated(memo);
     },
   });
@@ -2172,7 +2173,7 @@ const CreateMemoModal = ({
   };
 
   const markDirty = () => {
-    dirtyRef.current = true;
+    draftVersionRef.current += 1;
     setDirty(true);
   };
 
@@ -2201,39 +2202,7 @@ const CreateMemoModal = ({
       return;
     }
     await flushEditor();
-    if (materializedMemoRef.current) {
-      createMutation.mutate();
-      return;
-    }
-    if (!dirtyRef.current) {
-      onClose();
-      return;
-    }
-    Alert.alert("退出新建笔记？", "内容已自动保存为本地草稿，下次新建时会继续恢复。", [
-      { text: "继续编辑", style: "cancel" },
-      {
-        text: "放弃草稿",
-        style: "destructive",
-        onPress: () => {
-          void clearMobileNewMemoDraft(dataScope);
-          dirtyRef.current = false;
-          onClose();
-        },
-      },
-      {
-        text: "保留并退出",
-        onPress: () => {
-          void writeMobileNewMemoDraft(dataScope, {
-            title,
-            contentMarkdown: contentMarkdownRef.current,
-            notebookId: targetNotebookId,
-            tagsText,
-            updatedAt: new Date().toISOString(),
-          });
-          onClose();
-        },
-      },
-    ]);
+    createMutation.mutate();
   };
 
   const loadEditorResource = useCallback((source: string) => {
@@ -2290,7 +2259,7 @@ const CreateMemoModal = ({
           </Pressable>
           <View style={styles.createMemoHeaderActions}>
             <Text style={[styles.createMemoStatus, createMutation.isPending && styles.createMemoStatusActive]}>
-              {imageOperation === "creating" ? "正在创建" : imageOperation === "uploading" ? "正在上传" : createMutation.isPending ? "保存中" : dirty ? "本地草稿" : editorReady ? "已保存" : "正在启动"}
+              {imageOperation === "creating" ? "正在创建" : imageOperation === "uploading" ? "正在上传" : createMutation.isPending || dirty ? "保存中" : editorReady ? "已保存" : "正在启动"}
             </Text>
             <Pressable
               accessibilityLabel="完成新建笔记"
@@ -2304,7 +2273,6 @@ const CreateMemoModal = ({
         </View>
 
         <View style={styles.createMemoMain}>
-          {draftRestored ? <Text style={styles.createMemoDraftNotice}>已恢复上次未完成的本地草稿</Text> : null}
           <TextInput
             autoCorrect
             accessibilityLabel="笔记标题"
@@ -6815,15 +6783,6 @@ const baseWorkspaceStyles = StyleSheet.create({
     paddingBottom: 8,
     paddingHorizontal: 12,
     paddingTop: 14,
-  },
-  createMemoDraftNotice: {
-    backgroundColor: "#fffbeb",
-    borderRadius: 8,
-    color: "#92400e",
-    fontSize: 12,
-    marginBottom: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
   },
   createMemoTitleInput: {
     color: "#0f172a",

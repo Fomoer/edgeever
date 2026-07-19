@@ -242,7 +242,7 @@ const PrimaryButton = ({ disabled, label, onPress }: { disabled: boolean; label:
 
 const baseAccountSecurityStyles = StyleSheet.create({
   content: { gap: 14, padding: 16, paddingBottom: 40 },
-  hero: { alignItems: "center", backgroundColor: "#ecfdf3", borderRadius: 14, flexDirection: "row", gap: 12, padding: 16 },
+  hero: { alignItems: "flex-start", backgroundColor: "transparent", flexDirection: "row", gap: 10 },
   sectionHeader: { alignItems: "center", flexDirection: "row", gap: 12 },
   flex: { flex: 1 },
   cardTitle: { color: "#17211a", fontSize: 16, fontWeight: "800" },
