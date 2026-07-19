@@ -1,3 +1,5 @@
+import { t } from "./i18n";
+
 export type ExtensionSettings = {
   instanceUrl: string;
   token: string;
@@ -47,14 +49,14 @@ export const requestInstancePermission = async (instanceUrl: string) => {
   const origin = getInstanceOrigin(instanceUrl);
   const granted = await chrome.permissions.request({ origins: [`${origin}/*`] });
   if (!granted) {
-    throw new Error("需要允许插件访问你的 EdgeEver 实例。");
+    throw new Error(t("instancePermissionRequired"));
   }
 };
 
 export const edgeEverRequest = async <T>(settings: ExtensionSettings, path: string, init?: RequestInit): Promise<T> => {
   const instanceUrl = normalizeInstanceUrl(settings.instanceUrl);
   if (!instanceUrl || !settings.token) {
-    throw new Error("请先在插件设置中填写 EdgeEver 地址和 API Token。");
+    throw new Error(t("missingSettingsDetails"));
   }
 
   const response = await fetch(`${instanceUrl}${path}`, {
@@ -68,7 +70,7 @@ export const edgeEverRequest = async <T>(settings: ExtensionSettings, path: stri
 
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { error?: { message?: string } } | null;
-    throw new Error(body?.error?.message || `EdgeEver 请求失败（${response.status}）。`);
+    throw new Error(body?.error?.message || t("requestFailed", String(response.status)));
   }
 
   return response.json() as Promise<T>;

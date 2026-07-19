@@ -1,5 +1,8 @@
 import "./styles.css";
 import { getSettings, saveSettings, testConnection, type ExtensionSettings } from "./extension";
+import { localizeDocument, t } from "./i18n";
+
+localizeDocument();
 
 type NotebookSelect = {
   value: string;
@@ -32,7 +35,7 @@ const renderNotebooks = (notebooks: Array<{ id: string; name: string }>, selecte
     return;
   }
 
-  notebookSelect.replaceChildren(new Option("连接后自动使用第一个笔记本", ""));
+  notebookSelect.replaceChildren(new Option(t("autoFirstNotebook"), ""));
   for (const notebook of notebooks) {
     notebookSelect.add(new Option(notebook.name, notebook.id));
   }
@@ -48,14 +51,15 @@ const initialize = async () => {
 
 testButton?.addEventListener("click", async () => {
   testButton.disabled = true;
-  setStatus("正在连接……");
+  setStatus(t("connecting"));
   try {
     const settings = readSettings();
     const notebooks = await testConnection(settings);
     renderNotebooks(notebooks, notebookSelect?.value ?? "");
-    setStatus(`连接成功，共 ${notebooks.length} 个笔记本。`, "success");
+    const messageKey = notebooks.length === 1 ? "connectionSuccessOne" : "connectionSuccessMany";
+    setStatus(t(messageKey, String(notebooks.length)), "success");
   } catch (error) {
-    setStatus(error instanceof Error ? error.message : "连接失败。", "error");
+    setStatus(error instanceof Error ? error.message : t("connectionFailed"), "error");
   } finally {
     testButton.disabled = false;
   }
@@ -65,9 +69,9 @@ form?.addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
     await saveSettings(readSettings());
-    setStatus("设置已保存。", "success");
+    setStatus(t("settingsSaved"), "success");
   } catch (error) {
-    setStatus(error instanceof Error ? error.message : "保存失败。", "error");
+    setStatus(error instanceof Error ? error.message : t("settingsSaveFailed"), "error");
   }
 });
 

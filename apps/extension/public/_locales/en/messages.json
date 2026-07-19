@@ -1,0 +1,114 @@
+{
+  "extensionName": {
+    "message": "EdgeEver Web Clipper"
+  },
+  "extensionDescription": {
+    "message": "Save the current webpage or selected content to your self-hosted EdgeEver instance."
+  },
+  "actionTitle": {
+    "message": "Save to EdgeEver"
+  },
+  "webClipper": {
+    "message": "Web Clipper"
+  },
+  "popupDescription": {
+    "message": "Save the current webpage or selected content to your EdgeEver."
+  },
+  "saveCurrentPage": {
+    "message": "Save current page"
+  },
+  "pluginSettings": {
+    "message": "Extension settings"
+  },
+  "readingAndSaving": {
+    "message": "Reading and saving the webpage…"
+  },
+  "completePluginConfiguration": {
+    "message": "Please complete the extension setup"
+  },
+  "savedToEdgeEver": {
+    "message": "Saved to EdgeEver."
+  },
+  "saveFailed": {
+    "message": "Failed to save."
+  },
+  "optionsTitle": {
+    "message": "EdgeEver Web Clipper settings"
+  },
+  "instanceAddress": {
+    "message": "EdgeEver instance URL"
+  },
+  "tokenPlaceholder": {
+    "message": "Create one in EdgeEver settings"
+  },
+  "defaultNotebook": {
+    "message": "Default notebook"
+  },
+  "autoFirstNotebook": {
+    "message": "Use the first notebook automatically after connecting"
+  },
+  "testConnection": {
+    "message": "Test connection"
+  },
+  "saveSettings": {
+    "message": "Save settings"
+  },
+  "privacyPolicy": {
+    "message": "Privacy policy"
+  },
+  "connecting": {
+    "message": "Connecting…"
+  },
+  "connectionSuccessOne": {
+    "message": "Connected. Found 1 notebook."
+  },
+  "connectionSuccessMany": {
+    "message": "Connected. Found $COUNT$ notebooks.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "connectionFailed": {
+    "message": "Connection failed."
+  },
+  "settingsSaved": {
+    "message": "Settings saved."
+  },
+  "settingsSaveFailed": {
+    "message": "Failed to save settings."
+  },
+  "missingSettingsDetails": {
+    "message": "Enter the EdgeEver instance URL and API token in the extension settings first."
+  },
+  "instancePermissionRequired": {
+    "message": "Allow the extension to access your EdgeEver instance."
+  },
+  "requestFailed": {
+    "message": "EdgeEver request failed ($STATUS$).",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "sourceLabel": {
+    "message": "Source"
+  },
+  "capturedAtLabel": {
+    "message": "Captured at"
+  },
+  "noAvailableNotebooks": {
+    "message": "No notebooks are available in EdgeEver."
+  },
+  "currentPageNotFound": {
+    "message": "Could not find the current page."
+  },
+  "captureTimeout": {
+    "message": "Page extraction timed out. Please try again."
+  },
+  "emptyPageContent": {
+    "message": "(No readable content was found on this page)"
+  }
+}

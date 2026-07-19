@@ -1,0 +1,114 @@
+{
+  "extensionName": {
+    "message": "EdgeEver 网页剪藏"
+  },
+  "extensionDescription": {
+    "message": "将当前网页或选中的内容保存到你自托管的 EdgeEver 实例。"
+  },
+  "actionTitle": {
+    "message": "保存到 EdgeEver"
+  },
+  "webClipper": {
+    "message": "网页剪藏"
+  },
+  "popupDescription": {
+    "message": "保存当前网页或选中的内容到你的 EdgeEver。"
+  },
+  "saveCurrentPage": {
+    "message": "保存当前网页"
+  },
+  "pluginSettings": {
+    "message": "插件设置"
+  },
+  "readingAndSaving": {
+    "message": "正在读取网页并保存……"
+  },
+  "completePluginConfiguration": {
+    "message": "请先完成插件配置"
+  },
+  "savedToEdgeEver": {
+    "message": "已保存到 EdgeEver。"
+  },
+  "saveFailed": {
+    "message": "保存失败。"
+  },
+  "optionsTitle": {
+    "message": "EdgeEver Web Clipper 设置"
+  },
+  "instanceAddress": {
+    "message": "EdgeEver 实例地址"
+  },
+  "tokenPlaceholder": {
+    "message": "从 EdgeEver 设置中创建"
+  },
+  "defaultNotebook": {
+    "message": "默认笔记本"
+  },
+  "autoFirstNotebook": {
+    "message": "连接后自动使用第一个笔记本"
+  },
+  "testConnection": {
+    "message": "测试连接"
+  },
+  "saveSettings": {
+    "message": "保存设置"
+  },
+  "privacyPolicy": {
+    "message": "隐私政策"
+  },
+  "connecting": {
+    "message": "正在连接……"
+  },
+  "connectionSuccessOne": {
+    "message": "连接成功，共 1 个笔记本。"
+  },
+  "connectionSuccessMany": {
+    "message": "连接成功，共 $COUNT$ 个笔记本。",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "connectionFailed": {
+    "message": "连接失败。"
+  },
+  "settingsSaved": {
+    "message": "设置已保存。"
+  },
+  "settingsSaveFailed": {
+    "message": "保存失败。"
+  },
+  "missingSettingsDetails": {
+    "message": "请先在插件设置中填写 EdgeEver 地址和 API Token。"
+  },
+  "instancePermissionRequired": {
+    "message": "需要允许插件访问你的 EdgeEver 实例。"
+  },
+  "requestFailed": {
+    "message": "EdgeEver 请求失败（$STATUS$）。",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "sourceLabel": {
+    "message": "来源"
+  },
+  "capturedAtLabel": {
+    "message": "抓取时间"
+  },
+  "noAvailableNotebooks": {
+    "message": "EdgeEver 中没有可用的笔记本。"
+  },
+  "currentPageNotFound": {
+    "message": "找不到当前页面。"
+  },
+  "captureTimeout": {
+    "message": "网页内容提取超时，请重试。"
+  },
+  "emptyPageContent": {
+    "message": "（网页没有可提取的正文内容）"
+  }
+}

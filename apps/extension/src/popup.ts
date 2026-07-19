@@ -1,5 +1,8 @@
 import "./styles.css";
 import { getSettings, requestInstancePermission } from "./extension";
+import { localizeDocument, t } from "./i18n";
+
+localizeDocument();
 
 const saveButton = document.querySelector<HTMLButtonElement>("#save");
 const settingsButton = document.querySelector<HTMLButtonElement>("#settings");
@@ -14,23 +17,23 @@ const setStatus = (message: string, kind: "normal" | "error" | "success" = "norm
 
 saveButton?.addEventListener("click", async () => {
   saveButton.disabled = true;
-  setStatus("正在读取网页并保存……");
+  setStatus(t("readingAndSaving"));
 
   try {
     const settings = await getSettings();
     if (!settings.instanceUrl || !settings.token) {
-      throw new Error("请先打开插件设置。");
+      throw new Error(t("completePluginConfiguration"));
     }
 
     await requestInstancePermission(settings.instanceUrl);
     const response = await chrome.runtime.sendMessage({ type: "captureCurrentPage" });
     if (!response?.ok) {
-      throw new Error(response?.message || "保存失败。");
+      throw new Error(response?.message || t("saveFailed"));
     }
 
-    setStatus("已保存到 EdgeEver。", "success");
+    setStatus(t("savedToEdgeEver"), "success");
   } catch (error) {
-    setStatus(error instanceof Error ? error.message : "保存失败。", "error");
+    setStatus(error instanceof Error ? error.message : t("saveFailed"), "error");
   } finally {
     saveButton.disabled = false;
   }

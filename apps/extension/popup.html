@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>保存到 EdgeEver</title>
+    <title data-i18n="actionTitle">Save to EdgeEver</title>
   </head>
   <body>
     <main class="popup-shell">
@@ -11,16 +11,16 @@
         <img src="/icons/icon-32.png" width="32" height="32" alt="" />
         <div>
           <h1>EdgeEver</h1>
-          <p class="hint">网页剪藏</p>
+          <p class="hint" data-i18n="webClipper">Web Clipper</p>
         </div>
       </header>
-      <p class="popup-description">保存当前网页或选中的内容到你的 EdgeEver。</p>
+      <p class="popup-description" data-i18n="popupDescription">Save the current webpage or selected content to your EdgeEver.</p>
       <button id="save" class="save-button" type="button">
         <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
           <path d="M5 4.75A1.75 1.75 0 0 1 6.75 3h8.836c.464 0 .91.184 1.238.513l1.663 1.663c.329.328.513.774.513 1.238v12.836A1.75 1.75 0 0 1 17.25 21H6.75A1.75 1.75 0 0 1 5 19.25V4.75Z" />
           <path d="M8 3v5h7V3M8 21v-7h8v7" />
         </svg>
-        <span>保存当前网页</span>
+        <span data-i18n="saveCurrentPage">Save current page</span>
       </button>
       <p id="status" class="status" role="status"></p>
       <button id="settings" class="settings-button" type="button">
@@ -28,7 +28,7 @@
           <path d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z" />
           <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06L3.8 16.94l.06-.06A1.7 1.7 0 0 0 4.2 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2.4v-4h.1A1.7 1.7 0 0 0 4.2 8.6a1.7 1.7 0 0 0-.34-1.88L3.8 6.66 6.66 3.8l.06.06A1.7 1.7 0 0 0 8.6 4.2a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1v-.1h4v.1a1.7 1.7 0 0 0 1 1.7 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 8.6a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4h.1v4h-.1a1.7 1.7 0 0 0-1.7 1Z" />
         </svg>
-        <span>插件设置</span>
+        <span data-i18n="pluginSettings">Extension settings</span>
       </button>
     </main>
     <script type="module" src="/src/popup.ts"></script>

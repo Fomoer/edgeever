@@ -1,36 +1,36 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EdgeEver Web Clipper 设置</title>
+    <title data-i18n="optionsTitle">EdgeEver Web Clipper settings</title>
   </head>
   <body>
     <main class="options-shell">
-      <h1>EdgeEver Web Clipper</h1>
+      <h1 data-i18n="extensionName">EdgeEver Web Clipper</h1>
       <form id="settings-form">
         <label>
-          EdgeEver 实例地址
+          <span data-i18n="instanceAddress">EdgeEver instance URL</span>
           <input id="instance-url" type="url" placeholder="https://notes.example.com" required />
         </label>
         <label>
           API Token
-          <input id="token" type="password" placeholder="从 EdgeEver 设置中创建" required />
+          <input id="token" type="password" placeholder="Create one in EdgeEver settings" data-i18n-placeholder="tokenPlaceholder" required />
         </label>
         <label>
-          默认笔记本
+          <span data-i18n="defaultNotebook">Default notebook</span>
           <select id="notebook-id">
-            <option value="">连接后自动使用第一个笔记本</option>
+            <option value="" data-i18n="autoFirstNotebook">Use the first notebook automatically after connecting</option>
           </select>
         </label>
         <div class="actions">
-          <button id="test" type="button" class="secondary">测试连接</button>
-          <button id="save" type="submit">保存设置</button>
+          <button id="test" type="button" class="secondary" data-i18n="testConnection">Test connection</button>
+          <button id="save" type="submit" data-i18n="saveSettings">Save settings</button>
         </div>
         <p id="status" class="status" role="status"></p>
       </form>
       <p class="privacy-link">
-        <a href="https://edgeever.org/privacy" target="_blank" rel="noopener noreferrer">隐私政策</a>
+        <a href="https://edgeever.org/privacy" target="_blank" rel="noopener noreferrer" data-i18n="privacyPolicy">Privacy policy</a>
       </p>
     </main>
     <script type="module" src="/src/options.ts"></script>

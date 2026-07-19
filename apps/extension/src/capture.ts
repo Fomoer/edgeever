@@ -1,5 +1,6 @@
 import { Readability } from "@mozilla/readability";
 import TurndownService from "turndown";
+import { t } from "./i18n";
 
 type CapturedPage = {
   title: string;
@@ -43,7 +44,7 @@ const capturePage = (): CapturedPage => {
   return {
     title,
     url: location.href,
-    markdown: markdown || "（网页没有可提取的正文内容）",
+    markdown: markdown || t("emptyPageContent"),
   };
 };
 

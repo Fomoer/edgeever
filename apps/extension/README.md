@@ -12,6 +12,12 @@ Chrome/Edge Manifest V3 extension for saving the current webpage or selected tex
 
 The extension does not use a central relay service. The page content is sent directly to the EdgeEver instance configured by the user.
 
+## Localization
+
+The extension uses Chrome's native `chrome.i18n` support. English is the fallback locale, and Simplified Chinese is available for browsers whose UI language is Chinese.
+
+User-visible strings live in `public/_locales/<locale>/messages.json`. Add or update every supported locale when changing interface copy. Chrome Web Store listing translations are maintained separately in the developer dashboard; ready-to-paste English and Simplified Chinese copy is available in `STORE_LISTING.md`.
+
 ## Development
 
 From the repository root:
