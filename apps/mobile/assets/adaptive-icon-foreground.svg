@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="EdgeEver">
+  <rect x="14" y="10" width="36" height="44" rx="8" fill="#047857" />
   <path d="M24 23h18v5H30v5h11v5H30v6h13v5H24V23Z" fill="#f8fafc" />
-  <path d="M21 19h22" stroke="#6ee7b7" stroke-width="3" stroke-linecap="round" />
+  <path d="M19 16h26" stroke="#6ee7b7" stroke-width="3" stroke-linecap="round" />
 </svg>
