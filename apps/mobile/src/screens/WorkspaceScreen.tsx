@@ -70,14 +70,16 @@ import {
   StyleSheet,
   type StyleProp,
   Switch,
+  useWindowDimensions,
   Vibration,
   View,
+  type ViewStyle,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Alert, Pressable, Text, TextInput } from "../components/LocalizedText";
-import Markdown, { type RenderRules } from "react-native-markdown-display";
+import Markdown, { type ASTNode, type RenderRules } from "react-native-markdown-display";
 import { SvgXml } from "react-native-svg";
 import { buildGitHubFeedbackUrl, buildRevisionDiffRows, createExcerpt, docToMarkdown, docToText, getNotebookDescendantIds, markdownToDoc, resolveMemoContentDoc, type ApiToken, type AuthUser, type MemoDetail, type MemoRevision, type MemoSummary, type Notebook, type ResourceListItem, type RevisionDiffRow, type TagSummary, type TiptapDoc } from "@edgeever/shared";
 import { MOBILE_UI_METRICS, getMobileCenteredScrollOffset, getMobileNotebookSearchVisibleIds, toggleMobileMemoFilterMode, toggleMobileMemoSelection } from "@edgeever/shared/mobile-ui";
@@ -133,6 +135,9 @@ const resolveEditableMemoTitle = (title?: string | null) => {
 const MOBILE_APP_VERSION = Constants.expoConfig?.version ?? "0.1.2";
 const GITHUB_REPOSITORY_URL = "https://github.com/tianma-if/edgeever";
 const ANDROID_SYSTEM_NAVIGATION_FALLBACK = 48;
+const DETAIL_CONTENT_HORIZONTAL_PADDING = 16;
+const DETAIL_TABLE_FIT_COLUMN_COUNT = 3;
+const DETAIL_TABLE_MIN_COLUMN_WIDTH = 132;
 
 const formatExecutionEnvironment = (environment: string | null | undefined, localePreference: MobileLocaleMode = "system") => {
   const english = isEnglishMobileLocale(localePreference);
@@ -4020,6 +4025,7 @@ const MemoDetailModal = ({
 }) => {
   const { session } = useSession();
   const { resolvedTheme } = useMobileTheme();
+  const { width: viewportWidth } = useWindowDimensions();
   const safeAreaInsets = useSafeAreaInsets();
   const [actionsOpen, setActionsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -4031,18 +4037,71 @@ const MemoDetailModal = ({
     () => resolveMobileThemeStyles(detailMarkdownStyles, resolvedTheme),
     [resolvedTheme]
   );
-  const detailMarkdownRules = useMemo<RenderRules>(() => ({
-    image: (node, _children, _parents, markdownStyles) => (
-      <AuthenticatedResourceImage
-        alt={String(node.attributes.alt ?? "")}
-        fitAspect
-        key={node.key}
-        resizeMode="contain"
-        source={getAuthenticatedResourceSource(String(node.attributes.src ?? ""), session)}
-        style={markdownStyles._VIEW_SAFE_image}
-      />
-    ),
-  }), [session]);
+  const detailMarkdownRules = useMemo<RenderRules>(() => {
+    const availableTableWidth = Math.max(0, viewportWidth - DETAIL_CONTENT_HORIZONTAL_PADDING * 2);
+    const getTableColumnCount = (node: ASTNode, parents: ASTNode[]) => {
+      const table = node.type === "table" ? node : parents.find((parent) => parent.type === "table");
+      const tableSection = table?.children.find((child) => child.type === "thead" || child.type === "tbody");
+      const firstRow = tableSection?.children.find((child) => child.type === "tr");
+      return Math.max(1, firstRow?.children.filter((child) => child.type === "th" || child.type === "td").length ?? 1);
+    };
+    const renderTableCell = (node: ASTNode, children: ReactNode[], parents: ASTNode[], markdownStyles: Record<string, StyleProp<ViewStyle>>, isHeader: boolean) => {
+      const columnCount = getTableColumnCount(node, parents);
+      const row = parents.find((parent) => parent.type === "tr");
+      const cellIndex = row?.children.findIndex((child) => child.key === node.key) ?? -1;
+      const isLastCell = cellIndex === (row?.children.length ?? 0) - 1;
+      const wideCellStyle = columnCount > DETAIL_TABLE_FIT_COLUMN_COUNT
+        ? { flex: 0, width: DETAIL_TABLE_MIN_COLUMN_WIDTH }
+        : undefined;
+
+      return (
+        <View
+          key={node.key}
+          style={[
+            markdownStyles[isHeader ? "_VIEW_SAFE_th" : "_VIEW_SAFE_td"],
+            wideCellStyle,
+            !isLastCell && markdownStyles._VIEW_SAFE_tableCellDivider,
+          ]}
+        >
+          {children}
+        </View>
+      );
+    };
+
+    return {
+      image: (node, _children, _parents, markdownStyles) => (
+        <AuthenticatedResourceImage
+          alt={String(node.attributes.alt ?? "")}
+          fitAspect
+          key={node.key}
+          resizeMode="contain"
+          source={getAuthenticatedResourceSource(String(node.attributes.src ?? ""), session)}
+          style={markdownStyles._VIEW_SAFE_image}
+        />
+      ),
+      table: (node, children, parents, markdownStyles) => {
+        const columnCount = getTableColumnCount(node, parents);
+        const tableWidth = columnCount > DETAIL_TABLE_FIT_COLUMN_COUNT
+          ? columnCount * DETAIL_TABLE_MIN_COLUMN_WIDTH
+          : availableTableWidth;
+
+        return (
+          <ScrollView
+            contentContainerStyle={markdownStyles._VIEW_SAFE_tableScrollContent}
+            horizontal
+            key={node.key}
+            nestedScrollEnabled
+            showsHorizontalScrollIndicator={columnCount > DETAIL_TABLE_FIT_COLUMN_COUNT}
+            style={markdownStyles._VIEW_SAFE_tableScroll}
+          >
+            <View style={[markdownStyles._VIEW_SAFE_table, { width: tableWidth }]}>{children}</View>
+          </ScrollView>
+        );
+      },
+      td: (node, children, parents, markdownStyles) => renderTableCell(node, children, parents, markdownStyles, false),
+      th: (node, children, parents, markdownStyles) => renderTableCell(node, children, parents, markdownStyles, true),
+    };
+  }, [session, viewportWidth]);
   const detailText = memo?.contentMarkdown || memo?.contentText || "没有正文内容";
   const searchMatches = useMemo(() => getTextSearchMatches(detailText, searchQuery), [detailText, searchQuery]);
   const searchMatchLabel = searchQuery.trim() ? `${searchMatches.length > 0 ? activeMatchIndex + 1 : 0}/${searchMatches.length}` : "0/0";
@@ -5905,6 +5964,43 @@ const detailMarkdownStyles = StyleSheet.create({
   strong: {
     fontWeight: "800",
   },
+  table: {
+    backgroundColor: "#ffffff",
+    borderColor: "#d8d8d8",
+    borderRadius: 2,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  tableCellDivider: {
+    borderRightColor: "#dedede",
+    borderRightWidth: 1,
+  },
+  tableScroll: {
+    marginBottom: 10,
+    marginTop: 10,
+    maxWidth: "100%",
+  },
+  tableScrollContent: {
+    flexGrow: 1,
+  },
+  td: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  th: {
+    backgroundColor: "#f2f2f2",
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  tr: {
+    borderBottomColor: "#dedede",
+    borderBottomWidth: 1,
+    flexDirection: "row",
+  },
 });
 
 const baseWorkspaceStyles = StyleSheet.create({
@@ -7522,7 +7618,7 @@ const baseWorkspaceStyles = StyleSheet.create({
   },
   detailContent: {
     paddingBottom: 112,
-    paddingHorizontal: 16,
+    paddingHorizontal: DETAIL_CONTENT_HORIZONTAL_PADDING,
     paddingTop: 16,
   },
   detailTitle: {
