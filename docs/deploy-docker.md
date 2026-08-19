@@ -29,21 +29,6 @@ Open `http://localhost:8787`. The container reports healthy only after the
 shared `/api/health` endpoint confirms that authentication, SQLite, and object
 storage are ready.
 
-### Image registry
-
-The default image is `ghcr.io/tianma-if/edgeever`. Users in mainland China can
-switch to Tencent Cloud TCR:
-
-```sh
-export EDGE_EVER_IMAGE=ccr.ccs.tencentyun.com/edgeever/edgeever
-export EDGE_EVER_VERSION=v1.33.0
-docker compose pull
-docker compose up -d
-```
-
-The public TCR image requires no `docker login` and supports `linux/amd64` and
-`linux/arm64`. Pin `EDGE_EVER_VERSION` to a release tag in production.
-
 Compose creates one named volume. Everything that must survive a container
 replacement is under `/data`:
 

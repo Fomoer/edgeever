@@ -100,7 +100,7 @@ export EDGE_EVER_AUTH_PASSWORD='replace-with-a-long-random-password'
 docker compose up -d
 ```
 
-Docker persists SQLite and local attachments in `/data` and supports S3-compatible storage. Users in mainland China can select the Tencent Cloud mirror with `EDGE_EVER_IMAGE=ccr.ccs.tencentyun.com/edgeever/edgeever`. See the [Docker deployment guide](docs/deploy-docker.md) for details.
+Docker persists SQLite and local attachments in one `/data` volume and also supports S3-compatible attachment storage. See the [Docker deployment guide](docs/deploy-docker.md) for HTTPS, secrets, NAS permissions, backup, and upgrade instructions.
 
 ---
 

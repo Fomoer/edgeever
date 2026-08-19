@@ -1,6 +1,6 @@
 services:
   edgeever:
-    image: "${EDGE_EVER_IMAGE:-ghcr.io/tianma-if/edgeever}:${EDGE_EVER_VERSION:-latest}"
+    image: ghcr.io/tianma-if/edgeever:${EDGE_EVER_VERSION:-latest}
     restart: unless-stopped
     init: true
     ports:

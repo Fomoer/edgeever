@@ -100,7 +100,7 @@ export EDGE_EVER_AUTH_PASSWORD='请替换为足够长的随机密码'
 docker compose up -d
 ```
 
-Docker 将 SQLite 与本地附件持久化到 `/data`，并支持 S3 兼容存储。中国大陆用户可通过 `EDGE_EVER_IMAGE=ccr.ccs.tencentyun.com/edgeever/edgeever` 选择腾讯云镜像。详见 [Docker 部署文档](docs/deploy-docker.zh-CN.md)。
+Docker 将 SQLite 与本地附件统一持久化到 `/data` 卷，也支持 S3 兼容附件存储。HTTPS、Secret、NAS 权限、备份与升级说明请查看 [Docker 部署文档](docs/deploy-docker.zh-CN.md)。
 
 ---
 
