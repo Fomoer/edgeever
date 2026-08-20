@@ -344,12 +344,6 @@ export const buildReleaseNotes = ({
   changesZh,
   issueNumber,
 }) => [
-  "## Key Changes",
-  "",
-  ...changesEn.map((change) => `- ${change}`),
-  "",
-  `Related Issue: #${issueNumber}`,
-  "",
   "## 🇨🇳 中文说明 / Chinese Changelog",
   "",
   "## 主要更新",
@@ -357,6 +351,12 @@ export const buildReleaseNotes = ({
   ...changesZh.map((change) => `- ${change}`),
   "",
   `关联 Issue：#${issueNumber}`,
+  "",
+  "## Key Changes",
+  "",
+  ...changesEn.map((change) => `- ${change}`),
+  "",
+  `Related Issue: #${issueNumber}`,
   "",
 ].join("\n");
 

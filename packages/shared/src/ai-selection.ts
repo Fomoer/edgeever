@@ -42,6 +42,22 @@ export type RichTextAiSelectionContext = {
 export const normalizeAiSelectionReplacement = (draft: string): string => draft.trim();
 
 /**
+ * Clamp a stored rich-text selection without discarding valid block-node
+ * positions. A node selection for the first document block starts at 0.
+ */
+export const getRichTextAiReplacementRange = (
+  from: number,
+  to: number,
+  documentSize: number,
+) => {
+  const safeFrom = Math.max(0, Math.min(from, documentSize));
+  return {
+    from: safeFrom,
+    to: Math.max(safeFrom, Math.min(to, documentSize)),
+  };
+};
+
+/**
  * Resolve the Markdown and replacement range for a rich-text selection.
  * A single selected text block stays inside its existing paragraph/list item.
  */

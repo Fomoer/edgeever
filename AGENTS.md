@@ -24,12 +24,6 @@
 11. **Release 说明结构**：使用中英文双语格式（正文禁止包含字面量 `\n`），只写用户可感知的变化、影响以及必要的升级或迁移提醒。类型检查、构建命令、签名、公证、资产复用等技术验证细节保留在 Actions 和关联 Issue 中，不写入公开 Release 正文。功能/修复关联对应 Issue 并标记 Label，发布后回链并关闭 Issue。正文结构：
 
 ```md
-## Key Changes
-
-- User-facing summary of changes in English.
-
-Related Issue: #<issue-number>
-
 ## 🇨🇳 中文说明 / Chinese Changelog
 
 ## 主要更新
@@ -37,6 +31,12 @@ Related Issue: #<issue-number>
 - 面向用户说明本次变化及影响。
 
 关联 Issue：#<issue-number>
+
+## Key Changes
+
+- User-facing summary of changes in English.
+
+Related Issue: #<issue-number>
 ```
 
 ## 环境、部署与组件约束

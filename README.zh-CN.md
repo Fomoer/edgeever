@@ -59,7 +59,7 @@ EdgeEver 是一款现代化的开源笔记工作区。它为你找回经典印�
 
 ## 部署
 
-Cloudflare 是推荐的零服务器部署方式；希望使用 VPS、NAS 或家庭服务器的用户也可以选择 Docker，两种运行时共用同一套应用和 migration。
+Cloudflare 是推荐的零服务器部署方式；希望使用 VPS、NAS 或家庭服务器的用户也可以选择 Docker。
 
 Cloudflare 在线部署可以选择以下两种方式之一：
 
@@ -92,19 +92,27 @@ Cloudflare 在线部署可以选择以下两种方式之一：
 
 > 📖 包含具体参数与构建命令的详细步骤，请查看 [在线部署完整文档](docs/deploy-cloudflare-button.zh-CN.md)。
 
+> 💡 **Cloudflare R2 开通**：虽然 Cloudflare R2 存储提供了足够慷慨、在笔记场景中完全不会超量的[免费存储额度](https://developers.cloudflare.com/r2/pricing/#free-tier)，但需先开通 R2 subscription 并绑定付款方式。Cloudflare [官方支持](https://developers.cloudflare.com/billing/get-started/update-billing-info/#supported-payment-methods) 银联（UnionPay）、Visa、Mastercard 等银行卡，以及 PayPal、Apple Pay、Google Pay 等付款方式。
+
 ### 方案三：在 VPS 或 NAS 上使用 Docker
 
+如果 VPS 或 NAS 位于中国大陆境外，使用 GitHub 托管的安装脚本和 GHCR 镜像：
+
 ```sh
-export EDGE_EVER_VERSION=vX.Y.Z
-export EDGE_EVER_AUTH_PASSWORD='请替换为足够长的随机密码'
-docker compose up -d
+curl -fsSL https://edgeever.org/install.sh | bash
 ```
 
-Docker 将 SQLite 与本地附件统一持久化到 `/data` 卷，也支持 S3 兼容附件存储。HTTPS、Secret、NAS 权限、备份与升级说明请查看 [Docker 部署文档](docs/deploy-docker.zh-CN.md)。
+如果 VPS 或 NAS 位于中国大陆境内，使用腾讯云 COS 安装脚本和腾讯云 TCR 镜像，
+下载速度和稳定性通常更好：
+
+```sh
+curl -fsSL https://edgeever-installer-1256854452.cos.ap-guangzhou.myqcloud.com/install.sh | bash -s -- --mirror tcr
+```
+
+两种方式都会自动拉取最新镜像、生成管理员密码、使用 Docker Compose 启动
+EdgeEver，并设置每日自动更新。手动部署与配置说明见 [Docker 部署文档](docs/deploy-docker.zh-CN.md)。
 
 ---
-
-> 💡 **部署提示（Cloudflare R2 付款方式）**：虽然 Cloudflare R2 存储提供了足够慷慨、在笔记场景中几乎永远不会超量的[免费存储额度](https://developers.cloudflare.com/r2/pricing/#free-tier)，但需先开通 R2 subscription 并绑定付款方式。Cloudflare [官方支持](https://developers.cloudflare.com/billing/get-started/update-billing-info/#supported-payment-methods) 银联（UnionPay）、Visa、Mastercard 等银行卡，以及 PayPal、Apple Pay、Google Pay 等付款方式。
 
 ## 多账号登录
 

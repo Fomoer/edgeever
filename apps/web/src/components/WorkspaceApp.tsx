@@ -797,6 +797,8 @@ export const WorkspaceApp = ({
   const [mobileSearchFocusToken, setMobileSearchFocusToken] = useState(0);
   const [noteSearchFocusToken, setNoteSearchFocusToken] = useState(0);
   const [noteReplaceFocusToken, setNoteReplaceFocusToken] = useState(0);
+  const [noteSaveAndSyncToken, setNoteSaveAndSyncToken] = useState(0);
+  const [noteEditorModeToggleToken, setNoteEditorModeToggleToken] = useState(0);
   const [search, setSearch] = useState("");
   const [memoFilterMode, setMemoFilterMode] = useState<MemoFilterMode>("all");
   const [memoSortMode, setMemoSortMode] = useState<MemoSortMode>("updated-desc");
@@ -2533,10 +2535,6 @@ export const WorkspaceApp = ({
       const targetElement = event.target instanceof Element ? event.target : null;
       const isEditorTextTarget = Boolean(targetElement?.closest(".ProseMirror"));
 
-      if ((action === "focusSearch" || action === "focusReplace") && isTextEntryTarget(event.target) && !isEditorTextTarget) {
-        return;
-      }
-
       const transientLayerOpen = Boolean(
         appNoticeDialog ||
           rightView !== "editor" ||
@@ -2547,6 +2545,27 @@ export const WorkspaceApp = ({
           notebookNameDialog ||
           templatesOpen
       );
+
+      if (action === "saveAndSync" || action === "toggleEditorMode") {
+        // These replace browser-level commands, so consume them throughout the
+        // workspace even when the current editor cannot perform the action.
+        event.preventDefault();
+
+        if (event.repeat || event.isComposing || transientLayerOpen || !selectedMemoId || memoView === "trash") {
+          return;
+        }
+
+        if (action === "saveAndSync") {
+          setNoteSaveAndSyncToken((value) => value + 1);
+        } else {
+          setNoteEditorModeToggleToken((value) => value + 1);
+        }
+        return;
+      }
+
+      if ((action === "focusSearch" || action === "focusReplace") && isTextEntryTarget(event.target) && !isEditorTextTarget) {
+        return;
+      }
 
       if (transientLayerOpen) {
         return;
@@ -3023,6 +3042,9 @@ export const WorkspaceApp = ({
                     contentSearchQuery={search}
                     searchFocusToken={noteSearchFocusToken}
                     replaceFocusToken={noteReplaceFocusToken}
+                    saveAndSyncToken={noteSaveAndSyncToken}
+                    editorModeToggleToken={noteEditorModeToggleToken}
+                    onSyncRequested={syncMemosManually}
                     documentActionRequest={memoDocumentActionRequest}
                     onDocumentActionConsumed={(requestId) => {
                       setMemoDocumentActionRequest((current) => current?.id === requestId ? null : current);

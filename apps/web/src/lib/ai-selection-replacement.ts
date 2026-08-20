@@ -1,5 +1,6 @@
 export {
   getRichTextAiSelectionContext,
+  getRichTextAiReplacementRange,
   getRichTextAiSelectionReplacement,
   normalizeAiSelectionReplacement,
   type RichTextAiSelectionContext,

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowUpCircle, CheckCircle2, Copy, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { UpdateAvailableDescription } from "@/components/UpdateAvailableDescription";
 import { detectWebClientKind } from "@/lib/client-environment";
 import { cn } from "@/lib/utils";
 import { fetchLatestRelease, isVersionOutdated, type LatestRelease } from "@/lib/version-check";
@@ -110,7 +111,7 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
           <ArrowUpCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
           <div className="min-w-0 flex-1 text-xs leading-5">
             <div className="font-semibold">{t("systemInfo.updateAvailableTitle")}</div>
-            <div className="text-slate-500">{t("systemInfo.updateAvailableDescription", { version: latestRelease.version })}</div>
+            <div className="text-slate-500"><UpdateAvailableDescription version={latestRelease.version} /></div>
           </div>
           <a className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-900" href={latestRelease.url} target="_blank" rel="noreferrer">
             {t("systemInfo.viewRelease")} <ExternalLink className="h-3 w-3" />

@@ -1,15 +1,19 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
+  DEFAULT_SHORTCUT_SETTINGS,
   DEFAULT_SYNC_INTERVAL_MS,
   DESKTOP_FOCUS_MODE_STORAGE_KEY,
   EDITOR_CONTENT_ALIGNMENT_STORAGE_KEY,
   NOTEBOOK_SORT_STORAGE_KEY,
+  SHORTCUT_SETTINGS_STORAGE_KEY,
   SYNC_INTERVAL_STORAGE_KEY,
+  getShortcutActionForEvent,
   getNotebookSortComparator,
   readEditorContentAlignmentPreference,
   readNotebookSortPreference,
   readSyncIntervalPreference,
   readDesktopFocusModePreference,
+  readShortcutSettingsPreference,
   writeEditorContentAlignmentPreference,
   writeNotebookSortPreference,
   writeSyncIntervalPreference,
@@ -181,5 +185,54 @@ describe("automatic sync interval preference", () => {
       },
     };
     expect(readSyncIntervalPreference()).toBe(30_000);
+  });
+});
+
+describe("workspace shortcut preferences", () => {
+  test("provides save, sync, and editor mode defaults", () => {
+    expect(DEFAULT_SHORTCUT_SETTINGS.saveAndSync).toEqual({
+      key: "s",
+      ctrlOrMeta: true,
+      shift: false,
+      alt: false,
+    });
+    expect(DEFAULT_SHORTCUT_SETTINGS.toggleEditorMode).toEqual({
+      key: "/",
+      ctrlOrMeta: true,
+      shift: false,
+      alt: false,
+    });
+  });
+
+  test("fills new shortcut actions into legacy stored settings", () => {
+    const values = installLocalStorage();
+    values.set(SHORTCUT_SETTINGS_STORAGE_KEY, JSON.stringify({
+      createMemo: { key: "m", ctrlOrMeta: true, shift: false, alt: false },
+    }));
+
+    const settings = readShortcutSettingsPreference();
+    expect(settings.createMemo.key).toBe("m");
+    expect(settings.saveAndSync).toEqual(DEFAULT_SHORTCUT_SETTINGS.saveAndSync);
+    expect(settings.toggleEditorMode).toEqual(DEFAULT_SHORTCUT_SETTINGS.toggleEditorMode);
+  });
+
+  test("recognizes Ctrl and Command variants for the new actions", () => {
+    const keyboardEvent = (key, modifiers = {}) => ({
+      key,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      altKey: false,
+      ...modifiers,
+    });
+
+    expect(getShortcutActionForEvent(
+      keyboardEvent("s", { ctrlKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+    )).toBe("saveAndSync");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("/", { metaKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+    )).toBe("toggleEditorMode");
   });
 });

@@ -3,6 +3,7 @@ import { ArrowUpCircle, Download, ExternalLink, RefreshCw, X } from "lucide-reac
 import { useTranslation } from "react-i18next";
 import { fetchLatestRelease, isVersionOutdated, type LatestRelease } from "@/lib/version-check";
 import { dismissRelease, getDismissedRelease } from "@/lib/release-notice";
+import { UpdateAvailableDescription } from "./UpdateAvailableDescription";
 
 const AUTO_DISMISS_MS = 3_000;
 
@@ -86,7 +87,7 @@ export const ReleaseUpdateNotice = () => {
                 ? t("systemInfo.desktopUpdateReady")
                 : nativeUpdateState === "error"
                   ? t("systemInfo.desktopUpdateFailed")
-                  : t("systemInfo.updateAvailableDescription", { version: release?.version ?? "" })}
+                  : <UpdateAvailableDescription version={release?.version ?? ""} />}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             {isNativeUpdate && nativeUpdateState !== "downloading" && nativeUpdateState !== "error" && (

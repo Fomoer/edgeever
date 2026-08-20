@@ -194,7 +194,50 @@ const remapQueuedMemoId = async (scope: string, temporaryId: string, remoteMemo:
     if (temporaryDraft) {
       const remoteDraft = await localDb.drafts.get(remoteId);
       const newestDraft = selectNewestLocalDraft(temporaryDraft, remoteDraft);
-      if (newestDraft) await localDb.drafts.put({ ...newestDraft, memoId: remoteId });
+      if (newestDraft) {
+        const remappedDraft = { ...newestDraft, memoId: remoteId };
+        await localDb.drafts.put(remappedDraft);
+
+        const queuedUpdate = await localDb.syncQueue.get(getMemoUpdateQueueId(remoteId));
+        const draftIsCovered = queuedUpdate
+          ? isDraftCoveredByMemoUpdate(queuedUpdate, remappedDraft)
+          : false;
+        const draftMatchesCreatedMemo =
+          remappedDraft.title.trim() === (remoteMemo.title ?? "") &&
+          JSON.stringify(parseTagsText(remappedDraft.tagsText)) === JSON.stringify(remoteMemo.tags) &&
+          JSON.stringify(remappedDraft.contentJson) === JSON.stringify(remoteMemo.contentJson);
+
+        // Editor autosave can persist a draft while memo.create is already in
+        // flight, before the temporary memo has a server revision that can be
+        // queued as memo.update. Preserve that edit as the successor request.
+        if (!draftIsCovered && !draftMatchesCreatedMemo) {
+          const now = new Date().toISOString();
+          await localDb.syncQueue.put({
+            id: getMemoUpdateQueueId(remoteId),
+            kind: "memo.update",
+            scope,
+            memoId: remoteId,
+            status: "pending",
+            payload: {
+              memoId: remoteId,
+              expectedRevision: remoteMemo.revision,
+              expectedContentHash: remoteMemo.contentHash,
+              editSessionId: `create-remap:${remoteId}`,
+              title: remappedDraft.title,
+              contentJson: remappedDraft.contentJson,
+              tags: parseTagsText(remappedDraft.tagsText),
+            },
+            attemptCount: queuedUpdate?.attemptCount ?? 0,
+            lastError: null,
+            lastErrorCode: null,
+            lastErrorDetails: null,
+            nextAttemptAt: null,
+            claimId: null,
+            createdAt: queuedUpdate?.createdAt ?? now,
+            updatedAt: now,
+          });
+        }
+      }
       await localDb.drafts.delete(temporaryId);
     }
   });
@@ -275,6 +318,15 @@ export const isMemoUpdateAlreadyApplied = (memo: MemoDetail, item: SyncQueueItem
     return false;
   }
   const payload = item.payload as MemoUpdateSyncPayload;
+  // A local mirror can project a draft over the memo returned by memo.create
+  // while retaining that response's server base. Matching visible content is
+  // not an acknowledgement until the revision or hash has advanced.
+  if (
+    memo.revision === payload.expectedRevision &&
+    memo.contentHash === payload.expectedContentHash
+  ) {
+    return false;
+  }
   if (memo.id !== item.memoId || memo.title !== payload.title) {
     return false;
   }

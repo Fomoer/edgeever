@@ -138,6 +138,7 @@ import { downloadMarkdownFile } from "@/lib/note-markdown-export";
 import { NOTE_HTML_FULL_STYLES } from "@/lib/note-html-export-assets";
 import { downloadNoteHtmlFile, getHtmlImageEmbedNoticeKind } from "@/lib/note-html-export";
 import { openNotePrintPreview, serializeNoteDocumentForPrint } from "@/lib/note-print";
+import { saveAndSyncEditor } from "@/lib/editor-shortcuts";
 import { isBrowserOffline } from "@/lib/network-status";
 import {
   EDITOR_LINK_OPEN_MODE_CHANGED_EVENT,
@@ -158,6 +159,7 @@ import { useStandaloneMobileEditor } from "@/hooks/useStandaloneMobileEditor";
 import { statusSettleMotion } from "@/lib/motion";
 import {
   getRichTextAiSelectionContext,
+  getRichTextAiReplacementRange,
   getRichTextAiSelectionReplacement,
   normalizeAiSelectionReplacement,
 } from "@/lib/ai-selection-replacement";
@@ -175,10 +177,12 @@ import {
   createNoteSearchHighlightPlugin,
   formatNoteSearchMatchLabel,
   getNextSearchMatchIndex,
+  getSearchNavigationIdentity,
   getSearchMatchesFromDocument,
   NOTE_SEARCH_HIGHLIGHT_PLUGIN_KEY,
   type NoteSearchMatch,
 } from "./editor/note-search";
+import { getEditorScrollProgress, restoreEditorScrollProgress } from "./editor/editor-mode-scroll";
 import { useEditorSaveStatus } from "./editor/useEditorSaveStatus";
 import { resolveEditorDraftState } from "./editor/editor-draft-state";
 import type { EdgeEverPluginHost, PluginEditorAdapter } from "@/lib/plugins/plugin-host";
@@ -627,6 +631,9 @@ type EditorPaneProps = {
   onSaveAsTemplate: (memo: MemoDetail, name: string) => Promise<void>;
   searchFocusToken: number;
   replaceFocusToken: number;
+  saveAndSyncToken: number;
+  editorModeToggleToken: number;
+  onSyncRequested: () => Promise<void>;
   documentActionRequest?: MemoDocumentActionRequest | null;
   onDocumentActionConsumed?: (requestId: number) => void;
   selectionActionBar?: ReactNode;
@@ -694,6 +701,9 @@ const RichEditorPane = ({
   onSaveAsTemplate,
   searchFocusToken,
   replaceFocusToken,
+  saveAndSyncToken,
+  editorModeToggleToken,
+  onSyncRequested,
   documentActionRequest,
   onDocumentActionConsumed,
   selectionActionBar,
@@ -782,6 +792,8 @@ const RichEditorPane = ({
   const [mobileImeDebugEvents, setMobileImeDebugEvents] = useState<MobileImeDebugEntry[]>([]);
   const [wechatCopyState, setWechatCopyState] = useState<"idle" | "copying" | "copied" | "error">("idle");
   const [memoIdCopyNotice, setMemoIdCopyNotice] = useState<{ status: "copied" | "error"; id: string } | null>(null);
+  const handledSaveAndSyncTokenRef = useRef(saveAndSyncToken);
+  const handledEditorModeToggleTokenRef = useRef(editorModeToggleToken);
   const noteLinkModifier = useMemo(
     () => typeof navigator !== "undefined" && /mac|iphone|ipad|ipod/i.test(navigator.platform) ? "⌘" : "Ctrl",
     []
@@ -863,6 +875,7 @@ const RichEditorPane = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const noteSearchInputRef = useRef<HTMLInputElement | null>(null);
   const noteReplaceInputRef = useRef<HTMLInputElement | null>(null);
+  const noteSearchAutoSelectionRef = useRef<{ editor: Editor; identity: string } | null>(null);
   const markdownTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const openExternalLinkDialogRef = useRef<() => void>(() => undefined);
   const hydratingRef = useRef(false);
@@ -872,6 +885,22 @@ const RichEditorPane = ({
   const editingMemoIdRef = useRef<string | null>(memo?.id ?? null);
   const imageCompressionEnabledRef = useRef(imageCompressionEnabled);
   const resourceMenuHideTimerRef = useRef<number | null>(null);
+
+  const restoreScrollAfterModeChange = useCallback((targetMode: "markdown" | "rich", progress: number) => {
+    const restore = (attempt: number) => {
+      const target = targetMode === "markdown"
+        ? markdownTextAreaRef.current
+        : editorScrollContainerRef.current;
+
+      if (restoreEditorScrollProgress(target, progress) || attempt >= 2) {
+        return;
+      }
+
+      window.requestAnimationFrame(() => restore(attempt + 1));
+    };
+
+    window.requestAnimationFrame(() => restore(0));
+  }, []);
 
   useEffect(() => {
     const handleMemoIdRemapped = (event: Event) => {
@@ -1573,7 +1602,7 @@ const RichEditorPane = ({
   );
 
   const selectNoteSearchMatch = useCallback(
-    (index: number, matches = noteSearchMatches) => {
+    (index: number, matches: NoteSearchMatch[]) => {
       const match = matches[index];
 
       if (!isEditorReady(editor) || !match) {
@@ -1612,7 +1641,7 @@ const RichEditorPane = ({
         }
       });
     },
-    [editor, noteSearchMatches]
+    [editor]
   );
 
   useEffect(() => {
@@ -1632,7 +1661,7 @@ const RichEditorPane = ({
         editor.unregisterPlugin(NOTE_SEARCH_HIGHLIGHT_PLUGIN_KEY);
       }
     };
-  }, [contentSearchQuery, editor, noteSearchIndex, noteSearchMatches, noteSearchOpen, noteSearchQuery]);
+  }, [contentSearchQuery, editor, noteSearchIndex, noteSearchOpen, noteSearchQuery]);
 
   const focusNoteSearchInput = useCallback(() => {
     window.requestAnimationFrame(() => {
@@ -1689,11 +1718,11 @@ const RichEditorPane = ({
 
       setNoteSearchIndex((current) => {
         const next = getNextSearchMatchIndex(current, direction, noteSearchMatches.length);
-        selectNoteSearchMatch(next);
+        selectNoteSearchMatch(next, noteSearchMatches);
         return next;
       });
     },
-    [noteSearchMatches.length, selectNoteSearchMatch]
+    [noteSearchMatches, selectNoteSearchMatch]
   );
 
   useEffect(() => {
@@ -1713,14 +1742,35 @@ const RichEditorPane = ({
   }, [openNoteReplace, replaceFocusToken]);
 
   useEffect(() => {
+    if (!isEditorReady(editor)) {
+      return;
+    }
+
+    const source = noteSearchOpen ? "note" : "content";
+    const query = noteSearchOpen ? noteSearchQuery : contentSearchQuery;
+    const matches = noteSearchOpen ? noteSearchMatches : contentSearchMatches;
+    const identity = getSearchNavigationIdentity(memo?.id ?? null, source, query);
+    const previousSelection = noteSearchAutoSelectionRef.current;
+
+    // Match positions change after every document edit. Only a new search,
+    // note, or search source should move the editor selection automatically.
+    if (previousSelection?.editor === editor && previousSelection.identity === identity) {
+      return;
+    }
+
+    noteSearchAutoSelectionRef.current = { editor, identity };
     setNoteSearchIndex(0);
 
-    if (noteSearchOpen && noteSearchMatches[0]) {
-      selectNoteSearchMatch(0, noteSearchMatches);
-    } else if (!noteSearchOpen && contentSearchMatches[0]) {
-      selectNoteSearchMatch(0, contentSearchMatches);
+    if (matches[0]) {
+      selectNoteSearchMatch(0, matches);
     }
-  }, [contentSearchMatches, noteSearchMatches, noteSearchOpen, selectNoteSearchMatch]);
+  }, [contentSearchMatches, contentSearchQuery, editor, memo?.id, noteSearchMatches, noteSearchOpen, noteSearchQuery, selectNoteSearchMatch]);
+
+  useEffect(() => {
+    setNoteSearchIndex((current) => noteSearchMatches.length === 0
+      ? 0
+      : Math.min(current, noteSearchMatches.length - 1));
+  }, [noteSearchMatches.length]);
 
   const replaceAllNoteSearchMatches = useCallback(() => {
     if (!isEditorReady(editor) || effectiveReadOnly || noteSearchMatches.length === 0) {
@@ -1891,7 +1941,7 @@ const RichEditorPane = ({
   const applyAiDraft = useCallback((draft: string, mode: "append" | "replace") => {
     if (mode === "replace" && aiSelection) {
       const replacementDraft = normalizeAiSelectionReplacement(draft);
-      if (!replacementDraft) return;
+      if (!replacementDraft) return false;
 
       if (aiSelection.kind === "plain") {
         const source = getMobilePlainTextValue();
@@ -1913,17 +1963,24 @@ const RichEditorPane = ({
         });
       } else if (aiSelection.kind === "rich" && isEditorReady(editor)) {
         const maxPos = editor.state.doc.content.size;
-        const from = Math.max(1, Math.min(aiSelection.from, maxPos));
-        const to = Math.max(from, Math.min(aiSelection.to, maxPos));
-        editor.chain().focus().insertContentAt(
-          { from, to },
-          getRichTextAiSelectionReplacement(replacementDraft, aiSelection.isInline),
-        ).run();
+        const { from, to } = getRichTextAiReplacementRange(aiSelection.from, aiSelection.to, maxPos);
+        try {
+          const applied = editor.commands.insertContentAt(
+            { from, to },
+            getRichTextAiSelectionReplacement(replacementDraft, aiSelection.isInline),
+          );
+          if (!applied) return false;
+          editor.commands.focus();
+        } catch {
+          return false;
+        }
+      } else {
+        return false;
       }
       markDirty();
       setAiSelection(null);
       setAiAssistantOpen(false);
-      return;
+      return true;
     }
 
     const current = getCurrentMarkdownForAi();
@@ -1937,11 +1994,18 @@ const RichEditorPane = ({
     } else if (useMarkdownSourceEditor) {
       setMarkdownSource(next);
     } else if (isEditorReady(editor)) {
-      editor.commands.setContent(markdownToDoc(next));
+      try {
+        if (!editor.commands.setContent(markdownToDoc(next))) return false;
+      } catch {
+        return false;
+      }
+    } else {
+      return false;
     }
     markDirty();
     setAiSelection(null);
     setAiAssistantOpen(false);
+    return true;
   }, [aiSelection, editor, getCurrentMarkdownForAi, getMobilePlainTextValue, markDirty, markdownSource, persistCurrentDraft, tagsText, title, useMarkdownSourceEditor, useMobilePlainTextEditor]);
 
   const getCurrentContentJson = useCallback((): TiptapDoc | null => {
@@ -2332,10 +2396,15 @@ const RichEditorPane = ({
       return;
     }
 
+    const scrollProgress = getEditorScrollProgress(
+      isMarkdownMode ? markdownTextAreaRef.current : editorScrollContainerRef.current,
+    );
+
     if (isMarkdownMode) {
       hydratingRef.current = true;
       editor.commands.setContent(markdownToDoc(markdownSource));
       setIsMarkdownMode(false);
+      restoreScrollAfterModeChange("rich", scrollProgress);
       window.setTimeout(() => {
         hydratingRef.current = false;
       }, 0);
@@ -2344,7 +2413,8 @@ const RichEditorPane = ({
 
     setMarkdownSource(docToMarkdown(editor.getJSON() as TiptapDoc));
     setIsMarkdownMode(true);
-  }, [editor, effectiveReadOnly, isMarkdownMode, markdownSource]);
+    restoreScrollAfterModeChange("markdown", scrollProgress);
+  }, [editor, effectiveReadOnly, isMarkdownMode, markdownSource, restoreScrollAfterModeChange]);
 
   const handleMarkdownSourceChange = useCallback((value: string) => {
     setMarkdownSource(value);
@@ -2750,7 +2820,71 @@ const RichEditorPane = ({
   // can starve a recovered draft indefinitely. These members are stable (or
   // primitive) and are safe effect dependencies.
   const mutateSave = saveMutation.mutate;
+  const mutateSaveAsync = saveMutation.mutateAsync;
   const saveMutationPending = saveMutation.isPending;
+
+  const editorShortcutBlocked = Boolean(
+    historyOpen ||
+      shareOpen ||
+      aiAssistantOpen ||
+      systemInfoOpen ||
+      mobileNotebookSheetOpen ||
+      noteLinkPickerOpen ||
+      externalLinkDialogOpen ||
+      resourceDialog ||
+      imagePreview
+  );
+
+  useEffect(() => {
+    if (handledEditorModeToggleTokenRef.current === editorModeToggleToken) {
+      return;
+    }
+
+    handledEditorModeToggleTokenRef.current = editorModeToggleToken;
+    if (editorShortcutBlocked || useMobilePlainTextEditor) {
+      return;
+    }
+
+    handleMarkdownModeChange();
+  }, [editorModeToggleToken, editorShortcutBlocked, handleMarkdownModeChange, useMobilePlainTextEditor]);
+
+  useEffect(() => {
+    if (handledSaveAndSyncTokenRef.current === saveAndSyncToken || saveMutationPending) {
+      return;
+    }
+
+    handledSaveAndSyncTokenRef.current = saveAndSyncToken;
+    if (
+      editorShortcutBlocked ||
+      effectiveReadOnly ||
+      !memoRef.current ||
+      !isEditorReady(editorRef.current) ||
+      saveState === "conflict"
+    ) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        await saveAndSyncEditor({
+          hasUnsavedChanges: hasUnsavedChangesRef.current,
+          save: mutateSaveAsync,
+          sync: onSyncRequested,
+        });
+      } catch {
+        // The save mutation owns its visible error/conflict state. Do not sync
+        // after a failed save because the queue may not contain this snapshot.
+      }
+    })();
+  }, [
+    editorShortcutBlocked,
+    effectiveReadOnly,
+    mutateSaveAsync,
+    onSyncRequested,
+    saveAndSyncToken,
+    saveMutationPending,
+    saveState,
+  ]);
 
   const replaceAttachmentLabel = useCallback((target: AttachmentMenuTarget, filename: string) => {
     const activeEditor = editorRef.current;

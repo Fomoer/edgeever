@@ -455,6 +455,15 @@ textarea {
   padding: 0;
 }
 
+/* Do not rely on the browser's relative `bolder` mapping here. Linux Chrome
+ * can render CJK fallback fonts with too little contrast between regular and
+ * bold, especially when the installed family has no matching bold face. */
+.ProseMirror strong,
+.ProseMirror b {
+  font-synthesis: weight;
+  font-weight: 800;
+}
+
 /* External hyperlinks (default theme).
  * Tailwind preflight resets <a> to inherit color/decoration, so without this
  * rule links are indistinguishable from body text. Note/attachment chips below

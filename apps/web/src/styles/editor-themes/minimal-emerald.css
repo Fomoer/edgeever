@@ -70,7 +70,7 @@
 
 .edgeever-editor[data-editor-theme="minimal-emerald"]:not([data-editor-theme="default"]) .ProseMirror strong {
   color: var(--editor-theme-heading);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .edgeever-editor[data-editor-theme="minimal-emerald"]:not([data-editor-theme="default"]) .ProseMirror a {

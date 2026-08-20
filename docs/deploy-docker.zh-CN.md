@@ -11,7 +11,34 @@ Cloudflare 使用 Workers + D1 + R2。
 - `amd64` 或 `arm64` Linux 主机。
 - 实例离开可信局域网时，必须使用带 HTTPS 的反向代理。
 
-## 使用 Compose 启动
+## 一键安装
+
+已安装 Docker Compose v2 的主机可直接执行：
+
+```sh
+curl -fsSL https://edgeever-installer-1256854452.cos.ap-guangzhou.myqcloud.com/install.sh | bash -s -- --mirror tcr
+```
+
+脚本会创建 `~/edgeever`、生成管理员密码、拉取 `latest`、启动容器并等待健康
+检查通过。中国大陆命令从腾讯云 COS 获取脚本与 Compose 配置，并从腾讯云 TCR
+拉取镜像。再次执行同一命令即可升级，已有密码和 `/data` 卷保持不变。
+
+默认情况下，脚本会通过当前用户的 crontab 设置每日自动更新，于服务器本地时间
+04:17 执行 `~/edgeever/update.sh`。更新程序会刷新 Compose 配置、拉取已配置的
+镜像标签、按需重建服务并验证容器健康状态，运行记录追加到
+`~/edgeever/update.log`。默认的 `latest` 标签会自动获得新版本；通过 `--version`
+指定的版本保持固定。使用 `--no-auto-update` 或
+`EDGE_EVER_AUTO_UPDATE=false` 可关闭自动更新。如果系统没有 `crontab`，安装脚本
+会保留 `update.sh`，并提示通过 NAS 的任务计划程序执行。
+
+海外服务器可去掉 `--mirror tcr` 使用 GHCR。按需使用 `--version vX.Y.Z`、
+`--port PORT` 或 `--install-dir DIR`；执行以下命令可查看全部参数：
+
+```sh
+curl -fsSL https://edgeever-installer-1256854452.cos.ap-guangzhou.myqcloud.com/install.sh | bash -s -- --help
+```
+
+## 手动使用 Compose
 
 下载 `compose.yaml`，选择要运行的正式版本，并设置高强度实例密码：
 
@@ -25,6 +52,20 @@ docker compose ps
 打开 `http://localhost:8787`。只有共享的 `/api/health` 确认鉴权、SQLite 和对象
 存储均已就绪后，容器才会进入 healthy 状态。
 
+### 镜像地址
+
+默认镜像为 `ghcr.io/tianma-if/edgeever`。中国大陆用户可以切换到腾讯云 TCR：
+
+```sh
+export EDGE_EVER_IMAGE=ccr.ccs.tencentyun.com/edgeever/edgeever
+export EDGE_EVER_VERSION=v1.33.0
+docker compose pull
+docker compose up -d
+```
+
+腾讯云公共镜像无需执行 `docker login`，支持 `linux/amd64` 与 `linux/arm64`。
+生产环境应通过 `EDGE_EVER_VERSION` 固定正式版本标签。
+
 Compose 会创建一个命名卷。所有需要在容器替换后保留的数据都位于 `/data`：
 
 ```text
@@ -34,6 +75,9 @@ Compose 会创建一个命名卷。所有需要在容器替换后保留的数据
 
 镜像以非 root 的 `bun` 用户运行（UID/GID 均为 `1000`）。如果 NAS 必须使用主机
 目录绑定而不是命名卷，请先创建目录，并为 UID/GID `1000` 授予读写权限。
+安装或自动更新失败时，脚本会对 `/data` 执行实际写入测试，输出挂载类型、来源、
+容器用户和目录状态。确认是权限问题后，还会根据 Docker 命名卷或 NAS 目录绑定
+给出对应的修复命令；脚本不会擅自修改现有数据的权限。
 
 ## 配置
 

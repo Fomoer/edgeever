@@ -13,7 +13,13 @@ export type MemoSortMode = "updated-desc" | "created-desc" | "title-asc";
 export type NotebookSortMode = "custom" | "name-asc" | "memo-count-desc" | "updated-desc";
 export type EditorContentAlignment = "start" | "center";
 export type MemoListDensity = "preview" | "compact";
-export type ShortcutAction = "createMemo" | "createNotebook" | "focusSearch" | "focusReplace";
+export type ShortcutAction =
+  | "createMemo"
+  | "createNotebook"
+  | "focusSearch"
+  | "focusReplace"
+  | "saveAndSync"
+  | "toggleEditorMode";
 export type ShortcutBinding = {
   key: string;
   ctrlOrMeta: boolean;
@@ -180,6 +186,16 @@ export const getShortcutActionOptions = (
     label: t("shortcuts.actions.focusReplace.label"),
     description: t("shortcuts.actions.focusReplace.description"),
   },
+  {
+    value: "saveAndSync",
+    label: t("shortcuts.actions.saveAndSync.label"),
+    description: t("shortcuts.actions.saveAndSync.description"),
+  },
+  {
+    value: "toggleEditorMode",
+    label: t("shortcuts.actions.toggleEditorMode.label"),
+    description: t("shortcuts.actions.toggleEditorMode.description"),
+  },
 ];
 
 export const DEFAULT_SHORTCUT_SETTINGS: ShortcutSettings = {
@@ -187,13 +203,22 @@ export const DEFAULT_SHORTCUT_SETTINGS: ShortcutSettings = {
   createNotebook: { key: "n", ctrlOrMeta: true, shift: true, alt: false },
   focusSearch: { key: "f", ctrlOrMeta: true, shift: false, alt: false },
   focusReplace: { key: "h", ctrlOrMeta: true, shift: false, alt: false },
+  saveAndSync: { key: "s", ctrlOrMeta: true, shift: false, alt: false },
+  toggleEditorMode: { key: "/", ctrlOrMeta: true, shift: false, alt: false },
 };
 
 const SHORTCUT_ALIASES: Partial<Record<ShortcutAction, ShortcutBinding[]>> = {
   focusReplace: [{ key: "h", ctrlOrMeta: true, shift: true, alt: false }],
 };
 
-const SHORTCUT_ACTION_VALUES: ShortcutAction[] = ["createMemo", "createNotebook", "focusSearch", "focusReplace"];
+const SHORTCUT_ACTION_VALUES: ShortcutAction[] = [
+  "createMemo",
+  "createNotebook",
+  "focusSearch",
+  "focusReplace",
+  "saveAndSync",
+  "toggleEditorMode",
+];
 
 export const isDefaultMemoTitle = (title: string | null | undefined) => title?.trim() === DEFAULT_MEMO_TITLE;
 

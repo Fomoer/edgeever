@@ -34,6 +34,23 @@ describe("editor typography contract", () => {
     expect(markdownLinkRules).toMatch(/text-decoration\s*:\s*underline/);
   });
 
+  test("keeps bold text visibly distinct across platform font fallbacks", () => {
+    const globals = readStyle("./globals.css");
+    const defaultBoldRules = declarationsForSelector(globals, ".ProseMirror strong");
+
+    expect(defaultBoldRules).toMatch(/font-synthesis\s*:\s*weight/);
+    expect(defaultBoldRules).toMatch(/font-weight\s*:\s*800/);
+
+    for (const filename of PRESET_THEME_FILES) {
+      const source = readStyle(`./editor-themes/${filename}`);
+      const boldRules = declarationsForSelector(source, ".ProseMirror strong");
+      const weights = [...boldRules.matchAll(/font-weight\s*:\s*(\d+)/g)].map((match) => Number(match[1]));
+
+      expect(weights.length).toBeGreaterThan(0);
+      expect(Math.max(...weights)).toBeGreaterThanOrEqual(700);
+    }
+  });
+
   test("does not let preset themes override body rhythm", () => {
     for (const filename of PRESET_THEME_FILES) {
       const source = readStyle(`./editor-themes/${filename}`);

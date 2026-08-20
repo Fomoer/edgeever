@@ -632,8 +632,9 @@ export const NotebookPane = ({
                 <span className="block truncate text-sm font-semibold leading-4">
                   {t("pwa.sidebarInstall") || "下载桌面客户端"}
                 </span>
-                <span className="mt-1 block truncate whitespace-nowrap text-[11px] font-normal leading-4 text-slate-500">
-                  {t("pwa.sidebarInstallAvailability") || "Mac 可用 · Windows 敬请期待"}
+                <span className="mt-1 block whitespace-nowrap text-[11px] font-normal leading-4 text-slate-500">
+                  {t("pwa.sidebarInstallAvailability") ||
+                    "Mac/iOS/安卓可用 · Windows 敬请期待"}
                 </span>
               </span>
             </a>

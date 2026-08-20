@@ -61,7 +61,7 @@ export const AiAssistantDialog = ({
   contentMarkdown: string;
   selectionMarkdown?: string | null;
   onOpenChange: (open: boolean) => void;
-  onApply: (text: string, mode: "append" | "replace") => void;
+  onApply: (text: string, mode: "append" | "replace") => boolean;
   onOpenPromptLibrary?: () => void;
 }) => {
   const { t, i18n } = useTranslation();
@@ -243,6 +243,13 @@ export const AiAssistantDialog = ({
   const retry = () => {
     if (lastRequestRef.current) return runGeneration(lastRequestRef.current);
     return generate();
+  };
+
+  const applyOutput = (mode: "append" | "replace") => {
+    setError(null);
+    if (!onApply(output, mode)) {
+      setError(t("aiAssistant.applyFailed"));
+    }
   };
 
   const copy = async () => {
@@ -488,12 +495,12 @@ export const AiAssistantDialog = ({
               </div>
               <div className="flex flex-wrap gap-2">
                 {promptAllowsReplace(effectiveResultMode) ? (
-                  <Button type="button" variant={hasSelection ? "solid" : "outline"} disabled={isGenerating} onClick={() => onApply(output, "replace")}>
+                  <Button type="button" variant={hasSelection ? "solid" : "outline"} disabled={isGenerating} onClick={() => applyOutput("replace")}>
                     {t(hasSelection ? "aiAssistant.replaceSelection" : "aiAssistant.replace")}
                   </Button>
                 ) : null}
                 {promptAllowsAppend(effectiveResultMode) ? (
-                  <Button type="button" variant={hasSelection && promptAllowsReplace(effectiveResultMode) ? "outline" : "solid"} disabled={isGenerating} onClick={() => onApply(output, "append")}>{t("aiAssistant.append")}</Button>
+                  <Button type="button" variant={hasSelection && promptAllowsReplace(effectiveResultMode) ? "outline" : "solid"} disabled={isGenerating} onClick={() => applyOutput("append")}>{t("aiAssistant.append")}</Button>
                 ) : null}
               </div>
             </DialogFooter>

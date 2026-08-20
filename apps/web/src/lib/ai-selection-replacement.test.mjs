@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { Editor } from "@tiptap/core";
+import { TableKit } from "@tiptap/extension-table";
 import { NodeSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import { markdownToDoc } from "@edgeever/shared";
 import {
   getRichTextAiSelectionContext,
+  getRichTextAiReplacementRange,
   getRichTextAiSelectionReplacement,
   normalizeAiSelectionReplacement,
 } from "./ai-selection-replacement.ts";
@@ -98,5 +100,43 @@ describe("getRichTextAiSelectionReplacement", () => {
 
   test("keeps block parsing when the original selection spans blocks", () => {
     expect(getRichTextAiSelectionReplacement("1. - 校对", false)[0]?.type).toBe("orderedList");
+  });
+
+  test("replaces a table node selected at the start of the document", () => {
+    const editor = new Editor({
+      extensions: [StarterKit, TableKit],
+      content: markdownToDoc([
+        "| A | B |",
+        "| --- | --- |",
+        "| foo | bar |",
+      ].join("\n")),
+    });
+    const context = getRichTextAiSelectionContext(
+      editor.state.doc,
+      NodeSelection.create(editor.state.doc, 0),
+    );
+
+    expect(context).not.toBeNull();
+    const range = getRichTextAiReplacementRange(
+      context.from,
+      context.to,
+      editor.state.doc.content.size,
+    );
+    expect(range.from).toBe(0);
+
+    editor.commands.insertContentAt(
+      range,
+      getRichTextAiSelectionReplacement([
+        "| X | Y |",
+        "| --- | --- |",
+        "| one | two |",
+      ].join("\n"), context.isInline),
+    );
+
+    expect(editor.getJSON().content).toHaveLength(1);
+    expect(editor.getJSON().content[0]?.type).toBe("table");
+    expect(JSON.stringify(editor.getJSON())).toContain("one");
+    expect(JSON.stringify(editor.getJSON())).not.toContain("foo");
+    editor.destroy();
   });
 });
