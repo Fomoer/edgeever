@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 const {
   isStagedResourceReferenced,
+  hasDesktopSyncStateReset,
   mergeMemoIdMappings,
   mergeSyncedMemos,
   orderBootstrapNotebooks,
@@ -60,6 +61,13 @@ describe("desktop staged resource sync", () => {
 });
 
 describe("desktop bootstrap sync", () => {
+  test("rebuilds when the server cursor rewinds or its identity changes", () => {
+    const local = { cursor: 42, syncIdentity: "workspace-a" };
+    expect(hasDesktopSyncStateReset(local, { serverCursor: 7, syncIdentity: "workspace-a" })).toBe(true);
+    expect(hasDesktopSyncStateReset(local, { serverCursor: 42, syncIdentity: "workspace-b" })).toBe(true);
+    expect(hasDesktopSyncStateReset(local, { serverCursor: 64, syncIdentity: "workspace-a" })).toBe(false);
+  });
+
   test("orders parent notebooks before their children", () => {
     const child = { id: "child", parentId: "parent", name: "Child" };
     const parent = { id: "parent", parentId: null, name: "Parent" };

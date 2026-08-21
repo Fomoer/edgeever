@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { globSync, readFileSync } from "node:fs";
 import { resolve, sep } from "node:path";
 import {
   buildLocalDevEnvironmentFile,
@@ -126,14 +126,15 @@ describe("cross-platform Wrangler runner", () => {
   });
 
   test("keeps every D1 trigger on one physical line for remote compatibility", () => {
-    const migrationSql = ["0001_initial.sql", "0013_mobile_sync_changes.sql"]
-      .map((file) => readFileSync(resolve("migrations", file), "utf8"))
+    const migrationSql = globSync(resolve("migrations", "*.sql"))
+      .sort()
+      .map((file) => readFileSync(file, "utf8"))
       .join("\n");
     const triggerLines = migrationSql
       .split("\n")
       .filter((line) => line.startsWith("CREATE TRIGGER "));
 
-    expect(triggerLines).toHaveLength(7);
+    expect(triggerLines).toHaveLength(12);
     for (const triggerLine of triggerLines) {
       expect(triggerLine).toEndWith(" END;");
     }

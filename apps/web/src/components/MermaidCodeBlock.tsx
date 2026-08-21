@@ -247,6 +247,9 @@ export const MermaidCodeBlock = ({ editor, node }: NodeViewProps) => {
       <NodeViewContent
         className={isMermaid ? "edgeever-code-source edgeever-mermaid-source" : "edgeever-code-source"}
         role="textbox"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
         aria-label={isMermaid ? t("editorToolbar.mermaidSource") : undefined}
         aria-multiline="true"
         aria-readonly={!editor.isEditable}

@@ -106,7 +106,7 @@ export type DesktopRpcResponses = {
   "memo.restoreRevision": { memo: MemoDetail };
   "memo.revision.cache": { ok: true };
   "sync.status": { pending: number; syncing: number; conflict: number; error: number; cursor: number; syncIdentity: string | null; lastSyncedAt: string | null };
-  "sync.bootstrap.prepare": { clearedSeedData: boolean };
+  "sync.bootstrap.prepare": { clearedSeedData: boolean; rebuiltMirror: boolean };
   "sync.outbox.list": { items: DesktopOutboxItem[] };
   "sync.outbox.ack": { ok: true; memo: MemoDetail | null; notebook: Notebook | null; template: MemoTemplate | null };
   "sync.outbox.fail": { ok: true };
@@ -152,7 +152,7 @@ export type DesktopRpcParams = {
   "memo.restoreRevision": { memoId: string; revisionId: string };
   "memo.revision.cache": { revision: import("./types").MemoRevision };
   "sync.status": Record<string, never>;
-  "sync.bootstrap.prepare": Record<string, never>;
+  "sync.bootstrap.prepare": { reset?: boolean };
   "sync.outbox.list": { limit?: number };
   "sync.outbox.ack": { id: number; remoteMemo?: MemoDetail; remoteNotebook?: Notebook; remoteTemplate?: MemoTemplate };
   "sync.outbox.fail": { id: number; error: string; conflict?: boolean };

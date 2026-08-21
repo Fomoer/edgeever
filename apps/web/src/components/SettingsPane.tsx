@@ -41,6 +41,7 @@ import type { AuthUser } from "@edgeever/shared";
 import { contentEnterMotion } from "@/lib/motion";
 import type { EdgeEverPluginHost } from "@/lib/plugins/plugin-host";
 import { PluginToolbarMenu } from "./plugins/PluginToolbarMenu";
+import { useDeployedUpdateNotice } from "@/hooks/useDeployedUpdateNotice";
 
 interface SettingsPaneProps {
   onClose: () => void;
@@ -111,6 +112,7 @@ export const SettingsPane = ({
   const [activeTab, setActiveTab] = useState<TabKey>("general");
   const [activeMobileTab, setActiveMobileTab] = useState<TabKey | null>(null);
   const [systemInfoOpen, setSystemInfoOpen] = useState(false);
+  const { unseen: deployedUpdateUnseen } = useDeployedUpdateNotice();
   const canClearLocalData = Boolean(window.edgeeverDesktop?.canClearLocalData);
 
   const tabItems: TabItem[] = [
@@ -395,8 +397,9 @@ export const SettingsPane = ({
                   className="flex min-h-16 w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-slate-600 transition-colors hover:bg-slate-200/50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
                 >
                   <span className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50/80">
+                    <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50/80">
                       <Info className="h-4 w-4 text-emerald-600" />
+                      {deployedUpdateUnseen ? <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-white" /> : null}
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold">{t("systemInfo.title")}</span>

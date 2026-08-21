@@ -128,12 +128,12 @@ import {
   getNotebookMoveOptions,
   type EditorContentAlignment,
   type MemoDocumentActionRequest,
+  type ShortcutSettings,
 } from "@/lib/app-helpers";
 import { copyEditorToWeChat, copyMarkdownToWeChat } from "@/lib/wechat-copy";
 import { ThemeBlock } from "./ThemeBlock";
 import { SystemInfoDialog } from "./SystemInfoDialog";
-import { fetchLatestRelease, isVersionOutdated } from "@/lib/version-check";
-import { RELEASE_STATUS_EVENT } from "@/lib/release-notice";
+import { useDeployedUpdateNotice } from "@/hooks/useDeployedUpdateNotice";
 import { downloadMarkdownFile } from "@/lib/note-markdown-export";
 import { NOTE_HTML_FULL_STYLES } from "@/lib/note-html-export-assets";
 import { downloadNoteHtmlFile, getHtmlImageEmbedNoticeKind } from "@/lib/note-html-export";
@@ -633,6 +633,7 @@ type EditorPaneProps = {
   replaceFocusToken: number;
   saveAndSyncToken: number;
   editorModeToggleToken: number;
+  shortcutSettings: ShortcutSettings;
   onSyncRequested: () => Promise<void>;
   documentActionRequest?: MemoDocumentActionRequest | null;
   onDocumentActionConsumed?: (requestId: number) => void;
@@ -703,6 +704,7 @@ const RichEditorPane = ({
   replaceFocusToken,
   saveAndSyncToken,
   editorModeToggleToken,
+  shortcutSettings,
   onSyncRequested,
   documentActionRequest,
   onDocumentActionConsumed,
@@ -743,7 +745,7 @@ const RichEditorPane = ({
   const aiBubbleMenu = useAiBubbleMenu(aiAssistantOpen);
   const [aiSelection, setAiSelection] = useState<AiSelectionContext | null>(null);
   const [systemInfoOpen, setSystemInfoOpen] = useState(false);
-  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const { unseen: deployedUpdateUnseen } = useDeployedUpdateNotice();
   const [mobileNotebookSheetOpen, setMobileNotebookSheetOpen] = useState(false);
   const [notebookUpdatePending, setNotebookUpdatePending] = useState(false);
   const [noteSearchOpen, setNoteSearchOpen] = useState(false);
@@ -846,18 +848,6 @@ const RichEditorPane = ({
   const mobileDefaultEditRequested = Boolean(memo?.id && memo.id === mobileDefaultEditMemoId && !readOnly);
   const mobileEditingActive = isMobileEditing || mobileDefaultEditRequested;
 
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetchLatestRelease(controller.signal)
-      .then((release) => setUpdateAvailable(isVersionOutdated(__EDGEEVER_APP_VERSION__, release.version)))
-      .catch(() => undefined);
-    const handleReleaseStatus = () => setUpdateAvailable(true);
-    window.addEventListener(RELEASE_STATUS_EVENT, handleReleaseStatus);
-    return () => {
-      controller.abort();
-      window.removeEventListener(RELEASE_STATUS_EVENT, handleReleaseStatus);
-    };
-  }, []);
   const effectiveReadOnly = readOnly || (isMobileViewport && !mobileEditingActive);
   const useMobilePlainTextEditor = isMobileViewport && mobileEditingActive && !readOnly;
   const useMarkdownSourceEditor = !useMobilePlainTextEditor && isMarkdownMode;
@@ -3841,7 +3831,7 @@ const RichEditorPane = ({
             <IconTooltip label={t("systemInfo.title")}>
               <Button className="relative hidden h-8 w-8 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-emerald-500/70 min-[1600px]:inline-flex" size="icon" variant="ghost" aria-label={t("systemInfo.title")} onClick={() => setSystemInfoOpen(true)}>
                 <Info className="h-5 w-5" strokeWidth={2.25} />
-                {updateAvailable ? <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-white" /> : null}
+                {deployedUpdateUnseen ? <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-white" /> : null}
               </Button>
             </IconTooltip>
             <PluginToolbarMenu host={pluginHost} onManage={onOpenPluginManager} />
@@ -4140,6 +4130,7 @@ const RichEditorPane = ({
             readOnly={effectiveReadOnly}
             markdownMode={useMarkdownSourceEditor}
             onMarkdownModeChange={handleMarkdownModeChange}
+            markdownModeShortcut={shortcutSettings.toggleEditorMode}
             onPickAttachment={() => fileInputRef.current?.click()}
             onPickExternalLink={openExternalLinkDialog}
             externalLinkActive={externalLinkActive}

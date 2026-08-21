@@ -2,6 +2,81 @@ export type WorkspaceRefreshMode = "background" | "manual";
 export type WorkspaceMemoView = "notebook" | "trash";
 
 export const BACKGROUND_WORKSPACE_REFRESH_INTERVAL_MS = 30_000;
+export const BACKGROUND_WORKSPACE_REFRESH_LEASE_MS = BACKGROUND_WORKSPACE_REFRESH_INTERVAL_MS * 2;
+export const BACKGROUND_WORKSPACE_REFRESH_COALESCE_MS = 1_000;
+
+type RefreshLease = {
+  ownerId: string;
+  expiresAt: number;
+};
+
+const parseRefreshLease = (value: string | null): RefreshLease | null => {
+  if (!value) return null;
+  try {
+    const lease = JSON.parse(value) as Partial<RefreshLease>;
+    return typeof lease.ownerId === "string" && Number.isFinite(lease.expiresAt)
+      ? { ownerId: lease.ownerId, expiresAt: Number(lease.expiresAt) }
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+export const claimBackgroundRefreshLease = ({
+  storage,
+  key,
+  ownerId,
+  now = Date.now(),
+  leaseMs = BACKGROUND_WORKSPACE_REFRESH_LEASE_MS,
+}: {
+  storage: Pick<Storage, "getItem" | "setItem">;
+  key: string;
+  ownerId: string;
+  now?: number;
+  leaseMs?: number;
+}) => {
+  const current = parseRefreshLease(storage.getItem(key));
+  if (current && current.ownerId !== ownerId && current.expiresAt > now) return false;
+
+  storage.setItem(key, JSON.stringify({ ownerId, expiresAt: now + leaseMs }));
+  return parseRefreshLease(storage.getItem(key))?.ownerId === ownerId;
+};
+
+export const releaseBackgroundRefreshLease = ({
+  storage,
+  key,
+  ownerId,
+}: {
+  storage: Pick<Storage, "getItem" | "removeItem">;
+  key: string;
+  ownerId: string;
+}) => {
+  if (parseRefreshLease(storage.getItem(key))?.ownerId === ownerId) storage.removeItem(key);
+};
+
+export const createRefreshSingleFlight = <T>({
+  refresh,
+  now = Date.now,
+  coalesceMs = BACKGROUND_WORKSPACE_REFRESH_COALESCE_MS,
+}: {
+  refresh: () => Promise<T>;
+  now?: () => number;
+  coalesceMs?: number;
+}) => {
+  let active: Promise<T> | null = null;
+  let lastStartedAt = Number.NEGATIVE_INFINITY;
+
+  return () => {
+    if (active) return active;
+    const startedAt = now();
+    if (startedAt - lastStartedAt < coalesceMs) return Promise.resolve(null);
+    lastStartedAt = startedAt;
+    active = refresh().finally(() => {
+      active = null;
+    });
+    return active;
+  };
+};
 
 export const shouldNavigateHomeWhenOpeningMemo = (view: WorkspaceMemoView) => view !== "trash";
 

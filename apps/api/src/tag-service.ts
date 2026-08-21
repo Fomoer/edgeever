@@ -3,6 +3,7 @@ import type { AuditActor } from "./api-context";
 import { AppError } from "./app-error";
 import { auditStatement } from "./audit";
 import { isoNow, parseJsonArray } from "./entity-utils";
+import { upsertMemoSearchDocumentStatement } from "./memo-search-index";
 import type { DatabaseAdapter, PreparedStatementAdapter } from "./storage-contract";
 
 type TagSummaryRow = {
@@ -33,11 +34,11 @@ const getMemoRowsByTag = async (db: DatabaseAdapter, workspaceId: string, tag: s
        WHERE m.workspace_id = ? AND m.is_deleted = 0
          AND EXISTS (
            SELECT 1
-           FROM json_each(m.tags_json)
-           WHERE json_each.value = ?
+           FROM memo_tags mt
+           WHERE mt.memo_id = m.id AND mt.workspace_id = ? AND mt.name = ?
          )`
     )
-    .bind(workspaceId, tag)
+    .bind(workspaceId, workspaceId, tag)
     .all<MemoTagUpdateRow>();
 
   return rows.results;
@@ -54,14 +55,14 @@ const replaceTag = (currentTags: string[], oldTag: string, nextTag: string | nul
 export const listTagSummaries = async (db: DatabaseAdapter, workspaceId: string): Promise<TagSummary[]> => {
   const rows = await db
     .prepare(
-      `SELECT json_each.value AS name,
+      `SELECT mt.name AS name,
               COUNT(DISTINCT m.id) AS memo_count,
               MAX(m.updated_at) AS updated_at
-       FROM memos m, json_each(m.tags_json)
-       WHERE m.workspace_id = ? AND m.is_deleted = 0
-         AND trim(json_each.value) <> ''
-       GROUP BY json_each.value
-       ORDER BY lower(json_each.value) ASC`
+       FROM memo_tags mt
+       INNER JOIN memos m ON m.id = mt.memo_id AND m.workspace_id = mt.workspace_id
+       WHERE mt.workspace_id = ? AND m.is_deleted = 0
+       GROUP BY mt.name
+       ORDER BY mt.normalized_name ASC, mt.name ASC`
     )
     .bind(workspaceId)
     .all<TagSummaryRow>();
@@ -102,10 +103,7 @@ export const updateTagAcrossMemos = async (
            WHERE id = ? AND workspace_id = ? AND is_deleted = 0`
         )
         .bind(JSON.stringify(nextTags), actorLabel, now, row.id, workspaceId),
-      db.prepare(`DELETE FROM memos_fts WHERE memo_id = ?`).bind(row.id),
-      db
-        .prepare(`INSERT INTO memos_fts (memo_id, title, content_text, tags) VALUES (?, ?, ?, ?)`)
-        .bind(row.id, row.title, row.content_text, nextTags.join(" ")),
+      upsertMemoSearchDocumentStatement(db, row.id, row.title, row.content_text, nextTags.join(" ")),
       auditStatement(db, actor.actorType, actor.actorId, normalizedNext ? "tag.rename" : "tag.delete", "memo", row.id, {
         from: normalizedOld,
         to: normalizedNext,
@@ -210,10 +208,13 @@ export const updateTagsForMemos = async (
            WHERE id = ? AND workspace_id = ? AND is_deleted = 0`
         )
         .bind(JSON.stringify(change.nextTags), input.actorLabel, now, change.memoId, input.workspaceId),
-      db.prepare(`DELETE FROM memos_fts WHERE memo_id = ?`).bind(change.memoId),
-      db
-        .prepare(`INSERT INTO memos_fts (memo_id, title, content_text, tags) VALUES (?, ?, ?, ?)`)
-        .bind(change.memoId, change.title, change.contentText, change.nextTags.join(" ")),
+      upsertMemoSearchDocumentStatement(
+        db,
+        change.memoId,
+        change.title,
+        change.contentText,
+        change.nextTags.join(" "),
+      ),
       auditStatement(
         db,
         input.actor.actorType,

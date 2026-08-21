@@ -38,7 +38,7 @@ await waitFor((message) => message.event === "ready");
 const notebooks = await request("notebook.list");
 const seedInbox = notebooks.notebooks.find((notebook) => notebook.slug === "inbox");
 assert.ok(seedInbox, "seed inbox notebook should exist");
-assert.deepEqual(await request("sync.bootstrap.prepare"), { clearedSeedData: true });
+assert.deepEqual(await request("sync.bootstrap.prepare"), { clearedSeedData: true, rebuiltMirror: false });
 assert.equal((await request("memo.list", { limit: 20 })).totalCount, 0, "bootstrap preparation should remove only pristine seed data");
 assert.equal((await request("notebook.list")).notebooks.length, 0, "bootstrap preparation should remove pristine seed notebooks");
 const inbox = (await request("notebook.create", { name: "Inbox" })).notebook;
@@ -48,7 +48,7 @@ if (process.platform !== "win32") {
 }
 
 const first = await request("memo.create", { notebookId: inbox.id, title: "Local first", contentMarkdown: "searchable body", tags: ["local"] });
-assert.deepEqual(await request("sync.bootstrap.prepare"), { clearedSeedData: false });
+assert.deepEqual(await request("sync.bootstrap.prepare"), { clearedSeedData: false, rebuiltMirror: false });
 assert.equal((await request("memo.get", { memoId: first.memo.id })).memo.id, first.memo.id, "bootstrap preparation must preserve local user data");
 const second = await request("memo.create", { notebookId: inbox.id, title: "Second memo", contentMarkdown: "another body", tags: [] });
 const search = await request("memo.list", { q: "searchable", limit: 20 });

@@ -5,7 +5,7 @@ import { BrowserRouter } from "react-router";
 import { registerSW } from "virtual:pwa-register";
 import { App } from "./app/App";
 import "./i18n";
-import { emitPwaUpdateNotice, markPwaUpdateReloadPending } from "./lib/pwa-update-notice";
+import { emitPwaUpdateNotice } from "./lib/pwa-update-notice";
 import { initializeTheme, ThemeProvider } from "./components/ThemeProvider";
 import { DesktopRendererErrorBoundary } from "./components/DesktopRendererErrorBoundary";
 import "./styles/globals.css";
@@ -56,11 +56,10 @@ const registerProductionServiceWorker = () => {
   updateServiceWorker = registerSW({
     immediate: true,
     onNeedRefresh() {
-      emitPwaUpdateNotice({ buildLabel: __EDGEEVER_BUILD_LABEL__, kind: "checking" });
+      emitPwaUpdateNotice({ kind: "checking" });
       void updateServiceWorker(true);
     },
     onNeedReload() {
-      markPwaUpdateReloadPending();
       window.location.reload();
     },
     onRegisteredSW(_swScriptUrl, registration) {

@@ -190,9 +190,9 @@ export const listMemos = async (
 
   if (tag) {
     baseConditions.push(
-      "EXISTS (SELECT 1 FROM json_each(m.tags_json) AS memo_tag WHERE LOWER(CAST(memo_tag.value AS TEXT)) = LOWER(?))",
+      "EXISTS (SELECT 1 FROM memo_tags mt WHERE mt.memo_id = m.id AND mt.workspace_id = ? AND mt.normalized_name = LOWER(?))",
     );
-    baseBinds.push(tag);
+    baseBinds.push(input.workspaceId, tag);
   }
 
   if (filter === "tagged") baseConditions.push("m.tags_json <> '[]'");

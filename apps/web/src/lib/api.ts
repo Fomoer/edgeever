@@ -46,6 +46,11 @@ type ListNotebooksResponse = {
   notebooks: Notebook[];
 };
 
+export type InstanceRelease = {
+  version: string;
+  changes: Record<string, string[]>;
+};
+
 type ListMemosResponse = {
   memos: MemoSummary[];
   totalCount: number;
@@ -296,8 +301,8 @@ export type ApiResponseDiagnostics = {
 let desktopSessionRejected = false;
 let unauthorizedConfirmPromise: Promise<boolean> | null = null;
 
-const isDesktopAuthenticationRequest = (path: string) =>
-  path === "/api/v1/auth/login" || path === "/api/v1/auth/session";
+const isDesktopPublicRequest = (path: string) =>
+  path === "/api/release" || path === "/api/v1/auth/login" || path === "/api/v1/auth/session";
 
 /**
  * Confirm the browser is actually logged out before forcing the login screen.
@@ -365,7 +370,7 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const isDesktop = Boolean(typeof window !== "undefined" && window.edgeeverDesktop?.isAvailable);
   const sessionToken = isDesktop ? getDesktopSessionToken() : undefined;
 
-  if (isDesktop && desktopSessionRejected && !isDesktopAuthenticationRequest(path)) {
+  if (isDesktop && desktopSessionRejected && !isDesktopPublicRequest(path)) {
     throw new ApiRequestError("Authentication required", 401, "unauthorized");
   }
 
@@ -452,6 +457,8 @@ const requestArrayBuffer = async (path: string) => {
 };
 
 export const api = {
+  getInstanceRelease: () => request<InstanceRelease>("/api/release"),
+
   getSession: () => request<AuthSession>("/api/v1/auth/session"),
 
   getPublicMemoShare: (token: string) =>

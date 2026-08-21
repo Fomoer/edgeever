@@ -48,6 +48,8 @@ describe("Docker release contract", () => {
     expect(dockerfile).toContain("FROM oven/bun:1.3.14-alpine AS runtime");
     expect(dockerfile).toContain("COPY patches patches");
     expect(dockerfile).toContain("COPY docs docs");
+    expect(dockerfile).toContain("COPY release-summary.json release-summary.json");
+    expect(dockerfile).toContain("COPY --from=build /app/release-summary.json ./release-summary.json");
     expect(dockerfile).toContain("--filter @edgeever/web");
     expect(dockerfile).toContain("--production --filter edgeever");
     expect(dockerfile).toContain("USER bun");

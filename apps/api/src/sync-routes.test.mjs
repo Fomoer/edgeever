@@ -80,15 +80,22 @@ describe("sync route contracts", () => {
     });
   });
 
-  test("uses the workspace cursor index without joining the whole change log", async () => {
+  test("loads changes and workspace cursor state in one indexed query", async () => {
     const sqlStatements = [];
     const database = {
       prepare: (sql) => {
         sqlStatements.push(sql);
         return {
           bind: () => ({
-            all: async () => ({ results: [] }),
-            first: async () => ({ cursor: 0, sync_identity: "workspace-created-at" }),
+            all: async () => ({ results: [{
+              id: null,
+              entity_type: null,
+              entity_id: null,
+              operation: null,
+              server_cursor: 0,
+              sync_identity: "workspace-created-at",
+            }] }),
+            first: async () => null,
           }),
         };
       },
@@ -100,9 +107,10 @@ describe("sync route contracts", () => {
     );
 
     expect(response.status).toBe(200);
-    const cursorSql = sqlStatements.find((sql) => sql.includes("SELECT MAX(c.id)"));
+    expect(sqlStatements).toHaveLength(1);
+    const cursorSql = sqlStatements[0];
     expect(cursorSql).toContain("WHERE c.workspace_id = w.id");
-    expect(cursorSql).not.toContain("LEFT JOIN mobile_sync_changes");
+    expect(cursorSql).toContain("WHERE workspace_id = ? AND id > ?");
   });
 
   test("folds repeated entities within a page while preserving the raw page cursor", async () => {
@@ -110,19 +118,19 @@ describe("sync route contracts", () => {
       prepare: (sql) => ({
         bind: () => ({
           all: async () => {
-            if (sql.includes("FROM mobile_sync_changes")) {
+            if (sql.includes("WITH workspace_state")) {
               return {
                 results: [
-                  { id: 11, entity_type: "memo", entity_id: "memo_1", operation: "upsert" },
-                  { id: 12, entity_type: "memo", entity_id: "memo_1", operation: "upsert" },
-                  { id: 13, entity_type: "notebook", entity_id: "notebook_1", operation: "delete" },
+                  { id: 11, entity_type: "memo", entity_id: "memo_1", operation: "upsert", server_cursor: 13, sync_identity: "workspace-created-at" },
+                  { id: 12, entity_type: "memo", entity_id: "memo_1", operation: "upsert", server_cursor: 13, sync_identity: "workspace-created-at" },
+                  { id: 13, entity_type: "notebook", entity_id: "notebook_1", operation: "delete", server_cursor: 13, sync_identity: "workspace-created-at" },
                 ],
               };
             }
             if (sql.includes("FROM memos m")) return { results: [{ id: "memo_1", title: "Latest" }] };
             return { results: [] };
           },
-          first: async () => ({ cursor: 13, sync_identity: "workspace-created-at" }),
+          first: async () => null,
         }),
       }),
     };
@@ -164,17 +172,17 @@ describe("sync route contracts", () => {
       prepare: (sql) => ({
         bind: () => ({
           all: async () => {
-            if (sql.includes("FROM mobile_sync_changes")) {
+            if (sql.includes("WITH workspace_state")) {
               return {
                 results: [
-                  { id: 21, entity_type: "memo", entity_id: "memo_1", operation: "delete" },
-                  { id: 22, entity_type: "memo", entity_id: "memo_1", operation: "upsert" },
+                  { id: 21, entity_type: "memo", entity_id: "memo_1", operation: "delete", server_cursor: 22, sync_identity: "workspace-created-at" },
+                  { id: 22, entity_type: "memo", entity_id: "memo_1", operation: "upsert", server_cursor: 22, sync_identity: "workspace-created-at" },
                 ],
               };
             }
             return { results: [] };
           },
-          first: async () => ({ cursor: 22, sync_identity: "workspace-created-at" }),
+          first: async () => null,
         }),
       }),
     };

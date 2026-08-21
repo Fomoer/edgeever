@@ -1136,9 +1136,72 @@ fn sync_status(database: &Connection) -> Result<Value, String> {
     }))
 }
 
-fn prepare_sync_bootstrap(database: &Connection) -> Result<Value, String> {
+const SYNC_BOOTSTRAP_RESET_KEY: &str = "sync.bootstrap.reset_pending";
+
+fn reset_sync_mirror(database: &Connection) -> Result<(), String> {
+    let tx = database
+        .unchecked_transaction()
+        .map_err(|e| e.to_string())?;
+    tx.execute_batch(
+        "CREATE TEMP TABLE IF NOT EXISTS _edgeever_bootstrap_preserved_memos (id TEXT PRIMARY KEY);
+         CREATE TEMP TABLE IF NOT EXISTS _edgeever_bootstrap_preserved_notebooks (id TEXT PRIMARY KEY);
+         DELETE FROM _edgeever_bootstrap_preserved_memos;
+         DELETE FROM _edgeever_bootstrap_preserved_notebooks;
+         INSERT OR IGNORE INTO _edgeever_bootstrap_preserved_memos (id)
+         SELECT m.id FROM memos m
+         WHERE EXISTS (
+           SELECT 1 FROM _edgeever_sidecar_outbox o
+           WHERE o.entity_id = m.id OR instr(o.payload_json, m.id) > 0
+         );
+         INSERT OR IGNORE INTO _edgeever_bootstrap_preserved_notebooks (id)
+         SELECT n.id FROM notebooks n
+         WHERE EXISTS (
+           SELECT 1 FROM _edgeever_sidecar_outbox o
+           WHERE o.entity_id = n.id OR instr(o.payload_json, n.id) > 0
+         );
+         INSERT OR IGNORE INTO _edgeever_bootstrap_preserved_notebooks (id)
+         SELECT DISTINCT m.notebook_id
+         FROM memos m
+         INNER JOIN _edgeever_bootstrap_preserved_memos p ON p.id = m.id;
+         WITH RECURSIVE preserved_ancestors(id, parent_id) AS (
+           SELECT n.id, n.parent_id
+           FROM notebooks n
+           INNER JOIN _edgeever_bootstrap_preserved_notebooks p ON p.id = n.id
+           UNION
+           SELECT parent.id, parent.parent_id
+           FROM notebooks parent
+           INNER JOIN preserved_ancestors child ON child.parent_id = parent.id
+         )
+         INSERT OR IGNORE INTO _edgeever_bootstrap_preserved_notebooks (id)
+         SELECT id FROM preserved_ancestors;
+         DELETE FROM resources
+         WHERE memo_id NOT IN (SELECT id FROM _edgeever_bootstrap_preserved_memos);
+         DELETE FROM memos
+         WHERE id NOT IN (SELECT id FROM _edgeever_bootstrap_preserved_memos);
+         UPDATE notebooks SET parent_id = NULL
+         WHERE id NOT IN (SELECT id FROM _edgeever_bootstrap_preserved_notebooks);
+         DELETE FROM notebooks
+         WHERE id NOT IN (SELECT id FROM _edgeever_bootstrap_preserved_notebooks);
+         DELETE FROM _edgeever_sidecar_meta
+         WHERE key IN ('sync.cursor', 'sync.identity', 'sync.last_synced_at');
+         INSERT INTO _edgeever_sidecar_meta (key, value, updated_at)
+         VALUES ('sync.bootstrap.reset_pending', '1', strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at;",
+    )
+    .map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())
+}
+
+fn prepare_sync_bootstrap(database: &Connection, params: &Value) -> Result<Value, String> {
+    let reset_requested = bool_param(params, "reset", false)
+        || meta_value(database, SYNC_BOOTSTRAP_RESET_KEY).as_deref() == Some("1");
+    if reset_requested {
+        reset_sync_mirror(database)?;
+        return Ok(json!({ "clearedSeedData": false, "rebuiltMirror": true }));
+    }
+
     if meta_value(database, "sync.identity").is_some_and(|identity| !identity.is_empty()) {
-        return Ok(json!({ "clearedSeedData": false }));
+        return Ok(json!({ "clearedSeedData": false, "rebuiltMirror": false }));
     }
 
     let outbox_count = database
@@ -1163,13 +1226,11 @@ fn prepare_sync_bootstrap(database: &Connection) -> Result<Value, String> {
         .map_err(|e| e.to_string())?;
 
     if outbox_count > 0 || non_seed_memos > 0 || non_seed_notebooks > 0 {
-        return Ok(json!({ "clearedSeedData": false }));
+        return Ok(json!({ "clearedSeedData": false, "rebuiltMirror": false }));
     }
 
     let tx = database
         .unchecked_transaction()
-        .map_err(|e| e.to_string())?;
-    tx.execute("DELETE FROM memos_fts WHERE memo_id = 'memo_welcome'", [])
         .map_err(|e| e.to_string())?;
     tx.execute("DELETE FROM memos WHERE id = 'memo_welcome'", [])
         .map_err(|e| e.to_string())?;
@@ -1180,7 +1241,7 @@ fn prepare_sync_bootstrap(database: &Connection) -> Result<Value, String> {
     )
     .map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
-    Ok(json!({ "clearedSeedData": true }))
+    Ok(json!({ "clearedSeedData": true, "rebuiltMirror": false }))
 }
 
 fn sync_outbox_list(database: &Connection, params: &Value) -> Result<Value, String> {
@@ -1412,6 +1473,7 @@ fn apply_sync_changes(database: &Connection, params: &Value) -> Result<Value, St
         .get("changes")
         .and_then(Value::as_array)
         .ok_or_else(|| "Missing changes array".to_owned())?;
+    let rebuilding = meta_value(database, SYNC_BOOTSTRAP_RESET_KEY).as_deref() == Some("1");
     let tx = database
         .unchecked_transaction()
         .map_err(|e| e.to_string())?;
@@ -1419,6 +1481,23 @@ fn apply_sync_changes(database: &Connection, params: &Value) -> Result<Value, St
         let entity_type = string_param(change, "entityType")?;
         let operation = string_param(change, "operation")?;
         let entity_id = string_param(change, "entityId")?;
+        if rebuilding {
+            let preserved_table = if entity_type == "notebook" {
+                "_edgeever_bootstrap_preserved_notebooks"
+            } else {
+                "_edgeever_bootstrap_preserved_memos"
+            };
+            let preserved = tx
+                .query_row(
+                    &format!("SELECT EXISTS(SELECT 1 FROM {preserved_table} WHERE id = ?1)"),
+                    [&entity_id],
+                    |row| row.get::<_, bool>(0),
+                )
+                .unwrap_or(false);
+            if preserved {
+                continue;
+            }
+        }
         if entity_type == "notebook" {
             if operation == "delete" {
                 tx.execute("UPDATE notebooks SET is_deleted = 1, deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?1", [&entity_id]).map_err(|e| e.to_string())?;
@@ -1481,7 +1560,7 @@ fn handle(
         "storage.backups" => list_backups(root).map_err(|error| error.to_string()),
         "storage.restore" => restore_database(database, root, migrations, &request.params),
         "sync.status" => sync_status(database),
-        "sync.bootstrap.prepare" => prepare_sync_bootstrap(database),
+        "sync.bootstrap.prepare" => prepare_sync_bootstrap(database, &request.params),
         "sync.outbox.list" => sync_outbox_list(database, &request.params),
         "sync.outbox.ack" => sync_outbox_ack(database, &request.params),
         "sync.outbox.fail" => sync_outbox_fail(database, &request.params),
@@ -1508,6 +1587,18 @@ fn handle(
                     .unwrap_or(""),
             )?;
             set_meta(database, "sync.last_synced_at", &chrono_like_now())?;
+            database
+                .execute(
+                    "DELETE FROM _edgeever_sidecar_meta WHERE key = ?1",
+                    [SYNC_BOOTSTRAP_RESET_KEY],
+                )
+                .map_err(|e| e.to_string())?;
+            database
+                .execute_batch(
+                    "DROP TABLE IF EXISTS temp._edgeever_bootstrap_preserved_memos;
+                     DROP TABLE IF EXISTS temp._edgeever_bootstrap_preserved_notebooks;",
+                )
+                .map_err(|e| e.to_string())?;
             Ok(json!({ "ok": true }))
         }
         "notebook.list" => list_notebooks(database),
@@ -1656,5 +1747,95 @@ mod tests {
             r#"{"type":"doc","content":[{"type":"image","attrs":{"src":"image.png"}}]}"#
         )
         .is_err());
+    }
+
+    #[test]
+    fn mirror_reset_removes_stale_cache_and_preserves_outbox_drafts() {
+        let database = Connection::open_in_memory().unwrap();
+        database
+            .execute_batch(
+                "PRAGMA foreign_keys = ON;
+                 CREATE TABLE _edgeever_sidecar_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL);
+                 CREATE TABLE _edgeever_sidecar_outbox (id INTEGER PRIMARY KEY, kind TEXT NOT NULL, entity_id TEXT NOT NULL, payload_json TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending');
+                 CREATE TABLE notebooks (id TEXT PRIMARY KEY, parent_id TEXT REFERENCES notebooks(id) ON DELETE RESTRICT, name TEXT NOT NULL);
+                 CREATE TABLE memos (id TEXT PRIMARY KEY, notebook_id TEXT NOT NULL REFERENCES notebooks(id) ON DELETE RESTRICT, title TEXT);
+                 CREATE TABLE memo_contents (memo_id TEXT PRIMARY KEY REFERENCES memos(id) ON DELETE CASCADE, content_markdown TEXT NOT NULL);
+                 CREATE TABLE resources (id TEXT PRIMARY KEY, memo_id TEXT NOT NULL REFERENCES memos(id) ON DELETE RESTRICT);
+                 INSERT INTO _edgeever_sidecar_meta VALUES ('sync.cursor', '42', 'now'), ('sync.identity', 'workspace-a', 'now');
+                 INSERT INTO notebooks VALUES ('stale-notebook', NULL, 'Stale'), ('draft-parent', NULL, 'Draft parent'), ('draft-notebook', 'draft-parent', 'Draft');
+                 INSERT INTO memos VALUES ('stale-memo', 'stale-notebook', 'Stale cache'), ('draft-memo', 'draft-notebook', 'Unsynced draft');
+                 INSERT INTO memo_contents VALUES ('stale-memo', 'stale'), ('draft-memo', 'local changes');
+                 INSERT INTO resources VALUES ('stale-resource', 'stale-memo'), ('draft-resource', 'draft-memo');
+                 INSERT INTO _edgeever_sidecar_outbox (id, kind, entity_id, payload_json) VALUES (1, 'memo.update', 'draft-memo', '{\"memoId\":\"draft-memo\"}');",
+            )
+            .unwrap();
+
+        let result = prepare_sync_bootstrap(&database, &json!({ "reset": true })).unwrap();
+        assert_eq!(
+            result.get("rebuiltMirror").and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            database
+                .query_row(
+                    "SELECT COUNT(*) FROM memos WHERE id = 'stale-memo'",
+                    [],
+                    |row| row.get::<_, i64>(0)
+                )
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            database
+                .query_row(
+                    "SELECT content_markdown FROM memo_contents WHERE memo_id = 'draft-memo'",
+                    [],
+                    |row| row.get::<_, String>(0)
+                )
+                .unwrap(),
+            "local changes"
+        );
+        assert_eq!(
+            database
+                .query_row(
+                    "SELECT COUNT(*) FROM notebooks WHERE id IN ('draft-parent', 'draft-notebook')",
+                    [],
+                    |row| row.get::<_, i64>(0)
+                )
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            database
+                .query_row(
+                    "SELECT COUNT(*) FROM resources WHERE id = 'draft-resource'",
+                    [],
+                    |row| row.get::<_, i64>(0)
+                )
+                .unwrap(),
+            1
+        );
+        assert!(meta_value(&database, "sync.cursor").is_none());
+
+        apply_sync_changes(
+            &database,
+            &json!({ "changes": [{
+                "entityType": "memo",
+                "operation": "upsert",
+                "entityId": "draft-memo",
+                "memo": { "title": "Cloud snapshot must not overwrite this" }
+            }] }),
+        )
+        .unwrap();
+        assert_eq!(
+            database
+                .query_row(
+                    "SELECT title FROM memos WHERE id = 'draft-memo'",
+                    [],
+                    |row| row.get::<_, String>(0)
+                )
+                .unwrap(),
+            "Unsynced draft"
+        );
     }
 }

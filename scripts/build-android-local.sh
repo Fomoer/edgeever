@@ -69,6 +69,17 @@ else
   echo "跳过 Android prebuild：原生配置未变化。"
 fi
 
+ANDROID_MANIFEST="$ANDROID_DIR/app/src/main/AndroidManifest.xml"
+if [[ "$MODE" == "play" ]]; then
+  run_timed "移除 Play 不需要的侧载安装权限" \
+    node "$PROJECT_ROOT/scripts/configure-android-package-permissions.mjs" \
+    "$ANDROID_MANIFEST" play
+else
+  run_timed "保留 APK 自更新所需的安装权限" \
+    node "$PROJECT_ROOT/scripts/configure-android-package-permissions.mjs" \
+    "$ANDROID_MANIFEST" sideload
+fi
+
 cd "$ANDROID_DIR"
 COMMON_ARGS=(
   --build-cache
@@ -144,6 +155,12 @@ run_timed "Gradle 生产 AAB 构建" ./gradlew bundleRelease \
   -Pandroid.injected.signing.store.type=PKCS12
 
 AAB_PATH="app/build/outputs/bundle/release/app-release.aab"
+PACKAGED_MANIFEST="app/build/intermediates/packaged_manifests/release/processReleaseManifestForPackage/AndroidManifest.xml"
+test -s "$PACKAGED_MANIFEST"
+if grep -q "android.permission.REQUEST_INSTALL_PACKAGES" "$PACKAGED_MANIFEST"; then
+  echo "Play AAB 的最终合并清单仍包含 REQUEST_INSTALL_PACKAGES，停止发布。" >&2
+  exit 1
+fi
 ACTUAL_PLAY_ARCHS="$(unzip -Z1 "$AAB_PATH" | sed -n 's#^base/lib/\([^/]*\)/.*#\1#p' | sort -u | paste -sd, -)"
 if [[ "$ACTUAL_PLAY_ARCHS" != "$PLAY_ARCHS" ]]; then
   echo "AAB 架构不符合预期：期望 ${PLAY_ARCHS}，实际 ${ACTUAL_PLAY_ARCHS:-无原生库}。" >&2

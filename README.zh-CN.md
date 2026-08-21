@@ -1,4 +1,4 @@
-# EdgeEver
+<h1><img src="assets/brand/edgeever-icon.svg" alt="EdgeEver Logo" width="40" align="absmiddle" /> EdgeEver</h1>
 
 [![GitHub Stars](https://img.shields.io/github/stars/tianma-if/edgeever?style=social)](https://github.com/tianma-if/edgeever/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/tianma-if/edgeever?style=social)](https://github.com/tianma-if/edgeever/network/members)
@@ -145,6 +145,7 @@ macOS App 可从 [GitHub Releases](https://github.com/tianma-if/edgeever/release
 ## 社区与反馈
 
 - Bug、功能建议和部署问题请优先提交 [GitHub Issues](https://github.com/tianma-if/edgeever/issues)，方便后续用户检索和复用解决方案。
+- 贡献代码前请阅读[贡献代码须知](CONTRIBUTING.zh-CN.md)。如果您的 Fork 同时用于部署 EdgeEver，请将 `main` 分支仅用于部署；从官方 `upstream/main` 新建独立分支，在该分支中同步上游、开发并提交 Pull Request，不要在部署用的 `main` 上开发或执行 Sync fork。
 
 ### 微信交流群
 
@@ -232,14 +233,6 @@ Remote MCP 端点支持无状态的 `2026-07-28` 协议，同时继续兼容现�
 比如让AI Agent归纳你随机记录的灵感创意、针对你的笔记做精准的人物画像、构建自己的知识图谱、自动为笔记打标签）
 借助 MCP，EdgeEver 还可以与 Notion Database、飞书多维表格等工具联动，把日常笔记中零散的灵感、信息和素材沉淀到结构化数据库中，方便后续整理、检索与管理。
 
-## 接入自己的 AI 模型
-
-进入**个人中心 → AI 集成**，可以使用自己的 Base URL 和 API Key 添加一个或多个 OpenAI 兼容协议、Anthropic Messages 或 Google Gemini 云端服务，也支持第三方中转站。每个服务都能配置多个模型：既可以从服务的模型列表接口自动发现，也可以手动输入模型 ID。服务级开关会让该服务下的全部模型暂时不可用，工作区默认模型则决定笔记 AI 实际使用哪个模型。
-
-当前 Web、Android 与 iOS 内置 6 个常用指令：总结、翻译、润色、精炼表达、转为小红书风格与转为推特风格；更细分的场景可自行添加指令。三个平台的编辑器都可以直接处理选中内容，并只替换对应选区。模型结果会先作为可审查的流式草稿展示，用户可以重试、继续提出调整要求、追加内容，或明确接受后替换原文。翻译使用带默认值的语言下拉框：中文界面默认译为英语，英文界面默认译为简体中文。
-
-AI 请求统一由 EdgeEver 服务端发出，不会由浏览器或原生客户端直接携带模型密钥。模型凭据按个人工作区隔离并加密保存；标准部署会自动从已有的实例认证 Secret 派生 AI 专用加密密钥，不需要增加任何部署变量。Cloudflare Worker 与未来的 Docker/Bun 运行时共用同一套 AI 业务代码。
-
 ## 图片压缩规则
 
 图片压缩仅在 Web 端上传前执行，由设置页的“压缩笔记内图片”开关控制。启用后，浏览器会把 PNG、JPEG、WebP、AVIF 尝试压缩为 WebP，并将最长边限制在 `2560px` 以内；如果压缩结果不比原图小，则保留原图。
@@ -248,9 +241,7 @@ Cloudflare Worker 侧执行图片处理会消耗计算/图片处理额度，因�
 
 ## 高级对象存储
 
-实例 Owner 可以进入**设置 → 高级设置 → OSS 对象存储**，让后续上传的图片和附件写入兼容 S3 API 的阿里云 OSS、腾讯云 COS、AWS S3、MinIO 或 R2。已有资源继续保留在原存储中，因此切换默认存储不会迁移历史附件，也不会让历史附件失效。
-
-在 Cloudflare 部署中保存第三方对象存储凭据前，需要先配置一个至少 32 个字符的随机 `EDGE_EVER_STORAGE_ENCRYPTION_KEY` Worker Secret。EdgeEver 会用这个实例级密钥加密保存在 D1 中的对象存储 Secret。请保持该密钥稳定并妥善备份；更换密钥会导致之前保存的对象存储凭据无法继续使用。
+实例 Owner 可在**设置 → 高级设置 → OSS 对象存储**中配置兼容 S3 API 的对象存储。切换存储不会迁移或影响已有附件。Cloudflare 部署还需配置至少 32 个字符的 `EDGE_EVER_STORAGE_ENCRYPTION_KEY` Worker Secret。
 
 ## 导入与迁移 (Migration)
 

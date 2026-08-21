@@ -36,6 +36,9 @@ export const createLocalDataScope = (baseUrl: string, userId?: string | null) =>
 const getMeta = async (scope: string, key: string) =>
   (await localDb.syncMeta.get([scope, key]))?.value ?? null;
 
+export const hasLocalSyncCursorRewound = (localCursor: number, serverCursor?: number) =>
+  typeof serverCursor === "number" && Number.isFinite(serverCursor) && serverCursor < localCursor;
+
 export const isLocalMirrorInitialized = async (scope: string) => Boolean(await getMeta(scope, SYNC_IDENTITY_KEY));
 
 export const hasLocalMirrorData = async (scope: string) =>
@@ -142,7 +145,15 @@ const performSyncLocalMirror = async (scope: string) => {
   let currentCursor = cursor;
   let response = await api.syncChanges({ cursor: currentCursor, limit: CHANGE_PAGE_SIZE });
 
-  if (response.syncIdentity && response.syncIdentity !== storedIdentity) {
+  if (
+    hasLocalSyncCursorRewound(currentCursor, response.serverCursor) ||
+    (response.syncIdentity && response.syncIdentity !== storedIdentity)
+  ) {
+    // Restoring or clearing a server database can restart the change-log
+    // sequence without replacing the workspace row. In that case the saved
+    // browser cursor is ahead of the server and an incremental request looks
+    // empty even though the IndexedDB mirror is stale. Rebuild from the
+    // authoritative snapshot just as we do for a changed sync identity.
     changed = await bootstrapScope(scope);
     return { bootstrapped: true, changed };
   }

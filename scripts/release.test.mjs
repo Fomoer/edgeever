@@ -3,6 +3,7 @@ import {
   auditReleaseCommitCoverage,
   buildIssueBody,
   buildReleaseNotes,
+  buildReleaseSummary,
   buildReleaseTitle,
   nextVersion,
   parseReleaseArgs,
@@ -38,6 +39,8 @@ describe("release automation", () => {
         "Run checks in parallel.",
         "--change-zh",
         "并行运行检查。",
+        "--change-locale",
+        "ja-JP:チェックを並列実行します。",
         "--change-commit",
         "abc1234",
       ]),
@@ -47,6 +50,7 @@ describe("release automation", () => {
       labels: ["enhancement"],
       changesEn: ["Run checks in parallel."],
       changesZh: ["并行运行检查。"],
+      localizedChanges: { "ja-JP": ["チェックを並列実行します。"] },
       changeCommits: ["abc1234"],
     });
   });
@@ -175,6 +179,22 @@ describe("release automation", () => {
     expect(notes).not.toContain("Version bump");
     expect(notes).not.toContain("release plan");
     expect(notes).not.toContain("\\n");
+  });
+
+  test("builds the in-app summary from the same bilingual release changes", () => {
+    expect(buildReleaseSummary({
+      version: "1.6.55",
+      changesEn: ["Improve the release flow."],
+      changesZh: ["优化发布流程。"],
+      localizedChanges: { "ja-JP": ["リリースフローを改善します。"] },
+    })).toEqual({
+      version: "1.6.55",
+      changes: {
+        "en-US": ["Improve the release flow."],
+        "zh-CN": ["优化发布流程。"],
+        "ja-JP": ["リリースフローを改善します。"],
+      },
+    });
   });
 
   test("builds a bilingual umbrella Issue", () => {

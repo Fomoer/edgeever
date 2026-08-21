@@ -404,6 +404,13 @@ const applyBootstrap = async (page: SyncBootstrapResponse) => {
   if (changes.length > 0) await request("sync.apply", { changes });
 };
 
+export const hasDesktopSyncStateReset = (
+  local: { cursor: number; syncIdentity: string },
+  remote: Pick<SyncChangesResponse, "serverCursor" | "syncIdentity">,
+) => remote.serverCursor < local.cursor || Boolean(
+  remote.syncIdentity && remote.syncIdentity !== local.syncIdentity,
+);
+
 export const orderBootstrapNotebooks = (notebooks: SyncBootstrapResponse["notebooks"]) => {
   const remaining = new Map(notebooks.map((notebook) => [notebook.id, notebook]));
   const ordered: SyncBootstrapResponse["notebooks"] = [];
@@ -425,31 +432,47 @@ export const orderBootstrapNotebooks = (notebooks: SyncBootstrapResponse["notebo
   return ordered;
 };
 
+const bootstrapDesktopMirror = async (reset: boolean) => {
+  await request("sync.bootstrap.prepare", reset ? { reset: true } : {});
+  let afterId: string | null = null;
+  let firstPage = true;
+  let snapshotCursor = 0;
+  let syncIdentity = "";
+  do {
+    const page = await api.syncBootstrap({ afterId, limit: 200 });
+    if (firstPage) {
+      snapshotCursor = page.snapshotCursor;
+      syncIdentity = page.syncIdentity ?? "";
+      firstPage = false;
+    }
+    await applyBootstrap(page);
+    afterId = page.nextAfterId;
+  } while (afterId);
+  await request("sync.cursor.set", { cursor: snapshotCursor, syncIdentity });
+};
+
 const pullRemoteChanges = async () => {
   const status = await request("sync.status", {});
   if (!status.syncIdentity) {
-    await request("sync.bootstrap.prepare", {});
-    let afterId: string | null = null;
-    let snapshotCursor = 0;
-    let syncIdentity = "";
-    do {
-      const page = await api.syncBootstrap({ afterId, limit: 200 });
-      if (!snapshotCursor) snapshotCursor = page.snapshotCursor;
-      syncIdentity = page.syncIdentity ?? syncIdentity;
-      await applyBootstrap(page);
-      afterId = page.nextAfterId;
-    } while (afterId);
-    await request("sync.cursor.set", { cursor: snapshotCursor, syncIdentity });
+    await bootstrapDesktopMirror(false);
     return;
   }
 
   let cursor = status.cursor;
   let response: SyncChangesResponse = await api.syncChanges({ cursor, limit: 200 });
+  if (hasDesktopSyncStateReset({ cursor: status.cursor, syncIdentity: status.syncIdentity }, response)) {
+    await bootstrapDesktopMirror(true);
+    return;
+  }
   while (response.changes.length > 0) {
     await request("sync.apply", { changes: response.changes });
     cursor = response.cursor;
     if (!response.hasMore) break;
     response = await api.syncChanges({ cursor, limit: 200 });
+    if (hasDesktopSyncStateReset({ cursor, syncIdentity: status.syncIdentity }, response)) {
+      await bootstrapDesktopMirror(true);
+      return;
+    }
   }
   await request("sync.cursor.set", { cursor: response.cursor ?? cursor, syncIdentity: response.syncIdentity ?? status.syncIdentity });
 };

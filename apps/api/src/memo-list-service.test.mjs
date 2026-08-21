@@ -92,8 +92,9 @@ describe("memo list service", () => {
 
     expect(database.calls).toHaveLength(2);
     for (const call of database.calls) {
-      expect(call.sql).toContain("json_each(m.tags_json)");
-      expect(call.sql).toContain("LOWER(CAST(memo_tag.value AS TEXT)) = LOWER(?)");
+      expect(call.sql).toContain("FROM memo_tags mt");
+      expect(call.sql).toContain("mt.normalized_name = LOWER(?)");
+      expect(call.parameters.filter((value) => value === "ws_1").length).toBeGreaterThanOrEqual(2);
       expect(call.parameters).toContain("Demo");
       expect(call.sql).not.toContain("m.tags_json LIKE");
     }

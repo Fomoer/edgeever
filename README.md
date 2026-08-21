@@ -1,4 +1,4 @@
-# EdgeEver
+<h1><img src="assets/brand/edgeever-icon.svg" alt="EdgeEver logo" width="40" align="absmiddle" /> EdgeEver</h1>
 
 [![GitHub Stars](https://img.shields.io/github/stars/tianma-if/edgeever?style=social)](https://github.com/tianma-if/edgeever/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/tianma-if/edgeever?style=social)](https://github.com/tianma-if/edgeever/network/members)
@@ -148,6 +148,7 @@ On platforms without a native client, EdgeEver can be installed as a PWA using C
 ## Community and Feedback
 
 - Bugs, feature requests, and deployment issues: [GitHub Issues](https://github.com/tianma-if/edgeever/issues)
+- Code contributions: read the [Contribution Guide](CONTRIBUTING.md). If your Fork is also used to deploy EdgeEver, keep its `main` branch deployment-only. Create a separate branch from the official `upstream/main` for synchronization, development, and pull requests; do not develop on or Sync fork the deployment `main`.
 
 ### WeChat Community Group
 
@@ -233,14 +234,6 @@ The Remote MCP endpoint supports the stateless `2026-07-28` protocol while retai
 
 With MCP, EdgeEver can also connect to tools such as Notion databases and Feishu Bitable, turning scattered ideas, information, and materials from everyday notes into structured data that is easier to organize, search, and manage.
 
-## Bring Your Own AI Models
-
-Open **Profile → AI Integrations** to add one or more OpenAI-compatible, Anthropic Messages, or Google Gemini services with your own Base URLs and API keys. Third-party API relays are also supported. Each service can contain multiple models: discover them from the provider's model-list endpoint or enter a model ID manually. A service-level switch temporarily makes all of its models unavailable, while the workspace default selects the model used for note AI.
-
-Note AI includes six focused built-in prompts across Web, Android, and iOS: summarize, translate, polish, make concise, convert to Xiaohongshu style, and convert to X (Twitter) style. You can add custom prompts for more specialized workflows. Editors on all three platforms can also run AI directly on selected text and replace only that selection. Results stream into a reviewable draft that you can retry, refine with a follow-up instruction, append, or explicitly accept as a replacement. Translation uses a language picker whose default follows the interface language: Chinese defaults to English, while English defaults to Simplified Chinese.
-
-AI requests are sent by the EdgeEver server rather than directly by the browser or native client. Model credentials are isolated by personal workspace and encrypted before being stored. Standard deployments automatically derive an AI-specific encryption key from the existing instance authentication secret, so no additional deployment variable is required. The same AI business code runs in Cloudflare Workers and the Docker/Bun runtime.
-
 ## Image Compression
 
 Image compression happens in the Web client before upload and is controlled by the **Compress note images** setting. When enabled, PNG, JPEG, WebP, and AVIF files are converted to WebP when beneficial, with the longest edge limited to `2560px`. If compression does not reduce size, the original file is kept.
@@ -249,9 +242,7 @@ EdgeEver avoids Worker-side image processing to reduce compute and image-process
 
 ## Advanced Object Storage
 
-The instance owner can open **Settings → Advanced → OSS object storage** to send new images and attachments to an S3-compatible service such as Alibaba Cloud OSS, Tencent COS, AWS S3, MinIO, or R2. Existing resources stay in their original store, so changing the default does not migrate or break historical attachments.
-
-Before saving third-party object-storage credentials on a Cloudflare deployment, configure the `EDGE_EVER_STORAGE_ENCRYPTION_KEY` Worker Secret with a random value of at least 32 characters. EdgeEver uses this instance-level key to encrypt the access secret stored in D1. Keep the key stable and backed up; changing it makes previously saved object-storage credentials unusable.
+The instance owner can configure S3-compatible object storage under **Settings → Advanced → OSS object storage**. Changing storage does not migrate or affect existing attachments. Cloudflare deployments must also configure an `EDGE_EVER_STORAGE_ENCRYPTION_KEY` Worker Secret of at least 32 characters.
 
 ## Migration
 

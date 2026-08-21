@@ -79,7 +79,7 @@ describe("authentication hot path", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(statements.some((sql) => sql.includes("UPDATE sessions SET last_seen_at"))).toBe(false);
+    expect(statements.some((sql) => /UPDATE sessions\s+SET last_seen_at/.test(sql))).toBe(false);
     expect(statements.some((sql) => sql.includes("SELECT id FROM users"))).toBe(false);
     expect(statements.some((sql) => sql.includes("memo_templates"))).toBe(false);
     expect(statements.some((sql) => sql.includes("ai_prompt_templates"))).toBe(false);
@@ -99,6 +99,6 @@ describe("authentication hot path", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(statements.filter((sql) => sql.includes("UPDATE sessions SET last_seen_at"))).toHaveLength(1);
+    expect(statements.filter((sql) => /UPDATE sessions\s+SET last_seen_at/.test(sql))).toHaveLength(1);
   });
 });

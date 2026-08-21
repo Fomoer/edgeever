@@ -2,6 +2,9 @@ import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 import {
   BACKGROUND_WORKSPACE_REFRESH_INTERVAL_MS,
+  claimBackgroundRefreshLease,
+  createRefreshSingleFlight,
+  releaseBackgroundRefreshLease,
   refreshWorkspaceData,
   resolveCreatedMemoSelection,
   resolveSyncedMemoId,
@@ -11,6 +14,48 @@ import {
 describe("refreshWorkspaceData", () => {
   it("uses a shared 30-second background refresh interval", () => {
     assert.equal(BACKGROUND_WORKSPACE_REFRESH_INTERVAL_MS, 30_000);
+  });
+
+  it("allows only one tab to own a live background refresh lease", () => {
+    const values = new Map();
+    const storage = {
+      getItem: (key) => values.get(key) ?? null,
+      setItem: (key, value) => values.set(key, value),
+      removeItem: (key) => values.delete(key),
+    };
+
+    assert.equal(claimBackgroundRefreshLease({ storage, key: "sync", ownerId: "tab-a", now: 1_000, leaseMs: 500 }), true);
+    assert.equal(claimBackgroundRefreshLease({ storage, key: "sync", ownerId: "tab-b", now: 1_100, leaseMs: 500 }), false);
+    releaseBackgroundRefreshLease({ storage, key: "sync", ownerId: "tab-b" });
+    assert.equal(claimBackgroundRefreshLease({ storage, key: "sync", ownerId: "tab-b", now: 1_501, leaseMs: 500 }), true);
+  });
+
+  it("coalesces concurrent and immediately repeated background refreshes", async () => {
+    let now = 1_000;
+    let calls = 0;
+    let finish;
+    const run = createRefreshSingleFlight({
+      now: () => now,
+      coalesceMs: 100,
+      refresh: () => new Promise((resolve) => {
+        calls += 1;
+        finish = resolve;
+      }),
+    });
+
+    const first = run();
+    const concurrent = run();
+    assert.equal(first, concurrent);
+    assert.equal(calls, 1);
+    finish("done");
+    assert.equal(await first, "done");
+    assert.equal(await run(), null);
+    now += 101;
+    finish = undefined;
+    const next = run();
+    assert.equal(calls, 2);
+    finish("again");
+    assert.equal(await next, "again");
   });
 
   it("keeps the trash route when opening a deleted memo", () => {

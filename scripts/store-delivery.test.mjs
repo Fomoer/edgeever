@@ -76,4 +76,18 @@ describe("store delivery command", () => {
     expect(buildScript).not.toContain("EDGE_EVER_ANDROID_ARCHS:-");
     expect(buildScript).not.toContain("armeabi-v7a,arm64-v8a,x86,x86_64");
   });
+
+  test("removes the sideload-only install permission from Play bundles", () => {
+    const buildScript = readFileSync(
+      new URL("./build-android-local.sh", import.meta.url),
+      "utf8",
+    );
+
+    expect(buildScript).toContain('if [[ "$MODE" == "play" ]]');
+    expect(buildScript).toContain('"$ANDROID_MANIFEST" play');
+    expect(buildScript).toContain('"$ANDROID_MANIFEST" sideload');
+    expect(buildScript).toContain(
+      'grep -q "android.permission.REQUEST_INSTALL_PACKAGES" "$PACKAGED_MANIFEST"',
+    );
+  });
 });

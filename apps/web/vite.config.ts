@@ -18,6 +18,31 @@ const readPackageVersion = () => {
   }
 };
 
+const readReleaseSummary = (packageVersion: string) => {
+  const summaryPath = fileURLToPath(new URL("../../release-summary.json", import.meta.url));
+  const summary = JSON.parse(readFileSync(summaryPath, "utf8")) as {
+    version?: unknown;
+    changes?: unknown;
+  };
+  const localizedChanges = summary.changes && typeof summary.changes === "object" && !Array.isArray(summary.changes)
+    ? Object.entries(summary.changes)
+    : [];
+  if (
+    summary.version !== packageVersion ||
+    localizedChanges.length === 0 ||
+    !localizedChanges.every(([locale, changes]) =>
+      /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(locale) &&
+      Array.isArray(changes) &&
+      changes.length > 0 &&
+      changes.every((item) => typeof item === "string" && item.trim())
+    ) ||
+    !localizedChanges.some(([locale]) => locale.toLowerCase() === "en-us")
+  ) {
+    throw new Error(`release-summary.json must contain valid localized changes and an en-US fallback for package version ${packageVersion}.`);
+  }
+  return summary as { version: string; changes: Record<string, string[]> };
+};
+
 const readGitCommit = () => {
   try {
     return execSync("git rev-parse --short=12 HEAD", { encoding: "utf8" }).trim();
@@ -56,7 +81,9 @@ const buildId = process.env.WORKERS_CI_COMMIT_SHA?.slice(0, 12)
   ?? readGitCommit()
   ?? "local";
 const gitDescription = readGitDescription();
-const appVersion = resolveAppVersion(readPackageVersion(), gitDescription);
+const packageVersion = readPackageVersion();
+const appVersion = resolveAppVersion(packageVersion, gitDescription);
+const releaseSummary = readReleaseSummary(packageVersion);
 const OPTIONAL_CHUNK_WARNING_LIMIT_KB = 1_700;
 const TARGET_VENDOR_CHUNK_BYTES = 450 * 1024;
 const releaseTimestamp = resolveReleaseTimestamp(process.env.EDGE_EVER_RELEASED_AT) || readLatestReleaseCommitTimestamp();
@@ -113,6 +140,7 @@ export default defineConfig({
     __EDGEEVER_BUILD_ID__: JSON.stringify(buildId),
     __EDGEEVER_BUILD_LABEL__: JSON.stringify(buildId === "local" ? "local" : buildId.slice(0, 7)),
     __EDGEEVER_RELEASED_AT__: JSON.stringify(releaseTimestamp),
+    __EDGEEVER_RELEASE_SUMMARY__: JSON.stringify(releaseSummary),
     __EDGEEVER_DEPLOYMENT_TRIGGER__: JSON.stringify(deploymentTrigger),
     __EDGEEVER_DEPLOYMENT_METHOD__: JSON.stringify(deploymentMethod),
     __EDGEEVER_DEVELOPMENT_PROFILE__: JSON.stringify(process.env.EDGE_EVER_DEVELOPMENT_PROFILE ?? ""),

@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ButtonTooltip } from "@/components/ui/button-tooltip";
 import { formatDateTime } from "@/lib/utils";
 import { WORKSPACE_PAGE_TITLE_CLASSNAME } from "@/lib/workspace-ui";
 import type { EdgeEverRepository } from "@/lib/repository";
@@ -219,66 +220,75 @@ export const AssetsPane = ({ onClose, repository }: AssetsPaneProps) => {
       </header>
 
       {/* Toolbar (Filters, Search, Layout mode) */}
-      <div className="flex flex-col gap-3 border-b border-slate-100 bg-white p-4 shrink-0 sm:flex-row sm:items-center sm:justify-between">
-        {/* Category Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          {(["all", "image", "document", "other"] as const).map((type) => (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
-                filterType === type
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200/50 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                  : "text-slate-500 hover:bg-slate-50 border border-transparent"
-              }`}
-            >
-              {t(`assets.filters.${type}`)}
-            </button>
-          ))}
-        </div>
-
-        {/* Search & Layout Toggles */}
-        <div className="flex items-center gap-2">
-          {/* Search box */}
-          <div className="relative flex-1 sm:w-60">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder={t("assets.searchPlaceholder")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8.5 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-8.5 pr-8 text-xs text-slate-800 placeholder-slate-400 transition-colors focus:border-emerald-500/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500/20"
-            />
-            {searchQuery && (
+      <div className="shrink-0 border-b border-slate-100 bg-white p-4">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {/* Category Filters */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            {(["all", "image", "document", "other"] as const).map((type) => (
               <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-650"
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                  filterType === type
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/50 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                    : "text-slate-500 hover:bg-slate-50 border border-transparent"
+                }`}
               >
-                <X className="h-3 w-3" />
+                {t(`assets.filters.${type}`)}
               </button>
-            )}
+            ))}
           </div>
 
-          {/* Layout switches */}
-          <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 p-0.5 bg-slate-50/50">
-            <button
-              onClick={() => setLayoutMode("grid")}
-              title={t("assets.gridView")}
-              className={`rounded-md p-1 transition-colors ${
-                layoutMode === "grid" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
-              }`}
-            >
-              <Grid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setLayoutMode("list")}
-              title={t("assets.listView")}
-              className={`rounded-md p-1 transition-colors ${
-                layoutMode === "list" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
-              }`}
-            >
-              <List className="h-4 w-4" />
-            </button>
+          {/* Search & Layout Toggles */}
+          <div className="flex min-w-0 items-center gap-2">
+            {/* Search box */}
+            <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder={t("assets.searchPlaceholder")}
+                aria-label={t("assets.searchPlaceholder")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-9 pr-8 text-xs text-slate-800 placeholder-slate-400 transition-colors focus:border-emerald-500/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500/20"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-650"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Layout switches */}
+            <div className="flex h-9 shrink-0 items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50/50 p-0.5">
+              <ButtonTooltip title={t("assets.gridView")}>
+                <button
+                  onClick={() => setLayoutMode("grid")}
+                  aria-label={t("assets.gridView")}
+                  aria-pressed={layoutMode === "grid"}
+                  className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
+                    layoutMode === "grid" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  <Grid className="h-4 w-4" />
+                </button>
+              </ButtonTooltip>
+              <ButtonTooltip title={t("assets.listView")}>
+                <button
+                  onClick={() => setLayoutMode("list")}
+                  aria-label={t("assets.listView")}
+                  aria-pressed={layoutMode === "list"}
+                  className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
+                    layoutMode === "list" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </ButtonTooltip>
+            </div>
           </div>
         </div>
       </div>

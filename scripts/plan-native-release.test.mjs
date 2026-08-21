@@ -19,6 +19,7 @@ describe("native release planning", () => {
       "packages/shared/src/index.ts",
       "bun.lock",
       "scripts/build-android-local.sh",
+      "scripts/configure-android-package-permissions.mjs",
       "scripts/verify-android-apk-signature.mjs",
       ".github/workflows/mobile-build.yml",
       ".github/workflows/store-delivery.yml",
@@ -82,7 +83,7 @@ describe("native release planning", () => {
 
   test("does not rebuild desktop for release notes or a root version bump alone", () => {
     expect(
-      planNativeRelease("desktop", ["package.json", "AGENTS.md"]),
+      planNativeRelease("desktop", ["package.json", "release-summary.json", "AGENTS.md"]),
     ).toEqual({ rebuild: false, relevantChanges: [] });
   });
 });
