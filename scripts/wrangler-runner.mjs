@@ -101,6 +101,11 @@ export const parseWranglerDeploymentUrls = (output) => {
   return urls;
 };
 
+export const parseWranglerDeploymentVersionId = (output) => {
+  const matches = [...stripAnsi(output).matchAll(/^Current Version ID:\s*(\S+)\s*$/gim)];
+  return matches.at(-1)?.[1];
+};
+
 export const shouldCaptureDeploymentTargets = (env = process.env) =>
   env.WORKERS_CI === "1" || env.CI?.trim().toLowerCase() === "true";
 

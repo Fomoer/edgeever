@@ -358,7 +358,10 @@ describe("Cloudflare deployment entrypoints", () => {
       expect(JSON.parse(readFileSync(
         resolve(workingDirectory, ".wrangler.deployment-targets.json"),
         "utf8",
-      ))).toEqual({ urls: ["https://edgeever.example.workers.dev"] });
+      ))).toEqual({
+        urls: ["https://edgeever.example.workers.dev"],
+        versionId: "version-1",
+      });
       const generatedConfig = readFileSync(
         resolve(workingDirectory, ".wrangler.generated.toml"),
         "utf8",

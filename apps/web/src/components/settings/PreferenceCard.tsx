@@ -1,4 +1,4 @@
-import { AlignHorizontalJustifyCenter, ChartNoAxesCombined, Image, Languages, MousePointerClick, Palette, RefreshCw, Sparkles } from "lucide-react";
+import { AlignHorizontalJustifyCenter, ChartNoAxesCombined, Image, Keyboard, Languages, MousePointerClick, Palette, RefreshCw, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { writeSyncIntervalPreference, type EditorContentAlignment, type ShortcutSettings, type SyncIntervalPreference } from "@/lib/app-helpers";
@@ -13,6 +13,11 @@ import {
   readAiSelectionMenuPreference,
   writeAiSelectionMenuPreference,
 } from "@/lib/ai-selection-menu-preference";
+import {
+  AI_SPACE_SHORTCUT_CHANGED_EVENT,
+  readAiSpaceShortcutPreference,
+  writeAiSpaceShortcutPreference,
+} from "@/lib/ai-space-shortcut-preference";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -70,6 +75,7 @@ export const PreferenceCard = ({
   const [isMobile, setIsMobile] = useState(false);
   const [linkOpenMode, setLinkOpenMode] = useState<EditorLinkOpenMode>(() => getStoredEditorLinkOpenMode());
   const [aiSelectionMenuEnabled, setAiSelectionMenuEnabled] = useState(readAiSelectionMenuPreference);
+  const [aiSpaceShortcutEnabled, setAiSpaceShortcutEnabled] = useState(readAiSpaceShortcutPreference);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 640px)");
@@ -77,6 +83,24 @@ export const PreferenceCard = ({
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mediaQuery.addEventListener("change", handler);
     return () => mediaQuery.removeEventListener("change", handler);
+  }, []);
+
+  useEffect(() => {
+    const syncPreference = () => setAiSpaceShortcutEnabled(readAiSpaceShortcutPreference());
+    const onPreferenceChanged = (event: Event) => {
+      const detail = (event as CustomEvent<boolean>).detail;
+      if (typeof detail === "boolean") {
+        setAiSpaceShortcutEnabled(detail);
+        return;
+      }
+      syncPreference();
+    };
+    window.addEventListener(AI_SPACE_SHORTCUT_CHANGED_EVENT, onPreferenceChanged);
+    window.addEventListener("storage", syncPreference);
+    return () => {
+      window.removeEventListener(AI_SPACE_SHORTCUT_CHANGED_EVENT, onPreferenceChanged);
+      window.removeEventListener("storage", syncPreference);
+    };
   }, []);
 
   useEffect(() => {
@@ -372,6 +396,26 @@ export const PreferenceCard = ({
                 setAiSelectionMenuEnabled(enabled);
               }}
               aria-label={t("settings.aiSelectionMenuAria")}
+            />
+          </div>
+        </div>
+
+        <div className="flex min-h-16 flex-col items-start gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <Keyboard className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-slate-900">{t("settings.aiSpaceShortcutTitle")}</div>
+              <div className="mt-0.5 text-xs leading-4 text-slate-500">{t("settings.aiSpaceShortcutDescription")}</div>
+            </div>
+          </div>
+          <div className="flex w-full shrink-0 justify-start sm:w-44 sm:justify-end">
+            <Switch
+              checked={aiSpaceShortcutEnabled}
+              onCheckedChange={(enabled) => {
+                writeAiSpaceShortcutPreference(enabled);
+                setAiSpaceShortcutEnabled(enabled);
+              }}
+              aria-label={t("settings.aiSpaceShortcutAria")}
             />
           </div>
         </div>

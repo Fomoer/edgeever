@@ -189,7 +189,13 @@ describe("automatic sync interval preference", () => {
 });
 
 describe("workspace shortcut preferences", () => {
-  test("provides save, sync, and editor mode defaults", () => {
+  test("provides AI, save, sync, and editor mode defaults", () => {
+    expect(DEFAULT_SHORTCUT_SETTINGS.openAiAssistant).toEqual({
+      key: "j",
+      ctrlOrMeta: true,
+      shift: false,
+      alt: false,
+    });
     expect(DEFAULT_SHORTCUT_SETTINGS.saveAndSync).toEqual({
       key: "s",
       ctrlOrMeta: true,
@@ -212,6 +218,7 @@ describe("workspace shortcut preferences", () => {
 
     const settings = readShortcutSettingsPreference();
     expect(settings.createMemo.key).toBe("m");
+    expect(settings.openAiAssistant).toEqual(DEFAULT_SHORTCUT_SETTINGS.openAiAssistant);
     expect(settings.saveAndSync).toEqual(DEFAULT_SHORTCUT_SETTINGS.saveAndSync);
     expect(settings.toggleEditorMode).toEqual(DEFAULT_SHORTCUT_SETTINGS.toggleEditorMode);
   });
@@ -226,6 +233,10 @@ describe("workspace shortcut preferences", () => {
       ...modifiers,
     });
 
+    expect(getShortcutActionForEvent(
+      keyboardEvent("j", { metaKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+    )).toBe("openAiAssistant");
     expect(getShortcutActionForEvent(
       keyboardEvent("s", { ctrlKey: true }),
       DEFAULT_SHORTCUT_SETTINGS,

@@ -1,0 +1,276 @@
+import { forwardRef, useEffect, useImperativeHandle, useState, type ComponentType } from "react";
+import { Extension, type Editor, type Range } from "@tiptap/core";
+import { ReactRenderer } from "@tiptap/react";
+import { PluginKey } from "@tiptap/pm/state";
+import Suggestion, { type SuggestionKeyDownProps, type SuggestionProps } from "@tiptap/suggestion";
+import {
+  BetweenHorizontalStart,
+  Bot,
+  Braces,
+  FileUp,
+  Heading1,
+  Heading2,
+  Heading3,
+  Link,
+  List,
+  ListOrdered,
+  ListTodo,
+  Pilcrow,
+  Quote,
+  Table2,
+} from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+  CommandShortcut,
+} from "@/components/ui/command";
+
+export type SlashCommandId =
+  | "ai"
+  | "paragraph"
+  | "heading-1"
+  | "heading-2"
+  | "heading-3"
+  | "bullet-list"
+  | "ordered-list"
+  | "task-list"
+  | "blockquote"
+  | "code-block"
+  | "divider"
+  | "table"
+  | "attachment"
+  | "note-link"
+  | "external-link";
+
+type SlashCommandGroup = "suggested" | "basic" | "insert";
+type SlashCommandIcon = ComponentType<{ className?: string }>;
+
+export type SlashCommandLabels = {
+  menu: string;
+  empty: string;
+  close: string;
+  groups: Record<SlashCommandGroup, string>;
+  items: Record<SlashCommandId, string>;
+};
+
+export type SlashCommandActions = {
+  openAi: () => void;
+  openAttachmentPicker: () => void;
+  openExternalLinkPicker: () => void;
+  openNoteLinkPicker: () => void;
+};
+
+export type SlashCommandItem = {
+  id: SlashCommandId;
+  group: SlashCommandGroup;
+  icon: SlashCommandIcon;
+  keywords: string[];
+  label: string;
+  shortcut?: string;
+};
+
+const slashCommandPluginKey = new PluginKey("edgeever-slash-command");
+
+export const createSlashCommandItems = (labels: SlashCommandLabels): SlashCommandItem[] => [
+  { id: "ai", group: "suggested", icon: Bot, label: labels.items.ai, shortcut: "/ai", keywords: ["ai", "assistant", "人工智能", "智能", "写作"] },
+  { id: "paragraph", group: "basic", icon: Pilcrow, label: labels.items.paragraph, keywords: ["text", "paragraph", "正文", "文本"] },
+  { id: "heading-1", group: "basic", icon: Heading1, label: labels.items["heading-1"], shortcut: "#", keywords: ["h1", "heading", "标题"] },
+  { id: "heading-2", group: "basic", icon: Heading2, label: labels.items["heading-2"], shortcut: "##", keywords: ["h2", "heading", "标题"] },
+  { id: "heading-3", group: "basic", icon: Heading3, label: labels.items["heading-3"], shortcut: "###", keywords: ["h3", "heading", "标题"] },
+  { id: "bullet-list", group: "basic", icon: List, label: labels.items["bullet-list"], shortcut: "-", keywords: ["bullet", "list", "无序", "列表"] },
+  { id: "ordered-list", group: "basic", icon: ListOrdered, label: labels.items["ordered-list"], shortcut: "1.", keywords: ["ordered", "numbered", "list", "有序", "编号"] },
+  { id: "task-list", group: "basic", icon: ListTodo, label: labels.items["task-list"], shortcut: "[ ]", keywords: ["task", "todo", "check", "任务", "待办"] },
+  { id: "blockquote", group: "basic", icon: Quote, label: labels.items.blockquote, shortcut: ">", keywords: ["quote", "引用"] },
+  { id: "code-block", group: "basic", icon: Braces, label: labels.items["code-block"], shortcut: "```", keywords: ["code", "代码"] },
+  { id: "divider", group: "insert", icon: BetweenHorizontalStart, label: labels.items.divider, shortcut: "---", keywords: ["divider", "rule", "分割", "分隔"] },
+  { id: "table", group: "insert", icon: Table2, label: labels.items.table, keywords: ["table", "表格"] },
+  { id: "attachment", group: "insert", icon: FileUp, label: labels.items.attachment, keywords: ["file", "upload", "attachment", "文件", "上传", "附件"] },
+  { id: "note-link", group: "insert", icon: Link, label: labels.items["note-link"], keywords: ["note", "link", "memo", "笔记", "引用"] },
+  { id: "external-link", group: "insert", icon: Link, label: labels.items["external-link"], keywords: ["url", "link", "web", "链接", "网址"] },
+];
+
+export const filterSlashCommandItems = (items: SlashCommandItem[], query: string) => {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  if (!normalizedQuery) return items;
+  return items.filter((item) => [item.label, item.id, ...item.keywords]
+    .some((value) => value.toLocaleLowerCase().includes(normalizedQuery)));
+};
+
+type SlashCommandMenuProps = SuggestionProps<SlashCommandItem, SlashCommandItem> & {
+  labels: SlashCommandLabels;
+};
+
+export type SlashCommandMenuHandle = {
+  onKeyDown: (props: SuggestionKeyDownProps) => boolean;
+};
+
+const GROUP_ORDER: SlashCommandGroup[] = ["suggested", "basic", "insert"];
+
+export const SlashCommandMenu = forwardRef<SlashCommandMenuHandle, SlashCommandMenuProps>(
+  ({ command, items, labels }, ref) => {
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const selectedItem = items[Math.min(selectedIndex, Math.max(0, items.length - 1))];
+
+    useEffect(() => setSelectedIndex(0), [items]);
+
+    useImperativeHandle(ref, () => ({
+      onKeyDown: ({ event }) => {
+        if (!items.length) return false;
+        if (event.key === "ArrowUp") {
+          setSelectedIndex((current) => (current + items.length - 1) % items.length);
+          return true;
+        }
+        if (event.key === "ArrowDown") {
+          setSelectedIndex((current) => (current + 1) % items.length);
+          return true;
+        }
+        if (event.key === "Enter") {
+          command(items[Math.min(selectedIndex, items.length - 1)]);
+          return true;
+        }
+        return false;
+      },
+    }), [command, items, selectedIndex]);
+
+    return (
+      <Command
+        aria-label={labels.menu}
+        className="w-[min(22rem,calc(100vw-1.5rem))] rounded-xl border border-slate-200 shadow-2xl ring-1 ring-slate-950/5"
+        shouldFilter={false}
+        value={selectedItem?.id}
+        onValueChange={(value) => {
+          const index = items.findIndex((item) => item.id === value);
+          if (index >= 0) setSelectedIndex(index);
+        }}
+      >
+        <CommandList className="max-h-[min(24rem,60dvh)] p-1.5">
+          <CommandEmpty>{labels.empty}</CommandEmpty>
+          {GROUP_ORDER.map((group) => {
+            const groupItems = items.filter((item) => item.group === group);
+            return groupItems.length ? (
+              <CommandGroup key={group} heading={labels.groups[group]}>
+                {groupItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <CommandItem
+                      key={item.id}
+                      value={item.id}
+                      keywords={item.keywords}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onSelect={() => command(item)}
+                    >
+                      <Icon className="h-4 w-4 shrink-0 text-slate-500" />
+                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                      {item.shortcut ? <CommandShortcut>{item.shortcut}</CommandShortcut> : null}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            ) : null;
+          })}
+        </CommandList>
+        <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2 text-xs text-slate-400">
+          <span>↑↓ · Enter</span>
+          <span>{labels.close} · Esc</span>
+        </div>
+      </Command>
+    );
+  },
+);
+SlashCommandMenu.displayName = "SlashCommandMenu";
+
+const runSlashCommand = ({
+  actions,
+  editor,
+  item,
+  range,
+}: {
+  actions: SlashCommandActions;
+  editor: Editor;
+  item: SlashCommandItem;
+  range: Range;
+}) => {
+  const chain = editor.chain().focus().deleteRange(range);
+  switch (item.id) {
+    case "ai":
+      chain.run();
+      window.requestAnimationFrame(actions.openAi);
+      break;
+    case "paragraph": chain.setParagraph().run(); break;
+    case "heading-1": chain.setHeading({ level: 1 }).run(); break;
+    case "heading-2": chain.setHeading({ level: 2 }).run(); break;
+    case "heading-3": chain.setHeading({ level: 3 }).run(); break;
+    case "bullet-list": chain.toggleBulletList().run(); break;
+    case "ordered-list": chain.toggleOrderedList().run(); break;
+    case "task-list": chain.toggleTaskList().run(); break;
+    case "blockquote": chain.toggleBlockquote().run(); break;
+    case "code-block": chain.setCodeBlock().run(); break;
+    case "divider": chain.setHorizontalRule().run(); break;
+    case "table": chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); break;
+    case "attachment":
+      chain.run();
+      window.requestAnimationFrame(actions.openAttachmentPicker);
+      break;
+    case "note-link":
+      chain.run();
+      window.requestAnimationFrame(actions.openNoteLinkPicker);
+      break;
+    case "external-link":
+      chain.run();
+      window.requestAnimationFrame(actions.openExternalLinkPicker);
+      break;
+  }
+};
+
+export const createSlashCommandExtension = ({
+  actions,
+  getLabels,
+}: {
+  actions: SlashCommandActions;
+  getLabels: () => SlashCommandLabels;
+}) => Extension.create({
+  name: "edgeeverSlashCommand",
+  addProseMirrorPlugins() {
+    const initialItems = createSlashCommandItems(getLabels());
+    return [Suggestion<SlashCommandItem, SlashCommandItem>({
+      editor: this.editor,
+      pluginKey: slashCommandPluginKey,
+      char: "/",
+      allowedPrefixes: [" "],
+      placement: "bottom-start",
+      offset: { mainAxis: 6 },
+      decorationClass: "edgeever-slash-command-query",
+      initialItems,
+      allow: ({ state, range }) => {
+        const position = state.doc.resolve(range.from);
+        return this.editor.isEditable && position.parent.type.name === "paragraph";
+      },
+      items: ({ query }) => filterSlashCommandItems(createSlashCommandItems(getLabels()), query),
+      command: ({ editor, range, props }) => runSlashCommand({ actions, editor, item: props, range }),
+      render: () => {
+        let renderer: ReactRenderer<SlashCommandMenuHandle, SlashCommandMenuProps> | null = null;
+        let unmount: (() => void) | null = null;
+        return {
+          onStart: (props) => {
+            renderer = new ReactRenderer(SlashCommandMenu, {
+              editor: props.editor,
+              props: { ...props, labels: getLabels() },
+            });
+            unmount = props.mount(renderer.element);
+          },
+          onUpdate: (props) => renderer?.updateProps({ ...props, labels: getLabels() }),
+          onKeyDown: (props) => renderer?.ref?.onKeyDown(props) ?? false,
+          onExit: () => {
+            unmount?.();
+            renderer?.destroy();
+            unmount = null;
+            renderer = null;
+          },
+        };
+      },
+    })];
+  },
+});

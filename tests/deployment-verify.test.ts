@@ -2,16 +2,18 @@ import { describe, expect, test } from "bun:test";
 import {
   buildSchemaVerificationSql,
   normalizeDeploymentUrl,
+  parseCapturedDeploymentTargets,
   parseCapturedDeploymentUrls,
   parseD1Rows,
   parseJsonOutput,
   parseSecretNames,
   REQUIRED_TABLES,
   resolveDeploymentUrl,
-  verifyOnlineHealth,
+  verifyCloudflareWorkerHealth,
 } from "../scripts/verify-deployment.mjs";
 import {
   parseWranglerDeploymentUrls,
+  parseWranglerDeploymentVersionId,
   shouldCaptureDeploymentTargets,
 } from "../scripts/wrangler-runner.mjs";
 
@@ -58,6 +60,10 @@ describe("deployment verification", () => {
       "https://notes.example.com",
     ]);
     expect(parseWranglerDeploymentUrls("No targets deployed for edgeever")).toEqual([]);
+    expect(parseWranglerDeploymentVersionId([
+      "Uploaded edgeever (2.1 sec)",
+      "Current Version ID: version-1",
+    ].join("\n"))).toBe("version-1");
   });
 
   test("captures deployment targets only in CI environments", () => {
@@ -71,6 +77,13 @@ describe("deployment verification", () => {
     expect(parseCapturedDeploymentUrls(JSON.stringify({
       urls: ["https://edgeever.example.workers.dev"],
     }))).toEqual(["https://edgeever.example.workers.dev"]);
+    expect(parseCapturedDeploymentTargets(JSON.stringify({
+      urls: ["https://edgeever.example.workers.dev"],
+      versionId: "version-1",
+    }))).toEqual({
+      urls: ["https://edgeever.example.workers.dev"],
+      versionId: "version-1",
+    });
     expect(resolveDeploymentUrl({
       env: { EDGE_EVER_DEPLOYMENT_URL: "https://notes.example.com/app" },
       capturedUrls: ["https://edgeever.example.workers.dev"],
@@ -84,7 +97,7 @@ describe("deployment verification", () => {
 
   test("verifies the live Worker health response", async () => {
     let requestedUrl = "";
-    const result = await verifyOnlineHealth({
+    const result = await verifyCloudflareWorkerHealth({
       deploymentUrl: "https://notes.example.com",
       attempts: 1,
       fetchImpl: async (url) => {
@@ -98,13 +111,13 @@ describe("deployment verification", () => {
   });
 
   test("requires a URL before requesting the live Worker", async () => {
-    expect(verifyOnlineHealth({ deploymentUrl: "" })).rejects.toThrow(
+    expect(verifyCloudflareWorkerHealth({ deploymentUrl: "" })).rejects.toThrow(
       "A deployment URL is required",
     );
   });
 
   test("diagnoses a live Worker bound to a different unprepared D1 database", async () => {
-    expect(verifyOnlineHealth({
+    expect(verifyCloudflareWorkerHealth({
       deploymentUrl: "https://notes.example.com",
       attempts: 1,
       fetchImpl: async () => Response.json({
@@ -114,12 +127,30 @@ describe("deployment verification", () => {
   });
 
   test("diagnoses a live Worker without its R2 binding", async () => {
-    expect(verifyOnlineHealth({
+    expect(verifyCloudflareWorkerHealth({
       deploymentUrl: "https://notes.example.com",
       attempts: 1,
       fetchImpl: async () => Response.json({
         error: { code: "object_storage_not_ready" },
       }, { status: 503 }),
     })).rejects.toThrow("RESOURCES binding points to the configured R2 bucket");
+  });
+
+  test("preserves Cloudflare runtime diagnostics for an unknown health failure", async () => {
+    const verification = verifyCloudflareWorkerHealth({
+      deploymentUrl: "https://notes.example.com",
+      deploymentVersionId: "version-1101",
+      attempts: 1,
+      fetchImpl: async () => new Response("error code: 1101", {
+        status: 500,
+        statusText: "Internal Server Error",
+        headers: { "CF-Ray": "ray-id-SJC" },
+      }),
+    });
+
+    await expect(verification).rejects.toThrow("response body: error code: 1101");
+    await expect(verification).rejects.toThrow("CF-Ray: ray-id-SJC");
+    await expect(verification).rejects.toThrow("Worker Version ID: version-1101");
+    await expect(verification).rejects.toThrow("Logs > Live");
   });
 });

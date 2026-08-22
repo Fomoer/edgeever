@@ -426,8 +426,7 @@ const createTray = () => {
     { label: "Show EdgeEver", click: () => showWindow(mainWindow) },
     { label: "Sync now", click: () => sendDesktopCommand("sync-now") },
     { label: "Backup now", click: () => sendDesktopCommand("backup-now") },
-    ...(updateState === "available" ? [{ label: "Download update", click: () => void autoUpdater.downloadUpdate() }] : []),
-    ...(updateState === "downloaded" ? [{ label: "Restart to update", click: () => autoUpdater.quitAndInstall() }] : []),
+    ...(updateState === "downloaded" ? [{ label: "Restart to update", click: () => installDownloadedUpdate() }] : []),
     { type: "separator" },
     { label: "Quit EdgeEver", click: () => { isQuitting = true; app.quit(); } },
   ]));
@@ -500,15 +499,27 @@ const refreshTrayMenu = () => {
   createTray();
 };
 
+const installDownloadedUpdate = () => {
+  if (updateState !== "downloaded") return { started: false };
+  // The normal window close handler hides the app. Mark this as a real quit
+  // before electron-updater closes windows so installation can proceed.
+  isQuitting = true;
+  autoUpdater.quitAndInstall(false, true);
+  return { started: true };
+};
+
 const configureAutoUpdater = () => {
   if (!app.isPackaged || process.env.EDGE_EVER_DISABLE_AUTO_UPDATE === "1") return;
-  autoUpdater.autoDownload = false;
+  autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoRunAppAfterInstall = true;
   autoUpdater.on("update-available", () => { updateState = "available"; refreshTrayMenu(); void writeDiagnostic("update.available"); });
   autoUpdater.on("download-progress", (progress) => { void writeDiagnostic("update.download-progress", { percent: progress.percent }); });
   autoUpdater.on("update-downloaded", () => { updateState = "downloaded"; refreshTrayMenu(); void writeDiagnostic("update.downloaded"); });
-  autoUpdater.on("error", (error) => { void writeDiagnostic("update.error", { message: error.message }); });
-  void autoUpdater.checkForUpdates().catch((error) => writeDiagnostic("update.check-failed", { message: error.message }));
+  autoUpdater.on("error", (error) => { isQuitting = false; void writeDiagnostic("update.error", { message: error.message }); });
+  void autoUpdater.checkForUpdates()
+    .then((result) => result?.downloadPromise?.catch((error) => writeDiagnostic("update.download-failed", { message: error.message })))
+    .catch((error) => writeDiagnostic("update.check-failed", { message: error.message }));
 };
 
 const startSidecar = async (accountId = null) => {
@@ -897,7 +908,7 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle("desktop:update-status", () => ({ state: updateState }));
   ipcMain.handle("desktop:download-update", () => autoUpdater.downloadUpdate());
-  ipcMain.handle("desktop:install-update", () => autoUpdater.quitAndInstall());
+  ipcMain.handle("desktop:install-update", () => installDownloadedUpdate());
   ipcMain.handle("desktop:stage-resource", async (_event, input) => {
     const { memoId, name, type, bytes } = normalizeStagedResourceInput(input);
     const id = `stage_${Date.now()}_${Math.random().toString(36).slice(2)}`;

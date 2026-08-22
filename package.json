@@ -1,6 +1,6 @@
 {
   "name": "edgeever",
-  "version": "1.35.2",
+  "version": "1.37.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -135,6 +135,7 @@
     "@tiptap/extension-table": "3.27.1",
     "@tiptap/react": "latest",
     "@tiptap/starter-kit": "latest",
+    "@tiptap/suggestion": "3.27.1",
     "ai": "^7.0.58",
     "aws4fetch": "^1.0.20",
     "class-variance-authority": "latest",

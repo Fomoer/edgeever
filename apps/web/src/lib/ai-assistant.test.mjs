@@ -64,6 +64,23 @@ describe("AI assistant interaction model", () => {
     });
   });
 
+  test("includes temporary attachments only when present", () => {
+    const attachment = {
+      filename: "brief.txt",
+      mediaType: "text/plain",
+      base64Data: "SGVsbG8=",
+    };
+    expect(buildAiAssistantRequest({
+      action: "custom",
+      attachments: [attachment],
+      contentMarkdown: "",
+      customInstruction: "Summarize the file.",
+      targetLanguage: "en",
+      title: "",
+      tone: "professional",
+    })).toMatchObject({ attachments: [attachment] });
+  });
+
   test("keeps extractive output additive while allowing rewritten content to replace its source", () => {
     expect(canReplaceAiSource("summarize")).toBe(false);
     expect(canReplaceAiSource("continue-writing")).toBe(false);

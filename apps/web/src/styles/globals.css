@@ -727,6 +727,13 @@ textarea {
   background: transparent;
 }
 
+@media (min-width: 1280px) {
+  .ProseMirror .edgeever-mermaid-code-block {
+    max-width: min(60vw, 52rem);
+    margin-inline: auto;
+  }
+}
+
 .ProseMirror .edgeever-mermaid-toolbar {
   position: absolute;
   top: 0.5rem;
@@ -999,7 +1006,7 @@ textarea {
   background-color: var(--brand-green-muted);
 }
 
-.ProseMirror p.is-editor-empty:first-child::before {
+.ProseMirror.edgeever-note-rich-editor p.is-empty::before {
   color: #94a3b8;
   content: attr(data-placeholder);
   float: left;

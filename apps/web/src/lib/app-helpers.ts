@@ -18,6 +18,7 @@ export type ShortcutAction =
   | "createNotebook"
   | "focusSearch"
   | "focusReplace"
+  | "openAiAssistant"
   | "saveAndSync"
   | "toggleEditorMode";
 export type ShortcutBinding = {
@@ -187,6 +188,11 @@ export const getShortcutActionOptions = (
     description: t("shortcuts.actions.focusReplace.description"),
   },
   {
+    value: "openAiAssistant",
+    label: t("shortcuts.actions.openAiAssistant.label"),
+    description: t("shortcuts.actions.openAiAssistant.description"),
+  },
+  {
     value: "saveAndSync",
     label: t("shortcuts.actions.saveAndSync.label"),
     description: t("shortcuts.actions.saveAndSync.description"),
@@ -203,6 +209,7 @@ export const DEFAULT_SHORTCUT_SETTINGS: ShortcutSettings = {
   createNotebook: { key: "n", ctrlOrMeta: true, shift: true, alt: false },
   focusSearch: { key: "f", ctrlOrMeta: true, shift: false, alt: false },
   focusReplace: { key: "h", ctrlOrMeta: true, shift: false, alt: false },
+  openAiAssistant: { key: "j", ctrlOrMeta: true, shift: false, alt: false },
   saveAndSync: { key: "s", ctrlOrMeta: true, shift: false, alt: false },
   toggleEditorMode: { key: "/", ctrlOrMeta: true, shift: false, alt: false },
 };
@@ -216,6 +223,7 @@ const SHORTCUT_ACTION_VALUES: ShortcutAction[] = [
   "createNotebook",
   "focusSearch",
   "focusReplace",
+  "openAiAssistant",
   "saveAndSync",
   "toggleEditorMode",
 ];

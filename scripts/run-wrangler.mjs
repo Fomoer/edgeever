@@ -15,6 +15,7 @@ import {
   findD1DatabaseIdByName,
   normalizeD1MigrationSql,
   parseWranglerDeploymentUrls,
+  parseWranglerDeploymentVersionId,
   PLACEHOLDER_D1_ID,
   productionVersionIds,
   repositoryWranglerConfigError,
@@ -466,8 +467,10 @@ if (captureDeploymentTargets) {
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   if (result.status === 0) {
-    const urls = parseWranglerDeploymentUrls(`${result.stdout ?? ""}\n${result.stderr ?? ""}`);
-    writeFileSync(deploymentTargetsPath, `${JSON.stringify({ urls }, null, 2)}\n`);
+    const deploymentOutput = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    const urls = parseWranglerDeploymentUrls(deploymentOutput);
+    const versionId = parseWranglerDeploymentVersionId(deploymentOutput);
+    writeFileSync(deploymentTargetsPath, `${JSON.stringify({ urls, versionId }, null, 2)}\n`);
   }
 }
 

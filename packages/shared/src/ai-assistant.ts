@@ -22,6 +22,34 @@ export type AiTone = (typeof AI_TONES)[number];
 export const AI_TARGET_LANGUAGES = ["en", "zh-CN", "zh-TW", "ja", "ko", "es", "fr", "de", "pt"] as const;
 export type AiTargetLanguage = (typeof AI_TARGET_LANGUAGES)[number];
 
+export const AI_ATTACHMENT_MEDIA_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+  "application/json",
+  "text/plain",
+  "text/markdown",
+  "text/csv",
+] as const;
+export type AiAttachmentMediaType = (typeof AI_ATTACHMENT_MEDIA_TYPES)[number];
+export const MAX_AI_ATTACHMENTS = 4;
+export const MAX_AI_ATTACHMENT_BYTES = 4 * 1024 * 1024;
+export const MAX_AI_TEXT_ATTACHMENT_BYTES = 256 * 1024;
+export const MAX_AI_ATTACHMENTS_TOTAL_BYTES = 8 * 1024 * 1024;
+
+export const getBase64DecodedByteLength = (data: string) => {
+  if (!data || data.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)) {
+    return null;
+  }
+  const padding = data.endsWith("==") ? 2 : data.endsWith("=") ? 1 : 0;
+  return (data.length / 4) * 3 - padding;
+};
+
+export const isAiTextAttachment = (mediaType: AiAttachmentMediaType) =>
+  mediaType.startsWith("text/") || mediaType === "application/json";
+
 export const AI_PROMPT_PARAMETER_KINDS = ["none", "target-language", "tone"] as const;
 export type AiPromptParameterKind = (typeof AI_PROMPT_PARAMETER_KINDS)[number];
 

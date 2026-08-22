@@ -29,7 +29,6 @@ import { FeedbackLink } from "./settings/FeedbackLink";
 import { McpConfigCard } from "./settings/McpConfigCard";
 import { PreferenceCard } from "./settings/PreferenceCard";
 import { PasswordCard } from "./settings/PasswordCard";
-import { SessionCard } from "./settings/SessionCard";
 import { UserManagementCard } from "./settings/UserManagementCard";
 import { ObjectStorageCard } from "./settings/ObjectStorageCard";
 import { AiModelCard } from "./settings/AiModelCard";
@@ -262,8 +261,13 @@ export const SettingsPane = ({
           <SettingsGroup>
             <AccountInfoCard user={user} />
             <PasswordCard authRequired={authRequired} demoMode={demoMode} />
-            {demoMode ? null : <LoginDevicesCard authRequired={authRequired} />}
-            <SessionCard authRequired={authRequired} isLoggingOut={isLoggingOut} onLogout={onLogout} />
+            {demoMode ? null : (
+              <LoginDevicesCard
+                authRequired={authRequired}
+                isLoggingOut={isLoggingOut}
+                onLogout={onLogout}
+              />
+            )}
           </SettingsGroup>
         );
       default:

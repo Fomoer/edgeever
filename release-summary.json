@@ -1,11 +1,11 @@
 {
-  "version": "1.35.2",
+  "version": "1.37.0",
   "changes": {
     "en-US": [
-      "Deliver current Android and native iOS builds to Google Play and the App Store; Play builds no longer request the sideload-only package installation permission."
+      "Clearly distinguish the client version from the connected cloud instance version, and automatically prepare verified desktop updates in the background with a one-click restart-and-update action when ready."
     ],
     "zh-CN": [
-      "将当前 Android 与原生 iOS 版本交付至 Google Play 和 App Store；Play 构建不再请求仅供侧载更新使用的安装应用权限。"
+      "明确区分客户端版本与所连接的云端实例版本，并在后台自动准备已校验的桌面端更新；准备完成后可一键重启并更新。"
     ]
   }
 }

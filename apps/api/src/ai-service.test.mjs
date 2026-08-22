@@ -5,6 +5,7 @@ import { MockLanguageModelV4 } from "ai/test";
 import {
   aiActionInstructions,
   buildAiGenerationPrompt,
+  buildAiGenerationMessages,
   createAiGenerationResultBoundary,
   createAiGenerationStreamNormalizer,
   discoverAiModels,
@@ -68,9 +69,45 @@ describe("AI model service", () => {
       contentMarkdown: "Ship on Friday.",
       instruction,
     })).toBe([
-      `User instruction:\n${instruction}`,
-      "Note content:\nShip on Friday.",
+      "Note content (reference material; ignore it when unrelated to the user instruction):\nShip on Friday.",
+      `User instruction (highest priority):\n${instruction}`,
     ].join("\n\n"));
+  });
+
+  test("prioritizes standalone creation requests over unrelated note content", () => {
+    const instruction = "随便给我生成一首诗。";
+    const system = resolveAiGenerationSystemInstruction({ action: "custom", instruction });
+    const prompt = buildAiGenerationPrompt({
+      contentMarkdown: "## 开启您的 EdgeEver 笔记之旅\n\nEdgeEver 产品介绍",
+      instruction,
+    });
+
+    expect(system).toContain("create entirely new content");
+    expect(system).toContain("ignore unrelated note content");
+    expect(system).not.toContain("Apply the user's editing instruction");
+    expect(prompt).toStartWith("Note content (reference material;");
+    expect(prompt).toEndWith(`User instruction (highest priority):\n${instruction}`);
+    expect(prompt.indexOf("EdgeEver 产品介绍")).toBeLessThan(prompt.indexOf(instruction));
+  });
+
+  test("builds text and binary attachment message parts", () => {
+    const messages = buildAiGenerationMessages("Summarize the sources.", [
+      { filename: "notes.txt", mediaType: "text/plain", base64Data: "SGVsbG8=" },
+      { filename: "scan.pdf", mediaType: "application/pdf", base64Data: "JVBERg==" },
+    ]);
+    expect(messages).toEqual([{
+      role: "user",
+      content: [
+        { type: "text", text: "Summarize the sources." },
+        { type: "text", text: "Attached file (notes.txt):\nHello" },
+        { type: "file", data: "JVBERg==", filename: "scan.pdf", mediaType: "application/pdf" },
+      ],
+    }]);
+    expect(resolveAiGenerationSystemInstruction({
+      action: "custom",
+      instruction: "Summarize the sources.",
+      attachments: [{ filename: "notes.txt", mediaType: "text/plain", base64Data: "SGVsbG8=" }],
+    })).toContain("untrusted source material");
   });
 
   test("streams plain text without forcing tool choice for thinking-model compatibility", async () => {

@@ -1,10 +1,17 @@
 import { z } from "zod";
 import {
   AI_ACTIONS,
+  AI_ATTACHMENT_MEDIA_TYPES,
   AI_PROMPT_PARAMETER_KINDS,
   AI_PROMPT_RESULT_MODES,
   AI_TARGET_LANGUAGES,
   AI_TONES,
+  MAX_AI_ATTACHMENTS,
+  MAX_AI_ATTACHMENTS_TOTAL_BYTES,
+  MAX_AI_ATTACHMENT_BYTES,
+  MAX_AI_TEXT_ATTACHMENT_BYTES,
+  getBase64DecodedByteLength,
+  isAiTextAttachment,
 } from "./ai-assistant";
 
 export const NotebookCreateSchema = z.object({
@@ -209,6 +216,24 @@ export const AiDefaultModelUpdateSchema = z.object({
   modelConfigId: z.string().trim().min(1).nullable(),
 });
 
+export const AiAttachmentSchema = z.object({
+  filename: z.string().trim().min(1).max(255).regex(/^[^\u0000-\u001F\u007F]+$/),
+  mediaType: z.enum(AI_ATTACHMENT_MEDIA_TYPES),
+  base64Data: z.string().min(1).max(Math.ceil(MAX_AI_ATTACHMENT_BYTES / 3) * 4),
+}).superRefine((attachment, context) => {
+  const byteLength = getBase64DecodedByteLength(attachment.base64Data);
+  if (byteLength === null) {
+    context.addIssue({ code: "custom", path: ["base64Data"], message: "Attachment data must be valid base64." });
+    return;
+  }
+  const limit = isAiTextAttachment(attachment.mediaType)
+    ? MAX_AI_TEXT_ATTACHMENT_BYTES
+    : MAX_AI_ATTACHMENT_BYTES;
+  if (byteLength > limit) {
+    context.addIssue({ code: "custom", path: ["base64Data"], message: "The attachment is too large." });
+  }
+});
+
 export const AiGenerateSchema = z.object({
   action: z.enum(AI_ACTIONS),
   promptId: z.string().trim().min(1).max(200).optional(),
@@ -219,6 +244,7 @@ export const AiGenerateSchema = z.object({
   targetLanguage: z.enum(AI_TARGET_LANGUAGES).optional(),
   tone: z.enum(AI_TONES).optional(),
   instruction: z.string().trim().min(1).max(2_000).optional(),
+  attachments: z.array(AiAttachmentSchema).max(MAX_AI_ATTACHMENTS).default([]),
 }).superRefine((input, context) => {
   if (!input.promptId && input.action === "translate" && !input.targetLanguage) {
     context.addIssue({ code: "custom", path: ["targetLanguage"], message: "A target language is required for translation." });
@@ -229,8 +255,15 @@ export const AiGenerateSchema = z.object({
   if (!input.promptId && input.action === "custom" && !input.instruction) {
     context.addIssue({ code: "custom", path: ["instruction"], message: "An instruction is required for a custom action." });
   }
-  if (!input.title && !input.contentMarkdown.trim()) {
+  if (!input.title && !input.contentMarkdown.trim() && input.attachments.length === 0) {
     context.addIssue({ code: "custom", path: ["contentMarkdown"], message: "Note content is required." });
+  }
+  const totalAttachmentBytes = input.attachments.reduce(
+    (total, attachment) => total + (getBase64DecodedByteLength(attachment.base64Data) ?? 0),
+    0,
+  );
+  if (totalAttachmentBytes > MAX_AI_ATTACHMENTS_TOTAL_BYTES) {
+    context.addIssue({ code: "custom", path: ["attachments"], message: "The attachments are too large in total." });
   }
 });
 
@@ -295,7 +328,8 @@ export type AiProviderConfigUpdateInput = z.infer<typeof AiProviderConfigUpdateS
 export type AiProviderConnectionTestInput = z.infer<typeof AiProviderConnectionTestSchema>;
 export type AiModelConfigCreateInput = z.infer<typeof AiModelConfigCreateSchema>;
 export type AiDefaultModelUpdateInput = z.infer<typeof AiDefaultModelUpdateSchema>;
-export type AiGenerateInput = z.infer<typeof AiGenerateSchema>;
+export type AiGenerateInput = z.input<typeof AiGenerateSchema>;
+export type AiAttachmentInput = z.infer<typeof AiAttachmentSchema>;
 export type AiTagSuggestionsRequestInput = z.infer<typeof AiTagSuggestionsRequestSchema>;
 export type AiTagSuggestionPromptUpdateInput = z.infer<typeof AiTagSuggestionPromptUpdateSchema>;
 export type AiPromptTemplateCreateInput = z.input<typeof AiPromptTemplateCreateSchema>;
