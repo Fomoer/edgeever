@@ -101,7 +101,10 @@ describe("MCP template and AI instruction management", () => {
     });
 
     expect(created).toMatchObject({ diagramKind: kind, memo: { title: "Generated diagram", tags: ["design"] } });
-    const diagram = parseDiagramDocument(created.memo.contentMarkdown);
+    expect(JSON.stringify(created.memo)).not.toContain("edgeever-diagram-v1");
+    expect(created.diagram.nodes[0].layout).toBeUndefined();
+    const stored = sqlite.query("SELECT content_markdown FROM memo_contents WHERE memo_id = ?").get(created.memo.id);
+    const diagram = parseDiagramDocument(stored.content_markdown);
     expect(diagram).toMatchObject({ kind, theme: "brand" });
     expect(diagram.nodes.map((node) => node.id)).toEqual(nodes.map((node) => node.id));
     expect(diagram.nodes.every((node) => Number.isFinite(node.x) && Number.isFinite(node.y))).toBeTrue();
@@ -129,6 +132,94 @@ describe("MCP template and AI instruction management", () => {
       nodes: [{ id: "root", label: "Root", type: "database" }],
       edges: [],
     })).rejects.toMatchObject({ code: "invalid_params" });
+  });
+
+  test("reads semantic diagrams without layout by default and applies revision-safe operations", async () => {
+    const { sqlite, auth, context } = createFixture();
+    sqlite.query("INSERT INTO notebooks (id, workspace_id, name) VALUES (?, ?, ?)")
+      .run("nb_diagrams", "ws_mcp", "Diagrams");
+    const created = await callMcpTool(context, auth, "create_diagram_memo", {
+      notebookId: "nb_diagrams",
+      title: "Architecture",
+      kind: "architecture",
+      nodes: [
+        { id: "system", label: "System", type: "boundary" },
+        { id: "api", label: "API", type: "service", parentId: "system" },
+        { id: "database", label: "Database", type: "database", parentId: "system" },
+      ],
+      edges: [{ source: "api", target: "database", type: "data" }],
+    });
+
+    const semantic = await callMcpTool(context, auth, "get_diagram", { memoId: created.memo.id });
+    expect(semantic.diagram.nodes[0].layout).toBeUndefined();
+    expect(JSON.stringify(semantic)).not.toContain("edgeever-diagram-v1");
+    const genericMemo = await callMcpTool(context, auth, "get_memo", { memoId: created.memo.id });
+    expect(genericMemo.diagram.nodes[0].layout).toBeUndefined();
+    expect(JSON.stringify(genericMemo)).not.toContain("edgeever-diagram-v1");
+    const withLayout = await callMcpTool(context, auth, "get_diagram", { memoId: created.memo.id, includeLayout: true });
+    const apiLayout = withLayout.diagram.nodes.find((node) => node.id === "api").layout;
+    expect(apiLayout).toMatchObject({ x: expect.any(Number), y: expect.any(Number), width: expect.any(Number), height: expect.any(Number) });
+
+    const operations = [
+      { op: "add_node", node: { id: "redis", label: "Redis", type: "database", parentId: "system", resourceIcon: "cache" } },
+      { op: "add_edge", edge: { source: "api", target: "redis", type: "data", label: "cache" } },
+    ];
+    const preview = await callMcpTool(context, auth, "update_diagram", {
+      memoId: created.memo.id,
+      expectedRevision: semantic.memo.revision,
+      operations,
+      dryRun: true,
+    });
+    expect(preview).toMatchObject({ dryRun: true, changes: { addedNodes: 1, addedEdges: 1 } });
+    expect((await callMcpTool(context, auth, "get_diagram", { memoId: created.memo.id })).diagram.nodes)
+      .toHaveLength(3);
+
+    const updated = await callMcpTool(context, auth, "update_diagram", {
+      memoId: created.memo.id,
+      expectedRevision: semantic.memo.revision,
+      operations,
+    });
+    expect(updated.memo.revision).toBe(semantic.memo.revision + 1);
+    expect(updated.diagram.nodes.find((node) => node.id === "redis")).toMatchObject({ type: "database", parentId: "system" });
+    const afterLayout = await callMcpTool(context, auth, "get_diagram", { memoId: created.memo.id, includeLayout: true });
+    expect(afterLayout.diagram.nodes.find((node) => node.id === "api").layout).toEqual(apiLayout);
+
+    await expect(callMcpTool(context, auth, "update_diagram", {
+      memoId: created.memo.id,
+      expectedRevision: semantic.memo.revision,
+      operations: [{ op: "remove_node", nodeId: "redis" }],
+    })).rejects.toMatchObject({ code: "revision_conflict", status: 409 });
+    await expect(callMcpTool(context, auth, "update_memo", {
+      memoId: created.memo.id,
+      contentMarkdown: "plain text",
+    })).rejects.toMatchObject({ code: "diagram_update_required" });
+
+    const stored = sqlite.query("SELECT content_markdown FROM memo_contents WHERE memo_id = ?").get(created.memo.id);
+    expect(parseDiagramDocument(stored.content_markdown).nodes.map((node) => node.id)).toContain("redis");
+  });
+
+  test("keeps mind-map hierarchy edges consistent when a node is reparented", async () => {
+    const { sqlite, auth, context } = createFixture();
+    sqlite.query("INSERT INTO notebooks (id, workspace_id, name) VALUES (?, ?, ?)")
+      .run("nb_diagrams", "ws_mcp", "Diagrams");
+    const created = await callMcpTool(context, auth, "create_diagram_memo", {
+      notebookId: "nb_diagrams",
+      kind: "mind-map",
+      nodes: [
+        { id: "root", label: "Root" },
+        { id: "left", label: "Left", parentId: "root" },
+        { id: "leaf", label: "Leaf", parentId: "left" },
+      ],
+    });
+    const updated = await callMcpTool(context, auth, "update_diagram", {
+      memoId: created.memo.id,
+      expectedRevision: created.memo.revision,
+      operations: [{ op: "update_node", nodeId: "leaf", changes: { parentId: "root" } }],
+    });
+    expect(updated.diagram.nodes.find((node) => node.id === "leaf").parentId).toBe("root");
+    expect(updated.diagram.edges.filter((edge) => edge.target === "leaf")).toMatchObject([
+      { source: "root", target: "leaf" },
+    ]);
   });
 
   test("manages note templates within the authenticated workspace", async () => {

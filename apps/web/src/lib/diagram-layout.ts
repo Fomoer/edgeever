@@ -2,6 +2,7 @@ export {
   compileDiagramIr,
   compactArchitectureNodeSize,
   compactFlowchartNodeSize,
+  flowchartNodePresentation,
   compactMindMapNodeSize,
   computeDiagramLayout,
   computeDiagramLayoutResult,

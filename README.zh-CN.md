@@ -231,7 +231,7 @@ https://你的域名/api/openapi.json
 
 ## MCP
 
-在 **个人中心** -> **MCP 设置** 中创建 API Token 并交给 AI Agent，即可让 Agent 在账号授权范围内安全地读取、整理和导入笔记，使用 `create_diagram_memo` 通过语义图数据创建可编辑的思维导图、流程图和架构图笔记，节点尺寸与排版由 EdgeEver 自动生成；同时还可管理笔记模板与 AI 指令，并与 Notion Database、飞书多维表格等工具联动。
+在 **个人中心** -> **MCP 设置** 中创建 API Token 并交给 AI Agent，即可让 Agent 在账号授权范围内安全地读取、整理和导入笔记，使用 `create_diagram_memo` 通过语义图数据创建可编辑的思维导图、流程图和架构图笔记，并通过 `get_diagram` 与 `update_diagram` 安全读取和增量修改已有图表。节点尺寸与排版默认由 EdgeEver 管理，仅在明确的视觉布局任务中按需返回；同时还可管理笔记模板与 AI 指令，并与 Notion Database、飞书多维表格等工具联动。
 
 > 放飞你的想法：让 AI Agent 归纳随手记录的灵感、构建个人知识图谱、根据笔记生成用户画像，或自动为笔记打标签。
 

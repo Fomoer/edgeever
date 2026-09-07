@@ -233,7 +233,7 @@ Repository file: [docs/openapi.json](docs/openapi.json).
 
 ## MCP
 
-Create an API token in **Profile** -> **MCP settings** and give it to your AI Agent. The Agent can then securely read, organize, and import notes, use `create_diagram_memo` to create editable mind map, flowchart, and architecture diagram notes from semantic graphs with automatic sizing and layout, manage note templates and AI instructions, and connect your notes with tools such as Notion databases and Feishu Bitable—all within your account permissions.
+Create an API token in **Profile** -> **MCP settings** and give it to your AI Agent. The Agent can then securely read, organize, and import notes, use `create_diagram_memo` to create editable mind map, flowchart, and architecture diagram notes from semantic graphs, and safely read or incrementally modify existing diagrams through `get_diagram` and `update_diagram`. EdgeEver manages node sizing and layout by default and only returns geometry when an explicit visual-layout task requests it. The Agent can also manage note templates and AI instructions and connect your notes with tools such as Notion databases and Feishu Bitable—all within your account permissions.
 
 > Let your ideas run free: ask an AI Agent to organize fleeting thoughts, build a personal knowledge graph, create a profile from your notes, or tag them automatically.
 

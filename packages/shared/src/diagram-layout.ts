@@ -1,3 +1,5 @@
+import { visualTextUnits, compactFlowchartNodeSize, flowchartNodePresentation } from "./diagram-node-presentation";
+export { compactFlowchartNodeSize, flowchartNodePresentation } from "./diagram-node-presentation";
 import { graphlib, layout as runDagreLayout } from "@dagrejs/dagre";
 import {
   ARCHITECTURE_DIAGRAM_SCHEMA_VERSION,
@@ -43,6 +45,7 @@ export type DiagramIrNodeType =
   | "decision"
   | "start"
   | "end"
+  | "terminator"
   | "client"
   | "frontend"
   | "service"
@@ -83,23 +86,10 @@ const ARCHITECTURE_LAYOUT_ROW_WIDTH = 1480;
 const ARCHITECTURE_GROUP_HORIZONTAL_GAP = 72;
 const ARCHITECTURE_GROUP_VERTICAL_GAP = 88;
 
-const visualTextUnits = (label: string) => Array.from(label).reduce(
-  (total, character) => total + (/[^\u0000-\u00ff]/.test(character) ? 1 : 0.55),
-  0,
-);
-
 export const compactMindMapNodeSize = (label: string, isRoot: boolean) => ({
   width: Math.round(Math.min(isRoot ? 168 : 156, Math.max(isRoot ? 112 : 92, visualTextUnits(label) * 13 + 28))),
   height: isRoot ? 42 : 36,
 });
-
-export const compactFlowchartNodeSize = (shape: DiagramNodeShape) => (
-  shape === "decision"
-    ? { width: 116, height: 72 }
-    : shape === "terminator"
-      ? { width: 116, height: 44 }
-      : { width: 124, height: 44 }
-);
 
 export const compactArchitectureNodeSize = (
   shape: DiagramNodeShape,
@@ -404,7 +394,7 @@ const computeArchitectureLayout = (document: DiagramDocument, options: DiagramLa
 
 const irNodeShape = (kind: DiagramKind, type: DiagramIrNodeType | undefined): DiagramNodeShape => {
   if (kind === "mind-map") return "topic";
-  if (kind === "flowchart") return type === "decision" ? "decision" : type === "start" || type === "end" ? "terminator" : "process";
+  if (kind === "flowchart") return type === "decision" ? "decision" : type === "start" || type === "end" || type === "terminator" ? "terminator" : "process";
   return (type ?? "service") as DiagramNodeShape;
 };
 
@@ -558,13 +548,14 @@ export const compileDiagramIr = (ir: DiagramIr): DiagramDocument => {
       ? compactMindMapNodeSize(node.label, !node.parentId)
       : ir.kind === "architecture"
         ? compactArchitectureNodeSize(shape)
-        : compactFlowchartNodeSize(shape);
+        : flowchartNodePresentation(shape, node.label);
     return {
       id: node.id,
       label: node.label,
       x: 72,
       y: 64 + index * 80,
-      ...size,
+      width: size.width,
+      height: size.height,
       shape,
       ...(node.parentId ? { parentId: node.parentId } : {}),
       ...(node.resourceIcon ? { resourceIcon: node.resourceIcon } : {}),

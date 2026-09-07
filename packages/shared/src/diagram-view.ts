@@ -1,3 +1,4 @@
+import { flowchartNodePresentation } from "./diagram-node-presentation";
 import type { ArchitectureResourceIcon, DiagramDocument, DiagramNodeShape, DiagramTheme } from "./diagram";
 
 export type DiagramAppearance = "light" | "dark";
@@ -80,6 +81,7 @@ export const diagramDocumentToX6Cells = (
 ) => {
   const palette = resolvePortableDiagramPalette(document.theme ?? "brand", appearance);
   const nodes = document.nodes.map((node) => {
+    const presentation = document.kind === "flowchart" ? flowchartNodePresentation(node.shape, node.label) : { width: node.width, height: node.height, text: node.label };
     const isRootTopic = node.shape === "topic" && !node.parentId;
     const isTerminator = node.shape === "terminator";
     const isBoundary = node.shape === "boundary";
@@ -100,8 +102,8 @@ export const diagramDocumentToX6Cells = (
       shape: node.shape === "decision" ? "polygon" : "rect",
       x: node.x,
       y: node.y,
-      width: node.width,
-      height: node.height,
+      width: presentation.width,
+      height: presentation.height,
       zIndex: isBoundary ? 0 : 2,
       ...(usesArchitectureIcon ? { markup: [
         { tagName: "rect", selector: "body" },
@@ -120,7 +122,8 @@ export const diagramDocumentToX6Cells = (
           ...(node.shape === "decision" ? { refPoints: "0,10 10,0 20,10 10,20" } : {}),
         },
         label: {
-          text: node.label,
+          text: presentation.text,
+          lineHeight: 18,
           fill: emphasized ? palette.topicText : palette.nodeText,
           fontSize: node.shape === "topic" ? 14 : isBoundary ? 12 : 13,
           fontWeight: emphasized || isBoundary || accent ? 650 : 500,
@@ -159,6 +162,7 @@ export const diagramDocumentToX6Cells = (
       id: edge.id,
       source: { cell: edge.source },
       target: { cell: edge.target },
+      router: document.kind === "flowchart" ? { name: "manhattan", args: { padding: 28, step: 10 } } : undefined,
       connector: { name: document.kind === "mind-map" ? "smooth" : "rounded", args: { radius: 10 } },
       attrs: { line: {
         stroke,
@@ -168,8 +172,8 @@ export const diagramDocumentToX6Cells = (
         targetMarker: document.kind === "mind-map" ? null : { name: "block", width: 8, height: 6 },
       } },
       labels: edge.label ? [{ attrs: {
-        label: { text: edge.label, fill: palette.nodeText, fontSize: 12 },
-        body: { fill: palette.canvas, stroke: palette.nodeStroke, strokeWidth: 1, rx: 5, ry: 5 },
+        label: { text: edge.label, fill: palette.nodeText, fontSize: 12, lineHeight: 16, textWrap: { width: 140, height: 512 } },
+        body: { ref: "label", refWidth: 1, refHeight: 1, refWidth2: 12, refHeight2: 8, refX: -6, refY: -4, fill: palette.canvas, stroke: palette.nodeStroke, strokeWidth: 1, rx: 5, ry: 5 },
       } }] : undefined,
     };
   });

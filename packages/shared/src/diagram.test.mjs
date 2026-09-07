@@ -134,3 +134,14 @@ describe("diagram document", () => {
     expect(parseDiagramDocument(serializeDiagramDocument(architecture))).toBeNull();
   });
 });
+
+test('native flowchart projection shares label sizing and obstacle routing without mutating content', () => {
+  const document = createDefaultDiagramDocument('flowchart');
+  document.nodes[1].label = 'Transformer 前向计算\n因果注意力以及前馈网络'.repeat(4);
+  const original = structuredClone(document);
+  const projection = diagramDocumentToX6Cells(document, 'dark');
+  expect(projection.nodes[1].height).toBeGreaterThan(document.nodes[1].height);
+  expect(projection.nodes[1].attrs.label.text.replaceAll('\n', '')).toBe(document.nodes[1].label.replaceAll('\n', ''));
+  expect(projection.edges[0].router.name).toBe('manhattan');
+  expect(document).toEqual(original);
+});

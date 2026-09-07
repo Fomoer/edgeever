@@ -78,9 +78,11 @@ The native apps currently hide regular rich-text editing, double-tap editing, an
 
 For MCP and AI, the IR is a positive capability and the foundation of a stable tool protocol. An AI can work with semantic IR instead of producing X6 internals, SVG, or an entire Mermaid document. It can therefore perform a local request such as “add a Redis cache between the API and database” while preserving the user's other nodes and layout decisions.
 
-The `create_diagram_memo` MCP tool accepts this semantic creation IR: node identities, labels, semantic types, containment, and connections. EdgeEver generates edge identities, node dimensions, coordinates, deterministic layout, and architecture boundary geometry before compiling the result into the persisted `DiagramDocument`. An optional layout direction is a hint rather than authored geometry.
+The `create_diagram_memo` MCP tool accepts this semantic creation IR: node identities, labels, semantic types, containment, and connections. EdgeEver generates edge identities, node dimensions, coordinates, deterministic layout, and architecture boundary geometry before compiling the result into the persisted `DiagramDocument`. An optional layout direction is a hint rather than authored geometry. Tool results likewise return only the semantic graph instead of the encoded persistence payload.
 
-MCP should expose small, explicit operations such as reading a diagram, adding or updating a node, connecting components, moving a node into a boundary, validating changes, and applying layout. It should not rely solely on a high-risk `replace_diagram_ir` operation. The recommended flow is:
+`get_diagram` returns only the semantic graph and memo revision by default, without coordinates or dimensions; node geometry is included only when `includeLayout` is explicitly set. `update_diagram` accepts incremental operations that add, update, or remove nodes and edges, uses `expectedRevision` to prevent concurrent overwrites, supports `dryRun` previews, and preserves unaffected authored layout by default. The generic `update_memo` tool cannot replace diagram content, preventing callers from bypassing diagram validation.
+
+MCP exposes small, explicit operations for reading a diagram, adding or updating a node, connecting components, moving a node into a boundary, validating changes, and applying layout instead of a high-risk `replace_diagram_ir`. The recommended flow is:
 
 ```text
 Read IR

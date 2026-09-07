@@ -6,6 +6,7 @@ const DIAGRAM_IR_NODE_TYPES = [
   "decision",
   "start",
   "end",
+  "terminator",
   "client",
   "frontend",
   "service",
@@ -145,6 +146,113 @@ const MCP_TOOL_DEFINITIONS = [
               type: { type: "string", enum: ["dependency", "request", "async", "data"] },
               bidirectional: { type: "boolean" },
             },
+          },
+        },
+      },
+    },
+  },
+  {
+    name: "get_diagram",
+    description:
+      "Read an editable diagram as a semantic graph. Coordinates and dimensions are omitted by default; set includeLayout only for an explicit visual-layout task.",
+    inputSchema: {
+      type: "object",
+      required: ["memoId"],
+      additionalProperties: false,
+      properties: {
+        memoId: { type: "string", minLength: 1 },
+        includeLayout: { type: "boolean", description: "Include node coordinates and dimensions. Defaults to false." },
+      },
+    },
+  },
+  {
+    name: "update_diagram",
+    description:
+      "Apply validated semantic operations to an existing diagram while preserving unaffected authored layout. Use expectedRevision to prevent concurrent overwrites. Set reflow to all only when the user explicitly wants a complete automatic layout.",
+    inputSchema: {
+      type: "object",
+      required: ["memoId", "expectedRevision", "operations"],
+      additionalProperties: false,
+      properties: {
+        memoId: { type: "string", minLength: 1 },
+        expectedRevision: { type: "integer", minimum: 0 },
+        dryRun: { type: "boolean" },
+        reflow: { type: "string", enum: ["preserve", "all"] },
+        operations: {
+          type: "array",
+          minItems: 1,
+          maxItems: 100,
+          items: {
+            oneOf: [
+              {
+                type: "object", required: ["op", "node"], additionalProperties: false,
+                properties: {
+                  op: { const: "add_node" },
+                  node: {
+                    type: "object", required: ["id", "label"], additionalProperties: false,
+                    properties: {
+                      id: { type: "string", minLength: 1, maxLength: 100 },
+                      label: { type: "string", maxLength: 500 },
+                      type: { type: "string", enum: [...DIAGRAM_IR_NODE_TYPES] },
+                      parentId: { type: "string", minLength: 1, maxLength: 100 },
+                      resourceIcon: { type: "string", enum: [...ARCHITECTURE_RESOURCE_ICONS] },
+                    },
+                  },
+                },
+              },
+              {
+                type: "object", required: ["op", "nodeId", "changes"], additionalProperties: false,
+                properties: {
+                  op: { const: "update_node" }, nodeId: { type: "string", minLength: 1 },
+                  changes: {
+                    type: "object", minProperties: 1, additionalProperties: false,
+                    properties: {
+                      label: { type: "string", maxLength: 500 },
+                      type: { type: "string", enum: [...DIAGRAM_IR_NODE_TYPES] },
+                      parentId: { type: ["string", "null"], maxLength: 100 },
+                      resourceIcon: { type: ["string", "null"], enum: [...ARCHITECTURE_RESOURCE_ICONS, null] },
+                    },
+                  },
+                },
+              },
+              {
+                type: "object", required: ["op", "nodeId"], additionalProperties: false,
+                properties: { op: { const: "remove_node" }, nodeId: { type: "string", minLength: 1 }, cascade: { type: "boolean" } },
+              },
+              {
+                type: "object", required: ["op", "edge"], additionalProperties: false,
+                properties: {
+                  op: { const: "add_edge" },
+                  edge: {
+                    type: "object", required: ["source", "target"], additionalProperties: false,
+                    properties: {
+                      id: { type: "string", minLength: 1, maxLength: 100 },
+                      source: { type: "string", minLength: 1, maxLength: 100 }, target: { type: "string", minLength: 1, maxLength: 100 },
+                      label: { type: "string", maxLength: 500 }, type: { type: "string", enum: ["dependency", "request", "async", "data"] },
+                      bidirectional: { type: "boolean" },
+                    },
+                  },
+                },
+              },
+              {
+                type: "object", required: ["op", "edgeId", "changes"], additionalProperties: false,
+                properties: {
+                  op: { const: "update_edge" }, edgeId: { type: "string", minLength: 1 },
+                  changes: {
+                    type: "object", minProperties: 1, additionalProperties: false,
+                    properties: {
+                      source: { type: "string", minLength: 1, maxLength: 100 }, target: { type: "string", minLength: 1, maxLength: 100 },
+                      label: { type: ["string", "null"], maxLength: 500 }, type: { type: ["string", "null"], enum: ["dependency", "request", "async", "data", null] },
+                      bidirectional: { type: ["boolean", "null"] },
+                    },
+                  },
+                },
+              },
+              {
+                type: "object", required: ["op", "edgeId"], additionalProperties: false,
+                properties: { op: { const: "remove_edge" }, edgeId: { type: "string", minLength: 1 } },
+              },
+            ],
           },
         },
       },
@@ -702,6 +810,7 @@ const READ_ONLY_MCP_TOOLS = new Set([
   "search_memos",
   "list_memos",
   "get_memo",
+  "get_diagram",
   "list_memo_resources",
   "list_resources",
   "list_memo_revisions",

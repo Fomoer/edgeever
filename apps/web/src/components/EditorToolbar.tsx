@@ -22,6 +22,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MemoEditorToolbarDivider, MemoEditorToolbarRow } from "@/components/MemoEditorToolbarChrome";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -70,8 +71,6 @@ const EditorToolbarButton = ({
     <TooltipContent>{title}</TooltipContent>
   </Tooltip>
 );
-
-const ToolbarDivider = () => <div className="hidden h-6 w-px shrink-0 bg-slate-200 sm:block" />;
 
 const isToolbarEditorReady = (editor: Editor | null): editor is Editor =>
   Boolean(editor && !editor.isDestroyed && (editor as { extensionManager?: unknown }).extensionManager);
@@ -285,10 +284,9 @@ export const EditorToolbar = ({
         aria-label={t("editorToolbar.toolbar")}
       >
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-4 bg-gradient-to-r from-white to-transparent sm:hidden" />
-        <div
+        <MemoEditorToolbarRow
           ref={controlsRef}
           className={cn(
-            "flex min-w-0 max-w-full flex-wrap items-center gap-1 px-3 py-2 sm:px-5",
             hasOverflow && "pr-14 sm:pr-16",
             !expanded && "max-h-12 overflow-hidden"
           )}
@@ -323,7 +321,7 @@ export const EditorToolbar = ({
                   )}
                 </TooltipContent>
               </Tooltip>
-              <ToolbarDivider />
+              <MemoEditorToolbarDivider className="hidden sm:block" />
             </>
           )}
           {onPickAttachment && (
@@ -335,7 +333,7 @@ export const EditorToolbar = ({
               >
                 <Paperclip className="h-4 w-4" />
               </EditorToolbarButton>
-              <ToolbarDivider />
+              <MemoEditorToolbarDivider className="hidden sm:block" />
             </>
           )}
           {onPickExternalLink && (
@@ -352,7 +350,7 @@ export const EditorToolbar = ({
               >
                 <Link className="h-4 w-4" />
               </EditorToolbarButton>
-              <ToolbarDivider />
+              <MemoEditorToolbarDivider className="hidden sm:block" />
             </>
           )}
           {onPickNoteLink && (
@@ -364,7 +362,7 @@ export const EditorToolbar = ({
               >
                 <Link2 className="h-4 w-4" />
               </EditorToolbarButton>
-              <ToolbarDivider />
+              <MemoEditorToolbarDivider className="hidden sm:block" />
             </>
           )}
           {markdownMode ? (
@@ -387,7 +385,7 @@ export const EditorToolbar = ({
             </SelectContent>
           </Select>
 
-          <ToolbarDivider />
+              <MemoEditorToolbarDivider className="hidden sm:block" />
           <EditorToolbarButton
             title={t("editorToolbar.undo")}
             disabled={!canRun((current) => current.can().chain().focus().undo().run())}
@@ -403,7 +401,7 @@ export const EditorToolbar = ({
             <Redo2 className="h-4 w-4" />
           </EditorToolbarButton>
 
-          <ToolbarDivider />
+          <MemoEditorToolbarDivider className="hidden sm:block" />
           <EditorToolbarButton
             title={t("editorToolbar.bold")}
             active={isActive("bold")}
@@ -437,7 +435,7 @@ export const EditorToolbar = ({
             <Code2 className="h-4 w-4" />
           </EditorToolbarButton>
 
-          <ToolbarDivider />
+          <MemoEditorToolbarDivider className="hidden sm:block" />
           <EditorToolbarButton
             title={`${t("editorToolbar.bulletList")} · ${t("editorToolbar.listIndentHint")}`}
             active={isActive("bulletList")}
@@ -519,9 +517,9 @@ export const EditorToolbar = ({
           <EditorTableMenu editor={editor} readOnly={readOnly} />
             </>
           )}
-        </div>
+        </MemoEditorToolbarRow>
         {hasOverflow && (
-          <div className="absolute right-3 top-2 z-20 flex h-8 items-center bg-gradient-to-l from-white via-white to-transparent pl-5 sm:right-5">
+          <div className="absolute right-3 top-2 z-20 flex h-8 items-center bg-gradient-to-l from-white via-white to-transparent pl-5 sm:right-4 sm:top-0.5">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button

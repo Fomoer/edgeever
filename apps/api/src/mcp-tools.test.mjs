@@ -52,6 +52,24 @@ describe("MCP tool catalog", () => {
     });
     expect(byName.get("create_diagram_memo")?.inputSchema.properties.nodes.items.properties.x).toBeUndefined();
     expect(byName.get("create_diagram_memo")?.inputSchema.properties.nodes.items.properties.width).toBeUndefined();
+    expect(byName.get("get_diagram")?.annotations).toMatchObject({
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+    });
+    expect(byName.get("get_diagram")?.inputSchema).toMatchObject({
+      required: ["memoId"],
+      properties: { includeLayout: { type: "boolean" } },
+    });
+    expect(byName.get("update_diagram")?.annotations).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+    });
+    expect(byName.get("update_diagram")?.inputSchema).toMatchObject({
+      required: ["memoId", "expectedRevision", "operations"],
+      properties: { operations: { minItems: 1, maxItems: 100 } },
+    });
     expect(byName.get("rename_notebook")?.annotations).toMatchObject({
       readOnlyHint: false,
       destructiveHint: false,

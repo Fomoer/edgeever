@@ -1,10 +1,12 @@
 import type { PointerEventHandler, ReactNode } from "react";
 import {
   Boxes,
+  BookOpen,
   ChevronDown,
   Download,
   FileCode2,
   FileImage,
+  Scan,
   Redo2,
   Trash2,
   Undo2,
@@ -15,6 +17,7 @@ import {
 import { useTranslation } from "react-i18next";
 import type { DiagramTheme } from "@edgeever/shared";
 import { Button } from "@/components/ui/button";
+import { MemoEditorToolbarDivider, MemoEditorToolbarRow } from "@/components/MemoEditorToolbarChrome";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,14 +40,16 @@ type DiagramToolbarProps = {
   onRedo: () => void;
   onThemeChange: (theme: DiagramTheme) => void;
   onUndo: () => void;
+  onRead?: () => void;
+  onFit: () => void;
+  onResetZoom: () => void;
+  zoomPercent: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
   readOnly: boolean;
   selectionEditor?: ReactNode;
   theme: DiagramTheme;
 };
-
-const ToolbarDivider = () => <span className="mx-1 h-5 w-px shrink-0 bg-slate-200" />;
 
 export const DiagramToolbarAddTrigger = ({
   onPointerEnter,
@@ -75,6 +80,10 @@ export const DiagramToolbar = ({
   onRedo,
   onThemeChange,
   onUndo,
+  onRead,
+  onFit,
+  onResetZoom,
+  zoomPercent,
   onZoomIn,
   onZoomOut,
   readOnly,
@@ -83,8 +92,8 @@ export const DiagramToolbar = ({
 }: DiagramToolbarProps) => {
   const { t } = useTranslation();
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-slate-200 bg-white px-3 py-2" role="toolbar" aria-label={t("diagram.toolbar")}>
-      {leading ? <>{leading}<ToolbarDivider /></> : null}
+    <MemoEditorToolbarRow className="shrink-0 border-b border-slate-200 bg-white" role="toolbar" aria-label={t("diagram.toolbar")}>
+      {leading ? <>{leading}<MemoEditorToolbarDivider /></> : null}
       <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" aria-label={t("diagram.undo")} disabled={!canUndo || readOnly} onClick={onUndo}><Undo2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>{t("diagram.undo")}</TooltipContent></Tooltip>
       <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" aria-label={t("diagram.redo")} disabled={!canRedo || readOnly} onClick={onRedo}><Redo2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>{t("diagram.redo")}</TooltipContent></Tooltip>
       {!readOnly && <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" aria-label={t("diagram.deleteSelection")} disabled={!hasSelection} onClick={onDeleteSelection}><Trash2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>{t("diagram.deleteSelection")}</TooltipContent></Tooltip>}
@@ -99,9 +108,13 @@ export const DiagramToolbar = ({
           <TooltipContent>{t("diagram.autoLayoutTooltip")}</TooltipContent>
         </Tooltip>
       )}
-      <ToolbarDivider />
+      <MemoEditorToolbarDivider />
       <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" aria-label={t("diagram.zoomOut")} onClick={onZoomOut}><ZoomOut className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>{t("diagram.zoomOut")}</TooltipContent></Tooltip>
+      <Tooltip><TooltipTrigger asChild><Button size="sm" variant="ghost" className="w-16 tabular-nums" aria-label={t("diagram.resetZoom")} onClick={onResetZoom}>{zoomPercent}%</Button></TooltipTrigger><TooltipContent>{t("diagram.resetZoom")}</TooltipContent></Tooltip>
       <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" aria-label={t("diagram.zoomIn")} onClick={onZoomIn}><ZoomIn className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>{t("diagram.zoomIn")}</TooltipContent></Tooltip>
+      <Tooltip><TooltipTrigger asChild><Button size="sm" variant="ghost" aria-label={t("diagram.fit")} onClick={onFit}><Scan className="h-4 w-4" /><span>{t("diagram.fit")}</span></Button></TooltipTrigger><TooltipContent>{t("diagram.fit")}</TooltipContent></Tooltip>
+      {onRead ? <Tooltip><TooltipTrigger asChild><Button size="sm" variant="ghost" onClick={onRead}><BookOpen className="h-4 w-4" />{t("diagram.readFlow")}</Button></TooltipTrigger><TooltipContent>{t("diagram.readFlowHint")}</TooltipContent></Tooltip> : null}
+      <MemoEditorToolbarDivider />
       <Select value={theme} disabled={readOnly} onValueChange={(value) => onThemeChange(value as DiagramTheme)}>
         <SelectTrigger className="h-8 w-[8.5rem] gap-2" aria-label={t("diagram.theme")}>
           <SelectValue />
@@ -122,6 +135,6 @@ export const DiagramToolbar = ({
         </DropdownMenuContent>
       </DropdownMenu>
       {selectionEditor}
-    </div>
+    </MemoEditorToolbarRow>
   );
 };

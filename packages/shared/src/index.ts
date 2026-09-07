@@ -36,3 +36,7 @@ export * from "./note-image-card";
 export * from "./pdf-attachment";
 export * from "./types";
 export * from './plugin-capabilities';
+
+export { attachDiagramReader } from "./diagram-reader";
+
+export { attachDiagramScroll } from "./diagram-scroll";

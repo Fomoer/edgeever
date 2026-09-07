@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("./DiagramEditorPane.tsx", import.meta.url), "utf8");
 const toolbarSource = readFileSync(new URL("./DiagramToolbar.tsx", import.meta.url), "utf8");
+const topRowLeadingSource = readFileSync(new URL("./MemoEditorTopRowLeading.tsx", import.meta.url), "utf8");
 const globalStyles = readFileSync(new URL("../styles/globals.css", import.meta.url), "utf8");
 
 describe("diagram editor keyboard workflow", () => {
@@ -39,12 +40,15 @@ describe("diagram editor keyboard workflow", () => {
 
 describe("diagram editor canvas surface", () => {
   test("uses the common note header and capability-aware more menu", () => {
-    expect(source).toContain('<span className="hidden truncate text-xs text-slate-400 sm:inline">{updatedLabel}</span>');
+    expect(source).toContain("<MemoEditorTopRowLeading");
+    expect(topRowLeadingSource).toContain('<span className="hidden truncate text-xs text-slate-400 sm:inline">{updatedLabel}</span>');
     expect(source).not.toContain('t("editor.updatedAt", { time: updatedLabel })');
     expect(source).toContain("onToggleDesktopFocusMode");
-    expect(source).toContain("onOpenPreviousMemo");
-    expect(source).toContain("onOpenNextMemo");
-    expect(source).toContain('aria-label={t("editor.moreAria")}');
+    expect(source).not.toContain("onOpenPreviousMemo");
+    expect(source).not.toContain("onOpenNextMemo");
+    expect(source).toContain("<MemoEditorHeaderActions");
+    expect(source).toContain("onSearch={openSearch}");
+    expect(source).toContain("<EditorNoteSearchBar");
     expect(source).toContain('t("editor.versionHistory")');
     expect(source).toContain('"sharing.afterSync" : "sharing.action"');
     expect(source).toContain('t("templates.saveAsTemplate")');
@@ -59,7 +63,9 @@ describe("diagram editor canvas surface", () => {
     expect(source).toContain("EDITOR_LOCAL_SAVE_DELAY_MS");
     expect(source).toContain("window.setTimeout(() => saveRef.current(), EDITOR_LOCAL_SAVE_DELAY_MS)");
     expect(source).toContain("nodeEditor !== null");
-    expect(source).toContain("[dirty, dirtyVersion, editSessionReady, nodeEditor, readOnly, saveFailed, saving]");
+    expect(source).toContain("[dirtyVersion, editSessionReady, editorDirty, nodeEditor, readOnly, saveFailed, saving]");
+    expect(source).toContain("tags: nextTags");
+    expect(source).toContain("setTagsDirty(hasNewTagChanges)");
     expect(source).toContain("!readOnly && saveFailed");
     expect(source).toContain('t("diagram.retrySave")');
     expect(source).not.toContain('<Save className="h-4 w-4" />');
@@ -77,12 +83,13 @@ describe("diagram editor canvas surface", () => {
     expect(source).not.toContain("graph.drawGrid");
   });
 
-  test("uses restrained rounded edges and presents connected diagrams smaller at the left", () => {
+  test("uses restrained rounded edges and fits the complete diagram without clipping", () => {
     expect(source).toContain('connector: { name: kind === "mind-map" ? "smooth" : "rounded"');
-    expect(source).toContain('router: "normal"');
-    expect(source).not.toContain('name: "manhattan"');
+    expect(source).toContain('name: "manhattan"');
     expect(source).toContain("maxScale: policy.maxScale");
-    expect(source).toContain("policy.minScale ? { minScale: policy.minScale }");
+    expect(source).not.toContain("minScale: policy.minScale");
+    expect(source).toContain("graph.centerContent()");
+    expect(source).not.toContain("desiredLeft - contentLeft");
     expect(source).toContain("getDiagramLayoutViewport(document.kind)");
     expect(source).toContain("fitDiagramContent(graph, document, containerRef.current);");
   });
@@ -94,10 +101,10 @@ describe("diagram editor canvas surface", () => {
     expect(toolbarSource).not.toContain('<Button size="icon" variant="ghost" aria-label={t("diagram.autoLayout")}');
   });
 
-  test("keeps viewport fitting internal instead of exposing a redundant toolbar action", () => {
-    expect(toolbarSource).not.toContain("onFit");
-    expect(toolbarSource).not.toContain('t("diagram.fit")');
-    expect(source).not.toContain("onFit={() =>");
+  test("exposes view recovery separately from document layout", () => {
+    expect(toolbarSource).toContain("onFit");
+    expect(toolbarSource).toContain('t("diagram.fit")');
+    expect(source).toContain("onFit={() =>");
     expect(source).toContain("fitDiagramContent(graph, document, containerRef.current, 40, layout.viewport);");
   });
 
@@ -105,8 +112,13 @@ describe("diagram editor canvas surface", () => {
     expect(source).toContain("<DiagramToolbar");
     expect(source).toContain("leading={!readOnly ? (");
     expect(toolbarSource).toContain('role="toolbar"');
-    expect(toolbarSource).toContain("{leading ? <>{leading}<ToolbarDivider /></> : null}");
+    expect(toolbarSource).toContain("{leading ? <>{leading}<MemoEditorToolbarDivider /></> : null}");
     expect(toolbarSource).toContain("{selectionEditor}");
+  });
+
+  test("keeps the mind-map canvas flush with the shared toolbar", () => {
+    expect(source).not.toContain('t("diagram.branchView")');
+    expect(source).not.toContain("MindMapFocusReader");
   });
 
   test("reuses the architecture shape-library trigger across every diagram kind", () => {
@@ -248,10 +260,16 @@ describe("diagram editor canvas surface", () => {
     expect(source).toContain('graph.startBatch("quick-create")');
   });
 
+  test("keeps the desktop header compact without shrinking mobile controls", () => {
+    expect(source).toContain("MEMO_EDITOR_TOP_ROW_CLASS_NAME");
+    expect(source).toContain("MEMO_EDITOR_TITLE_REGION_CLASS_NAME");
+    expect(toolbarSource).toContain("<MemoEditorToolbarRow");
+  });
+
   test("repaints the graph when the application appearance changes", () => {
     expect(source).toContain("const { resolvedTheme } = useAppearanceTheme();");
     expect(source).toContain("applyGraphPalette(graph, themeRef.current, document.kind, resolvedTheme);");
     expect(source).toContain("data-diagram-appearance={resolvedTheme}");
-    expect(source).toContain("<ThemeToggle />");
+    expect(source).toContain("<MemoEditorHeaderActions");
   });
 });

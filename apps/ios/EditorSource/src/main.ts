@@ -17,6 +17,7 @@ import { toCanvas } from "html-to-image";
 import {
   createNativeUnsupportedContentExtensions,
   diagramDocumentToX6Cells,
+  attachDiagramReader,
   diagramFallbackMarkdown,
   docToMarkdown,
   NativeAttachmentMetadata,
@@ -372,12 +373,18 @@ async function renderMermaidBlocks(root: HTMLElement, theme: "light" | "dark") {
   }
 }
 
+let viewerDiagramReader: ReturnType<typeof attachDiagramReader> | null = null;
+let viewerDiagramFrame: number | null = null;
 let viewerDiagram: DiagramDocument | null = null;
 let viewerDiagramGraph: Graph | null = null;
 let viewerDiagramObserver: ResizeObserver | null = null;
 let viewerDiagramContainer: HTMLElement | null = null;
 
 function clearViewerDiagramGraph() {
+  if (viewerDiagramFrame !== null) cancelAnimationFrame(viewerDiagramFrame);
+  viewerDiagramFrame = null;
+  viewerDiagramReader?.dispose();
+  viewerDiagramReader = null;
   viewerDiagramObserver?.disconnect();
   viewerDiagramObserver = null;
   viewerDiagramGraph?.dispose();
@@ -421,16 +428,14 @@ function renderViewerDiagram(root: HTMLElement, diagram: DiagramDocument, theme:
     grid: false,
     interacting: false,
     panning: { enabled: true },
-    mousewheel: { enabled: true, minScale: 0.35, maxScale: 2 },
+    mousewheel: { enabled: true, minScale: 0.1, maxScale: 2.5 },
   });
   graph.addNodes(cells.nodes);
   graph.addEdges(cells.edges);
-  const fit = () => {
-    graph.resize(measureWidth(), Math.max(1, container.clientHeight));
-    graph.zoomToFit({ maxScale: 1.05, padding: 28 });
-    graph.centerContent();
-  };
-  requestAnimationFrame(fit);
+  const reader = attachDiagramReader(graph, container, { ...diagram, nodes: diagram.nodes.map((node, index) => ({ ...node, width: cells.nodes[index].width, height: cells.nodes[index].height })) }, locale, theme === "dark");
+  viewerDiagramReader = reader;
+  const fit = () => reader.resize(measureWidth(), Math.max(1, container.clientHeight));
+  viewerDiagramFrame = requestAnimationFrame(fit);
   const observer = new ResizeObserver(fit);
   observer.observe(parent ?? container);
   viewerDiagramGraph = graph;

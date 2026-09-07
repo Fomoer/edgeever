@@ -1,13 +1,17 @@
 {
-  "version": "1.60.0",
+  "version": "1.61.0",
   "changes": {
     "en-US": [
-      "Improve architecture diagram viewing and editing across platforms: render diagrams with X6 on mobile, add richer components and clearer diagram labels on Web and desktop, unify expansion and save feedback, and keep diagram metadata out of regular notes.",
-      "Fix desktop sync failures caused by merged memo ordering and foreign-key constraints."
+      "Create and edit semantic diagrams through MCP tools.",
+      "Improve diagram reading, layout, drag placement, controls, and scrolling across clients.",
+      "Make note editors more compact and consistent, with clearer focus mode and settings access.",
+      "Update the WeChat community QR code."
     ],
     "zh-CN": [
-      "增强架构图在各端的浏览与编辑体验：移动端使用 X6 渲染，Web 与桌面端提供更丰富的组件和更清晰的图表标识，统一展开与保存反馈，并避免图表元数据出现在普通笔记中。",
-      "修复桌面端合并备忘录顺序导致的外键约束同步失败。"
+      "支持通过 MCP 工具创建和编辑语义图。",
+      "改进跨客户端的图表阅读、布局、拖放、控件与滚动体验。",
+      "让笔记编辑器更紧凑一致，并改善专注模式与设置入口的清晰度。",
+      "更新微信交流群二维码。"
     ]
   }
 }

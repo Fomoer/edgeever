@@ -1,6 +1,6 @@
 import type { TiptapDoc } from "./content";
 import type { AiAction, AiPromptParameterKind, AiPromptResultMode } from "./ai-assistant";
-import type { DiagramKind } from "./diagram";
+import type { DiagramKind, DiagramSummaryPreview } from "./diagram";
 
 export type Notebook = {
   id: string;
@@ -22,6 +22,7 @@ export type MemoSummary = {
   title: string | null;
   excerpt: string;
   diagramKind?: DiagramKind | null;
+  diagramPreview?: DiagramSummaryPreview;
   tags: string[];
   isPinned: boolean;
   isArchived: boolean;

@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
-import { Export, Graph, History, Keyboard, Selection, type Edge, type Node } from "@antv/x6";
+import { diagramEditorSnapshot } from "@/lib/diagram-editor-snapshot";
+import { MemoTitleInput } from "@/components/MemoTitleInput";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { Dom, Export, Graph, History, Keyboard, Selection, type Edge, type Node } from "@antv/x6";
 import * as m from "motion/react-m";
 import {
   Activity,
@@ -12,7 +14,6 @@ import {
   ChartNoAxesCombined,
   ChevronDown,
   ChevronLeft,
-  ChevronRight,
   Circle,
   CircleAlert,
   Cloud,
@@ -42,9 +43,6 @@ import {
   Link2,
   LockKeyhole,
   LoaderCircle,
-  Maximize2,
-  Minimize2,
-  MoreHorizontal,
   MonitorSmartphone,
   Network,
   Pencil,
@@ -66,6 +64,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
+  attachDiagramScroll,
   ARCHITECTURE_DIAGRAM_SCHEMA_VERSION,
   DIAGRAM_SCHEMA_VERSION,
   diagramFallbackMarkdown,
@@ -79,6 +78,7 @@ import {
   type DiagramTheme,
   type MemoDetail,
   type MemoEditSession,
+  type Notebook,
 } from "@edgeever/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,17 +87,25 @@ import { RevisionHistoryDialog } from "@/components/dialogs/RevisionHistoryDialo
 import { ShareMemoDialog } from "@/components/dialogs/ShareMemoDialog";
 import { ClipboardCopyNotice } from "@/components/ClipboardCopyNotice";
 import { DiagramToolbar, DiagramToolbarAddTrigger } from "@/components/DiagramToolbar";
+import { MemoEditorHeaderActions } from "@/components/MemoEditorHeaderActions";
+import { MemoEditorMetadataRow } from "@/components/MemoEditorMetadataRow";
+import { MemoEditorTopRowLeading } from "@/components/MemoEditorTopRowLeading";
+import {
+  MEMO_EDITOR_TITLE_REGION_CLASS_NAME,
+  MEMO_EDITOR_TOP_ROW_CLASS_NAME,
+} from "@/components/MemoEditorChromeDensity";
+import { EditorNoteSearchBar } from "@/components/editor/EditorNoteSearchBar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAppearanceTheme } from "@/components/ThemeProvider";
 import { api } from "@/lib/api";
-import { EDITOR_LOCAL_SAVE_DELAY_MS } from "@/lib/app-helpers";
+import { EDITOR_LOCAL_SAVE_DELAY_MS, getNotebookMoveOptions } from "@/lib/app-helpers";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import {
   compactArchitectureNodeSize,
   compactFlowchartNodeSize,
+  flowchartNodePresentation,
   compactMindMapNodeSize,
   computeDiagramLayout,
   computeDiagramLayoutResult,
@@ -109,24 +117,23 @@ import { isLocalMemoId } from "@/lib/local-mirror";
 import { isBrowserOffline } from "@/lib/network-status";
 import { statusSettleMotion } from "@/lib/motion";
 import type { EdgeEverRepository } from "@/lib/repository";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime, parseTagsText } from "@/lib/utils";
 
 type DiagramEditorPaneProps = {
   memo: MemoDetail;
+  notebooks: Notebook[];
   repository: EdgeEverRepository;
   readOnly: boolean;
   desktopFocusMode: boolean;
-  hasNextMemo: boolean;
-  hasPreviousMemo: boolean;
   onBackToList: () => void;
   onDeleted: (memoId: string) => Promise<void>;
-  onOpenNextMemo: () => void;
-  onOpenPreviousMemo: () => void;
   onPermanentDeleted: (memoId: string) => Promise<void>;
   onRestored: (memoId: string) => Promise<void>;
   onSaved: (memo: MemoDetail) => Promise<void>;
   onSaveAsTemplate: (memo: MemoDetail, name: string) => Promise<void>;
   onToggleDesktopFocusMode: () => void;
+  onOpenExecutionCenter: () => void;
+  companionDiscoveryHub?: ReactNode;
 };
 
 type NodeData = { label: string; shape: DiagramNodeShape; parentId?: string; resourceIcon?: ArchitectureResourceIcon };
@@ -494,6 +501,10 @@ const applyDiagramSurface = (
 };
 
 const prepareExportSvg = (background: string) => (svg: SVGSVGElement) => {
+  svg.querySelectorAll<SVGElement>(".x6-node, .x6-edge").forEach((element) => {
+    element.removeAttribute("display");
+    element.style.removeProperty("display");
+  });
   svg.querySelectorAll(".x6-port").forEach((element) => element.remove());
   const viewBox = svg.getAttribute("viewBox")?.split(/\s+/).map(Number);
   if (!viewBox || viewBox.length !== 4 || viewBox.some((value) => !Number.isFinite(value))) return;
@@ -677,14 +688,47 @@ const architectureNodeVisuals = (
   };
 };
 
-const diagramNodeSize = (
+// Reuse X6's measured text wrapping so on-screen labels and SVG/PNG exports agree.
+const diagramNodePresentation = (
   node: DiagramDocument["nodes"][number],
   kind: DiagramDocument["kind"],
-) => kind === "mind-map"
-  ? compactMindMapNodeSize(node.label, !node.parentId)
-  : kind === "architecture"
-    ? compactArchitectureNodeSize(node.shape, node)
-    : compactFlowchartNodeSize(node.shape);
+) => {
+  if (kind === "flowchart") return flowchartNodePresentation(node.shape, node.label);
+  const size = kind === "mind-map"
+    ? compactMindMapNodeSize(node.label, !node.parentId)
+    : kind === "architecture"
+      ? compactArchitectureNodeSize(node.shape, node)
+      : compactFlowchartNodeSize(node.shape);
+  if (node.shape === "boundary") return { ...size, text: node.label };
+  const fontSize = kind === "mind-map" ? 14 : 13;
+  const lineHeight = 18;
+  const text = Dom.breakText(node.label, { width: size.width - (kind === "architecture" ? 66 : 24), height: 10000 }, {
+    fontSize, 'font-size': fontSize, 'font-weight': kind === "architecture" || !node.parentId ? 650 : 500,
+    lineHeight,
+  });
+  return { ...size, height: Math.max(size.height, text.split("\n").length * lineHeight + 16), text };
+};
+
+const diagramNodeSize = (node: DiagramDocument["nodes"][number], kind: DiagramDocument["kind"]) => {
+  const { width, height } = diagramNodePresentation(node, kind);
+  return { width, height };
+};
+
+const refreshNodeLabel = (node: Node, label: string) => {
+  const data = node.getData<NodeData>();
+  const shape = data?.shape ?? "process";
+  if (shape === "boundary") {
+    node.attr("label/text", label);
+    return;
+  }
+  const kind = shape === "topic" ? "mind-map" : ARCHITECTURE_NODE_ACCENTS[shape] ? "architecture" : "flowchart";
+  const presentation = diagramNodePresentation({ id: node.id, ...node.getPosition(), ...node.getSize(), ...data, shape, label }, kind);
+  const currentSize = node.getSize();
+  if (currentSize.width !== presentation.width || currentSize.height !== presentation.height) {
+    node.resize(presentation.width, presentation.height);
+  }
+  node.attr("label/text", presentation.text);
+};
 
 const flowPortGroup = (
   position: FlowPort,
@@ -747,7 +791,8 @@ const nodeMetadata = (
       body: visualAttrs.body,
       label: {
         ...visualAttrs.label,
-        text: node.label,
+        text: diagramNodePresentation(node, kind).text,
+        lineHeight: 18,
         ...(architectureVisuals ? { refX: 54, refY: "50%", textAnchor: "start", textVerticalAnchor: "middle" } : {}),
       },
       ...(architectureVisuals?.attrs ?? {}),
@@ -763,6 +808,15 @@ const nodeMetadata = (
     } } : {}),
   };
 };
+
+const diagramEdgeLabel = (text: string, palette: ReturnType<typeof resolveDiagramPalette>, kind: DiagramDocument["kind"]) => ({
+  position: { distance: 0.5, offset: kind === "architecture" ? { x: 0, y: -16 } : 0 },
+  attrs: {
+    label: { text, fill: palette.nodeText, fontSize: 12, lineHeight: 16, textWrap: { width: 140, height: 512 } },
+    body: { ref: "label", refWidth: 1, refHeight: 1, refWidth2: 12, refHeight2: 8, refX: -6, refY: -4,
+      fill: palette.canvas, stroke: palette.nodeStroke, strokeWidth: 1, rx: 4, ry: 4 },
+  },
+});
 
 const edgeMetadata = (
   edge: DiagramDocument["edges"][number],
@@ -781,7 +835,7 @@ const edgeMetadata = (
     id: edge.id,
     source: { cell: edge.source },
     target: { cell: edge.target },
-    router: undefined,
+    router: kind === "flowchart" ? { name: "manhattan", args: { padding: 28, step: 10 } } : undefined,
     connector: { name: kind === "mind-map" ? "smooth" : "rounded", args: { radius: 10 } },
     data: { ...(edgeKind ? { kind: edgeKind } : {}), ...(edge.bidirectional ? { bidirectional: true } : {}) } satisfies EdgeData,
     attrs: {
@@ -793,10 +847,7 @@ const edgeMetadata = (
         targetMarker: kind === "mind-map" ? null : { name: "block", width: 8, height: 6 },
       },
     },
-    labels: edge.label ? [{ attrs: {
-      label: { text: edge.label, fill: palette.nodeText, fontSize: 12 },
-      body: { fill: palette.canvas, stroke: palette.nodeStroke, strokeWidth: 1, rx: 5, ry: 5 },
-    } }] : undefined,
+    labels: edge.label ? [diagramEdgeLabel(edge.label, palette, kind)] : undefined,
   };
 };
 
@@ -862,14 +913,6 @@ const removeGraphSelection = (graph: Graph) => {
   return true;
 };
 
-const diagramEditorSnapshot = (title: string, document: DiagramDocument) => JSON.stringify({
-  title,
-  document: {
-    ...document,
-    theme: document.theme ?? "brand",
-    nodes: document.nodes.map((node) => ({ ...node, ...diagramNodeSize(node, document.kind) })),
-  },
-});
 
 const fitDiagramContent = (
   graph: Graph,
@@ -879,23 +922,46 @@ const fitDiagramContent = (
   viewport?: DiagramLayoutViewport,
 ) => {
   const policy = viewport ?? getDiagramLayoutViewport(document.kind);
+  const visibleNodes = graph.getNodes().filter((node) => node.isVisible());
+  if (visibleNodes.length !== graph.getNodes().length) {
+    const bounds = graph.getCellsBBox(visibleNodes);
+    if (bounds) graph.zoomToRect(bounds, { padding, maxScale: policy.maxScale });
+    return;
+  }
   graph.zoomToFit({
     padding,
     maxScale: policy.maxScale,
-    ...(policy.minScale ? { minScale: policy.minScale } : {}),
+
   });
-  if (!container) return;
-  if (policy.anchor === "center") return;
-  const anchor = policy.anchor === "root"
-    ? graph.getNodes().find((node) => !node.getData<NodeData>()?.parentId)
-    : graph.getNodes().reduce<Node | null>((leftmost, node) => (
-        !leftmost || node.getBBox().x < leftmost.getBBox().x ? node : leftmost
-      ), null);
-  if (!anchor) return;
-  const contentLeft = graph.localToGraph(anchor.getBBox().topLeft).x;
-  const desiredLeft = Math.max(32, Math.min(72, container.clientWidth * 0.055));
-  const translation = graph.translate();
-  graph.translate(translation.tx + desiredLeft - contentLeft, translation.ty);
+  // Fit the complete bounding box, including branches left of a mind-map root.
+  // A minimum scale or a second anchor translation can crop existing content.
+  graph.centerContent();
+};
+
+const readFlowchart = (graph: Graph, document: DiagramDocument, container: HTMLElement | null) => {
+  if (!container || !document.nodes.length) return;
+  const incoming = new Set(document.edges.map((edge) => edge.target));
+  const start = document.nodes.find((node) => !incoming.has(node.id)) ?? document.nodes[0];
+  const cell = graph.getCellById(start.id);
+  if (!cell?.isNode()) return;
+  graph.zoomTo(1);
+  const bounds = cell.getBBox();
+  graph.translate(container.clientWidth / 2 - bounds.center.x, 48 - bounds.y);
+};
+
+const applyMindMapHierarchy = (graph: Graph, theme: DiagramTheme, appearance: DiagramAppearance) => {
+  const palette = resolveDiagramPalette(theme, appearance);
+  const roots = new Set(graph.getNodes().filter((node) => !node.getData<NodeData>()?.parentId).map((node) => node.id));
+  for (const node of graph.getNodes()) {
+    const parentId = node.getData<NodeData>()?.parentId;
+    const primary = Boolean(parentId && roots.has(parentId));
+    node.attr("label/fontWeight", !parentId || primary ? 650 : 500);
+    node.attr("body/strokeWidth", !parentId ? 2 : primary ? 1.5 : 1);
+    if (primary) node.attr("body/stroke", palette.topicStroke);
+  }
+  for (const edge of graph.getEdges()) {
+    edge.attr("line/strokeWidth", roots.has(edge.getSourceCellId()) ? 2.5 : 1.25);
+  }
 };
 
 const applyGraphPalette = (
@@ -913,7 +979,8 @@ const applyGraphPalette = (
       const shape = data?.shape ?? "process";
       const attrs = nodeAttrs(shape, theme, appearance, shape === "topic" && !data?.parentId);
       node.attr("body", attrs.body);
-      node.attr("label", { ...attrs.label, text: data?.label ?? "" });
+      node.attr("label", attrs.label);
+      refreshNodeLabel(node, data?.label ?? "");
       if (kind === "architecture" && shape !== "boundary") {
         const architectureVisuals = architectureNodeVisuals(shape, node.getSize(), appearance, data?.resourceIcon);
         for (const [selector, selectorAttrs] of Object.entries(architectureVisuals.attrs)) {
@@ -932,11 +999,10 @@ const applyGraphPalette = (
       const edgeKind = edge.getData<EdgeData>()?.kind;
       edge.attr("line/stroke", edgeKind === "data" ? "#7C3AED" : edgeKind === "async" ? "#EA580C" : kind === "mind-map" ? palette.mindMapEdge : palette.flowEdge);
       if (edge.getLabels().length > 0) {
-        edge.attr("label/fill", palette.nodeText);
-        edge.attr("body/fill", palette.canvas);
-        edge.attr("body/stroke", palette.nodeStroke);
+        edge.setLabels(edge.getLabels().map((label) => diagramEdgeLabel(String(label.attrs?.label?.text ?? ""), palette, kind)));
       }
     }
+    if (kind === "mind-map") applyMindMapHierarchy(graph, theme, appearance);
     applyDiagramSurface(graph, theme, appearance);
   } finally {
     if (historyEnabled) graph.enableHistory();
@@ -945,20 +1011,19 @@ const applyGraphPalette = (
 
 export const DiagramEditorPane = ({
   memo,
+  notebooks,
   repository,
   readOnly,
   desktopFocusMode,
-  hasNextMemo,
-  hasPreviousMemo,
   onBackToList,
   onDeleted,
-  onOpenNextMemo,
-  onOpenPreviousMemo,
   onPermanentDeleted,
   onRestored,
   onSaved,
   onSaveAsTemplate,
   onToggleDesktopFocusMode,
+  onOpenExecutionCenter,
+  companionDiscoveryHub,
 }: DiagramEditorPaneProps) => {
   const { t } = useTranslation();
   const { resolvedTheme } = useAppearanceTheme();
@@ -972,17 +1037,21 @@ export const DiagramEditorPane = ({
   const document = parseDiagramDocument(memo.contentMarkdown);
   const documentTheme = document?.theme ?? "brand";
   const [title, setTitle] = useState(memo.title ?? "");
+  const [tagsText, setTagsText] = useState(memo.tags.join(", "));
   const [theme, setTheme] = useState<DiagramTheme>(documentTheme);
   const titleRef = useRef(title);
+  const tagsRef = useRef(tagsText);
   const themeRef = useRef<DiagramTheme>(documentTheme);
   const appearanceRef = useRef<DiagramAppearance>(resolvedTheme);
   const savedSnapshotRef = useRef(document ? diagramEditorSnapshot(memo.title ?? "", document) : "");
+  const viewOnlyRef = useRef(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedNodeLabel, setSelectedNodeLabel] = useState("");
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [selectedEdgeLabel, setSelectedEdgeLabel] = useState("");
   const [hasSelection, setHasSelection] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [tagsDirty, setTagsDirty] = useState(false);
   const [dirtyVersion, setDirtyVersion] = useState(0);
   const [saving, setSaving] = useState(false);
   const [editSessionReady, setEditSessionReady] = useState(false);
@@ -993,13 +1062,22 @@ export const DiagramEditorPane = ({
   const [memoIdCopyNotice, setMemoIdCopyNotice] = useState<"copied" | "error" | null>(null);
   const memoIdCopyTimerRef = useRef<number | null>(null);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
+  const [mobileNotebookSheetOpen, setMobileNotebookSheetOpen] = useState(false);
+  const [notebookUpdatePending, setNotebookUpdatePending] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const [zoomPercent, setZoomPercent] = useState(100);
   const [historyState, setHistoryState] = useState({ undo: false, redo: false });
   const [nodeEditor, setNodeEditor] = useState<NodeEditorState | null>(null);
   const [flowQuickCreate, setFlowQuickCreate] = useState<FlowQuickCreateState | null>(null);
   const [pendingArchitectureItem, setPendingArchitectureItem] = useState<ArchitectureLibraryItem | null>(null);
+  const notebookOptions = useMemo(() => getNotebookMoveOptions(notebooks), [notebooks]);
   const flowQuickCreateRef = useRef<FlowQuickCreateState | null>(null);
   const flowPointerDragRef = useRef<FlowPointerDragState | null>(null);
   const nodeEditorRef = useRef<NodeEditorState | null>(null);
+  const editorDirty = dirty || tagsDirty;
 
   useEffect(() => {
     setPendingArchitectureItem(null);
@@ -1037,7 +1115,7 @@ export const DiagramEditorPane = ({
       if (label !== current.originalValue) {
         graph.startBatch("edit-label");
         cell.setData({ ...cell.getData<NodeData>(), label });
-        cell.attr("label/text", label);
+        refreshNodeLabel(cell, label);
         graph.stopBatch("edit-label");
         setSelectedNodeLabel(label);
       }
@@ -1082,8 +1160,12 @@ export const DiagramEditorPane = ({
     memoRef.current = memo;
     setTitle(memo.title ?? "");
     titleRef.current = memo.title ?? "";
+    setTagsText(memo.tags.join(", "));
+    tagsRef.current = memo.tags.join(", ");
     savedSnapshotRef.current = document ? diagramEditorSnapshot(memo.title ?? "", document) : "";
     setDirty(false);
+    setTagsDirty(false);
+    setMobileNotebookSheetOpen(false);
     setSaveError(null);
     setSaveFailed(false);
     editSessionRef.current = null;
@@ -1109,7 +1191,12 @@ export const DiagramEditorPane = ({
     appearanceRef.current = resolvedTheme;
     const graph = graphRef.current;
     if (!graph || !document) return;
-    applyGraphPalette(graph, themeRef.current, document.kind, resolvedTheme);
+    viewOnlyRef.current = true;
+    try {
+      applyGraphPalette(graph, themeRef.current, document.kind, resolvedTheme);
+    } finally {
+      viewOnlyRef.current = false;
+    }
     const currentEditor = nodeEditorRef.current;
     if (!currentEditor) return;
     const node = graph.getCellById(currentEditor.nodeId);
@@ -1136,7 +1223,7 @@ export const DiagramEditorPane = ({
       async: true,
       background: { color: palette.canvas },
       grid: false,
-      panning: { enabled: true, eventTypes: ["leftMouseDown", "mouseWheel"] },
+      panning: { enabled: true, eventTypes: ["leftMouseDown"] },
       mousewheel: { enabled: true, modifiers: ["ctrl", "meta"], minScale: 0.3, maxScale: 2.5 },
       interacting: !readOnly,
       connecting: {
@@ -1148,7 +1235,7 @@ export const DiagramEditorPane = ({
         allowMulti: false,
         highlight: isConnectableDiagram(document.kind),
         snap: { radius: 24 },
-        router: "normal",
+        router: document.kind === "flowchart" ? { name: "manhattan", args: { padding: 28, step: 10 } } : "normal",
         connector: document.kind === "mind-map" ? "smooth" : "rounded",
         validateConnection: ({ sourceCell, targetCell, sourcePort, targetPort }) => {
           if (!isConnectableDiagram(document.kind) || !sourceCell || !sourcePort) return false;
@@ -1182,6 +1269,7 @@ export const DiagramEditorPane = ({
       },
     }));
     graph.use(new Selection({ enabled: true, multiple: true, rubberband: true, movable: !readOnly, showNodeSelectionBox: true, showEdgeSelectionBox: true }));
+    const detachScroll = attachDiagramScroll(graph.container, graph);
     graph.addNodes(document.nodes.map((node) => {
       const inferredResourceIcon = document.kind === "architecture" && !node.resourceIcon
         ? inferArchitectureResourceIcon(node.label, t)
@@ -1199,11 +1287,22 @@ export const DiagramEditorPane = ({
       }
     }
     graph.addEdges(document.edges.map((edge) => edgeMetadata(edge, document.kind, documentTheme, appearance)));
+    let viewportWidth = containerRef.current?.clientWidth ?? 0;
+    let viewportHeight = containerRef.current?.clientHeight ?? 0;
+    graph.on("resize", ({ width, height }) => {
+      const translation = graph.translate();
+      graph.translate(translation.tx + (width - viewportWidth) / 2, translation.ty + (height - viewportHeight) / 2);
+      viewportWidth = width;
+      viewportHeight = height;
+    });
+    graph.on("scale", () => setZoomPercent(Math.round(graph.scale().sx * 100)));
     graph.cleanHistory();
     fitDiagramContent(graph, document, containerRef.current);
+    if (document.kind === "flowchart" && graph.scale().sx < 0.8) readFlowchart(graph, document, containerRef.current);
 
     const updateHistory = () => setHistoryState({ undo: graph.canUndo(), redo: graph.canRedo() });
     const markDirty = () => {
+      if (viewOnlyRef.current) return;
       if (!readOnly) {
         const currentDocument = graphToDocument(graph, document.kind, themeRef.current);
         const hasChanges = savedSnapshotRef.current !== diagramEditorSnapshot(titleRef.current, currentDocument);
@@ -1503,6 +1602,7 @@ export const DiagramEditorPane = ({
     graph.bindKey("1", (event) => {
       event.preventDefault();
       graph.zoomTo(1);
+      graph.centerContent();
     });
     graph.bindKey("esc", (event) => {
       if (!flowQuickCreateRef.current) return;
@@ -1549,16 +1649,16 @@ export const DiagramEditorPane = ({
       openFlowQuickCreateRef.current = () => undefined;
       nodeEditorRef.current = null;
       graphRef.current = null;
-      graph.dispose();
+      detachScroll(); graph.dispose();
     };
   }, [beginNodeEdit, dismissFlowQuickCreate, memo.contentHash, memo.id, readOnly]);
 
   useEffect(() => {
-    if (!dirty) return;
+    if (!editorDirty) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  }, [editorDirty]);
 
   useEffect(() => {
     if (readOnly) return;
@@ -1762,7 +1862,7 @@ export const DiagramEditorPane = ({
     const node = selectedNodeId ? graphRef.current?.getCellById(selectedNodeId) : null;
     if (!node?.isNode() || readOnly) return;
     node.setData({ ...node.getData<NodeData>(), label });
-    node.attr("label/text", label);
+    refreshNodeLabel(node, label);
   };
 
   const updateSelectedEdgeLabel = (label: string) => {
@@ -1774,10 +1874,7 @@ export const DiagramEditorPane = ({
       return;
     }
     const palette = resolveDiagramPalette(themeRef.current, appearanceRef.current);
-    edge.setLabels([{ attrs: {
-      label: { text: label, fill: palette.nodeText, fontSize: 12 },
-      body: { fill: palette.canvas, stroke: palette.nodeStroke, strokeWidth: 1, rx: 5, ry: 5 },
-    } }]);
+    edge.setLabels([diagramEdgeLabel(label, palette, document?.kind ?? "flowchart")]);
   };
 
   const createConnectedFlowNode = (shape: DiagramNodeShape) => {
@@ -1935,10 +2032,11 @@ export const DiagramEditorPane = ({
     try {
       const palette = resolveDiagramPalette(themeRef.current, appearanceRef.current);
       const beforeSerialize = prepareExportSvg(palette.canvas);
+      const viewBox = graph.getCellsBBox(graph.getCells()) ?? undefined;
       if (format === "png") {
-        graph.exportPNG(fileName, { backgroundColor: palette.canvas, padding: 32, ratio: 2, copyStyles: false, beforeSerialize });
+        graph.exportPNG(fileName, { backgroundColor: palette.canvas, padding: 32, ratio: 2, copyStyles: false, beforeSerialize, viewBox });
       } else {
-        graph.exportSVG(fileName, { preserveDimensions: true, copyStyles: false, beforeSerialize });
+        graph.exportSVG(fileName, { preserveDimensions: true, copyStyles: false, beforeSerialize, viewBox });
       }
     } catch {
       setSaveError(t("diagram.exportError"));
@@ -1949,7 +2047,14 @@ export const DiagramEditorPane = ({
     const graph = graphRef.current;
     const currentMemo = memoRef.current;
     const editSession = editSessionRef.current;
-    if (!graph || !document || !editSession || readOnly || saving) return;
+    if (!graph || !document || !editSession || readOnly || saving) return false;
+    if (
+      savedSnapshotRef.current === diagramEditorSnapshot(titleRef.current, graphToDocument(graph, document.kind, themeRef.current))
+      && !tagsDirty
+    ) {
+      setDirty(false);
+      return true;
+    }
     setSaving(true);
     setSaveError(null);
     setSaveFailed(false);
@@ -1957,6 +2062,7 @@ export const DiagramEditorPane = ({
       const nextDocument = graphToDocument(graph, document.kind, themeRef.current);
       const markdown = serializeDiagramDocument(nextDocument);
       const nextTitle = titleRef.current;
+      const nextTags = parseTagsText(tagsRef.current);
       const nextSnapshot = diagramEditorSnapshot(nextTitle, nextDocument);
       const result = await repository.updateMemo(currentMemo, {
         expectedRevision: currentMemo.revision,
@@ -1965,7 +2071,7 @@ export const DiagramEditorPane = ({
         title: nextTitle,
         contentJson: markdownToDoc(diagramFallbackMarkdown(nextDocument)),
         contentMarkdown: markdown,
-        tags: currentMemo.tags,
+        tags: nextTags,
       });
       memoRef.current = result.memo;
       savedSnapshotRef.current = nextSnapshot;
@@ -1974,15 +2080,24 @@ export const DiagramEditorPane = ({
         graphToDocument(graph, document.kind, themeRef.current),
       );
       const hasNewChanges = currentSnapshot !== nextSnapshot;
+      const hasNewTagChanges = parseTagsText(tagsRef.current).join("\u0000") !== result.memo.tags.join("\u0000");
       setDirty(hasNewChanges);
-      if (!hasNewChanges) {
+      setTagsDirty(hasNewTagChanges);
+      if (!hasNewTagChanges) {
+        const savedTagsText = result.memo.tags.join(", ");
+        tagsRef.current = savedTagsText;
+        setTagsText(savedTagsText);
+      }
+      if (!hasNewChanges && !hasNewTagChanges) {
         graph.cleanHistory();
         setHistoryState({ undo: false, redo: false });
         await onSaved(result.memo);
       }
+      return true;
     } catch (error) {
       setSaveFailed(true);
       setSaveError(error instanceof Error ? error.message : t("diagram.saveError"));
+      return false;
     } finally {
       setSaving(false);
     }
@@ -1990,10 +2105,10 @@ export const DiagramEditorPane = ({
   saveRef.current = () => { void save(); };
 
   useEffect(() => {
-    if (readOnly || !dirty || nodeEditor !== null || saving || !editSessionReady || saveFailed) return;
+    if (readOnly || !editorDirty || nodeEditor !== null || saving || !editSessionReady || saveFailed) return;
     const timer = window.setTimeout(() => saveRef.current(), EDITOR_LOCAL_SAVE_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [dirty, dirtyVersion, editSessionReady, nodeEditor, readOnly, saveFailed, saving]);
+  }, [dirtyVersion, editSessionReady, editorDirty, nodeEditor, readOnly, saveFailed, saving]);
 
   const handleCopyMemoId = async () => {
     if (isLocalMemoId(memo.id)) return;
@@ -2022,13 +2137,80 @@ export const DiagramEditorPane = ({
     }, name.trim());
   };
 
+  const handleNotebookChange = (notebookId: string) => {
+    const currentMemo = memoRef.current;
+    if (readOnly || notebookUpdatePending || notebookId === currentMemo.notebookId) {
+      setMobileNotebookSheetOpen(false);
+      return;
+    }
+
+    setNotebookUpdatePending(true);
+    setSaveError(null);
+    void (async () => {
+      if (editorDirty && !(await save())) return;
+      const sourceMemo = memoRef.current;
+      await repository.moveMemos({ memoIds: [sourceMemo.id], notebookId });
+      const { memo: movedMemo } = await repository.getMemo(sourceMemo.id);
+      memoRef.current = movedMemo;
+      await onSaved(movedMemo);
+    })()
+      .catch((error) => {
+        setSaveError(error instanceof Error ? error.message : t("diagram.saveError"));
+      })
+      .finally(() => {
+        setNotebookUpdatePending(false);
+        setMobileNotebookSheetOpen(false);
+      });
+  };
+
+  const searchMatches = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase();
+    if (!searchOpen || !query) return [];
+    return (graphRef.current?.getNodes() ?? []).filter((node) =>
+      (node.getData<NodeData>()?.label ?? "").toLocaleLowerCase().includes(query),
+    );
+  }, [dirtyVersion, memo.id, searchOpen, searchQuery]);
+
+  const selectSearchMatch = useCallback((index: number) => {
+    const graph = graphRef.current;
+    const node = searchMatches[index];
+    if (!graph || !node) return;
+    graph.cleanSelection();
+    graph.select(node);
+    graph.centerCell(node);
+    setSelectedNodeId(node.id);
+    setSelectedNodeLabel(node.getData<NodeData>()?.label ?? "");
+  }, [searchMatches]);
+
+  const moveSearchMatch = useCallback((direction: -1 | 1) => {
+    if (searchMatches.length === 0) return;
+    setSearchIndex((current) => {
+      const next = (current + direction + searchMatches.length) % searchMatches.length;
+      selectSearchMatch(next);
+      return next;
+    });
+  }, [searchMatches.length, selectSearchMatch]);
+
+  const openSearch = useCallback(() => {
+    setSearchOpen(true);
+    window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+  }, []);
+
+  useEffect(() => {
+    setSearchIndex(0);
+    if (searchMatches[0]) selectSearchMatch(0);
+  }, [searchMatches, selectSearchMatch]);
+
   if (!document) return null;
   const kindLabel = document.kind === "mind-map" ? t("diagram.mindMap") : document.kind === "architecture" ? t("diagram.architecture") : t("diagram.flowchart");
   const updatedLabel = formatDateTime(memo.updatedAt);
-  const currentMarkdown = historyOpen
+  const currentMarkdown = historyOpen && dirty
     ? serializeDiagramDocument(graphRef.current ? graphToDocument(graphRef.current, document.kind, themeRef.current) : document)
     : memo.contentMarkdown;
-  const saveStatus = saveError ? "error" : saving ? "saving" : dirty ? "unsaved" : "saved";
+  const saveStatus = saveError ? "error" : saving || notebookUpdatePending ? "saving" : editorDirty ? "unsaved" : "saved";
   const saveLabel = saveStatus === "error"
     ? t("editor.saveState.error")
     : saveStatus === "saving"
@@ -2046,63 +2228,22 @@ export const DiagramEditorPane = ({
     <TooltipProvider>
       <div className="flex h-full min-h-0 flex-col bg-white">
       <header className="shrink-0 border-b border-slate-200 bg-white">
-        <div className="flex min-h-12 items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 sm:px-5">
-          <div className="flex min-w-0 items-center gap-2 text-sm">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button className="lg:hidden" size="icon" variant="ghost" aria-label={t("diagram.back")} onClick={() => dirty ? setConfirmDiscardOpen(true) : onBackToList()}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t("diagram.back")}</TooltipContent>
-            </Tooltip>
-            <div className="hidden items-center gap-1 sm:flex lg:hidden">
+        <div className={MEMO_EDITOR_TOP_ROW_CLASS_NAME}>
+          <MemoEditorTopRowLeading
+            desktopFocusMode={desktopFocusMode}
+            updatedLabel={updatedLabel}
+            onToggleDesktopFocusMode={onToggleDesktopFocusMode}
+            mobileBackButton={(
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="icon" variant="ghost" aria-label={t("editor.previousMemo")} onClick={onOpenPreviousMemo} disabled={!hasPreviousMemo}>
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("editor.previousMemo")}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button size="icon" variant="ghost" aria-label={t("editor.nextMemo")} onClick={onOpenNextMemo} disabled={!hasNextMemo}>
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("editor.nextMemo")}</TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="hidden items-center gap-1 lg:flex">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button size="sm" variant={desktopFocusMode ? "soft" : "ghost"} aria-label={t(desktopFocusMode ? "editor.exitFocusMode" : "editor.enterFocusMode")} aria-pressed={desktopFocusMode} onClick={onToggleDesktopFocusMode}>
-                    {desktopFocusMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                    <span>{t(desktopFocusMode ? "editor.exitFocusMode" : "editor.focusMode")}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t(desktopFocusMode ? "editor.exitFocusMode" : "editor.focusMode")}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button size="icon" variant="ghost" aria-label={t("editor.previousMemo")} onClick={onOpenPreviousMemo} disabled={!hasPreviousMemo}>
+                  <Button className="lg:hidden" size="icon" variant="ghost" aria-label={t("diagram.back")} onClick={() => editorDirty ? setConfirmDiscardOpen(true) : onBackToList()}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{t("editor.previousMemo")}</TooltipContent>
+                <TooltipContent>{t("diagram.back")}</TooltipContent>
               </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button size="icon" variant="ghost" aria-label={t("editor.nextMemo")} onClick={onOpenNextMemo} disabled={!hasNextMemo}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("editor.nextMemo")}</TooltipContent>
-              </Tooltip>
-            </div>
-            <span className="hidden truncate text-xs text-slate-400 sm:inline">{updatedLabel}</span>
-          </div>
+            )}
+          />
 
           <div className="flex shrink-0 items-center gap-1">
             <m.span
@@ -2146,14 +2287,13 @@ export const DiagramEditorPane = ({
                 {t("diagram.retrySave")}
               </Button>
             )}
-            <ThemeToggle />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="icon" variant="ghost" aria-label={t("editor.moreAria")}>
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 border border-slate-200 bg-white py-1 shadow-md">
+            <MemoEditorHeaderActions
+              companionDiscoveryHub={companionDiscoveryHub}
+              moreMenuClassName="w-48"
+              onOpenExecutionCenter={onOpenExecutionCenter}
+              onSearch={openSearch}
+              moreMenuItems={(
+                <>
                 <DropdownMenuItem disabled={isLocalMemoId(memo.id)} onClick={() => void handleCopyMemoId()}>
                   <Copy className="h-4 w-4 text-slate-500" />
                   {t(isLocalMemoId(memo.id) ? "editor.copyNoteIdAfterSync" : "editor.copyNoteId")}
@@ -2201,34 +2341,69 @@ export const DiagramEditorPane = ({
                     {t("editor.deleteMemo")}
                   </DropdownMenuItem>
                 )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </>
+              )}
+            />
           </div>
         </div>
 
-        <div className="flex min-h-14 items-center gap-3 px-4 py-2.5 sm:px-7">
-          <input
-            className="min-w-0 flex-1 bg-transparent text-xl font-semibold text-slate-950 outline-none placeholder:text-slate-400 disabled:text-slate-600 sm:text-2xl"
-            value={title}
+        <div className={MEMO_EDITOR_TITLE_REGION_CLASS_NAME}>
+          <div className="min-w-0">
+            <MemoTitleInput
+              value={title}
+              readOnly={readOnly}
+              placeholder={kindLabel}
+              ariaLabel={t("diagram.title")}
+              onValueChange={(nextTitle) => {
+                titleRef.current = nextTitle;
+                setTitle(nextTitle);
+                setDirtyVersion((current) => current + 1);
+                const graph = graphRef.current;
+                if (graph) {
+                  setDirty(savedSnapshotRef.current !== diagramEditorSnapshot(
+                    nextTitle,
+                    graphToDocument(graph, document.kind, themeRef.current),
+                  ));
+                }
+              }}
+            />
+          </div>
+          <MemoEditorMetadataRow
+            contentMarkdown={memo.contentMarkdown}
             disabled={readOnly}
-            maxLength={160}
-            placeholder={kindLabel}
-            aria-label={t("diagram.title")}
-            onChange={(event) => {
-              const nextTitle = event.target.value;
-              titleRef.current = nextTitle;
-              setTitle(nextTitle);
+            mobileNotebookPickerOpen={mobileNotebookSheetOpen}
+            notebookOptions={notebookOptions}
+            notebookUpdatePending={notebookUpdatePending || saving}
+            repository={repository}
+            selectedNotebookId={memoRef.current.notebookId}
+            tagsText={tagsText}
+            title={title}
+            onMobileNotebookPickerOpenChange={setMobileNotebookSheetOpen}
+            onNotebookChange={handleNotebookChange}
+            onTagsChange={(nextTagsText) => {
+              tagsRef.current = nextTagsText;
+              setTagsText(nextTagsText);
+              setTagsDirty(true);
               setDirtyVersion((current) => current + 1);
-              const graph = graphRef.current;
-              if (graph) {
-                setDirty(savedSnapshotRef.current !== diagramEditorSnapshot(
-                  nextTitle,
-                  graphToDocument(graph, document.kind, themeRef.current),
-                ));
-              }
             }}
           />
         </div>
+        {searchOpen ? (
+          <EditorNoteSearchBar
+            inputRef={searchInputRef}
+            query={searchQuery}
+            replacement=""
+            replaceOpen={false}
+            readOnly
+            matchCount={searchMatches.length}
+            matchLabel={searchQuery.trim() ? `${searchMatches.length > 0 ? searchIndex + 1 : 0}/${searchMatches.length}` : ""}
+            onQueryChange={setSearchQuery}
+            onReplacementChange={() => undefined}
+            onMoveMatch={moveSearchMatch}
+            onReplaceAll={() => undefined}
+            onClose={() => setSearchOpen(false)}
+          />
+        ) : null}
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col">
@@ -2266,6 +2441,16 @@ export const DiagramEditorPane = ({
           onRedo={() => runHistoryAction("redo")}
           onThemeChange={applyTheme}
           onUndo={() => runHistoryAction("undo")}
+          zoomPercent={zoomPercent}
+          onRead={document.kind === "flowchart" ? () => { if (graphRef.current) readFlowchart(graphRef.current, document, containerRef.current); } : undefined}
+          onFit={() => { const graph = graphRef.current; if (graph) fitDiagramContent(graph, document, containerRef.current); }}
+          onResetZoom={() => {
+            const graph = graphRef.current;
+            if (!graph) return;
+            graph.zoomTo(1);
+            const bounds = graph.getCellsBBox(graph.getNodes().filter((node) => node.isVisible()));
+            if (bounds) graph.centerPoint(bounds.center.x, bounds.center.y);
+          }}
           onZoomIn={() => graphRef.current?.zoom(0.1)}
           onZoomOut={() => graphRef.current?.zoom(-0.1)}
           readOnly={readOnly}

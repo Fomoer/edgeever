@@ -363,3 +363,22 @@ export const createDefaultDiagramDocument = (kind: DiagramKind): DiagramDocument
     ],
   };
 };
+
+export type DiagramSummaryPreview = { nodeCount: number; edgeCount: number; labels: string[] };
+
+/** Read-only, bounded list metadata; never ships the diagram payload to list rows. */
+export const getDiagramSummary = (markdown: string | null | undefined): {
+  diagramKind: DiagramKind | null;
+  diagramPreview?: DiagramSummaryPreview;
+} => {
+  const document = parseDiagramDocument(markdown);
+  if (!document) return { diagramKind: null };
+  const roots = new Set(document.nodes.filter((node) => !node.parentId).map((node) => node.id));
+  const primary = document.kind === "mind-map"
+    ? document.nodes.filter((node) => node.parentId && roots.has(node.parentId))
+    : document.kind === "architecture" ? document.nodes.filter((node) => node.shape === "boundary") : [];
+  const candidates = primary.length ? primary : document.nodes;
+  const labels = [...new Set(candidates.map((node) => node.label.replace(/\s+/g, " ").trim()).filter(Boolean))]
+    .slice(0, 4).map((label) => Array.from(label).slice(0, 48).join(""));
+  return { diagramKind: document.kind, diagramPreview: { nodeCount: document.nodes.length, edgeCount: document.edges.length, labels } };
+};

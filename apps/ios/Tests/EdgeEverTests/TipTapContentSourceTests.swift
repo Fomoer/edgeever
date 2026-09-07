@@ -289,7 +289,7 @@ final class TipTapContentSourceTests: XCTestCase {
         }
         let samples = [
             envelope(#"{"schemaVersion":1,"kind":"mind-map","nodes":[{"id":"a","label":"核心主题","x":0,"y":0,"width":100,"height":40,"shape":"topic"},{"id":"b","label":"分支主题","x":160,"y":0,"width":100,"height":40,"shape":"topic","parentId":"a"}],"edges":[{"id":"e","source":"a","target":"b"}]}"#),
-            envelope(#"{"schemaVersion":1,"kind":"flowchart","nodes":[{"id":"a","label":"开始","x":0,"y":0,"width":100,"height":40,"shape":"terminator"},{"id":"b","label":"处理步骤","x":0,"y":100,"width":100,"height":40,"shape":"process"}],"edges":[{"id":"e","source":"a","target":"b"}]}"#),
+            envelope(#"{"schemaVersion":1,"kind":"flowchart","nodes":[{"id":"a","label":"开始","x":0,"y":0,"width":100,"height":40,"shape":"terminator"},{"id":"b","label":"Transformer 前向计算与因果注意力处理步骤","x":0,"y":1600,"width":100,"height":40,"shape":"process"}],"edges":[{"id":"e","source":"a","target":"b"}]}"#),
             envelope(#"{"schemaVersion":2,"kind":"architecture","nodes":[{"id":"system","label":"应用系统","x":0,"y":0,"width":500,"height":300,"shape":"boundary"},{"id":"api","label":"API 服务","x":40,"y":40,"width":156,"height":64,"shape":"service","parentId":"system"},{"id":"db","label":"数据库","x":260,"y":40,"width":150,"height":72,"shape":"database","parentId":"system"}],"edges":[{"id":"query","source":"api","target":"db","label":"查询","kind":"data"}]}"#),
         ]
 
@@ -321,6 +321,32 @@ final class TipTapContentSourceTests: XCTestCase {
             )
             XCTAssertGreaterThan(graphWidth, 300, "X6 must occupy the viewer width instead of collapsing")
             XCTAssertGreaterThan(nodeCount, 0, "X6 must materialize diagram nodes")
+            let controlsCount = try await evalInt(webView, "document.querySelectorAll('.edgeever-diagram-reader-controls').length")
+            XCTAssertEqual(controlsCount, 1, "reusing a viewer must not accumulate controls")
+            let hasReadingButton = try await evalBool(webView, "!!document.querySelector('button[aria-label=\"从起点阅读\"]')")
+            if hasReadingButton {
+                _ = try await eval(webView, "document.querySelector('button[aria-label=\"从起点阅读\"]').click()")
+                let readingScale = try await evalInt(webView, "parseInt(document.querySelector('button[aria-label=\"恢复 100%\"]').textContent)")
+                XCTAssertEqual(readingScale, 100)
+                let scrolled = try await evalBool(webView, """
+                (function() {
+                  const canvas = document.querySelector('.edgeever-x6-diagram');
+                  const node = canvas.querySelector('.x6-node');
+                  const before = node.getBoundingClientRect().top;
+                  canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: 1200, bubbles: true, cancelable: true }));
+                  return Math.abs(node.getBoundingClientRect().top - before + 1200) < 2;
+                })()
+                """)
+                XCTAssertTrue(scrolled, "ordinary wheel must move the graph viewport")
+
+                _ = try await eval(webView, "document.querySelector('button[aria-label=\"放大\"]').click()")
+                let enlargedScale = try await evalInt(webView, "parseInt(document.querySelector('button[aria-label=\"恢复 100%\"]').textContent)")
+                XCTAssertEqual(enlargedScale, 125)
+                _ = try await eval(webView, "document.querySelector('button[aria-label=\"适应画布\"]').click()")
+                let overviewScale = try await evalInt(webView, "parseInt(document.querySelector('button[aria-label=\"恢复 100%\"]').textContent)")
+                XCTAssertLessThan(overviewScale, 80)
+            }
+
             let leakedLegacyFallback = try await evalBool(webView, "document.body.innerText.includes('node list only')")
             XCTAssertFalse(leakedLegacyFallback)
             let leakedCodeAffordance = try await evalBool(webView, "document.body.innerText.includes('Copy code')")
