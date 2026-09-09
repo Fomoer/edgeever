@@ -18,30 +18,39 @@ export const GitHubMark = ({ className }: { className?: string }) => (
 export const GitHubRepositoryLink = ({
   children,
   className,
+  href = GITHUB_REPOSITORY_URL,
   iconClassName,
+  label,
+  showTooltip = true,
 }: {
   children?: ReactNode;
   className?: string;
+  href?: string;
   iconClassName?: string;
+  label?: string;
+  showTooltip?: boolean;
 }) => {
   const { t } = useTranslation();
-  const resolvedTitle = t("common.githubRepository");
+  const resolvedTitle = label ?? t("common.githubRepository");
+  const link = (
+    <a
+      aria-label={children ? undefined : resolvedTitle}
+      className={cn("inline-flex items-center gap-2", className)}
+      href={href}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      <GitHubMark className={cn("h-4 w-4 shrink-0", iconClassName)} />
+      {children}
+    </a>
+  );
+
+  if (!showTooltip) return link;
 
   return (
     <TooltipProvider delayDuration={0} skipDelayDuration={0}>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <a
-            aria-label={children ? undefined : resolvedTitle}
-            className={cn("inline-flex items-center gap-2", className)}
-            href={GITHUB_REPOSITORY_URL}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <GitHubMark className={cn("h-4 w-4 shrink-0", iconClassName)} />
-            {children}
-          </a>
-        </TooltipTrigger>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
         <TooltipContent side="bottom">{resolvedTitle}</TooltipContent>
       </Tooltip>
     </TooltipProvider>

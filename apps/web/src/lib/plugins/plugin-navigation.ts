@@ -15,12 +15,11 @@ export const getPluginDetailPage = (manifest: ExtensionManifest, requestedPage: 
 export const getPluginToolbarGroups = (snapshot: Pick<PluginHostSnapshot, "extensions" | "commands" | "panels">) =>
   snapshot.extensions.flatMap((extension) => {
     if (extension.manifest.type !== "plugin") return [];
-    const hasSettings = hasPluginSettings(extension.manifest);
     const actions: RegisteredPluginAction[] = extension.enabled ? [
       ...snapshot.commands.filter((command) => command.pluginId === extension.manifest.id).map((command) => ({ ...command, type: "command" as const })),
       ...snapshot.panels.filter((panel) => panel.pluginId === extension.manifest.id).map((panel) => ({ ...panel, type: "panel" as const })),
     ] : [];
-    return actions.length || hasSettings
-      ? [{ pluginId: extension.manifest.id, name: extension.manifest.name, actions, hasSettings }]
+    return actions.length
+      ? [{ pluginId: extension.manifest.id, name: extension.manifest.name, actions }]
       : [];
   });

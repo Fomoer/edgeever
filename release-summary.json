@@ -1,17 +1,21 @@
 {
-  "version": "1.61.0",
+  "version": "1.62.0",
   "changes": {
     "en-US": [
-      "Create and edit semantic diagrams through MCP tools.",
-      "Improve diagram reading, layout, drag placement, controls, and scrolling across clients.",
-      "Make note editors more compact and consistent, with clearer focus mode and settings access.",
-      "Update the WeChat community QR code."
+      "Diagrams now offer smoother canvas navigation, clearer multi-selection feedback, refined mind-map and flowchart styling, ten color schemes, and new organization, timeline, and fishbone layouts.",
+      "Extensions now use clearer trusted-code and network permissions, host-rendered settings, settings-change notifications, automatic updates for official plugins, and a new official AI RSS plugin.",
+      "Android and iOS users can filter notes by tag from the native workspace.",
+      "Linux x64 is now available as an AppImage Preview download.",
+      "Desktop attachment downloads preserve their original filenames.",
+      "Docker self-hosting starts more reliably across supported Linux environments and now packages all runtime dependencies correctly."
     ],
     "zh-CN": [
-      "支持通过 MCP 工具创建和编辑语义图。",
-      "改进跨客户端的图表阅读、布局、拖放、控件与滚动体验。",
-      "让笔记编辑器更紧凑一致，并改善专注模式与设置入口的清晰度。",
-      "更新微信交流群二维码。"
+      "图表现已支持更顺畅的画布导航、更清晰的多选反馈、优化的思维导图与流程图样式、十种配色方案，以及组织架构图、时间线和鱼骨图布局。",
+      "扩展现采用更清晰的受信任代码与网络权限、宿主渲染设置和设置变更通知；官方插件可自动更新，并新增官方 AI RSS 插件。",
+      "Android 与 iOS 用户现在可以在原生工作区中按标签筛选笔记。",
+      "现已提供 Linux x64 AppImage Preview 下载。",
+      "桌面端下载附件时会保留原始文件名。",
+      "Docker 自托管在受支持的 Linux 环境中启动更可靠，并会正确打包全部运行时依赖。"
     ]
   }
 }

@@ -103,4 +103,20 @@ describe("desktop release workflow", () => {
       'path.replaceAll("\\\\", "/")',
     );
   });
+
+  test("builds and audits a Linux x64 AppImage Preview in parallel", () => {
+    expect(workflow).toContain("name: Linux x64 AppImage Preview");
+    expect(workflow).toContain("runs-on: ubuntu-22.04");
+    expect(workflow).toContain("EDGE_EVER_DESKTOP_TARGET: linux");
+    expect(desktopBuilderConfig).toContain(
+      "artifactName: EdgeEver-${version}-linux-x64.${ext}",
+    );
+    expect(workflow).toContain("name: Run packaged Linux sidecar integration tests");
+    expect(workflow).toContain("name: Verify packaged Linux first launch");
+    expect(workflow).toContain("xvfb-run -a bun run verify:packaged-desktop-startup");
+    expect(workflow).toContain("SHA256SUMS-linux.txt");
+    expect(workflow).toContain("name: Audit Linux Preview asset");
+    expect(workflow).toContain("needs: [release-plan, desktop, windows, linux]");
+    expect(desktopPackageVerifier).toContain("verifyGlibcBaseline(sidecar)");
+  });
 });

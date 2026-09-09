@@ -71,6 +71,7 @@ describe("Docker installer", () => {
     const curlLog = resolve(fixture, "curl.log");
     const fakeDocker = resolve(fakeBin, "docker");
     const fakeCurl = resolve(fakeBin, "curl");
+    const fakeUname = resolve(fakeBin, "uname");
     const fakeCrontab = resolve(fakeBin, "crontab");
     const crontabStore = resolve(fixture, "crontab");
 
@@ -126,8 +127,22 @@ else
 fi
 `,
       );
+      await writeFile(
+        fakeUname,
+        `#!/usr/bin/env bash
+set -eu
+case "\${1:-}" in
+  -s) printf 'Linux\\n' ;;
+  -r) printf '3.10.0-1160.119.1.el7.x86_64\\n' ;;
+  -sr) printf 'Linux 3.10.0-1160.119.1.el7.x86_64\\n' ;;
+  -m) printf 'x86_64\\n' ;;
+  *) printf 'Linux\\n' ;;
+esac
+`,
+      );
       await chmod(fakeDocker, 0o755);
       await chmod(fakeCurl, 0o755);
+      await chmod(fakeUname, 0o755);
       await chmod(fakeCrontab, 0o755);
 
       const environment = {
@@ -169,6 +184,15 @@ fi
       expect(first.stderr).toContain("Architecture:");
       expect(first.stderr).toContain("Docker Engine: 27.5.1");
       expect(first.stderr).toContain("Docker Compose: 2.32.4");
+      expect(first.stderr).toContain(
+        "Linux kernel 3.10.0-1160.119.1.el7.x86_64 does not meet EdgeEver's minimum 5.6 requirement",
+      );
+      expect(first.stderr).toContain(
+        "This host is outside the supported Docker environment",
+      );
+      expect(first.stderr).toContain(
+        "upgrade the host OS/kernel if startup reports EISDIR",
+      );
       expect(first.stderr).toContain(
         "EdgeEver target: ccr.ccs.tencentyun.com/edgeever/edgeever:latest",
       );

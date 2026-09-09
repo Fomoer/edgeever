@@ -53,6 +53,7 @@ export default {
     const disposePanel = context.ui.panels.register({
       id: "fixture",
       title: "Fixture panel",
+      purpose: "workflow",
       mount(container) {
         container.mountedByFixture = true;
         return () => { container.mountedByFixture = false; };

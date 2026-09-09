@@ -29,6 +29,7 @@ export type LocalMemoListParams = {
   notebookId?: string | null;
   notebookIds?: string[];
   q?: string;
+  tag?: string;
   trash?: boolean;
   sort?: MemoSortMode;
   filter?: MemoFilterMode;
@@ -115,6 +116,12 @@ export const listLocalMemos = async (scope: string, params: LocalMemoListParams)
     conditions.push("(title LIKE ? OR content_text LIKE ? OR tags_text LIKE ?)");
     const q = `%${params.q.trim()}%`;
     binds.push(q, q, q);
+  }
+  if (params.tag?.trim()) {
+    conditions.push(
+      "EXISTS (SELECT 1 FROM json_each(mobile_memos.data_json, '$.tags') AS memo_tag WHERE LOWER(CAST(memo_tag.value AS TEXT)) = LOWER(?))"
+    );
+    binds.push(params.tag.trim());
   }
   if (params.filter === "tagged") {
     conditions.push("tags_text <> ''");

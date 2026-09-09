@@ -205,7 +205,7 @@ const DIAGRAM_IR_NODE_TYPES = new Set<DiagramIrNodeType>([
   "queue", "security", "external", "boundary",
 ]);
 const DIAGRAM_EDGE_KINDS = new Set(["dependency", "request", "async", "data"]);
-const DIAGRAM_MEMO_KEYS = new Set(["notebookId", "title", "kind", "theme", "layout", "tags", "nodes", "edges"]);
+const DIAGRAM_MEMO_KEYS = new Set(["notebookId", "title", "kind", "theme", "structure", "layout", "tags", "nodes", "edges"]);
 const DIAGRAM_NODE_KEYS = new Set(["id", "label", "type", "parentId", "resourceIcon"]);
 const DIAGRAM_EDGE_KEYS = new Set(["source", "target", "label", "type", "bidirectional"]);
 
@@ -276,8 +276,11 @@ const parseDiagramMemoIr = (args: Record<string, unknown>): DiagramIr => {
   if (args.edges !== undefined && (!Array.isArray(args.edges) || args.edges.length > 400)) {
     throw new AppError("invalid_params", "edges must be an array with at most 400 items", 400);
   }
-  if (args.theme !== undefined && !["brand", "ocean", "ink"].includes(String(args.theme))) {
-    throw new AppError("invalid_params", "theme must be brand, ocean, or ink", 400);
+  if (args.theme !== undefined && !["brand", "sun", "wa", "island", "rose", "mint", "cosmos", "tea", "naive", "macaron", "ocean", "ink", "classic", "paper"].includes(String(args.theme))) {
+    throw new AppError("invalid_params", "theme is not a supported diagram color scheme", 400);
+  }
+  if (args.structure !== undefined && !["map", "line", "capsule", "box", "circle", "ellipse", "hexagon", "logic", "tree", "brace", "org", "timeline", "fishbone"].includes(String(args.structure))) {
+    throw new AppError("invalid_params", "structure is not a supported mind-map shape", 400);
   }
   if (args.title !== undefined && (typeof args.title !== "string" || args.title.length > 160)) {
     throw new AppError("invalid_params", "title must be a string with at most 160 characters", 400);
@@ -298,6 +301,7 @@ const parseDiagramMemoIr = (args: Record<string, unknown>): DiagramIr => {
   const ir: DiagramIr = {
     kind: kind as DiagramIr["kind"],
     ...(args.theme === undefined ? {} : { theme: args.theme as DiagramIr["theme"] }),
+    ...(args.structure === undefined ? {} : { structure: args.structure as DiagramIr["structure"] }),
     ...(args.layout === undefined ? {} : { layout: args.layout as DiagramIr["layout"] }),
     nodes: args.nodes.map(parseDiagramNode),
     edges: (args.edges as unknown[] | undefined)?.map(parseDiagramEdge),
@@ -354,6 +358,7 @@ const diagramNodeType = (shape: DiagramNodeShape): DiagramIrNodeType => shape;
 const diagramSemanticGraph = (document: DiagramDocument, includeLayout = false) => ({
   kind: document.kind,
   ...(document.theme ? { theme: document.theme } : {}),
+  ...(document.structure ? { structure: document.structure } : {}),
   nodes: document.nodes.map((node) => ({
     id: node.id,
     label: node.label,
@@ -541,6 +546,7 @@ const applyDiagramOperations = async (
   const validatedIr = parseDiagramMemoIr({
     kind: current.kind,
     ...(current.theme ? { theme: current.theme } : {}),
+    ...(current.structure ? { structure: current.structure } : {}),
     nodes,
     edges: edges.map(({ id: _id, ...edge }) => edge),
   });

@@ -482,6 +482,34 @@ html[data-edgeever-extension-theme] .edgeever-memo-divider {
   box-shadow: inset 0 0 0 2px rgb(var(--brand-green-rgb) / 0.5);
 }
 
+/* X6 owns the scroll extent so oversized diagrams remain reachable in both
+ * directions while the editor chrome stays fixed around the viewport. */
+.edgeever-diagram-scroller {
+  position: absolute !important;
+  inset: 0;
+  width: auto !important;
+  height: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.edgeever-diagram-scroller .edgeever-diagram-canvas {
+  cursor: default;
+}
+
+.edgeever-diagram-canvas[data-space-pan="active"]:not([data-architecture-placement="active"]) {
+  cursor: grab;
+}
+
+.edgeever-diagram-canvas[data-shift-select="active"]:not([data-architecture-placement="active"]) {
+  cursor: crosshair;
+}
+
+.edgeever-diagram-scroller[data-panning="true"] .edgeever-diagram-canvas,
+.edgeever-diagram-canvas[data-space-pan="active"][data-panning="true"] {
+  cursor: grabbing !important;
+}
+
 .edgeever-diagram-canvas .x6-widget-selection-rubberband {
   border-color: var(--brand-green) !important;
   background-color: var(--brand-green-muted) !important;

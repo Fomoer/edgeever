@@ -340,6 +340,7 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
   };
 
   const desktopUpdateState = desktopUpdateStatusQuery.data?.state ?? "idle";
+  const desktopAutoUpdateSupported = clientRuntimeQuery.data?.autoUpdateSupported !== false;
   const desktopUpdateBusy = desktopUpdateCheckMutation.isPending || desktopUpdateInstallMutation.isPending;
   const desktopUpdateStatus = desktopUpdateInstallMutation.isError || desktopUpdateCheckMutation.isError || desktopUpdateStatusQuery.isError
     ? t("systemInfo.desktopUpdateFailed")
@@ -395,7 +396,7 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
                   <h3 id={headingId} className="text-xs font-semibold text-slate-800">{group.title}</h3>
                 </div>
               </div>
-              {isClient && desktopAvailable ? (
+              {isClient && desktopAvailable && desktopAutoUpdateSupported ? (
                 <Button
                   size="sm"
                   variant="outline"
@@ -417,6 +418,18 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
                         ? t("systemInfo.desktopUpdateChecking")
                         : t("systemInfo.desktopCheckForUpdates")}
                 </Button>
+              ) : isClient && desktopAvailable ? (
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  className="h-7 bg-white px-2.5 text-xs shadow-xs hover:bg-slate-50"
+                >
+                  <a href="https://github.com/tianma-if/edgeever/releases/latest" target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    {t("systemInfo.desktopDownloadLatest")}
+                  </a>
+                </Button>
               ) : null}
             </div>
             {isCloud && active && release ? (
@@ -430,7 +443,7 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
                 </a>
               </div>
             ) : null}
-            {isClient && desktopAvailable && desktopUpdateStatus ? (
+            {isClient && desktopAvailable && desktopAutoUpdateSupported && desktopUpdateStatus ? (
               <p
                 className={cn(
                   "text-right text-xs",

@@ -18,6 +18,8 @@ import {
   createNativeUnsupportedContentExtensions,
   diagramDocumentToX6Cells,
   attachDiagramReader,
+  MIND_MAP_CONNECTOR_NAME,
+  mindMapConnector,
   diagramFallbackMarkdown,
   docToMarkdown,
   NativeAttachmentMetadata,
@@ -49,6 +51,8 @@ import { createImageInsertTransaction, createNativeImageGalleryView, groupUpload
 const galleryStyle = document.createElement("style");
 galleryStyle.textContent = NATIVE_IMAGE_GALLERY_CSS;
 document.head.append(galleryStyle);
+
+Graph.registerConnector(MIND_MAP_CONNECTOR_NAME, mindMapConnector, true);
 
 /** Keep in sync with packages/shared MergeDivider (iOS bundle cannot import monorepo shared). */
 const MERGE_DIVIDER_MARKDOWN_MARKER = "<!-- edgeever:merge-divider -->";

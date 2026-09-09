@@ -7,7 +7,6 @@ import { isUnauthenticatedAccessEnabled } from "../apps/api/src/auth-state.ts";
 import { fetchEdgeEverApp } from "../apps/api/src/index.ts";
 import { nodePublicFetch } from "../apps/api/src/node-public-network.ts";
 import { createSelfHostedStorageAdapter } from "../apps/api/src/self-hosted-storage-adapter.ts";
-import { createS3CompatibleStorageAdapter } from "../apps/api/src/s3-compatible-storage-adapter.ts";
 import { resolveSelfHostedConfig } from "./self-hosted-config.mjs";
 import { loadSelfHostedEnvironment } from "./self-hosted-secrets.mjs";
 
@@ -63,16 +62,18 @@ if (
 }
 
 const storage = config.storageBackend === "s3"
-  ? createS3CompatibleStorageAdapter(sqlite, {
-      bucket: runtimeEnvironment.EDGE_EVER_S3_BUCKET ?? "",
-      region: runtimeEnvironment.EDGE_EVER_S3_REGION,
-      endpoint: runtimeEnvironment.EDGE_EVER_S3_ENDPOINT,
-      accessKeyId: runtimeEnvironment.EDGE_EVER_S3_ACCESS_KEY_ID,
-      secretAccessKey: runtimeEnvironment.EDGE_EVER_S3_SECRET_ACCESS_KEY,
-      forcePathStyle: runtimeEnvironment.EDGE_EVER_S3_FORCE_PATH_STYLE
-        ? runtimeEnvironment.EDGE_EVER_S3_FORCE_PATH_STYLE === "true"
-        : undefined,
-    })
+  ? (
+      await import("../apps/api/src/s3-compatible-storage-adapter.ts")
+    ).createS3CompatibleStorageAdapter(sqlite, {
+        bucket: runtimeEnvironment.EDGE_EVER_S3_BUCKET ?? "",
+        region: runtimeEnvironment.EDGE_EVER_S3_REGION,
+        endpoint: runtimeEnvironment.EDGE_EVER_S3_ENDPOINT,
+        accessKeyId: runtimeEnvironment.EDGE_EVER_S3_ACCESS_KEY_ID,
+        secretAccessKey: runtimeEnvironment.EDGE_EVER_S3_SECRET_ACCESS_KEY,
+        forcePathStyle: runtimeEnvironment.EDGE_EVER_S3_FORCE_PATH_STYLE
+          ? runtimeEnvironment.EDGE_EVER_S3_FORCE_PATH_STYLE === "true"
+          : undefined,
+      })
   : createSelfHostedStorageAdapter(sqlite, resourcesDirectory);
 const env = {
   storage,

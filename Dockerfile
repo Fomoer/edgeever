@@ -17,14 +17,14 @@ COPY packages/wrangler/package.json packages/wrangler/package.json
 COPY patches patches
 
 FROM manifests AS dependencies
-RUN bun install --frozen-lockfile \
+RUN bun install --frozen-lockfile --linker hoisted \
   --filter edgeever \
   --filter @edgeever/api \
   --filter @edgeever/public-network \
   --filter @edgeever/web
 
 FROM manifests AS production-dependencies
-RUN bun install --frozen-lockfile --production \
+RUN bun install --frozen-lockfile --production --linker hoisted \
   --filter edgeever \
   --filter @edgeever/public-network
 

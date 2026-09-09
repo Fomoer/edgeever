@@ -5,6 +5,7 @@ struct LocalMemoListParams: Sendable {
     var notebookId: String? = nil
     var notebookIds: [String]? = nil
     var q: String? = nil
+    var tag: String? = nil
     var trash: Bool = false
     var sort: MemoSortMode = .updatedDesc
     var filter: MemoFilterMode = .all
@@ -111,6 +112,12 @@ final class LocalMirrorRepository: @unchecked Sendable {
                 conditions.append("(title LIKE ? OR content_text LIKE ? OR tags_text LIKE ?)")
                 let pattern = "%\(q)%"
                 arguments.append(contentsOf: [pattern, pattern, pattern])
+            }
+            if let tag = params.tag?.trimmingCharacters(in: .whitespacesAndNewlines), !tag.isEmpty {
+                conditions.append(
+                    "EXISTS (SELECT 1 FROM json_each(mobile_memos.data_json, '$.tags') AS memo_tag WHERE LOWER(CAST(memo_tag.value AS TEXT)) = LOWER(?))"
+                )
+                arguments.append(tag)
             }
             switch params.filter {
             case .all: break

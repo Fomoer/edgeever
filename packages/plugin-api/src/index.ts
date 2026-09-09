@@ -1,4 +1,4 @@
-export const PLUGIN_API_VERSION = "1" as const;
+export const PLUGIN_API_VERSION = "2" as const;
 export const THEME_API_VERSION = "1" as const;
 
 export const PLUGIN_PERMISSIONS = [
@@ -35,6 +35,8 @@ export interface PluginManifest {
   name: string;
   version: string;
   apiVersion: typeof PLUGIN_API_VERSION;
+  /** Plugins must delegate ordinary persistent configuration to EdgeEver. */
+  settingsUi: "host";
   description?: string;
   author?: string;
   entry: string;
@@ -121,6 +123,7 @@ export interface MarketplaceEntry {
   name: string;
   description: string;
   author: string;
+  publisher?: "edgeever";
   category: string;
   repositoryUrl: string;
   distribution:
@@ -260,6 +263,7 @@ export interface PluginTemplate {
 }
 
 export type PluginEventMap = {
+  "settings.changed": { key: string };
   "note.created": { note: PluginNote };
   "note.updated": { note: PluginNote };
   "note.deleted": { noteId: string };
@@ -329,6 +333,7 @@ export interface PluginOpenNoteOptions {
 
 export type PluginJsonValue = null | boolean | number | string | PluginJsonValue[] | { [key: string]: PluginJsonValue };
 export type PluginPanelPresentation = "dialog" | "fullscreen";
+export type PluginPanelPurpose = "workflow" | "dashboard" | "preview" | "onboarding";
 
 export interface PluginPanelOpenOptions {
   state?: PluginJsonValue;
@@ -369,6 +374,8 @@ export interface PluginEmbedRenderer {
 export interface PluginPanel {
   id: string;
   title: string;
+  /** Business purpose of this panel. Custom settings pages are intentionally unsupported. */
+  purpose: PluginPanelPurpose;
   presentation?: PluginPanelPresentation;
   mount(container: HTMLElement, context: PluginPanelMountContext): void | (() => void) | Promise<void | (() => void)>;
   beforeClose?(): PluginPanelCloseDecision | Promise<PluginPanelCloseDecision>;
@@ -612,13 +619,15 @@ export const parseExtensionManifest = (value: unknown): ExtensionManifest => {
 
   if (value.type === "plugin") {
     if (value.apiVersion !== PLUGIN_API_VERSION) throw new Error(`Unsupported plugin API version: ${String(value.apiVersion)}`);
+    if (value.settingsUi !== "host") {
+      throw new Error('Plugin API v2 requires settingsUi to be "host".');
+    }
     if (typeof value.entry !== "string" || !value.entry.trim()) throw new Error("Plugin entry is required.");
-    if (!Array.isArray(value.permissions)) throw new Error("Plugin permissions must be an array.");
+    if (value.permissions !== undefined && !Array.isArray(value.permissions)) throw new Error("Plugin permissions must be an array.");
     const allowedPermissions = new Set<string>(PLUGIN_PERMISSIONS);
-    const permissions = [...new Set(value.permissions.map(String))];
+    const permissions = [...new Set((value.permissions ?? []).map(String))];
     const unsupported = permissions.find((permission) => !allowedPermissions.has(permission));
     if (unsupported) throw new Error(`Unsupported plugin permission: ${unsupported}`);
-    if (permissions.includes("network:public") && !permissions.includes("network")) throw new Error("Public network transport also requires the network permission.");
     const networkHosts = value.networkHosts === undefined
       ? undefined
       : Array.isArray(value.networkHosts)
@@ -626,9 +635,6 @@ export const parseExtensionManifest = (value: unknown): ExtensionManifest => {
         : (() => { throw new Error("networkHosts must be an array."); })();
     if (networkHosts?.some((host) => !/^(?:\*\.)?[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i.test(host))) {
       throw new Error("networkHosts entries must be hostnames without a scheme, port, or path.");
-    }
-    if (permissions.includes("network") && !networkHosts?.length) {
-      throw new Error("Plugins requesting network permission must declare networkHosts.");
     }
     const platforms = value.platforms === undefined
       ? undefined
@@ -680,6 +686,9 @@ export const parseMarketplaceRegistry = (value: unknown): MarketplaceRegistry =>
     const name = item.name as string;
     const description = item.description as string;
     const author = item.author as string;
+    if (item.publisher !== undefined && item.publisher !== "edgeever") {
+      throw new Error(`Marketplace entry ${item.id} has an invalid publisher.`);
+    }
     const category = item.category as string;
     const repositoryUrl = item.repositoryUrl as string;
     if (!GITHUB_REPOSITORY_PATTERN.test(repositoryUrl)) throw new Error(`Marketplace entry ${item.id} repositoryUrl must be a GitHub repository.`);
@@ -710,6 +719,7 @@ export const parseMarketplaceRegistry = (value: unknown): MarketplaceRegistry =>
       name: name.trim(),
       description: description.trim(),
       author: author.trim(),
+      ...(item.publisher === "edgeever" ? { publisher: "edgeever" as const } : {}),
       category: category.trim(),
       repositoryUrl: repositoryUrl.trim(),
       distribution,

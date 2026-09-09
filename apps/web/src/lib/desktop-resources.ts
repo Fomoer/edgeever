@@ -27,6 +27,17 @@ export const toDesktopResourceUrl = (url: string) => {
   return resourceId ? `edgeever-resource://resource/${encodeURIComponent(resourceId)}` : url;
 };
 
+export const toDesktopResourceDownloadUrl = (url: string, filename: string) => {
+  if (!isDesktopResourceRuntime() || (!url.startsWith("edgeever-resource://") && !url.startsWith("edgeever-staged://"))) return url;
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("download", filename);
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+};
+
 export const toApiResourceUrl = (url: string) => {
   if (!url.startsWith("edgeever-resource://")) return url;
   const resourceId = getResourceId(url);

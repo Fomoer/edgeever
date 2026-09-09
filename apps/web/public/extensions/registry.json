@@ -1,5 +1,27 @@
 {
   "registryVersion": "1",
-  "updatedAt": "2026-08-16T00:00:00.000Z",
-  "entries": []
+  "updatedAt": "2026-09-08T16:40:19.000Z",
+  "entries": [
+    {
+      "id": "org.edgeever.plugins.ai-rss",
+      "name": "EdgeEver AI RSS",
+      "description": "AI-generated daily digests from curated RSS and Atom feeds, saved directly to EdgeEver notes.",
+      "author": "EdgeEver",
+      "publisher": "edgeever",
+      "category": "News & AI",
+      "repositoryUrl": "https://github.com/tianma-if/edgeever-ai-rss",
+      "distribution": {
+        "type": "github",
+        "repositoryUrl": "https://github.com/tianma-if/edgeever-ai-rss"
+      },
+      "verification": {
+        "version": "0.5.3",
+        "checksums": {
+          "manifestJson": "b164bf6ab199f0ef4282319dd87294a876ef3e7701962bae35a7b65c4e3c1156",
+          "mainJs": "7828d256ad758f85bd736742a72cac62ba46db6a2108c3a974bf9f429fcc3be4",
+          "stylesCss": "05cd135a1fe70c3f38d34850a2e9abf6b0c0530b09477960036f567375b2082e"
+        }
+      }
+    }
+  ]
 }

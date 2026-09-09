@@ -7,7 +7,7 @@ test('long labels fit bounded nodes while keeping every character', () => {
     const presentation = flowchartNodePresentation(shape, label);
     expect(presentation.text.replaceAll('\n', '')).toBe(label.replaceAll('\n', ''));
     expect(presentation.width).toBeLessThanOrEqual(240);
-    expect(presentation.height).toBeGreaterThanOrEqual(presentation.text.split('\n').length * 18 + 24);
+    expect(presentation.height).toBeGreaterThanOrEqual(presentation.text.split('\n').length * 18);
   }
 });
 

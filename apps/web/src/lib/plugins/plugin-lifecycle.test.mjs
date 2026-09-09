@@ -19,7 +19,7 @@ function setup() {
   const gate = new Promise(resolve => { release = resolve; });
   const host = new EdgeEverPluginHost({ scope: crypto.randomUUID(), packageStorage: { get: async () => null }, repository: { listMemos: async () => { calls++; entered(); await gate; return { memos: [], totalCount: 0, nextCursor: null }; } } });
   const id = `org.edgeever.lifecycle-${crypto.randomUUID()}`;
-  host.installManifest({ type: 'plugin', id, name: 'Delayed activation', version: '1.0.0', apiVersion: '1', entry: new URL('./plugin-lifecycle.fixture.mjs', import.meta.url).href, permissions: ['notes:read', 'ui:commands', 'ui:panels'] }, 'https://example.test/manifest.json');
+  host.installManifest({ type: 'plugin', id, name: 'Delayed activation', version: '1.0.0', apiVersion: '2', settingsUi: 'host', entry: new URL('./plugin-lifecycle.fixture.mjs', import.meta.url).href, permissions: ['notes:read', 'ui:commands', 'ui:panels'] }, 'https://example.test/manifest.json');
   return { host, id, started, release, calls: () => calls };
 }
 test('concurrent enable requests share a single asynchronous activation', async () => {

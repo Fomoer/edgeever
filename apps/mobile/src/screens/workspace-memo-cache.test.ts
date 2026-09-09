@@ -49,4 +49,13 @@ describe("mobile workspace memo cache", () => {
     expect(memoMatchesListQuery(memo, ["mobile", "memos", "notebook", "notebook_2", "all", "updated-desc", ["notebook_2"]])).toBe(false);
     expect(memoMatchesListQuery(memo, ["mobile", "memos", "notebook", "all", "tagged", "updated-desc", []])).toBe(false);
   });
+
+  test("matches one exact tag without depending on case", () => {
+    const taggedMemo = { ...memo, tags: ["Project Alpha", "Work"] };
+    const query = (tag: string) => ["mobile", "memos", "notebook", "all", "all", "updated-desc", [], tag];
+
+    expect(memoMatchesListQuery(taggedMemo, query("project alpha"))).toBe(true);
+    expect(memoMatchesListQuery(taggedMemo, query("project"))).toBe(false);
+    expect(memoMatchesListQuery(taggedMemo, query("homework"))).toBe(false);
+  });
 });

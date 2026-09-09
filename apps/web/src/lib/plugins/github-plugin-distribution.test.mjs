@@ -6,7 +6,8 @@ const manifest = {
   id: "org.edgeever.github-test",
   name: "GitHub Test",
   version: "1.2.3",
-  apiVersion: "1",
+  apiVersion: "2",
+  settingsUi: "host",
   entry: "./main.js",
   permissions: ["ui:notices"],
 };

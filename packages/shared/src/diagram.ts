@@ -1,4 +1,10 @@
 import { Base64 } from "js-base64";
+import {
+  architectureMermaidBoundaryStyle,
+  architectureMermaidClassDefs,
+  architectureMermaidClassName,
+} from "./diagram-architecture-style";
+import { flowchartMermaidClassDefs, flowchartMermaidClassName } from "./diagram-flowchart-style";
 
 export const DIAGRAM_SCHEMA_VERSION = 1 as const;
 export const ARCHITECTURE_DIAGRAM_SCHEMA_VERSION = 2 as const;
@@ -19,7 +25,57 @@ export type DiagramNodeShape =
   | "external"
   | "boundary";
 export type DiagramEdgeKind = "dependency" | "request" | "async" | "data";
-export type DiagramTheme = "brand" | "ocean" | "ink";
+export const DIAGRAM_SELECTABLE_THEMES = [
+  "brand", "sun", "wa", "island", "rose", "mint", "cosmos", "tea", "naive", "macaron",
+] as const;
+export const DIAGRAM_THEMES = [
+  "brand", "ocean", "ink", "classic", "sky", "sunset", "violet", "rose", "sand", "slate", "aurora", "mono",
+  "sun", "wa", "island", "mint", "cosmos", "tea", "naive", "macaron", "paper",
+] as const;
+export type DiagramTheme = (typeof DIAGRAM_THEMES)[number];
+export const DIAGRAM_SELECTABLE_STRUCTURES = [
+  "map", "line", "capsule", "box", "circle", "ellipse", "hexagon",
+  "logic", "tree", "brace", "org", "timeline", "fishbone",
+] as const;
+export const DIAGRAM_STRUCTURE_GROUPS = [
+  { id: "map", items: ["map", "line", "capsule", "box", "circle", "ellipse", "hexagon"] },
+  { id: "logic", items: ["logic"] },
+  { id: "brace", items: ["brace"] },
+  { id: "org", items: ["org"] },
+  { id: "tree", items: ["tree"] },
+  { id: "timeline", items: ["timeline"] },
+  { id: "fishbone", items: ["fishbone"] },
+] as const satisfies ReadonlyArray<{
+  id: string;
+  items: ReadonlyArray<typeof DIAGRAM_SELECTABLE_STRUCTURES[number]>;
+}>;
+export const DIAGRAM_STRUCTURES = [
+  ...DIAGRAM_SELECTABLE_STRUCTURES, "rect", "diamond", "cloud",
+] as const;
+export type DiagramStructure = (typeof DIAGRAM_STRUCTURES)[number];
+
+const THEME_ALIASES: Partial<Record<DiagramTheme, typeof DIAGRAM_SELECTABLE_THEMES[number]>> = {
+  ocean: "brand",
+  ink: "brand",
+  classic: "sun",
+  sky: "cosmos",
+  sunset: "sun",
+  violet: "rose",
+  sand: "island",
+  slate: "cosmos",
+  aurora: "mint",
+  mono: "cosmos",
+  paper: "brand",
+};
+
+export const resolveDiagramTheme = (theme?: DiagramTheme): typeof DIAGRAM_SELECTABLE_THEMES[number] => {
+  if (theme && (DIAGRAM_SELECTABLE_THEMES as readonly string[]).includes(theme)) return theme as typeof DIAGRAM_SELECTABLE_THEMES[number];
+  return THEME_ALIASES[theme ?? "brand"] ?? "brand";
+};
+
+export const resolveDiagramStructure = (structure?: DiagramStructure): DiagramStructure => (
+  structure && (DIAGRAM_SELECTABLE_STRUCTURES as readonly string[]).includes(structure) ? structure : "map"
+);
 
 export const ARCHITECTURE_RESOURCE_ICONS = [
   "client", "webApp", "mobileApp", "website", "apiClient",
@@ -60,6 +116,7 @@ export type DiagramDocument = {
   schemaVersion: typeof DIAGRAM_SCHEMA_VERSION | typeof ARCHITECTURE_DIAGRAM_SCHEMA_VERSION;
   kind: DiagramKind;
   theme?: DiagramTheme;
+  structure?: DiagramStructure;
   nodes: DiagramNode[];
   edges: DiagramEdge[];
 };
@@ -148,11 +205,11 @@ export const parseDiagramDocument = (markdown: string | null | undefined): Diagr
     if (isArchitecture
       ? value.schemaVersion !== ARCHITECTURE_DIAGRAM_SCHEMA_VERSION
       : value.schemaVersion !== DIAGRAM_SCHEMA_VERSION) return null;
-    if (
-      !Array.isArray(value.nodes)
-      || !Array.isArray(value.edges)
-      || (value.theme !== undefined && !["brand", "ocean", "ink"].includes(String(value.theme)))
-    ) return null;
+    if (!Array.isArray(value.nodes) || !Array.isArray(value.edges)) return null;
+    const theme = DIAGRAM_THEMES.includes(value.theme as DiagramTheme) ? value.theme as DiagramTheme : undefined;
+    const structure = DIAGRAM_STRUCTURES.includes(value.structure as DiagramStructure)
+      ? value.structure as DiagramStructure
+      : undefined;
     const nodes = value.nodes.map(parseNode);
     const edges = value.edges.map(parseEdge);
     if (nodes.some((node) => !node) || edges.some((edge) => !edge)) return null;
@@ -173,7 +230,8 @@ export const parseDiagramDocument = (markdown: string | null | undefined): Diagr
     return {
       schemaVersion: value.schemaVersion as DiagramDocument["schemaVersion"],
       kind: value.kind as DiagramKind,
-      ...(value.theme ? { theme: value.theme as DiagramTheme } : {}),
+      ...(theme ? { theme } : {}),
+      ...(value.kind === "mind-map" && structure ? { structure } : {}),
       nodes: nodes as DiagramNode[],
       edges: edges as DiagramEdge[],
     };
@@ -230,16 +288,6 @@ export const diagramDocumentToMermaid = (document: DiagramDocument) => {
       security: "hex",
       external: "cloud",
     };
-    const classNames: Partial<Record<DiagramNodeShape, string>> = {
-      client: "archClient",
-      frontend: "archFrontend",
-      service: "archService",
-      database: "archDatabase",
-      storage: "archStorage",
-      queue: "archQueue",
-      security: "archSecurity",
-      external: "archExternal",
-    };
     const rendered = new Set<string>();
     const renderNode = (node: DiagramNode, indent: string) => {
       if (rendered.has(node.id)) return;
@@ -254,7 +302,7 @@ export const diagramDocumentToMermaid = (document: DiagramDocument) => {
         return;
       }
       lines.push(`${indent}${id}@{ shape: ${shapeNames[node.shape] ?? "rect"}, label: "${label}" }`);
-      const className = classNames[node.shape];
+      const className = architectureMermaidClassName(node.shape);
       if (className) lines.push(`${indent}class ${id} ${className}`);
     };
 
@@ -272,16 +320,9 @@ export const diagramDocumentToMermaid = (document: DiagramDocument) => {
       lines.push(`  ${source} ${connector} ${target}`);
     }
 
-    lines.push("  classDef archClient fill:#ECFEFF,stroke:#0891B2,color:#0F172A,stroke-width:2px");
-    lines.push("  classDef archFrontend fill:#EFF6FF,stroke:#2563EB,color:#0F172A,stroke-width:2px");
-    lines.push("  classDef archService fill:#ECFDF5,stroke:#16A06E,color:#0F172A,stroke-width:2px");
-    lines.push("  classDef archDatabase fill:#F5F3FF,stroke:#7C3AED,color:#0F172A,stroke-width:2px");
-    lines.push("  classDef archStorage fill:#FFFBEB,stroke:#D97706,color:#0F172A,stroke-width:2px");
-    lines.push("  classDef archQueue fill:#FFF7ED,stroke:#EA580C,color:#0F172A,stroke-width:2px");
-    lines.push("  classDef archSecurity fill:#FFF1F2,stroke:#E11D48,color:#0F172A,stroke-width:2px");
-    lines.push("  classDef archExternal fill:#F8FAFC,stroke:#64748B,color:#0F172A,stroke-width:2px,stroke-dasharray:6 4");
+    lines.push(...architectureMermaidClassDefs("light"));
     for (const boundary of document.nodes.filter((node) => node.shape === "boundary")) {
-      lines.push(`  style ${nodeIds.get(boundary.id)} fill:transparent,stroke:#64748B,stroke-width:1.5px,stroke-dasharray:7 5`);
+      lines.push(`  style ${nodeIds.get(boundary.id)} ${architectureMermaidBoundaryStyle("light")}`);
     }
     return lines.join("\n");
   }
@@ -297,6 +338,9 @@ export const diagramDocumentToMermaid = (document: DiagramDocument) => {
           ? `${id}("${label}")`
           : `${id}["${label}"]`;
     lines.push(`  ${declaration}`);
+    if (document.kind === "flowchart") {
+      lines.push(`  class ${id} ${flowchartMermaidClassName(node.shape)}`);
+    }
   }
 
   for (const edge of document.edges) {
@@ -304,7 +348,21 @@ export const diagramDocumentToMermaid = (document: DiagramDocument) => {
     const target = nodeIds.get(edge.target);
     if (!source || !target) continue;
     const label = edge.label ? `|"${escapeMermaidLabel(edge.label)}"|` : "";
-    lines.push(`  ${source} -->${label} ${target}`);
+    const connector = document.kind === "mind-map" ? "---" : "-->";
+    lines.push(`  ${source} ${connector}${label} ${target}`);
+  }
+
+  if (document.kind === "flowchart") {
+    lines.push(...flowchartMermaidClassDefs(document.theme));
+  }
+
+  if (document.kind === "mind-map") {
+    const root = document.nodes.find((node) => node.shape === "topic" && !node.parentId);
+    const rootId = root ? nodeIds.get(root.id) : undefined;
+    if (rootId) {
+      lines.push("  classDef mindRoot fill:#16A06E,stroke:#12845B,color:#fff,stroke-width:1.5px");
+      lines.push(`  class ${rootId} mindRoot`);
+    }
   }
 
   return lines.join("\n");
@@ -319,15 +377,23 @@ export const createDefaultDiagramDocument = (kind: DiagramKind): DiagramDocument
       schemaVersion: DIAGRAM_SCHEMA_VERSION,
       kind,
       nodes: [
-        { id: "topic-root", label: "核心主题", x: 72, y: 150, width: 112, height: 42, shape: "topic" },
-        { id: "topic-1", label: "分支主题", x: 256, y: 88, width: 92, height: 36, shape: "topic", parentId: "topic-root" },
-        { id: "topic-2", label: "分支主题", x: 256, y: 153, width: 92, height: 36, shape: "topic", parentId: "topic-root" },
-        { id: "topic-3", label: "分支主题", x: 256, y: 218, width: 92, height: 36, shape: "topic", parentId: "topic-root" },
+        { id: "topic-root", label: "核心主题", x: 72, y: 168, width: 124, height: 46, shape: "topic" },
+        { id: "topic-1", label: "采集想法", x: 268, y: 117, width: 96, height: 36, shape: "topic", parentId: "topic-root" },
+        { id: "topic-2", label: "整理结构", x: 268, y: 201, width: 96, height: 36, shape: "topic", parentId: "topic-root" },
+        { id: "topic-3", label: "输出分享", x: 268, y: 257, width: 96, height: 36, shape: "topic", parentId: "topic-root" },
+        { id: "topic-1-a", label: "快速记录", x: 436, y: 89, width: 96, height: 36, shape: "topic", parentId: "topic-1" },
+        { id: "topic-1-b", label: "跨设备同步", x: 436, y: 145, width: 96, height: 36, shape: "topic", parentId: "topic-1" },
+        { id: "topic-2-a", label: "笔记本", x: 436, y: 201, width: 96, height: 36, shape: "topic", parentId: "topic-2" },
+        { id: "topic-3-a", label: "公开链接", x: 436, y: 257, width: 96, height: 36, shape: "topic", parentId: "topic-3" },
       ],
       edges: [
         { id: "branch-1", source: "topic-root", target: "topic-1" },
         { id: "branch-2", source: "topic-root", target: "topic-2" },
         { id: "branch-3", source: "topic-root", target: "topic-3" },
+        { id: "branch-1-a", source: "topic-1", target: "topic-1-a" },
+        { id: "branch-1-b", source: "topic-1", target: "topic-1-b" },
+        { id: "branch-2-a", source: "topic-2", target: "topic-2-a" },
+        { id: "branch-3-a", source: "topic-3", target: "topic-3-a" },
       ],
     };
   }
@@ -353,9 +419,9 @@ export const createDefaultDiagramDocument = (kind: DiagramKind): DiagramDocument
     schemaVersion: DIAGRAM_SCHEMA_VERSION,
     kind,
     nodes: [
-      { id: "flow-start", label: "开始", x: 80, y: 180, width: 104, height: 40, shape: "terminator" },
-      { id: "flow-process", label: "处理步骤", x: 256, y: 180, width: 112, height: 40, shape: "process" },
-      { id: "flow-end", label: "结束", x: 440, y: 180, width: 104, height: 40, shape: "terminator" },
+      { id: "flow-start", label: "开始", x: 98, y: 48, width: 140, height: 44, shape: "terminator" },
+      { id: "flow-process", label: "处理步骤", x: 80, y: 140, width: 176, height: 56, shape: "process" },
+      { id: "flow-end", label: "结束", x: 98, y: 244, width: 140, height: 44, shape: "terminator" },
     ],
     edges: [
       { id: "flow-edge-1", source: "flow-start", target: "flow-process" },

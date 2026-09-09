@@ -365,7 +365,7 @@ export const buildIssueBody = ({ changesEn, changesZh, commitCoverageAudit }) =>
   "## Acceptance criteria",
   "",
   "- Required type checks, Web build, and native release planning tests pass.",
-  "- The Draft Release contains audited macOS arm64/x64 DMGs, an unsigned Windows x64 Preview with an independently signed update manifest, and a Play-signed Android arm64 APK.",
+  "- The Draft Release contains audited macOS arm64/x64 DMGs, an unsigned Windows x64 Preview with an independently signed update manifest, a Linux x64 AppImage Preview with a checksum, and a Play-signed Android arm64 APK.",
   "- Post-publication native asset audits pass.",
 ].join("\n");
 
@@ -1146,16 +1146,18 @@ const assertDraftAssets = ({
       .filter((name) =>
         /^EdgeEver-.*-mac-(?:arm64|x64)\.(?:dmg|zip)(?:\.blockmap)?$/.test(name) ||
         /^EdgeEver-.*-windows-x64\.exe$/.test(name) ||
+        /^EdgeEver-.*-linux-x64\.AppImage$/.test(name) ||
         [
           "latest-mac.yml",
           "latest.yml",
           "latest-windows.json",
           "latest-windows.json.sig",
           "SHA256SUMS-windows.txt",
+          "SHA256SUMS-linux.txt",
         ].includes(name)
       );
     if (
-      previousDesktopNames.length !== 14 ||
+      previousDesktopNames.length !== 16 ||
       !previousDesktopNames.every((name) =>
         reusedAssetMatches(previousAssets, assets, name)
       )

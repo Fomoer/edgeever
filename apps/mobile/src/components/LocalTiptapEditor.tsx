@@ -36,6 +36,8 @@ import {
   getResourceIdFromUrl,
   diagramDocumentToX6Cells,
   attachDiagramReader,
+  MIND_MAP_CONNECTOR_NAME,
+  mindMapConnector,
   type AiAction,
   type AiPromptParameterKind,
   type AiPromptResultMode,
@@ -451,6 +453,8 @@ const MermaidRenderRuntime = (props: MermaidRendererProps) => {
 
   return null;
 };
+
+Graph.registerConnector(MIND_MAP_CONNECTOR_NAME, mindMapConnector, true);
 
 const ReadOnlyX6Diagram = ({
   diagram,

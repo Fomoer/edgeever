@@ -21,6 +21,7 @@ const {
   createStagedResourceListItem,
   stageDesktopResource,
   toApiResourceUrl,
+  toDesktopResourceDownloadUrl,
   toDesktopResourceUrl,
 } = await import("./desktop-resources.ts");
 
@@ -28,6 +29,19 @@ describe("desktop resource URLs", () => {
   test("maps remote resource URLs to the native cache protocol", () => {
     expect(toDesktopResourceUrl("/api/v1/resources/resource-1/blob")).toBe("edgeever-resource://resource/resource-1");
     expect(toDesktopResourceUrl("https://cdn.example.com/image.png")).toBe("https://cdn.example.com/image.png");
+  });
+
+  test("adds the requested filename to native resource downloads", () => {
+    expect(toDesktopResourceDownloadUrl(
+      "edgeever-resource://resource/resource-1",
+      "资料包.zip",
+    )).toBe("edgeever-resource://resource/resource-1?download=%E8%B5%84%E6%96%99%E5%8C%85.zip");
+    expect(toDesktopResourceDownloadUrl(
+      "edgeever-staged://stage-1",
+      "offline.zip",
+    )).toBe("edgeever-staged://stage-1?download=offline.zip");
+    expect(toDesktopResourceDownloadUrl("/api/v1/resources/resource-1/blob", "archive.zip"))
+      .toBe("/api/v1/resources/resource-1/blob");
   });
 
   test("restores portable API URLs before a memo is saved", () => {

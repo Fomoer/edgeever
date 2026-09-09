@@ -39,7 +39,8 @@ bun run release -- \
 公开 Release 说明。公开说明只包含用户可感知的变化、影响和必要的迁移提醒。
 
 使用 `--dry-run` 查看提交覆盖、原生端重建计划和说明。发布完成后不会下载、
-安装或启动 macOS 应用；已安装的桌面端通过应用内自动更新机制获取新版。仅在
+安装或启动 macOS 应用；已安装的 macOS 与 Windows 桌面端通过应用内自动更新
+机制获取新版。Linux 预览版在真实 AppImage 跨版本验证通过前保持手动更新。仅在
 确实需要原有安装验收时显式传入 `--install-desktop`。
 
 ## EdgeEver 特有规则
@@ -49,7 +50,8 @@ bun run release -- \
 - 根版本表示整体产品 Release。只有对应原生运行时重建时，才更新原生展示版本。
   Android `versionCode` 和 iOS Build Number 是相互独立且严格递增的标识。
 - 每个正式 Release 包含 macOS arm64 与 x64 DMG、按架构区分的更新 ZIP、带独立
-  签名更新清单的未签名 Windows x64 预览版安装包，以及 Android arm64 APK。
+  签名更新清单的未签名 Windows x64 预览版安装包、带 SHA-256 清单的 Linux x64
+  AppImage 预览版，以及 Android arm64 APK。
   未变化的原生资产沿用原文件名、版本和校验和。
 - 桌面端和 Android 更新检查使用对应 Release 资产中记录的版本，而不是整体
   GitHub Tag，避免仅涉及 Web 或 API 的 Release 触发无效原生更新。

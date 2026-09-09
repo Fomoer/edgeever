@@ -1,4 +1,4 @@
-export declare const PLUGIN_API_VERSION: "1";
+export declare const PLUGIN_API_VERSION: "2";
 export declare const THEME_API_VERSION: "1";
 export declare const PLUGIN_PERMISSIONS: readonly ["notes:read", "notes:write", "notes:delete", "metadata:read", "metadata:write", "resources:read", "resources:write", "templates:read", "templates:write", "network", "network:public", "ai:generate", "storage", "secrets", "schedules", "editor:read", "editor:write", "ui:commands", "ui:navigation", "ui:notices", "ui:panels", "ui:embeds"];
 export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number];
@@ -9,6 +9,8 @@ export interface PluginManifest {
     name: string;
     version: string;
     apiVersion: typeof PLUGIN_API_VERSION;
+    /** Plugins must delegate ordinary persistent configuration to EdgeEver. */
+    settingsUi: "host";
     description?: string;
     author?: string;
     entry: string;
@@ -83,6 +85,7 @@ export interface MarketplaceEntry {
     name: string;
     description: string;
     author: string;
+    publisher?: "edgeever";
     category: string;
     repositoryUrl: string;
     distribution: {
@@ -210,6 +213,9 @@ export interface PluginTemplate {
     updatedAt: string;
 }
 export type PluginEventMap = {
+    "settings.changed": {
+        key: string;
+    };
     "note.created": {
         note: PluginNote;
     };
@@ -298,6 +304,7 @@ export type PluginJsonValue = null | boolean | number | string | PluginJsonValue
     [key: string]: PluginJsonValue;
 };
 export type PluginPanelPresentation = "dialog" | "fullscreen";
+export type PluginPanelPurpose = "workflow" | "dashboard" | "preview" | "onboarding";
 export interface PluginPanelOpenOptions {
     state?: PluginJsonValue;
 }
@@ -331,6 +338,8 @@ export interface PluginEmbedRenderer {
 export interface PluginPanel {
     id: string;
     title: string;
+    /** Business purpose of this panel. Custom settings pages are intentionally unsupported. */
+    purpose: PluginPanelPurpose;
     presentation?: PluginPanelPresentation;
     mount(container: HTMLElement, context: PluginPanelMountContext): void | (() => void) | Promise<void | (() => void)>;
     beforeClose?(): PluginPanelCloseDecision | Promise<PluginPanelCloseDecision>;

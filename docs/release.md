@@ -41,9 +41,11 @@ contain only user-visible changes, impact, and necessary migration guidance.
 
 Use `--dry-run` to inspect commit coverage, the native rebuild plan, and notes.
 After publication, the command does not download, install, or launch the macOS
-application. Existing desktop installations receive new versions through the
-in-app automatic updater. Pass `--install-desktop` explicitly only when the
-previous installation check is actually needed.
+application. Existing macOS and Windows installations receive new versions
+through the in-app automatic updater. Linux Preview updates remain manual until
+a real AppImage-to-AppImage transition has passed the cross-version gate. Pass
+`--install-desktop` explicitly only when the previous installation check is
+actually needed.
 
 ## EdgeEver-Specific Behavior
 
@@ -55,8 +57,9 @@ previous installation check is actually needed.
   iOS build numbers remain independent, monotonically increasing identifiers.
 - A formal Release contains macOS arm64 and x64 DMGs, architecture-specific
   updater ZIPs, an unsigned Windows x64 Preview installer with an independently
-  signed update manifest, and an Android arm64 APK. Unchanged native assets are
-  reused with their original filenames, versions, and checksums.
+  signed update manifest, a Linux x64 AppImage Preview with a SHA-256 checksum
+  file, and an Android arm64 APK. Unchanged native assets are reused with their
+  original filenames, versions, and checksums.
 - Desktop and Android update checks use the version embedded in the applicable
   Release asset rather than the overall GitHub tag. This prevents a Web-only or
   API-only Release from prompting an unnecessary native update.

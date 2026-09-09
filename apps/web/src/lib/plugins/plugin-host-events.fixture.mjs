@@ -1,5 +1,9 @@
 export default {
   activate(context) {
+    const disposeSettings = context.events.on("settings.changed", ({ key }) => {
+      globalThis.edgeeverPluginObservedSettings ??= [];
+      globalThis.edgeeverPluginObservedSettings.push({ pluginId: context.pluginId, key });
+    });
     const disposeNote = context.events.on("note.updated", ({ note }) => {
       globalThis.edgeeverPluginObservedNote = note;
     });
@@ -10,6 +14,7 @@ export default {
       globalThis.edgeeverPluginObservedResource = resource;
     });
     return () => {
+      disposeSettings();
       disposeNote();
       disposeTemplate();
       disposeResource();

@@ -17,18 +17,16 @@ describe("plugin settings navigation", () => {
     expect(hasPluginSettings({ type: "theme" })).toBe(false);
   });
 
-  test("disabled plugins retain settings but never expose executable actions", () => {
+  test("does not expose disabled plugins through the command menu", () => {
     const groups = getPluginToolbarGroups({
       extensions: [{ manifest: plugin, enabled: false }],
       commands: [{ pluginId: "example", id: "run" }],
       panels: [{ pluginId: "example", id: "panel" }],
     });
-    expect(groups).toHaveLength(1);
-    expect(groups[0].hasSettings).toBe(true);
-    expect(groups[0].actions).toEqual([]);
+    expect(groups).toEqual([]);
   });
 
-  test("keeps commands and panels while hiding settings-free inactive plugins and themes", () => {
+  test("keeps commands and panels while hiding settings-only plugins, inactive plugins, and themes", () => {
     const groups = getPluginToolbarGroups({
       extensions: [
         { manifest: { type: "plugin", id: "actions" }, enabled: true },
@@ -39,11 +37,8 @@ describe("plugin settings navigation", () => {
       commands: [{ pluginId: "actions", id: "run" }, { pluginId: "inactive", id: "hidden" }],
       panels: [{ pluginId: "actions", id: "panel" }],
     });
-    expect(groups.map((group) => group.pluginId)).toEqual(["actions", "example"]);
-    expect(groups[0].hasSettings).toBe(false);
+    expect(groups.map((group) => group.pluginId)).toEqual(["actions"]);
     expect(groups[0].actions.map((action) => action.type)).toEqual(["command", "panel"]);
-    expect(groups[1].hasSettings).toBe(true);
-    expect(groups[1].actions).toEqual([]);
   });
 
   test("resolves deep links and safely falls back for unsupported settings pages", () => {

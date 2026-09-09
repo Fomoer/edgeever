@@ -106,7 +106,7 @@ import { memoShareQueryKey, ShareMemoDialog } from "./dialogs/ShareMemoDialog";
 import { ShareNoteImageDialog, type ShareNoteImageSource } from "./dialogs/ShareNoteImageDialog";
 import { AiAssistantDialog, type AiAssistantAnchor } from "./dialogs/AiAssistantDialog";
 import { api } from "@/lib/api";
-import { isDesktopResourceRuntime, stageDesktopResource, toDesktopResourceUrl } from "@/lib/desktop-resources";
+import { isDesktopResourceRuntime, stageDesktopResource, toDesktopResourceDownloadUrl, toDesktopResourceUrl } from "@/lib/desktop-resources";
 import { cn, formatDateTime, parseTagsText } from "@/lib/utils";
 import { EDITOR_CONTENT_MAX_WIDTH, EDITOR_CONTENT_MAX_WIDTH_COLLAPSED } from "@/lib/workspace-ui";
 import {
@@ -3224,7 +3224,7 @@ const RichEditorPane = ({
 
   const downloadResourceDirectly = useCallback((target: ResourceMenuTarget) => {
     const anchor = document.createElement("a");
-    anchor.href = target.url;
+    anchor.href = toDesktopResourceDownloadUrl(target.url, target.filename);
     anchor.download = target.filename;
     anchor.click();
   }, []);

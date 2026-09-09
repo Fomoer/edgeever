@@ -90,7 +90,7 @@ const requireAsset = (release: GithubReleaseResponse, name: string) => {
   return asset;
 };
 
-type GithubAssetDownloader = (
+export type GithubAssetDownloader = (
   coordinates: GithubRepositoryCoordinates,
   releaseTag: string,
   asset: GithubReleaseAsset,

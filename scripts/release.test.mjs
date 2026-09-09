@@ -439,6 +439,7 @@ describe("release automation", () => {
     expect(body).toContain("## Commit coverage audit");
     expect(body).toContain("Play-signed Android arm64 APK");
     expect(body).toContain("unsigned Windows x64 Preview");
+    expect(body).toContain("Linux x64 AppImage Preview");
     expect(body).toContain("- Change 1: `aaaaaaaa`");
     expect(body).toContain("- Excluded `bbbbbbbb`: test-only coverage");
   });

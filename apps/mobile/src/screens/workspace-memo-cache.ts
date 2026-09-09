@@ -44,11 +44,15 @@ export const memoMatchesListQuery = (memo: MemoSummary, queryKey: readonly unkno
   const notebookId = queryKey[3];
   const filter = queryKey[4];
   const notebookIds = Array.isArray(queryKey[6]) ? queryKey[6] : [];
+  const tag = typeof queryKey[7] === "string" ? queryKey[7].trim().toLocaleLowerCase() : "";
 
   if ((view === "trash") !== memo.isDeleted) {
     return false;
   }
   if (notebookId !== ALL_NOTES_ID && !notebookIds.includes(memo.notebookId)) {
+    return false;
+  }
+  if (tag && !memo.tags.some((memoTag) => memoTag.toLocaleLowerCase() === tag)) {
     return false;
   }
   if (filter === "tagged" && memo.tags.length === 0) {

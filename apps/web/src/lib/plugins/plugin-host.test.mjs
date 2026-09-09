@@ -65,25 +65,50 @@ beforeEach(() => {
 });
 
 describe("EdgeEverPluginHost", () => {
-  test('generic AI/public network calls require declared permissions and destination hosts', async () => {
+  test("rejects custom settings panels for API v2 plugins", async () => {
+    const host = new EdgeEverPluginHost({ repository, scope: "settings-policy" });
+    const id = "org.edgeever.settings-policy";
+    host.installManifest({
+      type: "plugin",
+      id,
+      name: "Settings policy",
+      version: "1.0.0",
+      apiVersion: "2",
+      settingsUi: "host",
+      entry: new URL("./plugin-settings-policy.fixture.mjs", import.meta.url).href,
+      permissions: ["ui:panels"],
+    }, "https://example.org/manifest.json");
+
+    await expect(host.setEnabled(id, true)).rejects.toThrow("custom settings panels are not allowed");
+    expect(host.getSnapshot().extensions.find((extension) => extension.manifest.id === id)).toMatchObject({
+      enabled: false,
+      error: expect.stringContaining("custom settings panels are not allowed"),
+    });
+    await host.dispose();
+  });
+
+  test('enabled plugins can use host capabilities without manifest permission declarations', async () => {
     const calls = [];
+    const directCalls = [];
+    globalThis.window.fetch = async (...input) => { directCalls.push(input); return new Response('direct'); };
     const host = new EdgeEverPluginHost({ repository, scope: 'test',
       aiAdapter: { status: async () => ({ configured: true }), generate: async input => { calls.push(input); return { text: 'HELLO' }; } },
       publicNetworkAdapter: { fetchPublic: async input => { calls.push(input); return { url: input.url, status: 429, statusText: 'Too Many Requests', headers: {}, body: new TextEncoder().encode('limited').buffer }; } },
     });
     const install = async (id, permissions) => {
-      host.installManifest({ type: 'plugin', id, name: id, version: '1.0.0', apiVersion: '1', entry: new URL('./plugin-capabilities.fixture.mjs', import.meta.url).href, permissions: ['ui:commands', ...permissions], networkHosts: ['example.org'] }, 'https://example.org/manifest.json');
+      host.installManifest({ type: 'plugin', id, name: id, version: '1.0.0', apiVersion: '2', settingsUi: 'host', entry: new URL('./plugin-capabilities.fixture.mjs', import.meta.url).href, ...(permissions ? { permissions } : {}) }, 'https://example.org/manifest.json');
       await host.setEnabled(id, true);
     };
-    await install('org.test.denied', ['network']);
-    await expect(host.runCommand('org.test.denied', 'ai')).rejects.toThrow();
-    await expect(host.runCommand('org.test.denied', 'public')).rejects.toThrow(); expect(calls).toHaveLength(0);
-    await install('org.test.allowed', ['network', 'network:public', 'ai:generate']);
-    await expect(host.runCommand('org.test.allowed', 'unlisted')).rejects.toThrow();
-    await expect(host.runCommand('org.test.allowed', 'post')).rejects.toThrow(); expect(calls).toHaveLength(0);
-    await host.runCommand('org.test.allowed', 'ai'); expect(capabilityResults.get('org.test.allowed')).toEqual({ text: 'HELLO' });
-    await host.runCommand('org.test.allowed', 'public'); expect(capabilityResults.get('org.test.allowed')).toEqual({ status: 429, text: 'limited', url: 'https://example.org/feed' });
-    expect(calls[0].signal.aborted).toBe(false); await host.setEnabled('org.test.allowed', false); expect(calls[0].signal.aborted).toBe(true);
+    await install('org.test.trusted');
+    await host.runCommand('org.test.trusted', 'ai'); expect(capabilityResults.get('org.test.trusted')).toEqual({ text: 'HELLO' });
+    await host.runCommand('org.test.trusted', 'public'); expect(capabilityResults.get('org.test.trusted')).toEqual({ status: 429, text: 'limited', url: 'https://example.org/feed' });
+    await host.runCommand('org.test.trusted', 'direct-unlisted');
+    expect(String(directCalls[0][0])).toBe('http://192.168.1.8/feed');
+    expect(directCalls[0][1].credentials).toBe('include');
+    expect(new Headers(directCalls[0][1].headers).get('Authorization')).toBe('Bearer test');
+    await expect(host.runCommand('org.test.trusted', 'post')).rejects.toThrow();
+    await host.runCommand('org.test.trusted', 'unlisted'); expect(calls.at(-1).url).toBe('https://unlisted.org/feed');
+    expect(calls[0].signal.aborted).toBe(false); await host.setEnabled('org.test.trusted', false); expect(calls[0].signal.aborted).toBe(true);
     await host.dispose();
   });
   test("lets a permitted plugin idempotently own schedules for its registered commands", async () => {
@@ -109,7 +134,8 @@ describe("EdgeEverPluginHost", () => {
       id: "org.edgeever.schedule-test",
       name: "Schedule Test",
       version: "1.0.0",
-      apiVersion: "1",
+      apiVersion: "2",
+      settingsUi: "host",
       entry: new URL("./plugin-host-schedules.fixture.mjs", import.meta.url).href,
       permissions: ["ui:commands", "schedules"],
     }, "https://example.com/schedule-plugin/manifest.json");
@@ -182,7 +208,8 @@ describe("EdgeEverPluginHost", () => {
       id: "org.edgeever.test-plugin",
       name: "Test plugin",
       version: "1.0.0",
-      apiVersion: "1",
+      apiVersion: "2",
+      settingsUi: "host",
       entry,
       permissions: ["notes:write", "ui:commands", "ui:notices", "ui:panels", "editor:read", "editor:write", "secrets", "storage"],
       settings: {
@@ -200,10 +227,8 @@ describe("EdgeEverPluginHost", () => {
     expect(host.getSnapshot().commands).toHaveLength(7);
     expect(host.getSnapshot().panels).toEqual([{ pluginId: "org.edgeever.test-plugin", id: "fixture", title: "Fixture panel", presentation: "dialog" }]);
     expect(notices).toEqual(["hello from plugin"]);
-    expect(host.getSnapshot().recentActions[0]).toMatchObject({ id: "hello", type: "command" });
-    await expect(host.runCommand("org.edgeever.test-plugin", "read-without-permission")).rejects.toThrow("notes:read");
-    await expect(host.runCommand("org.edgeever.test-plugin", "update-without-read-permission")).rejects.toThrow("notes:read");
-    await expect(host.runCommand("org.edgeever.test-plugin", "subscribe-without-read-permission")).rejects.toThrow("notes:read");
+    await host.runCommand("org.edgeever.test-plugin", "read-without-permission");
+    await host.runCommand("org.edgeever.test-plugin", "subscribe-without-read-permission");
     await host.runCommand("org.edgeever.test-plugin", "replace-selection");
     expect(replacement).toBe("HELLO");
     await host.runCommand("org.edgeever.test-plugin", "write-secret");
@@ -219,7 +244,6 @@ describe("EdgeEverPluginHost", () => {
     const container = {};
     const disposePanel = await host.mountPanel("org.edgeever.test-plugin", "fixture", container);
     expect(container.mountedByFixture).toBe(true);
-    expect(host.getSnapshot().recentActions[0]).toMatchObject({ id: "fixture", type: "panel" });
     disposePanel();
     expect(container.mountedByFixture).toBe(false);
     const mountedDuringDisable = {};
@@ -227,7 +251,6 @@ describe("EdgeEverPluginHost", () => {
     await host.setEnabled("org.edgeever.test-plugin", false);
     expect(mountedDuringDisable.mountedByFixture).toBe(false);
     expect(host.getSnapshot().panels).toHaveLength(0);
-    expect(host.getSnapshot().recentActions).toHaveLength(0);
     await host.uninstall("org.edgeever.test-plugin");
     expect(secrets.has("test:org.edgeever.test-plugin:token")).toBe(false);
     expect(secrets.has("test:org.edgeever.test-plugin:setting:token")).toBe(false);
@@ -242,7 +265,8 @@ describe("EdgeEverPluginHost", () => {
       id: "org.edgeever.marketplace-test",
       name: "Marketplace Test",
       version: "1.0.0",
-      apiVersion: "1",
+      apiVersion: "2",
+      settingsUi: "host",
       entry: "./main.js",
       permissions: [],
     };
@@ -311,7 +335,8 @@ describe("EdgeEverPluginHost", () => {
       id: pluginId,
       name: "Rollback Test",
       version: "1.0.0",
-      apiVersion: "1",
+      apiVersion: "2",
+      settingsUi: "host",
       entry,
       permissions: ["notes:write", "ui:commands", "ui:notices", "ui:panels", "editor:read", "editor:write", "secrets", "storage"],
     }, "https://plugins.example/v1/manifest.json");
@@ -322,7 +347,8 @@ describe("EdgeEverPluginHost", () => {
       id: pluginId,
       name: "Rollback Test",
       version: "2.0.0",
-      apiVersion: "1",
+      apiVersion: "2",
+      settingsUi: "host",
       entry: "./main.js",
       permissions: [],
     };
@@ -469,13 +495,10 @@ describe("EdgeEverPluginHost", () => {
       id: "org.edgeever.capabilities",
       name: "Capabilities",
       version: "1.0.0",
-      apiVersion: "1",
+      apiVersion: "2",
+      settingsUi: "host",
       entry,
-      permissions: [
-        "notes:read", "notes:write", "metadata:write", "resources:read", "resources:write",
-        "templates:read", "templates:write", "editor:read", "editor:write",
-        "ui:commands", "ui:navigation", "ui:panels", "ui:embeds",
-      ],
+      permissions: [],
       settings: { fields: [{ key: "endpoint", type: "text", label: "Endpoint", default: "https://api.example" }] },
     }, "https://plugins.example/capabilities/manifest.json");
 
@@ -631,12 +654,32 @@ describe("EdgeEverPluginHost", () => {
       id: "org.edgeever.events",
       name: "Events",
       version: "1.0.0",
-      apiVersion: "1",
+      apiVersion: "2",
+      settingsUi: "host",
       entry: new URL("./plugin-host-events.fixture.mjs", import.meta.url).href,
       permissions: ["notes:read", "templates:read", "resources:read"],
+      settings: { fields: [{ key: "mode", type: "select", label: "Mode", default: "daily", options: [
+        { value: "daily", label: "Daily" },
+        { value: "weekly", label: "Weekly" },
+      ] }] },
     }, "https://plugins.example/events/manifest.json");
     await host.setEnabled("org.edgeever.events", true);
     await host.activateEnabled();
+
+    host.installManifest({
+      type: "plugin",
+      id: "org.edgeever.events-other",
+      name: "Other Events",
+      version: "1.0.0",
+      apiVersion: "2",
+      settingsUi: "host",
+      entry: new URL("./plugin-host-events.fixture.mjs", import.meta.url).href,
+      permissions: [],
+      settings: { fields: [{ key: "mode", type: "text", label: "Mode" }] },
+    }, "https://plugins.example/events-other/manifest.json");
+    await host.setEnabled("org.edgeever.events-other", true);
+    await host.setSettingValue("org.edgeever.events", "mode", "weekly");
+    await host.removeSettingValue("org.edgeever.events", "mode");
 
     await repositoryWithEvents.updateMemo(updatedMemo, {});
     await repositoryWithEvents.createTemplate({ name: "Event template" });
@@ -654,9 +697,14 @@ describe("EdgeEverPluginHost", () => {
       id: "resource-events",
       contentHash: "resource-event-hash",
     });
+    expect(globalThis.edgeeverPluginObservedSettings).toEqual([
+      { pluginId: "org.edgeever.events", key: "mode" },
+      { pluginId: "org.edgeever.events", key: "mode" },
+    ]);
     delete globalThis.edgeeverPluginObservedNote;
     delete globalThis.edgeeverPluginObservedTemplate;
     delete globalThis.edgeeverPluginObservedResource;
+    delete globalThis.edgeeverPluginObservedSettings;
     await host.dispose();
   });
 });

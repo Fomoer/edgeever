@@ -49,7 +49,7 @@ export const PluginUpdateDialog = ({
               <div className="flex flex-wrap gap-1.5">
                 {update.addedPermissions.map((permission) => (
                   <span key={permission} className="rounded-full bg-amber-50 px-2 py-1 text-xs text-amber-800">
-                    {permissionLabel(permission)}
+                    {permission === "network:public" ? t("plugins.permissions.publicNetwork") : permissionLabel(permission)}
                   </span>
                 ))}
               </div>

@@ -10,6 +10,11 @@ Cloudflare uses Workers with D1 and R2.
 
 - Docker Engine 24 or later with Docker Compose v2.
 - An `amd64` or `arm64` Linux host.
+- Linux kernel 5.6 or later. Older kernels are outside the formally supported
+  Docker environment because Bun may fail to resolve container dependencies
+  there. The installer warns without blocking installation; if startup reports
+  `EISDIR reading .../node_modules/...`, upgrade the host OS or kernel before
+  changing `/data` permissions or replacing application data.
 - A reverse proxy with HTTPS when the instance is reachable outside a trusted
   local network.
 

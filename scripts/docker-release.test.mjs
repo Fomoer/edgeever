@@ -72,7 +72,10 @@ describe("Docker release contract", () => {
     expect(dockerfile).toContain("--filter @edgeever/web");
     expect(dockerfile).toContain("--filter @edgeever/public-network");
     expect(dockerfile).toContain(
-      "--production \\\n  --filter edgeever \\\n  --filter @edgeever/public-network",
+      "RUN bun install --frozen-lockfile --linker hoisted \\\n  --filter edgeever \\\n  --filter @edgeever/api",
+    );
+    expect(dockerfile).toContain(
+      "--production --linker hoisted \\\n  --filter edgeever \\\n  --filter @edgeever/public-network",
     );
     expect(dockerfile).toContain("USER bun");
     expect(dockerfile).toContain('VOLUME ["/data"]');
@@ -102,6 +105,12 @@ describe("Docker release contract", () => {
     );
     expect(selfHosted).toContain(
       "fetchEdgeEverApp(request, env, executionContext)",
+    );
+    expect(selfHosted).toContain(
+      'await import("../apps/api/src/s3-compatible-storage-adapter.ts")',
+    );
+    expect(selfHosted).not.toContain(
+      'import { createS3CompatibleStorageAdapter } from',
     );
     expect(selfHosted).not.toContain("worker.fetch(");
   });

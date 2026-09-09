@@ -1,5 +1,6 @@
 import { attachDiagramScroll } from "./diagram-scroll";
 import type { DiagramDocument } from './diagram';
+import { FLOWCHART_READABLE_MIN_SCALE } from "./diagram-flowchart-style";
 
 type ReaderGraph = {
   resize: (width: number, height: number) => unknown;
@@ -34,7 +35,11 @@ export const attachDiagramReader = (
     toolbar.appendChild(button);
     return button;
   };
-  const fit = () => { graph.zoomToFit({ maxScale: 1.05, padding: 28 }); graph.centerContent(); };
+  const fit = () => {
+    graph.zoomToFit({ maxScale: 1, padding: 28 });
+    if (diagram.kind === 'flowchart' && graph.scale().sx < FLOWCHART_READABLE_MIN_SCALE) read();
+    else graph.centerContent();
+  };
   const read = () => {
     const incoming = new Set(diagram.edges.map((edge) => edge.target));
     const start = diagram.nodes.find((node) => !incoming.has(node.id)) ?? diagram.nodes[0];
@@ -67,7 +72,6 @@ export const attachDiagramReader = (
       graph.resize(width, height);
       if (first) {
         fit();
-        if (diagram.kind === 'flowchart' && graph.scale().sx < 0.8) read();
       } else graph.translate(previous.tx + dx, previous.ty + dy);
       update();
     },

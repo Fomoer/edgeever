@@ -27,4 +27,17 @@ describe("diagram appearance palettes", () => {
       expect(contrast(dark.topicText, dark.topicFill)).toBeGreaterThanOrEqual(3);
     }
   });
+
+  test("treats retired mint and forest themes as forest green", () => {
+    expect(resolveDiagramPalette("ocean", "light")).toEqual(resolveDiagramPalette("brand", "light"));
+    expect(resolveDiagramPalette("ink", "dark")).toEqual(resolveDiagramPalette("brand", "dark"));
+  });
+
+  test("keeps the ten selectable color schemes distinct from forest green", () => {
+    expect(Object.keys(DIAGRAM_THEME_PALETTES)).toEqual(expect.arrayContaining([
+      "brand", "mint", "wa", "island", "rose", "sun", "cosmos", "tea", "naive", "macaron",
+    ]));
+    expect(resolveDiagramPalette("mint", "light").topicFill).not.toBe(resolveDiagramPalette("brand", "light").topicFill);
+    expect(resolveDiagramPalette("ocean", "light")).toEqual(resolveDiagramPalette("brand", "light"));
+  });
 });

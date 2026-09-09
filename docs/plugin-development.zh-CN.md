@@ -6,7 +6,9 @@ EdgeEver P0 扩展 API 支持受信任的客户端插件和无代码主题包。
 
 主题包只包含经过校验的 Manifest 和公开 Design Tokens，不执行 JavaScript。
 
-客户端插件采用类似 Obsidian 的受信任代码模型。插件声明的权限会限制它通过 EdgeEver 插件上下文调用的 API，但插件模块本身仍运行在客户端 JavaScript 环境中。用户只能安装来自可信开发者的插件。
+客户端插件采用类似 Obsidian 的受信任代码模型。启用插件即代表信任它使用完整的 EdgeEver 插件上下文；能力声明只是可选的描述性元数据，不限制 API 调用。插件模块运行在客户端 JavaScript 环境中，因此用户只能安装来自可信开发者的插件。
+
+用户在一台设备上首次启用客户端插件时，EdgeEver 会显示一次社区插件信任确认；确认后不会对每个插件重复提示。主题包不能执行 JavaScript，因此不会触发该确认。
 
 公开 API 不会向插件暴露 EdgeEver Repository、IndexedDB 数据库、Cloudflare Binding 或 React 内部状态。
 
@@ -18,7 +20,8 @@ EdgeEver P0 扩展 API 支持受信任的客户端插件和无代码主题包。
   "id": "com.example.recent-notes",
   "name": "Recent Notes",
   "version": "1.0.0",
-  "apiVersion": "1",
+  "apiVersion": "2",
+  "settingsUi": "host",
   "description": "Adds a command for recent notes.",
   "entry": "./main.js",
   "platforms": ["web", "desktop"],
@@ -42,7 +45,7 @@ styles.css（可选）
 
 GitHub 插件的 `entry` 固定为 `./main.js`，`main.js` 必须是无需相对模块导入的单文件 Bundle。EdgeEver 会读取默认分支 Manifest、查找相同版本的 Release、并行下载资产、验证 GitHub 提供的 SHA-256 Digest（如果存在），然后把验证后的包缓存到当前设备的 IndexedDB。`main.js` 上限为 5 MB，`styles.css` 上限为 1 MB。
 
-EdgeEver 会在插件市场页面打开、窗口重新获得焦点及每 30 分钟检查一次更新，但不会静默安装。用户必须点击「更新」并确认；如果新版新增插件权限或网络域名，确认框会明确列出新增访问范围。GitHub 分发的 Release `manifest.json` 必须与默认分支中用于提示更新的 Manifest 完全一致，否则安装会被拒绝。市场安装只跟随 Registry 中已经验证的新版本。
+EdgeEver 会在插件市场页面打开、窗口重新获得焦点及每 30 分钟检查一次更新。Registry 条目声明 `"publisher": "edgeever"` 的市场安装属于 EdgeEver 官方扩展，会自动更新到 Registry 中通过校验和固定的最新版本。社区市场扩展以及从 GitHub 或 Manifest 地址直接安装的扩展绝不会静默更新，用户必须点击「更新」并确认；如果手动确认的新版改变能力声明或旧版网络域名元数据，确认框会列出这些变化供用户查看。GitHub 分发的 Release `manifest.json` 必须与默认分支中用于提示更新的 Manifest 完全一致，否则安装会被拒绝。市场安装只跟随 Registry 中已经验证的新版本。
 
 升级采用可回滚切换：新旧版本的包会分别缓存；如果新版无法激活，EdgeEver 会恢复原 Manifest、原启用状态和上一版本代码，而不是留下一个被破坏或被停用的插件。
 
@@ -56,7 +59,9 @@ https://github.com/owner/edgeever-plugin
 
 ## 已验证插件市场
 
-插件市场是一个经过校验的 Registry，不接管插件所有权。Registry 为每个版本固定插件 ID、GitHub 仓库、版本号及 `manifest.json`/`main.js`/`styles.css` 的 SHA-256；安装时仍从开发者的 GitHub Release 或登记的公开地址下载，并再次核对校验和。
+官方插件市场仅收录自由及开源插件。每个上架版本都必须提供完整且人类可读的源码、认可的开源许可证、构建信息，以及可追溯的公开源码版本。该要求仅适用于官方市场准入；用户仍可自由通过 GitHub 或 Manifest 地址安装其他插件。完整要求参阅[官方插件市场上架政策](plugin-marketplace-policy.zh-CN.md)。
+
+插件市场是一个经过校验的 Registry，不接管插件所有权。Registry 为每个版本固定插件 ID、GitHub 仓库、版本号及 `manifest.json`/`main.js`/`styles.css` 的 SHA-256；安装时仍从开发者的 GitHub Release 或登记的公开地址下载，并再次核对校验和。可选的 `"publisher": "edgeever"` 标记仅保留给 EdgeEver 项目维护的 Registry 条目；它会启用自动更新，社区投稿不得使用。
 
 Registry 格式：
 
@@ -68,7 +73,8 @@ Registry 格式：
     "id": "com.example.recent-notes",
     "name": "Recent Notes",
     "description": "Shows recently updated notes.",
-    "author": "Example",
+    "author": "EdgeEver",
+    "publisher": "edgeever",
     "category": "Productivity",
     "repositoryUrl": "https://github.com/example/edgeever-recent-notes",
     "distribution": {
@@ -88,7 +94,7 @@ Registry 格式：
 
 市场安装显示“已验证”，GitHub 或 Manifest 自由安装会明确显示未经验证的来源，但 EdgeEver 不阻止用户安装。卸载插件时会同时删除本机缓存的全部插件版本、当前工作区的普通插件存储和 Secret Storage。
 
-当前支持以下权限：
+以下能力声明仅用于披露和向后兼容，均为可选：
 
 - `notes:read`
 - `notes:write`
@@ -111,7 +117,7 @@ Registry 格式：
 - `ui:panels`
 - `ui:embeds`
 
-通过 `context.network.fetch()` 访问网络时，还必须在 Manifest 的 `networkHosts` 中声明目标域名。
+通过 `context.network.fetch()` 访问网络不受能力声明或静态域名列表限制。`networkHosts` 仅作为兼容旧版的描述性元数据保留，不参与拦截。插件需要无凭据读取跨域公开响应时，可以使用匿名只读的 `network:public` 传输。
 
 ## 插件入口
 
@@ -149,7 +155,7 @@ export default definePlugin({
 
 ## 定时任务 API
 
-桌面插件可以持久化定时执行自己的已注册命令。Manifest 需要同时声明 `ui:commands` 和 `schedules`，先注册命令，再用稳定的插件内计划键调用 `upsert()`：
+桌面插件可以持久化定时执行自己的已注册命令。先注册命令，再用稳定的插件内计划键调用 `upsert()`：
 
 ```js
 export default {
@@ -221,8 +227,8 @@ context.tags.delete("unused");
 `notes.query()` 返回轻量摘要。当插件必须扫描多篇笔记的 Markdown 时，例如 Tasks 索引、日历、看板或 Linter，应使用 `notes.queryContent()`。两个接口每页最多返回 200 篇笔记；持续使用 `nextOffset` 翻页，直到它为 `null`。不需要正文时应优先使用摘要查询。
 
 所有写入都经过 EdgeEver 的共享 Repository 和业务层，包括离线队列与桌面端适配器。插件不能直接访问具体存储实现。
-`notes.update()` 同时需要 `notes:write` 和 `notes:read`，因为更新流程需要读取当前版本并会返回更新后的完整笔记；这可以避免写权限被间接用于读取笔记正文。
-`notes.editMarkdown()` 同样需要这两项权限，并用 `notes.get()` 返回的 `revision` 与 `contentHash` 做乐观并发检查。它适合任务勾选、Linter 和索引维护等只修改 Markdown 局部内容的插件：
+`notes.update()` 会读取当前版本并返回更新后的完整笔记。
+`notes.editMarkdown()` 使用 `notes.get()` 返回的 `revision` 与 `contentHash` 做乐观并发检查。它适合任务勾选、Linter 和索引维护等只修改 Markdown 局部内容的插件：
 
 ```ts
 const note = await context.notes.get(noteId);
@@ -237,28 +243,28 @@ await context.notes.editMarkdown(noteId, {
 ```
 
 编辑区间使用 JavaScript UTF-16 字符串偏移和半开区间 `[from, to)`。一次调用中的区间不得重叠、越界或切开 Unicode 代理对。笔记基线已经变化或当前编辑器存在未保存内容时，宿主拒绝写入并抛出带 `code: "NOTE_CONFLICT"` 的错误；插件应重新读取并要求用户重试。无效区间使用 `code: "INVALID_MARKDOWN_EDIT"`。SDK 导出 `PluginApiError` 和 `PluginApiErrorCode` 供 TypeScript 插件缩小错误类型。
-读取笔记本和标签需要 `metadata:read`，修改笔记本和标签需要 `metadata:write`。
+启用后的插件无需能力门禁即可读取和修改笔记本与标签。
 
-附件使用独立权限，并继续通过 Web/桌面端共用的 Repository 适配器执行：
+附件继续通过 Web/桌面端共用的 Repository 适配器执行：
 
 ```ts
-context.resources.list(noteId); // resources:read
-const blob = await context.resources.read(resourceId); // resources:read
-context.resources.upload(noteId, file); // resources:write
+context.resources.list(noteId);
+const blob = await context.resources.read(resourceId);
+context.resources.upload(noteId, file);
 context.resources.update(resourceId, { file, expectedContentHash });
 context.resources.rename(resourceId, filename);
 context.resources.delete(resourceId);
 ```
 
-`resources.update()` 同时需要两项资源权限，并使用 `resources.list()` 返回的 `contentHash` 做乐观并发检查。基线过期时会抛出 `code: "RESOURCE_CONFLICT"` 的 `PluginApiError`。当前替换上限为 100 MiB，并要求资源已同步且设备在线。宿主会把新内容写入新的对象键，再有条件地切换数据库指针，因此被拒绝的更新不会损坏旧对象。
+`resources.update()` 使用 `resources.list()` 返回的 `contentHash` 做乐观并发检查。基线过期时会抛出 `code: "RESOURCE_CONFLICT"` 的 `PluginApiError`。当前替换上限为 100 MiB，并要求资源已同步且设备在线。宿主会把新内容写入新的对象键，再有条件地切换数据库指针，因此被拒绝的更新不会损坏旧对象。
 
-订阅 `note.*` 事件需要 `notes:read`，订阅 `tag.changed` 需要 `metadata:read`，订阅 `template.*` 需要 `templates:read`，订阅 `resource.*` 需要 `resources:read`。同步队列状态事件不包含笔记或元数据，因此无需额外读取权限。
+启用后的插件无需能力门禁即可订阅 `note.*`、`tag.changed`、`template.*`、`resource.*` 和同步队列事件。
 
 通过 EdgeEver 正常 Repository 层成功完成的笔记、标签、模板和资源变更——无论来自用户操作还是插件操作——都会进入同一条插件事件流。`workspace.synced` 用于报告已完成的 Repository 同步；失败的变更不会发送成功事件。
 
 ## 模板 API
 
-模板是工作区共享数据，而不是插件私有设置。读取模板需要 `templates:read`；创建和删除需要 `templates:write`；更新需要两者。套用模板会创建笔记，因此还需要 `notes:write`：
+模板是工作区共享数据，而不是插件私有设置。启用后的插件无需能力门禁即可读取、创建、更新、删除和套用模板：
 
 ```ts
 const template = await context.templates.create({
@@ -271,13 +277,13 @@ const note = await context.templates.use(template.id, notebookId);
 context.events.on("template.updated", ({ template }) => console.log(template.name));
 ```
 
-`templates.create({ noteId })` 可以从已有笔记生成模板，此时还需要 `notes:read`。插件也可以调用 `templates.list()` 和 `templates.delete(templateId)`。
+`templates.create({ noteId })` 可以从已有笔记生成模板。插件也可以调用 `templates.list()` 和 `templates.delete(templateId)`。
 
 ## 宿主统一渲染的设置
 
 插件可以在 Manifest 中声明设置，由 EdgeEver 在插件详情的独立「插件设置」页面统一渲染。已安装插件卡片和插件工具菜单均可直达该页面；未声明配置项的插件不显示设置入口，停用的插件仍可配置。设置仅保存在当前设备。默认行为和凭据应放在设置中，实际操作使用插件命令或功能面板，无需为普通配置另建面板。目前支持 `text`、`secret`、`number`、`boolean` 和 `select`：
 
-设置 Schema 有意保持为声明式结构。字段布局、控件、间距、校验、响应式行为、无障碍、保存状态和密钥呈现均由 EdgeEver 管理；Manifest 中的 HTML、组件、CSS class、内联样式、颜色、字体以及自定义设置页导航等展示属性会被忽略。插件决定“配置什么”，而不是“设置页长什么样”。授权、连通性测试、数据迁移、索引重建等复杂流程应使用命令或命名清晰的功能面板，不要在自定义面板中重复实现普通设置。
+插件 API v2 强制要求 `settingsUi: "host"`。设置 Schema 有意保持为声明式结构：字段布局、控件、间距、校验、响应式行为、无障碍、保存状态和密钥呈现均由 EdgeEver 管理；Manifest 中的 HTML、组件、CSS class、内联样式、颜色、字体以及自定义设置页导航等展示属性会被忽略。插件决定“配置什么”，而不是“设置页长什么样”。宿主会拒绝自定义设置页。授权、连通性测试、数据迁移、索引重建等流程应使用命令或命名清晰的功能面板，不要在自定义面板中重复实现普通设置。
 
 ```json
 {
@@ -303,6 +309,16 @@ await context.settings.set("format", "html");
 await context.settings.remove("token");
 ```
 
+插件可以监听自己设置的变化，并重新读取宿主已经校验过的值。事件只会发送给拥有该设置的插件，且不会携带设置值，避免 secret 或其他配置进入事件载荷：
+
+```ts
+context.events.on("settings.changed", async ({ key }) => {
+  if (key !== "format") return;
+  const format = await context.settings.get("format");
+  // 应用更新后的格式。
+});
+```
+
 ## 插件存储与网络
 
 插件存储按照 EdgeEver 工作区和插件 ID 隔离：
@@ -312,17 +328,19 @@ await context.storage.set("cursor", "next-page");
 const cursor = await context.storage.get<string>("cursor");
 ```
 
-网络请求只能使用 HTTPS；本地开发允许 localhost HTTP，并且目标域名必须提前声明：
+直接请求可以访问任意 HTTP 或 HTTPS 地址，并使用任意方法、请求头、正文和浏览器凭据模式。Web 运行时仍遵循浏览器的 CORS 与 Cookie 规则：
 
 ```json
 {
-  "permissions": ["network"],
-  "networkHosts": ["api.example.com", "*.trusted.example.com"]
+  "permissions": ["network"]
 }
 ```
 
 ```ts
-await context.network.fetch("https://api.example.com/items");
+await context.network.fetch("https://api.example.com/items", {
+  headers: { Authorization: `Bearer ${token}`, "X-Client": "my-plugin" },
+  credentials: "include",
+});
 ```
 
 普通 `storage` 适合游标和偏好设置。API Key 等敏感字符串应使用 `secrets`：
@@ -358,7 +376,7 @@ if (document) {
 
 ### 插件 Embed
 
-`ui:embeds` 允许插件为自己的受约束块级 Embed 类型注册渲染器。插入 Embed 还需要 `editor:write`：
+启用后的插件可以为自己的受约束块级 Embed 类型注册渲染器，并将其插入编辑器：
 
 ```ts
 const disposeEmbed = context.editor.embeds.register({
@@ -383,7 +401,7 @@ await context.editor.insertEmbed({
 
 ## 笔记导航
 
-声明 `ui:navigation` 后，插件可以从任务、日历、索引或搜索面板打开一篇现有笔记：
+启用后的插件可以从任务、日历、索引或搜索面板打开一篇现有笔记：
 
 ```ts
 await context.ui.openNote(noteId, { search: "- [ ] 发布版本" });
@@ -399,6 +417,7 @@ await context.ui.openNote(noteId, { search: "- [ ] 发布版本" });
 context.ui.panels.register({
   id: "dashboard",
   title: "Dashboard",
+  purpose: "dashboard",
   presentation: "fullscreen",
   mount(container, { state, requestClose }) {
     const heading = document.createElement("h2");
@@ -415,6 +434,8 @@ context.ui.panels.register({
 
 await context.ui.panels.open("dashboard", { state: { resourceId } });
 ```
+
+每个 API v2 面板必须声明一种业务用途：`workflow`、`dashboard`、`preview` 或 `onboarding`。面板不能作为另一套设置入口。持久化的布尔值、文本、数字、密钥和固定选项必须放进 Manifest 设置 Schema。只有在执行某项操作时才有意义的工作区动态选项，可在宿主设置 Schema 尚不支持时保留为工作流控件。
 
 `presentation` 可以使用 `dialog`（默认）或 `fullscreen`。`panels.open()` 只能打开调用插件自己注册的面板；可选 JSON 状态上限为 64 KiB，并通过挂载上下文传入。`beforeClose()` 可以返回 `true` 关闭、返回 `false` 保持打开，或返回由宿主显示确认框所需的文案。挂载上下文中的 `requestClose()` 同样会经过这项保护。
 
@@ -467,13 +488,13 @@ await context.ui.panels.open("dashboard", { state: { resourceId } });
 - 插件只在应用打开期间运行。
 - 桌面插件可以持久化定时执行自己的已注册命令，用户则可以在插件页面管理这些计划并分页查看执行记录。计划通过工作区同步、绑定一台桌面设备，并且只在该设备运行 EdgeEver 时执行；错过的计划可以选择跳过，或在恢复后合并补跑一次。这不是服务端常驻后台运行时。
 - 暂无 Webhook 接收端、服务端后台运行环境、市场投稿后台和自动审核流水线。
-- 权限声明属于 API 能力检查，不是针对受信任 JavaScript 的严格沙箱。
+- 能力声明只是可选的描述性元数据，不是 API 授权或安全沙箱。
 - 自定义面板可以从桌面端统一插件菜单或插件管理页打开，尚未支持固定到主导航或编辑器侧栏。
 - Secret Storage 仅保存在当前设备，不会同步到其他设备。
 
 ## 通用 AI 与公开网络能力（尚未发布）
 
-插件可声明 `ai:generate` 调用当前工作区的默认 AI 模型。接口只接受普通提示词；来源解析、业务流程和提示词属于插件，凭据保留在宿主。
+启用后的插件可以调用当前工作区的默认 AI 模型，`ai:generate` 仅是可选的披露元数据。接口只接受普通提示词；来源解析、业务流程和提示词属于插件，凭据保留在宿主。
 
 ```ts
 const status = await context.ai.status(); // { configured, modelName? }
@@ -487,12 +508,11 @@ const result = await context.ai.generate({
 
 `system` 最多 8,000 字符，`prompt` 最多 90,000 字符，输出最多 5,000 token，生成最长 120 秒。后端要求交互式用户会话，公开演示模式禁用 AI，供应商错误脱敏。每个后端实例对每工作区的 AI 调用设置四路并发保护，不是分布式配额。模型费用沿用已配置供应商的计费；停用插件会中止其调用。
 
-已有 `network.fetch(url, init)` 保留浏览器 fetch 行为，受 CORS 限制并省略凭据。使用通用公开网络传输时，需要同时声明 `network`、`network:public` 和 `networkHosts`，并显式选择 `transport: "public"`：
+默认的 `network.fetch(url, init)` 是受信任的浏览器请求，可以访问任意 HTTP／HTTPS 地址，使用任意方法、正文、`Authorization` 等请求头以及调用方指定的浏览器凭据模式；它仍受所在运行时的 CORS 与 Cookie 策略约束。`networkHosts` 仅为兼容旧版保留，不是安全边界。需要无凭据读取跨域公开订阅或 API 时，显式选择 `transport: "public"` 即可；列出 `network` 和 `network:public` 仍有助于披露用途，但不是必需条件：
 
 ```json
 {
-  "permissions": ["network", "network:public"],
-  "networkHosts": ["example.org"]
+  "permissions": ["network", "network:public"]
 }
 ```
 
@@ -506,10 +526,10 @@ const response = await context.network.fetch("https://example.org/feed.xml", {
 const feed = await response.text(); // 插件自己解析。
 ```
 
-公开模式仅支持 443 端口的 HTTPS GET／HEAD，不携带请求体和凭据；超时 20 秒，解码后的响应正文最多 2,000,000 字节。重定向只返回、不跟随（`redirect: "error"` 会拒绝）。来源的 403／429 保留为来源状态，不绕过平台访问限制。允许的请求头为 Accept、Accept-Language、If-None-Match、If-Modified-Since、Range；仅返回内容／缓存元数据、Location 和 Retry-After，不返回 Set-Cookie。响应在上限内缓冲，不是无限流式代理。
+公开模式允许访问任意公开域名，但仅支持 443 端口的 HTTPS GET／HEAD，不携带请求体和凭据；超时 20 秒，解码后的响应正文最多 2,000,000 字节。重定向只返回、不跟随（`redirect: "error"` 会拒绝），插件可以检查目标后再单独请求。来源的 403／429 保留为来源状态，不绕过平台访问限制。允许的请求头为 Accept、Accept-Language、If-None-Match、If-Modified-Since、Range；仅返回内容／缓存元数据、Location 和 Retry-After，不返回 Set-Cookie。响应在上限内缓冲，不是无限流式代理。
 
 宿主在不改变插件 API 的前提下选择成本最低的安全传输。Web 先尝试浏览器请求：CORS 可读的响应完全留在客户端；只有浏览器以网络／CORS `TypeError` 拒绝时，才回退到已认证的后端中继。桌面端通过 Electron 主进程和用户本机网络请求，最多四路并发，不再把公开内容转发到 EdgeEver 后端。取消信号会传递到所有传输路径。
 
 桌面端、自托管与云端驱动共用同一策略包。桌面端和 Bun 自托管会校验全部 DNS 结果，并把已校验地址直接交给 TLS；私网、特殊用途和混合公私地址全部拒绝。Cloudflare 回退使用 workerd 默认的仅公开 Internet 出口，不使用私网服务绑定。VPN／fake-IP DNS 返回的保留地址也会拒绝，不应禁用检查；非标准 workerd 部署须保留仅公开网络出口。Web 回退返回有大小限制的二进制正文，不再使用 Base64 JSON，避免 Base64 的额外传输体积。
 
-插件权限和域名检查在可信客户端宿主执行。后端独立要求用户认证并限制仅公开网络，不信任客户端提交的插件 ID 或白名单，也不声称提供服务端证明的插件隔离；仍遵循可信 JavaScript 边界。后端不接收来源枚举、搜索时间范围、证据结构或报告流程。
+插件能力声明用于说明意图；启用后的插件属于受信任 JavaScript，不是安全沙箱。插件可以读取笔记并通过网络发送。公开传输有意允许匿名读取任意公开 HTTPS 域名。后端仍独立要求用户认证并限制仅公开网络，避免共享的 EdgeEver 服务被用来访问私网；它不声称提供服务端证明的插件隔离。后端不接收来源枚举、搜索时间范围、证据结构或报告流程。

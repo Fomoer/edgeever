@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { MemoSortMode } from "@edgeever/client";
 import { Modal, ScrollView, View } from "react-native";
-import { Check, CheckSquare, FileText, Folder, List, MoreVertical, Sparkles, Trash2, X } from "../components/icons";
+import { Check, CheckSquare, FileText, Folder, List, MoreVertical, Sparkles, Tag, Trash2, X } from "../components/icons";
 import { Pressable, Text } from "../components/LocalizedText";
 import type { MobileMemoListDensity } from "../lib/preferences";
 import { styles } from "./workspace-styles";
@@ -79,6 +79,7 @@ export const NotesActionsModal = ({
   onClose,
   onEnterSelection,
   onMemoListDensityChange,
+  onOpenTagFilter,
   onSortModeChange,
   selectionMode,
   visible,
@@ -92,6 +93,7 @@ export const NotesActionsModal = ({
   onClose: () => void;
   onEnterSelection: () => void;
   onMemoListDensityChange: (density: MobileMemoListDensity) => void;
+  onOpenTagFilter: () => void;
   onSortModeChange: (sortMode: MemoSortMode) => void;
   selectionMode: boolean;
   visible: boolean;
@@ -118,6 +120,12 @@ export const NotesActionsModal = ({
                 icon={<CheckSquare color="#0f172a" size={18} />}
                 label="选择笔记"
                 onPress={onEnterSelection}
+              />
+              <ActionSheetItem
+                compact
+                icon={<Tag color="#0f172a" size={18} />}
+                label="按标签筛选"
+                onPress={onOpenTagFilter}
               />
               <View style={styles.listActionDivider} />
             </>

@@ -9,6 +9,10 @@ Cloudflare 使用 Workers + D1 + R2。
 
 - Docker Engine 24 或更高版本，包含 Docker Compose v2。
 - `amd64` 或 `arm64` Linux 主机。
+- Linux 5.6 或更高版本内核。更旧的内核不属于正式支持的 Docker 环境，因为 Bun
+  在这些环境中可能无法解析容器依赖。安装器会发出警告但不会阻止安装；如果启动
+  日志出现 `EISDIR reading .../node_modules/...`，应先升级宿主机系统或内核，
+  不要先修改 `/data` 权限或替换应用数据。
 - 实例离开可信局域网时，必须使用带 HTTPS 的反向代理。
 
 ## 一键安装

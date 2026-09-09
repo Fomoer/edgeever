@@ -56,10 +56,19 @@ export const nativeReleaseAssetsReady = ({
       .exec(windowsInstallerNames[0])?.[1];
     if (!windowsVersion) return false;
     versions.add(windowsVersion);
+    const linuxAppImageNames = assetNames.filter((name) =>
+      /^EdgeEver-(.+)-linux-x64\.AppImage$/.test(name)
+    );
+    if (linuxAppImageNames.length !== 1) return false;
+    const linuxVersion = /^EdgeEver-(.+)-linux-x64\.AppImage$/
+      .exec(linuxAppImageNames[0])?.[1];
+    if (!linuxVersion) return false;
+    versions.add(linuxVersion);
     for (const name of [
       "latest.yml",
       "latest-windows.json",
       "SHA256SUMS-windows.txt",
+      "SHA256SUMS-linux.txt",
     ]) {
       if (assetNames.filter((assetName) => assetName === name).length !== 1) {
         return false;

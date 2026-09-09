@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, openSync, closeSync, readFileSync, readSync, readdirSync, rmSync, statSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { listPackage } from "@electron/asar";
 import { assertMacIcnsComplete } from "./desktop-icns.mjs";
 import { isVisualCppRuntimeDll, readPeImportedDlls } from "./pe-imports.mjs";
@@ -23,7 +23,6 @@ const walk = (directory) => {
 };
 
 const files = walk(outputDirectory);
-const matchingPrefix = (prefix) => files.filter((path) => basename(path).startsWith(prefix));
 const requestedPlatform = process.env.EDGE_EVER_VERIFY_TARGET ?? process.platform;
 const requestedArch = process.env.EDGE_EVER_DESKTOP_ARCH ?? process.arch;
 const listAsarFiles = (asarPath) => new Set(
@@ -51,6 +50,25 @@ const verifyPeX64 = (path, label) => {
   } finally {
     closeSync(descriptor);
   }
+};
+
+const verifyElfX64 = (path, label) => {
+  const result = spawnSync("readelf", ["-h", path], { encoding: "utf8" });
+  assert.equal(result.status, 0, `${label} ELF inspection failed: ${result.stderr || result.stdout}`);
+  assert.match(result.stdout, /Class:\s+ELF64/, `${label} must be a 64-bit ELF executable`);
+  assert.match(result.stdout, /Machine:\s+Advanced Micro Devices X86-64/, `${label} must target Linux x64`);
+};
+
+const verifyGlibcBaseline = (path, maximum = [2, 35]) => {
+  const result = spawnSync("readelf", ["--version-info", path], { encoding: "utf8" });
+  assert.equal(result.status, 0, `Rust sidecar glibc inspection failed: ${result.stderr || result.stdout}`);
+  const versions = [...result.stdout.matchAll(/GLIBC_(\d+)\.(\d+)/g)]
+    .map((match) => [Number(match[1]), Number(match[2])]);
+  assert.ok(versions.length > 0, "Rust sidecar must declare its glibc requirements");
+  const exceedsBaseline = versions.some(([major, minor]) =>
+    major > maximum[0] || (major === maximum[0] && minor > maximum[1])
+  );
+  assert.equal(exceedsBaseline, false, `Rust sidecar must not require glibc newer than ${maximum.join(".")}`);
 };
 
 for (const sidecarPath of files.filter((path) => /[\\/]resources[\\/]sidecar[\\/]edgeever-sidecar(?:\.exe)?$/i.test(path))) {
@@ -114,13 +132,29 @@ if (requestedPlatform === "darwin") {
   assert.ok(asarFiles.has("/src/preload/index.cjs"), "Windows app bundle must contain the sandbox-compatible CommonJS preload");
   assert.ok(!asarFiles.has("/src/preload/index.mjs"), "Windows app bundle must not contain the unsupported ESM preload");
 } else if (requestedPlatform === "linux") {
-  assert.ok(matchingPrefix(`EdgeEver-${version}-linux-`).some((path) => path.endsWith(".AppImage")), "Linux package must contain the current AppImage");
-  const unpacked = files.find((path) => path.endsWith("/resources/sidecar/edgeever-sidecar") && path.includes("linux-") && path.includes("-unpacked"));
-  if (unpacked) {
-    const root = unpacked.slice(0, unpacked.indexOf("/resources/sidecar/edgeever-sidecar"));
-    assert.ok(existsSync(join(root, "resources", "web", "index.html")), "Linux app bundle is missing the Web renderer");
-    assert.ok(existsSync(join(root, "resources", "migrations")), "Linux app bundle is missing migrations");
-  }
+  assert.equal(requestedArch, "x64", `Linux Preview package must target x64, received: ${requestedArch}`);
+  const appImage = join(outputDirectory, `EdgeEver-${version}-linux-x64.AppImage`);
+  const unpackedDirectory = join(outputDirectory, "linux-unpacked");
+  const executable = ["EdgeEver", "edgeever"]
+    .map((name) => join(unpackedDirectory, name))
+    .find(existsSync);
+  const resources = join(unpackedDirectory, "resources");
+  const sidecar = join(resources, "sidecar", "edgeever-sidecar");
+  assert.ok(existsSync(appImage), `Linux package must contain the current x64 AppImage: ${appImage}`);
+  assert.ok(statSync(appImage).mode & 0o111, "Linux AppImage must be executable");
+  assert.ok(executable, "Linux package must contain the unpacked EdgeEver executable");
+  assert.ok(existsSync(sidecar), `Linux app bundle is missing the sidecar: ${sidecar}`);
+  assert.ok(statSync(sidecar).mode & 0o111, "Linux sidecar must be executable");
+  assert.ok(existsSync(join(resources, "web", "index.html")), "Linux app bundle is missing the Web renderer");
+  assert.ok(existsSync(join(resources, "migrations")), "Linux app bundle is missing migrations");
+  verifyElfX64(executable, "Electron executable");
+  verifyElfX64(sidecar, "Rust sidecar");
+  verifyGlibcBaseline(sidecar);
+  const asarPath = join(resources, "app.asar");
+  assert.ok(existsSync(asarPath), `Linux app bundle is missing app.asar: ${asarPath}`);
+  const asarFiles = listAsarFiles(asarPath);
+  assert.ok(asarFiles.has("/src/preload/index.cjs"), "Linux app bundle must contain the sandbox-compatible CommonJS preload");
+  assert.ok(!asarFiles.has("/src/preload/index.mjs"), "Linux app bundle must not contain the unsupported ESM preload");
 } else {
   throw new Error(`Unsupported packaging platform: ${requestedPlatform}`);
 }

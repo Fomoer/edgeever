@@ -6,6 +6,7 @@ import { createLocalDataScope } from "./local-mirror";
 export type ClientRuntimeDiagnostics = {
   appVersion: string | null;
   architecture: string | null;
+  autoUpdateSupported: boolean | null;
   engine: string | null;
   operatingSystem: string | null;
 };
@@ -78,6 +79,7 @@ export const getClientRuntimeDiagnostics = async (): Promise<ClientRuntimeDiagno
     return {
       appVersion: info.appVersion,
       architecture: info.architecture === "unknown" ? null : info.architecture,
+      autoUpdateSupported: info.autoUpdateSupported,
       engine: [
         info.electron === "unknown" ? null : `Electron ${info.electron}`,
         info.chrome === "unknown" ? null : `Chromium ${info.chrome}`,
@@ -103,6 +105,7 @@ export const getClientRuntimeDiagnostics = async (): Promise<ClientRuntimeDiagno
   return {
     appVersion: null,
     architecture: architecture || null,
+    autoUpdateSupported: null,
     engine: browserEngine(navigator.userAgent),
     operatingSystem: browserOperatingSystem(
       navigator.userAgent,

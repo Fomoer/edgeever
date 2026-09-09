@@ -19,6 +19,24 @@ final class MobileUIParityTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testSelectingTagResetsConflictingListState() {
+        let store = WorkspaceStore()
+        store.selectedNotebookId = "notebook"
+        store.searchText = "query"
+        store.filter = .pinned
+        store.enterSelection(memoId: "memo")
+
+        store.selectTag("Work")
+
+        XCTAssertEqual(store.selectedTag, "Work")
+        XCTAssertNil(store.selectedNotebookId)
+        XCTAssertEqual(store.searchText, "")
+        XCTAssertEqual(store.filter, .all)
+        XCTAssertFalse(store.selectionMode)
+        XCTAssertTrue(store.selectedMemoIds.isEmpty)
+    }
+
     func testToggleSelectionAddAndRemove() {
         let once = MobileUI.toggleMemoSelection(current: [], memoId: "a")
         XCTAssertEqual(once, ["a"])
@@ -26,6 +44,17 @@ final class MobileUIParityTests: XCTestCase {
         XCTAssertTrue(twice.isEmpty)
         let multi = MobileUI.toggleMemoSelection(current: once, memoId: "b")
         XCTAssertEqual(multi, ["a", "b"])
+    }
+
+    func testSingleTagSelectionReplacesThePreviousTag() {
+        XCTAssertEqual(
+            MobileUI.toggleTagSelection(current: ["old"], tag: "new", maxSelections: 1),
+            ["new"]
+        )
+        XCTAssertEqual(
+            MobileUI.toggleTagSelection(current: ["new"], tag: "new", maxSelections: 1),
+            []
+        )
     }
 
     func testMemoListTimestampMatchesSortMode() {

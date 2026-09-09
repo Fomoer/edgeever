@@ -48,6 +48,9 @@ describe("release timing report", () => {
         job("Windows x64 unsigned Preview", start, 420, [
           step("Package unsigned Windows installer", start, 240),
         ]),
+        job("Linux x64 AppImage Preview", start, 360, [
+          step("Package Linux AppImage", start, 120),
+        ]),
       ]),
       desktopMode: "rebuild",
       mobile: payload("Mobile", start, 540, [
@@ -88,6 +91,7 @@ describe("release timing report", () => {
       "macOS arm64",
       "macOS x64",
       "Windows x64 Preview",
+      "Linux x64 Preview",
       "Android arm64",
       "Google Play signed APK",
     ]);
@@ -103,6 +107,9 @@ describe("release timing report", () => {
     );
     expect(markdown).toContain(
       "| Windows x64 Preview | rebuild | success | 7m 00s | package 4m 00s |",
+    );
+    expect(markdown).toContain(
+      "| Linux x64 Preview | rebuild | success | 6m 00s | package 2m 00s |",
     );
     expect(markdown).toContain(
       "| Google Play signed APK | build + deliver | success | 11m 00s | AAB build 3m 00s; Play upload 4m 00s |",
@@ -138,7 +145,7 @@ describe("release timing report", () => {
     });
 
     expect(report.rows.at(-2)).toMatchObject({
-      target: "macOS arm64 + x64 + Windows x64",
+      target: "macOS arm64 + x64 + Windows x64 + Linux x64",
       mode: "reuse",
       durationMs: 40_000,
     });

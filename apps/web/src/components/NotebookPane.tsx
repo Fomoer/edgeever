@@ -28,6 +28,7 @@ import {
   FileText,
   Network,
   Workflow,
+  Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -771,6 +772,28 @@ export const NotebookPane = ({
                     </div>
                     <div className="flex shrink-0 items-center gap-1 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300">
                       <span className="text-[11px]">DMG</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </div>
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a
+                    href={DESKTOP_DOWNLOAD_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`${t("pwa.sidebarLinux")} ${t("pwa.sidebarLinuxBadge")}`}
+                    className="group flex cursor-pointer items-center justify-between gap-2.5 rounded-md px-2 py-1.5 text-sm text-slate-700 outline-none transition-colors hover:bg-slate-100 hover:text-slate-900 focus:bg-slate-100 focus:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <BrandIconContainer>
+                        <Terminal className="h-3.5 w-3.5 text-slate-800 dark:text-slate-200" aria-hidden="true" />
+                      </BrandIconContainer>
+                      <span className="truncate font-medium">{t("pwa.sidebarLinux") || "Linux"}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1 text-amber-700 dark:text-amber-400">
+                      <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold dark:bg-amber-950/40">
+                        {t("pwa.sidebarLinuxBadge") || "Preview"}
+                      </span>
                       <ExternalLink className="h-3.5 w-3.5" />
                     </div>
                   </a>

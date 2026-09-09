@@ -6,7 +6,10 @@ struct ListActionsSheet: View {
     @Bindable var store: WorkspaceStore
     @Environment(\.dismiss) private var dismiss
 
-    private var listTitle: String { store.activeNotebook?.name ?? env.preferences.t("全部笔记", en: "All notes") }
+    private var listTitle: String {
+        if let selectedTag = store.selectedTag { return "#\(selectedTag)" }
+        return store.activeNotebook?.name ?? env.preferences.t("全部笔记", en: "All notes")
+    }
     private var listDescription: String {
         env.preferences.t("\(store.totalCount) 条笔记", en: "\(store.totalCount) notes")
     }
@@ -56,6 +59,16 @@ struct ListActionsSheet: View {
                         ) {
                             store.enterSelection()
                             dismiss()
+                        }
+                        sheetItem(
+                            icon: "tag",
+                            label: env.preferences.t("按标签筛选", en: "Filter by tag"),
+                            disabled: false
+                        ) {
+                            dismiss()
+                            DispatchQueue.main.async {
+                                store.showTagFilterPicker = true
+                            }
                         }
                         divider
                     }

@@ -69,6 +69,20 @@ enum MobileUI {
         }
         return next
     }
+
+    static func toggleTagSelection(current: [String], tag: String, maxSelections: Int) -> [String] {
+        guard maxSelections > 0 else { return [] }
+        if let index = current.firstIndex(of: tag) {
+            var next = current
+            next.remove(at: index)
+            return next
+        }
+        if maxSelections == 1 {
+            return [tag]
+        }
+        guard current.count < maxSelections else { return current }
+        return current + [tag]
+    }
 }
 
 struct NotebookTreeItem: Identifiable, Equatable {

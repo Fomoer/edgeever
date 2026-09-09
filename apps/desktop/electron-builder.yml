@@ -77,4 +77,4 @@ linux:
   syncDesktopName: true
   target:
     - AppImage
-  artifactName: EdgeEver-${version}-linux-${arch}.${ext}
+  artifactName: EdgeEver-${version}-linux-x64.${ext}

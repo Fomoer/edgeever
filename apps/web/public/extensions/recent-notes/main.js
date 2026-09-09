@@ -23,6 +23,7 @@ export default {
     const disposePanel = context.ui.panels.register({
       id: "recent-notes",
       title: "Recent notes",
+      purpose: "dashboard",
       mount(container) {
         const heading = document.createElement("h2");
         heading.textContent = "Recent notes inspector";

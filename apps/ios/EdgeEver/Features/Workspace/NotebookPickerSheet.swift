@@ -210,6 +210,7 @@ struct NotebookPickerSheet: View {
     }
 
     private func select(_ id: String?) {
+        store.selectedTag = nil
         store.selectedNotebookId = id
         store.reload(env: env)
         dismiss()

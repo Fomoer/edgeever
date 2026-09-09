@@ -31,6 +31,7 @@ export const NotesView = ({
   notebooks,
   onCreate,
   onCreateFromTemplate,
+  onClearTag,
   onClearSelection,
   onFilterModeChange,
   onOpenActions,
@@ -43,6 +44,7 @@ export const NotesView = ({
   onSearchTextChange,
   onSetMemoView,
   searchText,
+  selectedTag,
   totalMemoCount,
   selectedMemoIds,
   selectionMode,
@@ -62,6 +64,7 @@ export const NotesView = ({
   notebooks: Notebook[];
   onCreate: () => void;
   onCreateFromTemplate?: () => void;
+  onClearTag: () => void;
   onClearSelection: () => void;
   onFilterModeChange: (filterMode: MemoFilterMode) => void;
   onOpenActions: () => void;
@@ -74,6 +77,7 @@ export const NotesView = ({
   onSearchTextChange: (value: string) => void;
   onSetMemoView: (memoView: MemoView) => void;
   searchText: string;
+  selectedTag: string | null;
   totalMemoCount: number;
   selectionMode: boolean;
   selectedMemoIds: Set<string>;
@@ -81,15 +85,17 @@ export const NotesView = ({
   const { resolvedTheme } = useMobileTheme();
   const { preference: localePreference, translate } = useMobileLocale();
   const searchActive = searchText.trim().length > 0;
-  const filterActive = memoFilterMode !== "all";
+  const filterActive = memoFilterMode !== "all" || Boolean(selectedTag);
   const searchStatusLabel = translate("正在搜索");
   const searchResultLabel = translate(`${totalMemoCount} 条结果`);
   const exitSearchLabel = translate("退出搜索");
-  const activeFilterLabel = memoFilterMode === "pinned"
-    ? translate("置顶")
-    : memoFilterMode === "tagged"
-      ? translate("有标签")
-      : translate("无标签");
+  const activeFilterLabel = selectedTag
+    ? `#${selectedTag}`
+    : memoFilterMode === "pinned"
+      ? translate("置顶")
+      : memoFilterMode === "tagged"
+        ? translate("有标签")
+        : translate("无标签");
   const filterResultLabel = translate(`筛选：${activeFilterLabel} · ${totalMemoCount} 条`);
   const resetFilterLabel = translate("重置");
 
@@ -107,16 +113,16 @@ export const NotesView = ({
         ) : null}
         <View style={styles.mobileListTitleRow}>
           <Pressable
-            accessibilityLabel={memoView === "trash" ? "返回笔记列表" : "切换笔记本"}
+            accessibilityLabel={memoView === "trash" || selectedTag ? "返回笔记列表" : "切换笔记本"}
             accessibilityRole="button"
-            onPress={memoView === "trash" ? () => onSetMemoView("notebook") : onOpenNotebookPicker}
+            onPress={memoView === "trash" ? () => onSetMemoView("notebook") : selectedTag ? onClearTag : onOpenNotebookPicker}
             style={styles.mobileNotebookTitleButton}
           >
-            {memoView === "trash" ? <ChevronLeft color="#475569" size={18} /> : null}
+            {memoView === "trash" || selectedTag ? <ChevronLeft color="#475569" size={18} /> : null}
             <Text numberOfLines={1} style={styles.mobileNotebookTitle}>
-              {memoView === "trash" ? "回收站" : activeNotebook?.name ?? "全部笔记"}
+              {memoView === "trash" ? "回收站" : selectedTag ? `#${selectedTag}` : activeNotebook?.name ?? "全部笔记"}
             </Text>
-            {memoView === "notebook" ? <ChevronDown color="#64748b" size={16} /> : null}
+            {memoView === "notebook" && !selectedTag ? <ChevronDown color="#64748b" size={16} /> : null}
           </Pressable>
           <Pressable accessibilityLabel={selectionMode ? "批量操作" : "列表选项"} accessibilityRole="button" onPress={onOpenActions} style={styles.mobileMoreButton}>
             <MoreHorizontal color="#475569" size={20} />
@@ -177,7 +183,7 @@ export const NotesView = ({
               <Pressable
                 accessibilityLabel={searchActive ? exitSearchLabel : resetFilterLabel}
                 accessibilityRole="button"
-                onPress={searchActive ? () => onSearchTextChange("") : () => onFilterModeChange("all")}
+                onPress={searchActive ? () => onSearchTextChange("") : selectedTag ? onClearTag : () => onFilterModeChange("all")}
               >
                 <Text style={[styles.mobileListConstraintAction, !searchActive && styles.mobileListConstraintActionFilter]}>
                   {searchActive ? exitSearchLabel : resetFilterLabel}
@@ -189,7 +195,7 @@ export const NotesView = ({
       </View>
 
     <MemoList
-      emptyActions={memoView === "notebook" && notebooks.length > 0 && !searchActive && memoFilterMode === "all"
+      emptyActions={memoView === "notebook" && notebooks.length > 0 && !searchActive && !filterActive
         ? [
           { label: "新建笔记", onPress: onCreate, variant: "primary" as const },
           ...(onCreateFromTemplate
@@ -197,8 +203,8 @@ export const NotesView = ({
             : []),
         ]
         : undefined}
-      emptyDescription={searchActive ? "换个关键词再试" : memoFilterMode !== "all" ? "试试切换筛选条件，或调整搜索关键词。" : memoView === "trash" ? "删除的笔记会显示在这里。" : "先创建一条笔记，之后可以在这里快速预览、搜索和批量整理。"}
-      emptyTitle={searchActive ? "没有找到匹配笔记" : memoFilterMode !== "all" ? "没有符合筛选的笔记" : memoView === "trash" ? "回收站为空" : "暂无笔记"}
+      emptyDescription={searchActive ? "换个关键词再试" : filterActive ? "试试切换筛选条件，或调整搜索关键词。" : memoView === "trash" ? "删除的笔记会显示在这里。" : "先创建一条笔记，之后可以在这里快速预览、搜索和批量整理。"}
+      emptyTitle={searchActive ? "没有找到匹配笔记" : filterActive ? "没有符合筛选的笔记" : memoView === "trash" ? "回收站为空" : "暂无笔记"}
       error={error}
       initialSyncProgress={initialSyncProgress}
       isError={isError}

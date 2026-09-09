@@ -46,6 +46,39 @@ final class LocalMirrorTests: XCTestCase {
         XCTAssertEqual(tags, [TagSummary(name: "a", memoCount: 1, updatedAt: now)])
     }
 
+    func testListMemosFiltersOneExactTagCaseInsensitively() throws {
+        let db = try AppDatabase.makeEmpty()
+        let mirror = LocalMirrorRepository(dbQueue: db)
+        let scope = "https://demo.example|tag-filter"
+        let now = EdgeEverDate.nowString()
+        let memos = [
+            MemoDetail.localPlaceholder(
+                id: "exact",
+                notebookId: "nb1",
+                title: "Exact",
+                contentMarkdown: "",
+                tags: ["Project Alpha", "Work"],
+                createdAt: now
+            ),
+            MemoDetail.localPlaceholder(
+                id: "substring",
+                notebookId: "nb1",
+                title: "Substring",
+                contentMarkdown: "",
+                tags: ["Project"],
+                createdAt: now
+            ),
+        ]
+        try mirror.applyBootstrapBatch(scope: scope, notebooks: [], memos: memos)
+
+        let result = try mirror.listMemos(
+            scope: scope,
+            params: LocalMemoListParams(tag: "project alpha")
+        )
+
+        XCTAssertEqual(result.memos.map(\.id), ["exact"])
+    }
+
     func testOutboxCreateAbsorbsUpdate() throws {
         let db = try AppDatabase.makeEmpty()
         let outbox = SyncOutboxRepository(dbQueue: db)

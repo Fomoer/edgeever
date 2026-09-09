@@ -37,6 +37,7 @@ interface EdgeEverDesktopBridge {
   sidecarStatus(): Promise<{ available: boolean; path: string; scope: string }>;
   systemInfo(): Promise<{
     appVersion: string;
+    autoUpdateSupported: boolean;
     platform: string;
     architecture: string;
     osVersion: string;

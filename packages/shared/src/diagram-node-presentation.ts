@@ -7,29 +7,44 @@ export const visualTextUnits = (label: string) => Array.from(label).reduce(
 
 export const compactFlowchartNodeSize = (shape: DiagramNodeShape) => (
   shape === "decision"
-    ? { width: 116, height: 72 }
+    ? { width: 176, height: 80 }
     : shape === "terminator"
-      ? { width: 116, height: 44 }
-      : { width: 124, height: 44 }
+      ? { width: 140, height: 44 }
+      : { width: 176, height: 56 }
 );
+
+const FLOWCHART_CHAR_WIDTH = 13;
+const FLOWCHART_LINE_HEIGHT = 18;
+const FLOWCHART_DECISION_TEXT_RATIO = 0.7;
+
+const wrapFlowchartLabel = (label: string, capacity: number) => label.split("\n").flatMap((paragraph) => {
+  const result: string[] = [];
+  let line = "";
+  for (const character of Array.from(paragraph)) {
+    if (line && visualTextUnits(line + character) > capacity) {
+      result.push(line);
+      line = "";
+    }
+    line += character;
+  }
+  result.push(line);
+  return result;
+});
 
 // Shared by semantic creation and rendering so layout reserves space for every line.
 export const flowchartNodePresentation = (shape: DiagramNodeShape, label: string) => {
   const base = compactFlowchartNodeSize(shape);
   const decision = shape === "decision";
-  const width = Math.max(decision ? 184 : base.width, Math.min(decision ? 220 : 240,
-    Math.ceil(Math.max(...label.split("\n").map(visualTextUnits), 0) * 14 + (decision ? 64 : 32))));
-  const capacity = (width - (decision ? width / 2 : 32)) / 14;
-  const lines = label.split("\n").flatMap((paragraph) => {
-    const result: string[] = [];
-    let line = "";
-    for (const character of Array.from(paragraph)) {
-      if (line && visualTextUnits(line + character) > capacity) { result.push(line); line = ""; }
-      line += character;
-    }
-    result.push(line);
-    return result;
-  });
-  return { width, height: Math.max(base.height, lines.length * 18 * (decision ? 2 : 1) + 24), text: lines.join("\n") };
+  const terminator = shape === "terminator";
+  const padX = terminator ? 36 : 28;
+  const width = base.width;
+  const capacity = Math.max(4, (decision ? width * FLOWCHART_DECISION_TEXT_RATIO : width - padX) / FLOWCHART_CHAR_WIDTH);
+  const lines = wrapFlowchartLabel(label, capacity);
+  const textHeight = Math.max(lines.length, 1) * FLOWCHART_LINE_HEIGHT;
+  const height = Math.max(
+    base.height,
+    decision ? Math.ceil(textHeight / (1 - FLOWCHART_DECISION_TEXT_RATIO)) : textHeight + (terminator ? 16 : 18),
+  );
+  return { width, height, text: lines.join("\n") };
 };
 

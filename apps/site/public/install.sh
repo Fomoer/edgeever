@@ -241,6 +241,7 @@ if [[ -r /etc/os-release ]]; then
   done < /etc/os-release
 fi
 host_os="${host_os:-$(uname -s)}"
+host_kernel_name="$(uname -s)"
 kernel_version="$(uname -sr)"
 host_architecture="$(uname -m)"
 docker_engine_version="$(docker version --format '{{.Server.Version}}' 2>/dev/null || true)"
@@ -252,6 +253,18 @@ log INFO "Kernel: $kernel_version"
 log INFO "Architecture: $host_architecture"
 log INFO "Docker Engine: $docker_engine_version"
 log INFO "Docker Compose: $docker_compose_version"
+
+if [[ "$host_kernel_name" == "Linux" ]]; then
+  kernel_release="$(uname -r)"
+  kernel_major="${kernel_release%%.*}"
+  kernel_remainder="${kernel_release#*.}"
+  kernel_minor="${kernel_remainder%%.*}"
+  if [[ "$kernel_major" =~ ^[0-9]+$ && "$kernel_minor" =~ ^[0-9]+$ ]] \
+    && ((kernel_major < 5 || (kernel_major == 5 && kernel_minor < 6))); then
+    log WARN "Linux kernel $kernel_release does not meet EdgeEver's minimum 5.6 requirement"
+    log WARN "This host is outside the supported Docker environment and may fail while resolving container dependencies; upgrade the host OS/kernel if startup reports EISDIR"
+  fi
+fi
 
 mkdir -p "$install_dir"
 env_file="$install_dir/.env"

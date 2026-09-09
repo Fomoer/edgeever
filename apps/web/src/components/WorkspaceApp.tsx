@@ -100,6 +100,8 @@ import { useWorkspacePreferences } from "@/hooks/useWorkspacePreferences";
 import { useWorkspaceSelection } from "@/hooks/useWorkspaceSelection";
 import { useWorkspaceQueuedSync } from "@/hooks/useWorkspaceQueuedSync";
 import { EdgeEverPluginHost, type RegisteredPluginPanel } from "@/lib/plugins/plugin-host";
+import { loadResolvedPluginMarketplace } from "@/lib/plugins/plugin-marketplace";
+import { updateOfficialMarketplacePlugins } from "@/lib/plugins/plugin-updates";
 import { createPublicNetworkAdapter } from "@/lib/plugins/public-network-adapter";
 import { clearRendererRecoveryRequired, isRendererRecoveryRequired } from "@/lib/renderer-recovery";
 import { EditorPaneErrorBoundary, EditorRecoveryPane } from "./EditorPaneErrorBoundary";
@@ -793,6 +795,42 @@ export const WorkspaceApp = ({
       void pluginHost.dispose();
     };
   }, [pluginHost]);
+  useEffect(() => {
+    if (!pluginHostReady) return;
+    let active = true;
+    let running = false;
+    const updateOfficialPlugins = async () => {
+      if (!active || running) return;
+      running = true;
+      try {
+        const marketplace = await loadResolvedPluginMarketplace();
+        const result = await updateOfficialMarketplacePlugins(pluginHost, marketplace.entries);
+        const firstResolutionError = Object.entries(marketplace.resolutionErrors)[0];
+        if (firstResolutionError) {
+          console.error(`Official plugin ${firstResolutionError[0]} update resolution failed.`, firstResolutionError[1]);
+        }
+        if (active && result.updated.length > 0) {
+          setAppNoticeDialog({
+            title: t("plugins.noticeTitle"),
+            description: t("plugins.updates.officialAutoUpdated", { count: result.updated.length }),
+          });
+        }
+      } catch (error) {
+        console.error("Official plugin update check failed.", error);
+      } finally {
+        running = false;
+      }
+    };
+    const handleFocus = () => { void updateOfficialPlugins(); };
+    const intervalId = window.setInterval(() => void updateOfficialPlugins(), 30 * 60_000);
+    window.addEventListener("focus", handleFocus);
+    void updateOfficialPlugins();
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [pluginHost, pluginHostReady, t]);
   const scheduledTasksQuery = useQuery({
     queryKey: ["scheduled-tasks", scheduledTaskDeviceId],
     queryFn: () => api.listScheduledTasks(scheduledTaskDeviceId ?? undefined),

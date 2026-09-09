@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   cachedResourceResponse,
+  downloadContentDispositionFromRequest,
   isSafeResourceId,
   parseByteRangeHeader,
   resourceIdFromRequest,
@@ -13,6 +14,19 @@ test("desktop resource URL parsing accepts safe resource and staged IDs", () => 
   expect(resourceIdFromRequest("edgeever-staged://bad/id")).toBe("id");
   expect(resourceIdFromRequest("edgeever-staged://../../etc/passwd")).toBeNull();
   expect(resourceIdFromRequest("edgeever-staged://stage_%ZZ")).toBeNull();
+});
+
+test("desktop resource downloads preserve safe UTF-8 filenames", () => {
+  expect(downloadContentDispositionFromRequest(
+    "edgeever-resource://resource/resource_123?download=%E8%B5%84%E6%96%99%E5%8C%85.zip",
+  )).toBe(
+    "attachment; filename=\"download.zip\"; filename*=UTF-8''%E8%B5%84%E6%96%99%E5%8C%85.zip",
+  );
+  expect(downloadContentDispositionFromRequest(
+    "edgeever-resource://resource/resource_123?download=reports%2Farchive.zip",
+  )).toContain('filename="reports-archive.zip"');
+  expect(downloadContentDispositionFromRequest("edgeever-resource://resource/resource_123"))
+    .toBeNull();
 });
 
 test("desktop staged resource IPC IDs reject path traversal", () => {

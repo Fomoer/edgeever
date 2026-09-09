@@ -8,6 +8,14 @@ const systemInfoSource = readFileSync(new URL("../../../web/src/components/setti
 const notebookPaneSource = readFileSync(new URL("../../../web/src/components/NotebookPane.tsx", import.meta.url), "utf8");
 
 describe("desktop update flow", () => {
+  test("keeps Linux Preview updates manual until a cross-version AppImage test passes", () => {
+    expect(mainSource).toContain('process.platform === "linux" || !app.isPackaged');
+    expect(mainSource).toContain("Linux Preview updates stay manual");
+    expect(mainSource).toContain('autoUpdateSupported: process.platform !== "linux"');
+    expect(systemInfoSource).toContain("desktopAutoUpdateSupported");
+    expect(systemInfoSource).toContain('t("systemInfo.desktopDownloadLatest")');
+  });
+
   test("downloads updates in the background and relaunches after installation", () => {
     expect(mainSource).toContain('autoUpdater.autoDownload = process.platform !== "win32"');
     expect(mainSource).toContain("autoUpdater.autoRunAppAfterInstall = true");

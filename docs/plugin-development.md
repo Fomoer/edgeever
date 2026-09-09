@@ -6,7 +6,9 @@ EdgeEver's P0 extension API supports trusted client plugins and no-code theme pa
 
 Theme packages contain only a validated manifest and documented design tokens. They do not execute JavaScript.
 
-Client plugins use an Obsidian-style trusted-code model. Their declared permissions gate calls made through the EdgeEver plugin context, but the plugin module itself runs in the client JavaScript environment. Users must install plugins only from developers they trust.
+Client plugins use an Obsidian-style trusted-code model. Enabling a plugin trusts it with the full EdgeEver plugin context; declared capabilities are optional descriptive metadata and do not gate API calls. The plugin module runs in the client JavaScript environment, so users must install plugins only from developers they trust.
+
+The first time a user enables a client plugin on a device, EdgeEver presents a community-plugin trust confirmation. Once acknowledged, it is not shown for every plugin. Theme packages do not trigger the confirmation because they cannot execute JavaScript.
 
 Plugins never receive EdgeEver's repository, IndexedDB database, Cloudflare bindings, or internal React state through the public API.
 
@@ -18,7 +20,8 @@ Plugins never receive EdgeEver's repository, IndexedDB database, Cloudflare bind
   "id": "com.example.recent-notes",
   "name": "Recent Notes",
   "version": "1.0.0",
-  "apiVersion": "1",
+  "apiVersion": "2",
+  "settingsUi": "host",
   "description": "Adds a command for recent notes.",
   "entry": "./main.js",
   "platforms": ["web", "desktop"],
@@ -42,7 +45,7 @@ styles.css (optional)
 
 GitHub plugins must use `./main.js` as `entry`, and `main.js` must be a single-file bundle without relative module imports. EdgeEver reads the default-branch manifest, locates the matching Release, downloads assets in parallel, verifies GitHub's SHA-256 digest when present, and caches the verified package in device-local IndexedDB. `main.js` is limited to 5 MB and `styles.css` to 1 MB.
 
-EdgeEver checks for updates when the Plugin Marketplace opens, when the window regains focus, and every 30 minutes, but never installs silently. The user must click Update and confirm. If a new version adds plugin permissions or network hosts, the confirmation lists the additional access. For GitHub distribution, the Release `manifest.json` must exactly match the default-branch manifest used for the update prompt or installation is rejected. Marketplace installs only follow newer versions verified in the Registry.
+EdgeEver checks for updates when the Plugin Marketplace opens, when the window regains focus, and every 30 minutes. Marketplace installs whose Registry entry declares `"publisher": "edgeever"` are official EdgeEver extensions and update automatically to the latest checksum-pinned Registry version. Community Marketplace extensions and extensions installed directly from GitHub or a Manifest URL are never updated silently: the user must click Update and confirm. If a manually confirmed version changes declared capabilities or legacy network-host metadata, the confirmation lists those changes for review. For GitHub distribution, the Release `manifest.json` must exactly match the default-branch manifest used for the update prompt or installation is rejected. Marketplace installs only follow newer versions verified in the Registry.
 
 Updates use a rollback-capable switch. Old and new package versions are cached separately. If the new version cannot activate, EdgeEver restores the previous manifest, enabled state, and package instead of leaving the plugin broken or disabled.
 
@@ -56,7 +59,9 @@ Only public GitHub repositories are supported for now; private-repository tokens
 
 ## Verified plugin marketplace
 
-The marketplace is a verified Registry and does not take ownership of plugin files. For each version, the Registry pins the plugin ID, GitHub repository, version, and SHA-256 hashes for `manifest.json`, `main.js`, and optional `styles.css`. Installation still downloads from the developer's GitHub Release or registered public URL and verifies those hashes again.
+The official marketplace only lists free and open-source plugins. Complete human-readable source, an accepted open-source license, build information, and a traceable public source revision are required for every listed version. This requirement applies only to official marketplace admission; users remain free to install other plugins from GitHub or a Manifest URL. See the [Plugin Marketplace Submission Policy](plugin-marketplace-policy.md) for the complete requirements.
+
+The marketplace is a verified Registry and does not take ownership of plugin files. For each version, the Registry pins the plugin ID, GitHub repository, version, and SHA-256 hashes for `manifest.json`, `main.js`, and optional `styles.css`. Installation still downloads from the developer's GitHub Release or registered public URL and verifies those hashes again. The optional `"publisher": "edgeever"` marker is reserved for Registry entries maintained by the EdgeEver project; it enables automatic updates and must not be used for community submissions.
 
 Registry format:
 
@@ -68,7 +73,8 @@ Registry format:
     "id": "com.example.recent-notes",
     "name": "Recent Notes",
     "description": "Shows recently updated notes.",
-    "author": "Example",
+    "author": "EdgeEver",
+    "publisher": "edgeever",
     "category": "Productivity",
     "repositoryUrl": "https://github.com/example/edgeever-recent-notes",
     "distribution": {
@@ -88,7 +94,7 @@ Registry format:
 
 Marketplace installs display a Verified badge. GitHub and manifest sideloads clearly display their unverified source, but EdgeEver does not block them. Uninstalling also deletes all device-local cached package versions, ordinary plugin storage for the current workspace, and Secret Storage.
 
-Supported permissions:
+Optional capability declarations, retained for disclosure and compatibility:
 
 - `notes:read`
 - `notes:write`
@@ -111,7 +117,7 @@ Supported permissions:
 - `ui:panels`
 - `ui:embeds`
 
-Network access through `context.network.fetch()` also requires a `networkHosts` allowlist in the manifest.
+Network access through `context.network.fetch()` is not restricted by capability declarations or a static host list. `networkHosts` remains accepted as legacy descriptive metadata and is not enforced. The anonymous, read-only `network:public` transport is available when a plugin needs a cross-origin public response without credentials.
 
 ## Plugin entry
 
@@ -149,7 +155,7 @@ Every registration returns a disposer. The host also disposes registered command
 
 ## Schedules API
 
-Desktop plugins can persistently schedule one of their own registered commands. Declare both `ui:commands` and `schedules`, register the command first, then use a stable plugin-local key with `upsert()`:
+Desktop plugins can persistently schedule one of their own registered commands. Register the command first, then use a stable plugin-local key with `upsert()`:
 
 ```js
 export default {
@@ -221,8 +227,8 @@ context.tags.delete("unused");
 `notes.query()` returns lightweight summaries. Use `notes.queryContent()` when a plugin must scan Markdown across many notes, such as a Tasks index, Calendar, Kanban board, or Linter. Both APIs accept at most 200 notes per page; follow `nextOffset` until it is `null`. Prefer the summary query whenever full content is unnecessary.
 
 All writes go through EdgeEver's shared repository/business layer, including offline queueing and desktop adapters. Plugins do not access a storage implementation directly.
-`notes.update()` requires both `notes:write` and `notes:read` because the update flow reads the current revision and returns the complete updated note. This prevents write access from becoming an indirect note-content read capability.
-`notes.editMarkdown()` requires the same permissions and performs optimistic concurrency checks with the `revision` and `contentHash` returned by `notes.get()`. It is intended for plugins such as task togglers, linters, and index maintainers that change only specific Markdown ranges:
+`notes.update()` reads the current revision and returns the complete updated note.
+`notes.editMarkdown()` performs optimistic concurrency checks with the `revision` and `contentHash` returned by `notes.get()`. It is intended for plugins such as task togglers, linters, and index maintainers that change only specific Markdown ranges:
 
 ```ts
 const note = await context.notes.get(noteId);
@@ -237,28 +243,28 @@ await context.notes.editMarkdown(noteId, {
 ```
 
 Edit ranges use JavaScript UTF-16 string offsets and half-open ranges `[from, to)`. Ranges in one call must not overlap, exceed the note, or split a Unicode surrogate pair. The host rejects writes with an error carrying `code: "NOTE_CONFLICT"` when the note baseline changed or the active editor has unsaved changes; plugins should reload and ask the user to retry. Invalid ranges use `code: "INVALID_MARKDOWN_EDIT"`. The SDK exports `PluginApiError` and `PluginApiErrorCode` for TypeScript error narrowing.
-Notebook and tag reads require `metadata:read`; notebook and tag changes require `metadata:write`.
+Enabled plugins can read and change notebooks and tags without capability gates.
 
-Attachments use their own permissions and still flow through the same Web/Desktop repository adapters:
+Attachments flow through the same Web/Desktop repository adapters:
 
 ```ts
-context.resources.list(noteId); // resources:read
-const blob = await context.resources.read(resourceId); // resources:read
-context.resources.upload(noteId, file); // resources:write
+context.resources.list(noteId);
+const blob = await context.resources.read(resourceId);
+context.resources.upload(noteId, file);
 context.resources.update(resourceId, { file, expectedContentHash });
 context.resources.rename(resourceId, filename);
 context.resources.delete(resourceId);
 ```
 
-`resources.update()` requires both resource permissions and uses the `contentHash` returned by `resources.list()` as an optimistic-concurrency baseline. A stale baseline throws `PluginApiError` with `code: "RESOURCE_CONFLICT"`. Replacements are currently limited to 100 MiB and require the resource to be synchronized and online. The host stores new bytes under a new object key and switches the database pointer conditionally, so a rejected update does not damage the previous object.
+`resources.update()` uses the `contentHash` returned by `resources.list()` as an optimistic-concurrency baseline. A stale baseline throws `PluginApiError` with `code: "RESOURCE_CONFLICT"`. Replacements are currently limited to 100 MiB and require the resource to be synchronized and online. The host stores new bytes under a new object key and switches the database pointer conditionally, so a rejected update does not damage the previous object.
 
-Subscribing to `note.*` events requires `notes:read`, subscribing to `tag.changed` requires `metadata:read`, subscribing to `template.*` requires `templates:read`, and subscribing to `resource.*` requires `resources:read`. The sync-queue status event carries no note or metadata content and requires no additional read permission.
+Enabled plugins may subscribe to `note.*`, `tag.changed`, `template.*`, `resource.*`, and sync-queue events without capability gates.
 
 Successful note, tag, template, and resource changes made through EdgeEver's normal repository layer—including user actions and plugin actions—feed the same plugin event stream. `workspace.synced` reports completed repository sync passes. Failed mutations do not emit success events.
 
 ## Templates API
 
-Templates are shared workspace data rather than plugin-local settings. Reading them requires `templates:read`; creating and deleting require `templates:write`; updating requires both. Applying a template also requires `notes:write` because it creates a note:
+Templates are shared workspace data rather than plugin-local settings. Enabled plugins can read, create, update, delete, and apply them without capability gates:
 
 ```ts
 const template = await context.templates.create({
@@ -271,13 +277,13 @@ const note = await context.templates.use(template.id, notebookId);
 context.events.on("template.updated", ({ template }) => console.log(template.name));
 ```
 
-`templates.create({ noteId })` can capture an existing note and additionally requires `notes:read`. Plugins can also call `templates.list()` and `templates.delete(templateId)`.
+`templates.create({ noteId })` can capture an existing note. Plugins can also call `templates.list()` and `templates.delete(templateId)`.
 
 ## Host-rendered settings
 
 Plugins can declare settings that EdgeEver renders consistently on a dedicated Plugin settings page within plugin details. Installed plugin cards and the plugin toolbar menu link directly to this page. Plugins without settings fields have no settings entry, while disabled plugins remain configurable. Settings are stored on the current device only. Put defaults and credentials in settings, and use plugin commands or functional panels for actual operations; ordinary configuration does not need a separate custom panel. Supported field types are `text`, `secret`, `number`, `boolean`, and `select`:
 
-The settings Schema is deliberately declarative. EdgeEver owns field layout, controls, spacing, validation, responsive behavior, accessibility, save states, and secret presentation. Presentation properties such as HTML, components, CSS classes, inline styles, colors, typography, or custom setting-page navigation are ignored. A plugin decides what can be configured, not how the settings page looks. Use commands or a clearly named functional panel for complex workflows such as authorization, connectivity tests, migrations, and index rebuilding; do not recreate ordinary settings in a custom panel.
+Plugin API v2 requires `settingsUi: "host"`. The settings Schema is deliberately declarative: EdgeEver owns field layout, controls, spacing, validation, responsive behavior, accessibility, save states, and secret presentation. Presentation properties such as HTML, components, CSS classes, inline styles, colors, typography, or custom setting-page navigation are ignored. A plugin decides what can be configured, not how the settings page looks. Custom settings pages are rejected by the host. Use commands or a clearly named functional panel for workflows such as authorization, connectivity tests, migrations, and index rebuilding; do not recreate ordinary settings in a custom panel.
 
 ```json
 {
@@ -303,6 +309,16 @@ await context.settings.set("format", "html");
 await context.settings.remove("token");
 ```
 
+Plugins can listen for changes to their own settings and then read the host-validated value again. The event is delivered only to the plugin that owns the setting and does not include the value, keeping secrets and other configuration out of event payloads:
+
+```ts
+context.events.on("settings.changed", async ({ key }) => {
+  if (key !== "format") return;
+  const format = await context.settings.get("format");
+  // Apply the updated format.
+});
+```
+
 ## Storage and network
 
 Plugin storage is namespaced by EdgeEver workspace and plugin ID:
@@ -312,17 +328,19 @@ await context.storage.set("cursor", "next-page");
 const cursor = await context.storage.get<string>("cursor");
 ```
 
-Requests are limited to HTTPS, except localhost development, and to declared hosts:
+Direct requests may use HTTP or HTTPS with arbitrary destinations, methods, headers, bodies, and browser credential modes. The Web runtime still follows the browser's CORS and cookie rules:
 
 ```json
 {
-  "permissions": ["network"],
-  "networkHosts": ["api.example.com", "*.trusted.example.com"]
+  "permissions": ["network"]
 }
 ```
 
 ```ts
-await context.network.fetch("https://api.example.com/items");
+await context.network.fetch("https://api.example.com/items", {
+  headers: { Authorization: `Bearer ${token}`, "X-Client": "my-plugin" },
+  credentials: "include",
+});
 ```
 
 Use regular `storage` for cursors and preferences. Sensitive strings such as API keys belong in `secrets`:
@@ -358,7 +376,7 @@ Reading returns `null` when no editable note is open; writes throw an error. `ed
 
 ### Plugin embeds
 
-`ui:embeds` allows a plugin to register a renderer for its own constrained, block-level embed type. Inserting an embed additionally requires `editor:write`:
+An enabled plugin can register a renderer for its own constrained, block-level embed type and insert it into the editor:
 
 ```ts
 const disposeEmbed = context.editor.embeds.register({
@@ -383,7 +401,7 @@ The host assigns the embed ID and plugin ID, so a plugin cannot impersonate anot
 
 ## Note navigation
 
-With `ui:navigation` declared, a plugin can open an existing note from a task, calendar, index, or search panel:
+An enabled plugin can open an existing note from a task, calendar, index, or search panel:
 
 ```ts
 await context.ui.openNote(noteId, { search: "- [ ] Ship release" });
@@ -399,6 +417,7 @@ Plugins can register framework-independent DOM panels. Users open them from the 
 context.ui.panels.register({
   id: "dashboard",
   title: "Dashboard",
+  purpose: "dashboard",
   presentation: "fullscreen",
   mount(container, { state, requestClose }) {
     const heading = document.createElement("h2");
@@ -415,6 +434,8 @@ context.ui.panels.register({
 
 await context.ui.panels.open("dashboard", { state: { resourceId } });
 ```
+
+Every API v2 panel must declare one business purpose: `workflow`, `dashboard`, `preview`, or `onboarding`. A panel is not an alternative settings surface. Persistent booleans, text, numbers, secrets, and fixed-option selections belong in the Manifest settings Schema. Workspace-backed choices that are meaningful only while performing an operation may remain workflow controls until the host settings Schema supports them.
 
 `presentation` accepts `dialog` (the default) or `fullscreen`. `panels.open()` can only open a panel registered by the calling plugin; its optional JSON state is limited to 64 KiB and is delivered through the mount context. `beforeClose()` may return `true` to close, `false` to stay open, or confirmation copy for a host-rendered dialog. The mount context's `requestClose()` follows the same guard.
 
@@ -467,13 +488,13 @@ The first demonstrates note queries, selection replacement, commands, and a cust
 - Plugins run only while the app is open.
 - Desktop plugins can persistently schedule their own registered commands, and users can manage those schedules and inspect paginated run history from the plugin page. A schedule is synced through the workspace, bound to one desktop device, and runs only while EdgeEver is open on that device. A missed occurrence can either be skipped or coalesced into one recovery run. This is not an always-on server background runtime.
 - There is no webhook receiver, server background runtime, marketplace submission backend, or automated review pipeline.
-- Declared permissions are API capability checks, not a hard sandbox for trusted JavaScript.
+- Capability declarations are optional descriptive metadata, not API authorization or a sandbox.
 - Custom panels open from the unified desktop plugin menu or extension settings and cannot yet be pinned to the main navigation or editor sidebar.
 - Secret storage is device-local and does not sync to other devices.
 
 ## Generic AI and public network capabilities (unreleased)
 
-Plugins may declare `ai:generate` to use the current workspace's default AI model. These calls take ordinary prompts; source parsing, business workflows and prompts belong to the plugin. Credentials stay in the host.
+Enabled plugins may use the current workspace's default AI model. Declaring `ai:generate` is optional disclosure metadata. These calls take ordinary prompts; source parsing, business workflows and prompts belong to the plugin. Credentials stay in the host.
 
 ```ts
 const status = await context.ai.status(); // { configured, modelName? }
@@ -487,12 +508,11 @@ const result = await context.ai.generate({
 
 `system` is limited to 8,000 characters, `prompt` to 90,000, output to 5,000 tokens, and generation to 120 seconds. The backend requires an interactive user session, disables AI in public demo mode, and redacts provider errors. AI calls have a four-request per-workspace guard in each backend instance; this is not a distributed quota. Model charges follow the configured provider. Plugin deactivation aborts outstanding calls.
 
-Existing `network.fetch(url, init)` remains browser fetch with CORS and omitted credentials. Add both `network` and `network:public`, declare `networkHosts`, and explicitly select `transport: "public"` to use the generic public Internet transport:
+The default `network.fetch(url, init)` transport is a trusted browser request. It accepts arbitrary HTTP/HTTPS destinations, methods, bodies, request headers such as `Authorization`, and the requested browser credential mode. It remains subject to the runtime browser's CORS and cookie policy. `networkHosts` is legacy descriptive metadata and is not a security boundary. To read a cross-origin public feed or API without credentials, explicitly select `transport: "public"`; listing `network` and `network:public` remains useful disclosure but is optional.
 
 ```json
 {
-  "permissions": ["network", "network:public"],
-  "networkHosts": ["example.org"]
+  "permissions": ["network", "network:public"]
 }
 ```
 
@@ -506,10 +526,10 @@ const response = await context.network.fetch("https://example.org/feed.xml", {
 const feed = await response.text(); // Parse inside the plugin.
 ```
 
-Public mode supports HTTPS GET/HEAD on port 443, no request body or credentials, a 20-second deadline, and at most 2,000,000 decoded response bytes. It always returns redirects without following them (`redirect: "error"` rejects them). Upstream 403/429 remain upstream status codes; this transport does not bypass platform restrictions. Allowed request headers: Accept, Accept-Language, If-None-Match, If-Modified-Since, Range. Only content/cache metadata, Location and Retry-After are returned; Set-Cookie is excluded. The response is buffered within the size limit, not an unlimited streaming proxy.
+Public mode supports any public HTTPS host on port 443 with GET/HEAD, no request body or credentials, a 20-second deadline, and at most 2,000,000 decoded response bytes. It always returns redirects without following them (`redirect: "error"` rejects them), so plugins can inspect a destination before requesting it separately. Upstream 403/429 remain upstream status codes; this transport does not bypass platform restrictions. Allowed request headers: Accept, Accept-Language, If-None-Match, If-Modified-Since, Range. Only content/cache metadata, Location and Retry-After are returned; Set-Cookie is excluded. The response is buffered within the size limit, not an unlimited streaming proxy.
 
 The host selects the least expensive safe transport without changing the plugin API. Web first tries browser fetch; a readable CORS response stays entirely client-side, while a browser network/CORS `TypeError` falls back to the authenticated backend relay. Desktop uses its Electron main process and the user's own network, capped at four concurrent requests. It does not relay public content through the EdgeEver backend. Cancellation propagates to every transport.
 
 All native/server drivers share one policy package. Desktop and self-hosted Bun validate every DNS answer and pass the validated address directly to TLS; private, special-use and mixed public/private answers are rejected. Cloudflare fallback uses workerd's default public-only Internet egress and no private-service bindings. Synthetic VPN/fake-IP DNS answers in reserved ranges are rejected; do not disable this check. Nonstandard workerd deployments must preserve public-only global egress. The Web fallback returns bounded binary bytes rather than Base64 JSON, avoiding Base64's transfer expansion.
 
-Plugin permission/domain checks run in the trusted client host. Backend routes independently require user authentication and enforce public-only egress; they do not trust client-supplied plugin IDs or allowlists, and do not claim server-attested per-plugin isolation. The trusted-JavaScript limitation still applies. The backend never receives a source enum, search window, evidence schema or report workflow.
+Plugin capability declarations communicate intent; enabled plugins are trusted JavaScript, not a security sandbox. A plugin can read notes and transmit them over the network. The public transport intentionally grants anonymous read access to arbitrary public HTTPS hosts. Backend routes independently require user authentication and enforce public-only egress so the shared EdgeEver service cannot be used to reach private networks; they do not claim server-attested per-plugin isolation. The backend never receives a source enum, search window, evidence schema or report workflow.

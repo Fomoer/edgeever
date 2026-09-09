@@ -10,6 +10,7 @@ final class WorkspaceStore {
     var searchText = ""
     var sort: MemoSortMode = .updatedDesc
     var filter: MobileMemoFilterMode = .all
+    var selectedTag: String?
     var totalCount = 0
     var nextOffset: Int?
     var isLoadingList = false
@@ -19,6 +20,7 @@ final class WorkspaceStore {
     var selectedMemoIds: Set<String> = []
     var showNotebookPicker = false
     var showActions = false
+    var showTagFilterPicker = false
 
     /// Memo id that should play a return-bounce when the list reappears after create/edit.
     var bounceMemoId: String?
@@ -61,7 +63,7 @@ final class WorkspaceStore {
         defer { isLoadingList = false }
         let offset = resetOffset ? 0 : (nextOffset ?? memos.count)
         let notebookIds: [String]? = {
-            guard let selectedNotebookId else { return nil }
+            guard selectedTag == nil, let selectedNotebookId else { return nil }
             return NotebookHierarchy.descendantIds(notebooks: notebooks, targetNotebookId: selectedNotebookId)
         }()
         let result = try env.mirror.listMemos(
@@ -70,6 +72,7 @@ final class WorkspaceStore {
                 notebookId: nil,
                 notebookIds: notebookIds,
                 q: searchText,
+                tag: selectedTag,
                 sort: sort,
                 filter: filter.toMemoFilterMode(),
                 limit: 50,
@@ -94,7 +97,22 @@ final class WorkspaceStore {
     }
 
     func toggleFilter(_ requested: MobileMemoFilterMode) {
+        selectedTag = nil
         filter = MobileUI.toggleMemoFilterMode(current: filter, requested: requested)
+    }
+
+    func selectTag(_ tag: String?) {
+        selectedTag = tag
+        selectedNotebookId = nil
+        filter = .all
+        searchText = ""
+        clearSelection()
+    }
+
+    func clearTagFilter() {
+        selectedTag = nil
+        filter = .all
+        clearSelection()
     }
 
     func enterSelection(memoId: String? = nil) {
