@@ -31,8 +31,9 @@ const timeoutMs = Number(process.env.EDGE_EVER_DESKTOP_STARTUP_TIMEOUT_MS) || 45
 const deadline = Date.now() + timeoutMs;
 let startupReady = false;
 let lastLog = "";
-const requiredEvents = new Set(["sidecar.ready", "renderer.bootstrap-ready"]);
+const requiredEvents = new Set(["renderer.origin-ready", "sidecar.ready", "renderer.bootstrap-ready"]);
 const observedEvents = new Set();
+const observedEntries = [];
 const wait = (milliseconds) => new Promise((resolveWait) => setTimeout(resolveWait, milliseconds));
 
 const removeUserDataDirectory = async () => {
@@ -56,8 +57,12 @@ try {
       lastLog = readFileSync(diagnosticLogPath, "utf8");
       for (const line of lastLog.split(/\r?\n/)) {
         try {
-          const event = JSON.parse(line).event;
-          if (typeof event === "string") observedEvents.add(event);
+          const entry = JSON.parse(line);
+          const event = entry.event;
+          if (typeof event === "string") {
+            observedEvents.add(event);
+            observedEntries.push(entry);
+          }
         } catch { /* Ignore a partial trailing log line. */ }
       }
       if ([...requiredEvents].every((event) => observedEvents.has(event))) {
@@ -79,7 +84,17 @@ try {
     ].filter(Boolean).join("\n\n"));
   }
 
-  console.log(JSON.stringify({ ok: true, executablePath, events: [...requiredEvents] }));
+  const originEntry = observedEntries.find((entry) => entry.event === "renderer.origin-ready");
+  if (!originEntry || !["migrated", "already-migrated"].includes(originEntry.state)) {
+    throw new Error(`Packaged desktop did not complete renderer origin migration: ${JSON.stringify(originEntry)}`);
+  }
+  const rendererEntry = observedEntries.find((entry) =>
+    entry.event === "renderer.loaded" && String(entry.url || "").startsWith("edgeever-app://app/"));
+  if (!rendererEntry) {
+    throw new Error(`Packaged desktop did not load from the private app protocol.\n\nDiagnostic log:\n${lastLog}`);
+  }
+
+  console.log(JSON.stringify({ ok: true, executablePath, events: [...requiredEvents], rendererUrl: rendererEntry.url }));
 } finally {
   if (child.exitCode === null && child.pid) {
     if (process.platform === "win32") {

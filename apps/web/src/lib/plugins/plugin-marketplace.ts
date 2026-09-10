@@ -1,18 +1,22 @@
 import { parseMarketplaceRegistry, type MarketplaceEntry, type MarketplaceRegistry } from "@edgeever/plugin-api";
 import {
   downloadGithubExtension,
+  loadGithubInstallableManifest,
   type GithubAssetDownloader,
 } from "@/lib/plugins/github-plugin-distribution";
 import { isVersionOutdated } from "@/lib/version-check";
+import { resolveAppAssetUrl } from "@/lib/app-page-path";
 
-export const DEFAULT_PLUGIN_REGISTRY_URL = "/extensions/registry.json";
+export const DEFAULT_PLUGIN_REGISTRY_URL = "extensions/registry.json";
 
 export const loadPluginMarketplace = async (
   registryUrl = DEFAULT_PLUGIN_REGISTRY_URL,
-  request: typeof fetch = window.fetch.bind(window)
+  request: typeof fetch = window.fetch.bind(window),
+  baseUrl = import.meta.env.BASE_URL,
+  locationHref = window.location.href,
 ): Promise<MarketplaceRegistry> => {
-  const url = new URL(registryUrl, window.location.href);
-  const response = await request(url.href, { cache: "no-store", credentials: "omit" });
+  const url = resolveAppAssetUrl(registryUrl, baseUrl, locationHref);
+  const response = await request(url, { cache: "no-store", credentials: "omit" });
   if (!response.ok) throw new Error(`Plugin marketplace request failed with HTTP ${response.status}.`);
   return parseMarketplaceRegistry(await response.json());
 };
@@ -27,6 +31,16 @@ const resolveOfficialGithubEntry = async (
   downloadAssetBytes?: GithubAssetDownloader,
 ): Promise<MarketplaceEntry> => {
   if (entry.publisher !== "edgeever" || entry.distribution.type !== "github") return entry;
+  const live = await loadGithubInstallableManifest(entry.distribution.repositoryUrl, request);
+  if (live.manifest.id !== entry.id) {
+    throw new Error("Official repository manifest id does not match the marketplace entry.");
+  }
+  if (isVersionOutdated(live.manifest.version, entry.verification.version)) {
+    throw new Error("Official repository version is older than the marketplace verified version.");
+  }
+  if (live.manifest.version === entry.verification.version && entry.verification.checksums?.manifestJson) {
+    return entry;
+  }
   const downloaded = await downloadGithubExtension(entry.distribution.repositoryUrl, request, downloadAssetBytes);
   if (downloaded.manifest.id !== entry.id) {
     throw new Error("Official repository manifest id does not match the marketplace entry.");

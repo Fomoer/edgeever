@@ -64,9 +64,11 @@ test("keeps the caret and rebases edits made while autosave sync is in flight", 
   const marker = `sync-race-${Date.now()}`;
   const notebooksResponse = await page.request.get("/api/v1/notebooks");
   expect(notebooksResponse.ok()).toBe(true);
-  const notebooks = await notebooksResponse.json() as { notebooks: Array<{ id: string }> };
+  const notebooks = await notebooksResponse.json() as { notebooks: Array<{ id: string; name: string }> };
   const notebookId = notebooks.notebooks[0]?.id;
+  const notebookName = notebooks.notebooks[0]?.name;
   expect(notebookId).toBeTruthy();
+  expect(notebookName).toBeTruthy();
 
   const createResponse = await page.request.post("/api/v1/memos", {
     data: {
@@ -99,7 +101,7 @@ test("keeps the caret and rebases edits made while autosave sync is in flight", 
 
   try {
     await page.goto("/");
-    await page.getByRole("button", { name: "全部笔记", exact: true }).click();
+    await page.getByRole("button", { name: new RegExp(notebookName!) }).click();
     await page.getByPlaceholder("搜索笔记").fill(marker);
     await page.locator(`[data-memo-id="${memoId}"]`).locator("button").first().click();
     await page.getByRole("button", { name: "清空搜索", exact: true }).click();

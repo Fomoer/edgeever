@@ -1,6 +1,6 @@
 import { parseExtensionManifest, type ExtensionManifest, type MarketplaceEntry, type PluginPermission } from "@edgeever/plugin-api";
 import type { InstalledExtension } from "@/lib/plugins/plugin-host";
-import { loadGithubRepositoryManifest } from "@/lib/plugins/github-plugin-distribution";
+import { loadGithubInstallableManifest } from "@/lib/plugins/github-plugin-distribution";
 import { isVersionOutdated } from "@/lib/version-check";
 
 export interface PluginUpdateInfo {
@@ -31,7 +31,7 @@ const fetchManifest = async (url: string, request: typeof fetch) => {
 
 const loadMarketplaceManifest = async (entry: MarketplaceEntry, request: typeof fetch) => {
   if (entry.distribution.type === "github") {
-    return (await loadGithubRepositoryManifest(entry.distribution.repositoryUrl, request)).manifest;
+    return (await loadGithubInstallableManifest(entry.distribution.repositoryUrl, request)).manifest;
   }
   return fetchManifest(entry.distribution.manifestUrl, request);
 };
@@ -64,7 +64,7 @@ export const checkInstalledExtensionUpdate = async (
     }
   } else if (extension.source.kind === "github") {
     if (!extension.source.repositoryUrl) throw new Error("Installed GitHub extension is missing its repository URL.");
-    latestManifest = (await loadGithubRepositoryManifest(extension.source.repositoryUrl, request)).manifest;
+    latestManifest = (await loadGithubInstallableManifest(extension.source.repositoryUrl, request)).manifest;
   } else {
     latestManifest = await fetchManifest(extension.manifestUrl, request);
   }

@@ -259,10 +259,9 @@ const escapeMermaidLabel = (label: string) =>
     .replace(/>/g, "&gt;");
 
 /**
- * Portable rendering envelope for clients that do not ship the interactive X6
- * diagram editor. Both native apps already render Mermaid inside their TipTap
- * WebViews, so keeping this in the persisted Markdown makes diagram notes
- * visible there without a second graph renderer.
+ * Markdown projection of diagram IR. First-party canvases render IR through
+ * X6; this fence is the portable envelope for share/export, non-X6 readers,
+ * and degraded viewing when the IR comment fails to parse.
  */
 export const diagramDocumentToMermaid = (document: DiagramDocument) => {
   const nodeIds = new Map(document.nodes.map((node, index) => [node.id, `n${index}`]));

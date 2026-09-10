@@ -57,6 +57,14 @@ final class MobileUIParityTests: XCTestCase {
         )
     }
 
+    func testExactTagMatchIgnoresCaseAndOverlappingNames() {
+        XCTAssertTrue(MobileUI.memoHasExactTag(tags: ["Project Alpha", "Work"], tag: "project alpha"))
+        XCTAssertTrue(MobileUI.memoHasExactTag(tags: ["Project Alpha", "Work"], tag: " project alpha "))
+        XCTAssertFalse(MobileUI.memoHasExactTag(tags: ["Project Alpha", "Work"], tag: "project"))
+        XCTAssertFalse(MobileUI.memoHasExactTag(tags: ["Homework"], tag: "work"))
+        XCTAssertFalse(MobileUI.memoHasExactTag(tags: ["demo-extra"], tag: "demo"))
+    }
+
     func testMemoListTimestampMatchesSortMode() {
         let memo = MemoSummary(
             id: "memo",

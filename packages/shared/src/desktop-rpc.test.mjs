@@ -9,6 +9,10 @@ const rustRpcSource = readFileSync(
   new URL("../../../crates/desktop-sidecar/src/rpc.rs", import.meta.url),
   "utf8",
 );
+const rustMemoSource = readFileSync(
+  new URL("../../../crates/desktop-sidecar/src/memo.rs", import.meta.url),
+  "utf8",
+);
 const electronRpcSource = readFileSync(
   new URL("../../../apps/desktop/src/main/rpc.mjs", import.meta.url),
   "utf8",
@@ -25,6 +29,11 @@ describe("desktop sidecar RPC contract", () => {
       .sort();
 
     expect([...DESKTOP_RPC_METHODS].sort()).toEqual(rustMethods);
+  });
+
+  test("filters memo.list by an exact tag instead of ignoring the parameter", () => {
+    expect(rustMemoSource).toContain("json_each(m.tags_json) AS memo_tag");
+    expect(rustMemoSource).toContain("LOWER(TRIM(CAST(memo_tag.value AS TEXT))) = LOWER(?5)");
   });
 
   test("keeps the native and Electron protocol guards aligned", () => {

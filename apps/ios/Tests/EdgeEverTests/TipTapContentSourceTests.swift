@@ -255,7 +255,7 @@ final class TipTapContentSourceTests: XCTestCase {
         XCTAssertFalse(decision.useJSON)
     }
 
-    /// Live WKWebView regression for the portable projection of visual diagram notes.
+    /// Live WKWebView regression: valid IR renders through X6, not a hidden Mermaid document.
     @MainActor
     func testPackagedViewerRendersAllVisualDiagramFallbacksAsSVG() async throws {
         let htmlURL = try XCTUnwrap(
@@ -315,6 +315,11 @@ final class TipTapContentSourceTests: XCTestCase {
                 try await Task.sleep(nanoseconds: 100_000_000)
             }
             XCTAssertEqual(svgCount, 1, "each visual-note envelope must render through X6 in the iOS viewer")
+            let hiddenMermaidSource = try await evalInt(
+                webView,
+                "document.querySelectorAll('.ProseMirror pre, .ProseMirror code').length"
+            )
+            XCTAssertEqual(hiddenMermaidSource, 0, "valid IR must not leave a hidden Mermaid code block in TipTap")
             let graphWidth = try await evalInt(
                 webView,
                 "Math.round(document.querySelector('.edgeever-x6-diagram')?.getBoundingClientRect().width || 0)"
@@ -322,11 +327,10 @@ final class TipTapContentSourceTests: XCTestCase {
             XCTAssertGreaterThan(graphWidth, 300, "X6 must occupy the viewer width instead of collapsing")
             XCTAssertGreaterThan(nodeCount, 0, "X6 must materialize diagram nodes")
             let controlsCount = try await evalInt(webView, "document.querySelectorAll('.edgeever-diagram-reader-controls').length")
-            XCTAssertEqual(controlsCount, 1, "reusing a viewer must not accumulate controls")
-            let hasReadingButton = try await evalBool(webView, "!!document.querySelector('button[aria-label=\"从起点阅读\"]')")
-            if hasReadingButton {
-                _ = try await eval(webView, "document.querySelector('button[aria-label=\"从起点阅读\"]').click()")
-                let readingScale = try await evalInt(webView, "parseInt(document.querySelector('button[aria-label=\"恢复 100%\"]').textContent)")
+            XCTAssertEqual(controlsCount, 0, "the reader must not draw zoom chrome over the canvas")
+            let isFlowchart = try await evalBool(webView, "document.querySelector('.edgeever-x6-diagram')?.getAttribute('aria-label') === '流程图'")
+            if isFlowchart {
+                let readingScale = try await evalInt(webView, "parseInt(document.querySelector('.edgeever-x6-diagram').dataset.scale)")
                 XCTAssertEqual(readingScale, 100)
                 let scrolled = try await evalBool(webView, """
                 (function() {
@@ -338,13 +342,6 @@ final class TipTapContentSourceTests: XCTestCase {
                 })()
                 """)
                 XCTAssertTrue(scrolled, "ordinary wheel must move the graph viewport")
-
-                _ = try await eval(webView, "document.querySelector('button[aria-label=\"放大\"]').click()")
-                let enlargedScale = try await evalInt(webView, "parseInt(document.querySelector('button[aria-label=\"恢复 100%\"]').textContent)")
-                XCTAssertEqual(enlargedScale, 125)
-                _ = try await eval(webView, "document.querySelector('button[aria-label=\"适应画布\"]').click()")
-                let overviewScale = try await evalInt(webView, "parseInt(document.querySelector('button[aria-label=\"恢复 100%\"]').textContent)")
-                XCTAssertLessThan(overviewScale, 80)
             }
 
             let leakedLegacyFallback = try await evalBool(webView, "document.body.innerText.includes('node list only')")

@@ -1,6 +1,7 @@
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension, Transaction};
 use serde_json::{json, Value};
 
+use crate::catalog::is_inbox_notebook;
 use crate::memo::{create_memo, memo_value};
 use crate::{bool_param, enqueue_change, memo_remap_base_key, meta_value, set_meta, string_param};
 
@@ -603,95 +604,263 @@ pub(crate) fn sync_outbox_discard(database: &Connection, params: &Value) -> Resu
     Ok(json!({ "ok": true }))
 }
 
+fn order_sync_change_indices(changes: &[Value]) -> Vec<usize> {
+    let mut notebook_upserts = Vec::new();
+    let mut notebook_deletes = Vec::new();
+    let mut rest = Vec::new();
+    for (index, change) in changes.iter().enumerate() {
+        let entity_type = change
+            .get("entityType")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        let operation = change
+            .get("operation")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        if entity_type == "notebook" {
+            if operation == "delete" {
+                notebook_deletes.push(index);
+            } else {
+                notebook_upserts.push(index);
+            }
+        } else {
+            rest.push(index);
+        }
+    }
+
+    let mut remaining: std::collections::HashSet<usize> =
+        notebook_upserts.iter().copied().collect();
+    let mut ordered_upserts = Vec::new();
+    while !remaining.is_empty() {
+        let ready: Vec<usize> = notebook_upserts
+            .iter()
+            .copied()
+            .filter(|index| remaining.contains(index))
+            .filter(|index| {
+                let parent_id = changes[*index]
+                    .get("notebook")
+                    .and_then(|notebook| notebook.get("parentId"))
+                    .and_then(Value::as_str);
+                match parent_id {
+                    Some(parent_id) => !notebook_upserts.iter().copied().any(|candidate| {
+                        remaining.contains(&candidate)
+                            && changes[candidate].get("entityId").and_then(Value::as_str)
+                                == Some(parent_id)
+                    }),
+                    None => true,
+                }
+            })
+            .collect();
+        if ready.is_empty() {
+            ordered_upserts.extend(
+                notebook_upserts
+                    .iter()
+                    .copied()
+                    .filter(|index| remaining.contains(index)),
+            );
+            break;
+        }
+        for index in ready {
+            remaining.remove(&index);
+            ordered_upserts.push(index);
+        }
+    }
+
+    ordered_upserts
+        .into_iter()
+        .chain(notebook_deletes)
+        .chain(rest)
+        .collect()
+}
+
+fn ensure_active_inbox(tx: &Transaction<'_>) -> Result<String, String> {
+    if let Some(id) = tx
+        .query_row(
+            "SELECT id FROM notebooks
+             WHERE is_deleted = 0
+               AND (slug = 'inbox' OR id = 'nb_inbox' OR id GLOB '*_inbox')
+             ORDER BY CASE WHEN slug = 'inbox' THEN 0 WHEN id = 'nb_inbox' THEN 1 ELSE 2 END, id
+             LIMIT 1",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+    {
+        return Ok(id);
+    }
+
+    if let Some(id) = tx
+        .query_row(
+            "SELECT id FROM notebooks
+             WHERE slug = 'inbox' OR id = 'nb_inbox' OR id GLOB '*_inbox'
+             ORDER BY CASE WHEN id = 'nb_inbox' THEN 0 WHEN id GLOB '*_inbox' THEN 1 ELSE 2 END, id
+             LIMIT 1",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+    {
+        tx.execute(
+            "UPDATE notebooks
+             SET is_deleted = 0, deleted_at = NULL, slug = 'inbox', parent_id = NULL,
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+             WHERE id = ?1",
+            [&id],
+        )
+        .map_err(|e| e.to_string())?;
+        return Ok(id);
+    }
+
+    tx.execute(
+        "INSERT INTO notebooks (id, parent_id, name, slug, icon, color, sort_order, created_at, updated_at)
+         VALUES ('nb_inbox', NULL, '等待分类', 'inbox', 'notebook', '#0f766e', 10,
+                 strftime('%Y-%m-%dT%H:%M:%fZ','now'), strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+        [],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok("nb_inbox".to_owned())
+}
+
+fn resolve_sync_notebook_id(
+    tx: &Transaction<'_>,
+    requested_notebook_id: &str,
+) -> Result<String, String> {
+    let active = tx
+        .query_row(
+            "SELECT id FROM notebooks WHERE id = ?1 AND is_deleted = 0",
+            [requested_notebook_id],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+    if let Some(id) = active {
+        return Ok(id);
+    }
+    ensure_active_inbox(tx)
+}
+
+fn apply_one_sync_change(
+    tx: &Transaction<'_>,
+    change: &Value,
+    rebuilding: bool,
+) -> Result<(), String> {
+    let entity_type = string_param(change, "entityType")?;
+    let operation = string_param(change, "operation")?;
+    let entity_id = string_param(change, "entityId")?;
+    if rebuilding {
+        let preserved_table = if entity_type == "notebook" {
+            "_edgeever_bootstrap_preserved_notebooks"
+        } else {
+            "_edgeever_bootstrap_preserved_memos"
+        };
+        let preserved = tx
+            .query_row(
+                &format!("SELECT EXISTS(SELECT 1 FROM {preserved_table} WHERE id = ?1)"),
+                [&entity_id],
+                |row| row.get::<_, bool>(0),
+            )
+            .unwrap_or(false);
+        if preserved {
+            return Ok(());
+        }
+    }
+    if entity_type == "notebook" {
+        if operation == "delete" {
+            tx.execute("UPDATE notebooks SET is_deleted = 1, deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?1 AND slug <> 'inbox' AND id <> 'nb_inbox' AND id NOT GLOB '*_inbox'", [&entity_id]).map_err(|e| e.to_string())?;
+            return Ok(());
+        }
+        let notebook = change
+            .get("notebook")
+            .ok_or_else(|| "Missing notebook change payload".to_owned())?;
+        let requested_slug = notebook.get("slug").and_then(Value::as_str);
+        let inbox = is_inbox_notebook(&entity_id, requested_slug);
+        let requested_parent = notebook
+            .get("parentId")
+            .and_then(Value::as_str)
+            .filter(|id| !id.is_empty() && !inbox);
+        let parent_id = if let Some(parent_id) = requested_parent {
+            let exists: bool = tx
+                .query_row(
+                    "SELECT EXISTS(SELECT 1 FROM notebooks WHERE id = ?1)",
+                    [parent_id],
+                    |row| row.get(0),
+                )
+                .map_err(|e| e.to_string())?;
+            exists.then_some(parent_id)
+        } else {
+            None
+        };
+        let slug = if inbox { Some("inbox") } else { requested_slug };
+        tx.execute("INSERT INTO notebooks (id, parent_id, name, slug, icon, color, sort_order, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9) ON CONFLICT(id) DO UPDATE SET parent_id=excluded.parent_id, name=excluded.name, slug=excluded.slug, icon=excluded.icon, color=excluded.color, sort_order=excluded.sort_order, updated_at=excluded.updated_at, is_deleted=0", rusqlite::params![entity_id, parent_id, string_param(notebook, "name")?, slug, notebook.get("icon").and_then(Value::as_str), notebook.get("color").and_then(Value::as_str), notebook.get("sortOrder").and_then(Value::as_i64).unwrap_or(0), string_param(notebook, "createdAt")?, string_param(notebook, "updatedAt")?]).map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    if operation == "delete" {
+        tx.execute("UPDATE memos SET is_deleted = 1, deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?1", [&entity_id]).map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    let memo = change
+        .get("memo")
+        .ok_or_else(|| "Missing memo change payload".to_owned())?;
+    let tags = memo
+        .get("tags")
+        .cloned()
+        .unwrap_or_else(|| json!([]))
+        .to_string();
+    let source_memo_ids = memo
+        .get("sourceMemoIds")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let source_ids = Value::Array(source_memo_ids.clone()).to_string();
+    let requested_merge_target = memo.get("mergedIntoMemoId").and_then(Value::as_str);
+    // Bootstrap pages are ordered by memo id, not by merge dependency. A
+    // deleted source can therefore arrive before the merged memo it
+    // references. Cache the source without the unresolved foreign key;
+    // the target's sourceMemoIds backfills it when that page arrives.
+    let merge_target = if let Some(target_id) = requested_merge_target {
+        let target_exists = tx
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM memos WHERE id = ?1)",
+                [target_id],
+                |row| row.get::<_, bool>(0),
+            )
+            .map_err(|e| e.to_string())?;
+        target_exists.then_some(target_id)
+    } else {
+        None
+    };
+    let content_json = memo
+        .get("contentJson")
+        .cloned()
+        .unwrap_or_else(|| json!({"type":"doc","content":[]}));
+    let requested_notebook_id = string_param(memo, "notebookId")?;
+    let notebook_id = resolve_sync_notebook_id(tx, &requested_notebook_id)?;
+    tx.execute("INSERT INTO memos (id, notebook_id, title, excerpt, tags_json, is_pinned, is_archived, is_deleted, source_memo_ids, merge_source_count, merged_into_memo_id, created_at, updated_at, deleted_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14) ON CONFLICT(id) DO UPDATE SET notebook_id=excluded.notebook_id, title=excluded.title, excerpt=excluded.excerpt, tags_json=excluded.tags_json, is_pinned=excluded.is_pinned, is_archived=excluded.is_archived, is_deleted=excluded.is_deleted, source_memo_ids=excluded.source_memo_ids, merge_source_count=excluded.merge_source_count, merged_into_memo_id=excluded.merged_into_memo_id, updated_at=excluded.updated_at, deleted_at=excluded.deleted_at", rusqlite::params![entity_id, notebook_id, memo.get("title").and_then(Value::as_str), string_param(memo, "excerpt")?, tags, memo.get("isPinned").and_then(Value::as_bool).unwrap_or(false) as i64, memo.get("isArchived").and_then(Value::as_bool).unwrap_or(false) as i64, memo.get("isDeleted").and_then(Value::as_bool).unwrap_or(false) as i64, source_ids, memo.get("mergeSourceCount").and_then(Value::as_i64).unwrap_or(0), merge_target, string_param(memo, "createdAt")?, string_param(memo, "updatedAt")?, memo.get("deletedAt").and_then(Value::as_str)]).map_err(|e| e.to_string())?;
+    tx.execute("INSERT INTO memo_contents (memo_id, content_json, content_markdown, content_text, content_hash, revision) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(memo_id) DO UPDATE SET content_json=excluded.content_json, content_markdown=excluded.content_markdown, content_text=excluded.content_text, content_hash=excluded.content_hash, revision=excluded.revision, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')", rusqlite::params![entity_id, content_json.to_string(), string_param(memo, "contentMarkdown")?, string_param(memo, "contentText")?, string_param(memo, "contentHash")?, memo.get("revision").and_then(Value::as_i64).unwrap_or(0)]).map_err(|e| e.to_string())?;
+    for source_id in source_memo_ids.iter().filter_map(Value::as_str) {
+        tx.execute(
+            "UPDATE memos SET merged_into_memo_id = ?1 WHERE id = ?2",
+            rusqlite::params![entity_id, source_id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 pub(crate) fn apply_sync_changes(database: &Connection, params: &Value) -> Result<Value, String> {
     let changes = params
         .get("changes")
         .and_then(Value::as_array)
         .ok_or_else(|| "Missing changes array".to_owned())?;
     let rebuilding = meta_value(database, SYNC_BOOTSTRAP_RESET_KEY).as_deref() == Some("1");
+    let ordered = order_sync_change_indices(changes);
     let tx = database
         .unchecked_transaction()
         .map_err(|e| e.to_string())?;
-    for change in changes {
-        let entity_type = string_param(change, "entityType")?;
-        let operation = string_param(change, "operation")?;
-        let entity_id = string_param(change, "entityId")?;
-        if rebuilding {
-            let preserved_table = if entity_type == "notebook" {
-                "_edgeever_bootstrap_preserved_notebooks"
-            } else {
-                "_edgeever_bootstrap_preserved_memos"
-            };
-            let preserved = tx
-                .query_row(
-                    &format!("SELECT EXISTS(SELECT 1 FROM {preserved_table} WHERE id = ?1)"),
-                    [&entity_id],
-                    |row| row.get::<_, bool>(0),
-                )
-                .unwrap_or(false);
-            if preserved {
-                continue;
-            }
-        }
-        if entity_type == "notebook" {
-            if operation == "delete" {
-                tx.execute("UPDATE notebooks SET is_deleted = 1, deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?1", [&entity_id]).map_err(|e| e.to_string())?;
-                continue;
-            }
-            let notebook = change
-                .get("notebook")
-                .ok_or_else(|| "Missing notebook change payload".to_owned())?;
-            tx.execute("INSERT INTO notebooks (id, parent_id, name, slug, icon, color, sort_order, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9) ON CONFLICT(id) DO UPDATE SET parent_id=excluded.parent_id, name=excluded.name, slug=excluded.slug, icon=excluded.icon, color=excluded.color, sort_order=excluded.sort_order, updated_at=excluded.updated_at, is_deleted=0", rusqlite::params![entity_id, notebook.get("parentId").and_then(Value::as_str), string_param(notebook, "name")?, notebook.get("slug").and_then(Value::as_str), notebook.get("icon").and_then(Value::as_str), notebook.get("color").and_then(Value::as_str), notebook.get("sortOrder").and_then(Value::as_i64).unwrap_or(0), string_param(notebook, "createdAt")?, string_param(notebook, "updatedAt")?]).map_err(|e| e.to_string())?;
-            continue;
-        }
-        if operation == "delete" {
-            tx.execute("UPDATE memos SET is_deleted = 1, deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?1", [&entity_id]).map_err(|e| e.to_string())?;
-            continue;
-        }
-        let memo = change
-            .get("memo")
-            .ok_or_else(|| "Missing memo change payload".to_owned())?;
-        let tags = memo
-            .get("tags")
-            .cloned()
-            .unwrap_or_else(|| json!([]))
-            .to_string();
-        let source_memo_ids = memo
-            .get("sourceMemoIds")
-            .and_then(Value::as_array)
-            .cloned()
-            .unwrap_or_default();
-        let source_ids = Value::Array(source_memo_ids.clone()).to_string();
-        let requested_merge_target = memo.get("mergedIntoMemoId").and_then(Value::as_str);
-        // Bootstrap pages are ordered by memo id, not by merge dependency. A
-        // deleted source can therefore arrive before the merged memo it
-        // references. Cache the source without the unresolved foreign key;
-        // the target's sourceMemoIds backfills it when that page arrives.
-        let merge_target = if let Some(target_id) = requested_merge_target {
-            let target_exists = tx
-                .query_row(
-                    "SELECT EXISTS(SELECT 1 FROM memos WHERE id = ?1)",
-                    [target_id],
-                    |row| row.get::<_, bool>(0),
-                )
-                .map_err(|e| e.to_string())?;
-            target_exists.then_some(target_id)
-        } else {
-            None
-        };
-        let content_json = memo
-            .get("contentJson")
-            .cloned()
-            .unwrap_or_else(|| json!({"type":"doc","content":[]}));
-        tx.execute("INSERT INTO memos (id, notebook_id, title, excerpt, tags_json, is_pinned, is_archived, is_deleted, source_memo_ids, merge_source_count, merged_into_memo_id, created_at, updated_at, deleted_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14) ON CONFLICT(id) DO UPDATE SET notebook_id=excluded.notebook_id, title=excluded.title, excerpt=excluded.excerpt, tags_json=excluded.tags_json, is_pinned=excluded.is_pinned, is_archived=excluded.is_archived, is_deleted=excluded.is_deleted, source_memo_ids=excluded.source_memo_ids, merge_source_count=excluded.merge_source_count, merged_into_memo_id=excluded.merged_into_memo_id, updated_at=excluded.updated_at, deleted_at=excluded.deleted_at", rusqlite::params![entity_id, string_param(memo, "notebookId")?, memo.get("title").and_then(Value::as_str), string_param(memo, "excerpt")?, tags, memo.get("isPinned").and_then(Value::as_bool).unwrap_or(false) as i64, memo.get("isArchived").and_then(Value::as_bool).unwrap_or(false) as i64, memo.get("isDeleted").and_then(Value::as_bool).unwrap_or(false) as i64, source_ids, memo.get("mergeSourceCount").and_then(Value::as_i64).unwrap_or(0), merge_target, string_param(memo, "createdAt")?, string_param(memo, "updatedAt")?, memo.get("deletedAt").and_then(Value::as_str)]).map_err(|e| e.to_string())?;
-        tx.execute("INSERT INTO memo_contents (memo_id, content_json, content_markdown, content_text, content_hash, revision) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(memo_id) DO UPDATE SET content_json=excluded.content_json, content_markdown=excluded.content_markdown, content_text=excluded.content_text, content_hash=excluded.content_hash, revision=excluded.revision, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')", rusqlite::params![entity_id, content_json.to_string(), string_param(memo, "contentMarkdown")?, string_param(memo, "contentText")?, string_param(memo, "contentHash")?, memo.get("revision").and_then(Value::as_i64).unwrap_or(0)]).map_err(|e| e.to_string())?;
-        for source_id in source_memo_ids.iter().filter_map(Value::as_str) {
-            tx.execute(
-                "UPDATE memos SET merged_into_memo_id = ?1 WHERE id = ?2",
-                rusqlite::params![entity_id, source_id],
-            )
-            .map_err(|e| e.to_string())?;
-        }
+    for index in ordered {
+        apply_one_sync_change(&tx, &changes[index], rebuilding)?;
     }
     tx.commit().map_err(|e| e.to_string())?;
     Ok(json!({ "applied": changes.len() }))

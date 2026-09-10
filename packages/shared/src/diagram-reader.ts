@@ -1,64 +1,133 @@
 import { attachDiagramScroll } from "./diagram-scroll";
-import type { DiagramDocument } from './diagram';
+import type { DiagramDocument, DiagramKind } from "./diagram";
 import { FLOWCHART_READABLE_MIN_SCALE } from "./diagram-flowchart-style";
+
+type ReaderBox = { x: number; y: number; width: number; height: number };
+type ReaderNode = {
+  getBBox?: () => ReaderBox;
+};
 
 type ReaderGraph = {
   resize: (width: number, height: number) => unknown;
   scale: () => { sx: number; sy: number };
-  zoomTo: (scale: number) => unknown;
+  zoomTo: (scale: number, options?: { center?: { x: number; y: number }; minScale?: number; maxScale?: number }) => unknown;
   zoomToFit: (options: { maxScale: number; padding: number }) => unknown;
   centerContent: () => unknown;
   translate: { (): { tx: number; ty: number }; (x: number, y: number): unknown };
-  on: (event: string, callback: () => void) => unknown;
-  off: (event: string, callback: () => void) => unknown;
+  on: (event: string, callback: (args?: { node?: ReaderNode }) => void) => unknown;
+  off: (event: string, callback: (args?: { node?: ReaderNode }) => void) => unknown;
+  disablePanning?: () => unknown;
+  enablePanning?: () => unknown;
 };
 
-/** Common touch-sized reading controls for Android and iOS WebViews. No document writes. */
+export const DIAGRAM_READER_MIN_SCALE = FLOWCHART_READABLE_MIN_SCALE;
+export const DIAGRAM_READER_MAX_SCALE = 2.5;
+export const DIAGRAM_READER_FIT_PADDING = 28;
+
+export const diagramReaderOpeningMode = (fitScale: number, minScale = DIAGRAM_READER_MIN_SCALE) => (
+  fitScale + 1e-6 >= minScale ? "fit" : "read"
+);
+
+export const diagramReaderFocusNode = (diagram: DiagramDocument) => {
+  if (!diagram.nodes.length) return undefined;
+  if (diagram.kind === "flowchart") {
+    const incoming = new Set(diagram.edges.map((edge) => edge.target));
+    return diagram.nodes.find((node) => !incoming.has(node.id)) ?? diagram.nodes[0];
+  }
+  if (diagram.kind === "architecture") {
+    const content = diagram.nodes.filter((node) => node.shape !== "boundary");
+    return [...(content.length ? content : diagram.nodes)]
+      .sort((left, right) => left.x - right.x || left.y - right.y || left.id.localeCompare(right.id))[0];
+  }
+  return diagram.nodes.find((node) => !node.parentId) ?? diagram.nodes[0];
+};
+
+export const diagramReaderFocusTranslate = (
+  node: ReaderBox,
+  viewport: { width: number; height: number },
+  kind: DiagramKind,
+  scale = 1,
+) => {
+  const cx = node.x + node.width / 2;
+  const cy = kind === "flowchart" ? node.y : node.y + node.height / 2;
+  return {
+    tx: viewport.width / 2 - cx * scale,
+    ty: (kind === "flowchart" ? 32 : viewport.height / 2) - cy * scale,
+  };
+};
+
+export const diagramReaderPinchScale = (
+  startScale: number,
+  startDistance: number,
+  currentDistance: number,
+  minScale = 0.1,
+  maxScale = DIAGRAM_READER_MAX_SCALE,
+) => {
+  if (startDistance < 8) return startScale;
+  return Math.min(maxScale, Math.max(minScale, startScale * (currentDistance / startDistance)));
+};
+
+const touchDistance = (left: Touch, right: Touch) => Math.hypot(left.clientX - right.clientX, left.clientY - right.clientY);
+
+const touchCenter = (left: Touch, right: Touch, bounds: DOMRect) => ({
+  x: (left.clientX + right.clientX) / 2 - bounds.left,
+  y: (left.clientY + right.clientY) / 2 - bounds.top,
+});
+
+/** Touch pan / pinch / tap-to-focus for Android and iOS WebViews. No document writes. */
 export const attachDiagramReader = (
   graph: ReaderGraph, container: HTMLElement, diagram: DiagramDocument,
-  locale: string, dark: boolean,
+  _locale: string, _dark: boolean,
 ) => {
   const detachScroll = attachDiagramScroll(container, graph);
-  const english = locale === 'en-US';
-  const toolbar = document.createElement('div');
-  toolbar.className = 'edgeever-diagram-reader-controls';
-  toolbar.setAttribute('role', 'group');
-  toolbar.setAttribute('aria-label', english ? 'Diagram view' : '图表视图');
-  toolbar.style.cssText = `display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 16px;color:${dark ? '#E8F2ED' : '#173B2E'};`;
-  const addButton = (label: string, action: () => void, aria = label) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = label;
-    button.setAttribute('aria-label', aria);
-    button.style.cssText = 'min-width:44px;min-height:44px;padding:8px;border:1px solid #7f9c8e;border-radius:8px;background:transparent;color:inherit;font:inherit;touch-action:manipulation;';
-    button.onclick = action;
-    toolbar.appendChild(button);
-    return button;
-  };
+  const host = container.parentElement;
+  host?.classList.add("edgeever-diagram-reader-host");
   const fit = () => {
-    graph.zoomToFit({ maxScale: 1, padding: 28 });
-    if (diagram.kind === 'flowchart' && graph.scale().sx < FLOWCHART_READABLE_MIN_SCALE) read();
-    else graph.centerContent();
+    graph.zoomToFit({ maxScale: 1, padding: DIAGRAM_READER_FIT_PADDING });
+    graph.centerContent();
+  };
+  const applyFocus = (node: ReaderBox, scale = 1) => {
+    graph.zoomTo(scale);
+    const next = diagramReaderFocusTranslate(node, { width, height }, diagram.kind, scale);
+    graph.translate(next.tx, next.ty);
   };
   const read = () => {
-    const incoming = new Set(diagram.edges.map((edge) => edge.target));
-    const start = diagram.nodes.find((node) => !incoming.has(node.id)) ?? diagram.nodes[0];
+    const start = diagramReaderFocusNode(diagram);
     if (!start) return;
-    graph.zoomTo(1);
-    graph.translate(width / 2 - start.x - start.width / 2, 32 - start.y);
+    applyFocus(start, 1);
   };
-  addButton('−', () => graph.zoomTo(Math.max(0.1, graph.scale().sx / 1.25)), english ? 'Zoom out' : '缩小');
-  const percent = addButton('100%', () => { graph.zoomTo(1); graph.centerContent(); }, english ? 'Reset zoom to 100%' : '恢复 100%');
-  addButton('+', () => graph.zoomTo(Math.min(2.5, graph.scale().sx * 1.25)), english ? 'Zoom in' : '放大');
-  addButton(english ? 'Fit' : '适应画布', fit);
-  if (diagram.kind === 'flowchart') addButton(english ? 'Read from start' : '从起点阅读', read);
-  const hint = document.createElement('div');
-  hint.textContent = english ? 'Drag the diagram to explore. Use + / − to zoom.' : '拖动画布浏览，使用 ＋ / − 缩放';
-  hint.style.cssText = 'flex-basis:100%;font-size:12px;opacity:.75;';
-  toolbar.appendChild(hint);
-  container.parentNode?.insertBefore(toolbar, container);
-  const update = () => { percent.textContent = `${Math.round(graph.scale().sx * 100)}%`; };
-  graph.on('scale', update);
+  const update = () => { container.dataset.scale = `${Math.round(graph.scale().sx * 100)}`; };
+  graph.on("scale", update);
+  const onNodeFocus = (args?: { node?: ReaderNode }) => {
+    const box = args?.node?.getBBox?.();
+    if (!box) return;
+    applyFocus(box, Math.max(1, graph.scale().sx));
+  };
+  graph.on("node:click", onNodeFocus);
+  let pinch: { distance: number; scale: number } | null = null;
+  const onTouchStart = (event: TouchEvent) => {
+    if (event.touches.length === 2) {
+      pinch = { distance: touchDistance(event.touches[0], event.touches[1]), scale: graph.scale().sx };
+      graph.disablePanning?.();
+    }
+  };
+  const onTouchMove = (event: TouchEvent) => {
+    if (!pinch || event.touches.length !== 2) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const scale = diagramReaderPinchScale(pinch.scale, pinch.distance, touchDistance(event.touches[0], event.touches[1]));
+    graph.zoomTo(scale, { center: touchCenter(event.touches[0], event.touches[1], container.getBoundingClientRect()) });
+  };
+  const onTouchEnd = (event: TouchEvent) => {
+    if (event.touches.length < 2) {
+      pinch = null;
+      graph.enablePanning?.();
+    }
+  };
+  container.addEventListener("touchstart", onTouchStart, { passive: true });
+  container.addEventListener("touchmove", onTouchMove, { capture: true, passive: false });
+  container.addEventListener("touchend", onTouchEnd);
+  container.addEventListener("touchcancel", onTouchEnd);
   let width = 0;
   let height = 0;
   return {
@@ -68,13 +137,26 @@ export const attachDiagramReader = (
       const previous = graph.translate();
       const dx = (nextWidth - width) / 2;
       const dy = (nextHeight - height) / 2;
+      const relayout = first || (height < 80 && nextHeight >= 160);
       width = nextWidth; height = nextHeight;
       graph.resize(width, height);
-      if (first) {
+      if (relayout) {
         fit();
+        if (diagramReaderOpeningMode(graph.scale().sx) === "read") read();
       } else graph.translate(previous.tx + dx, previous.ty + dy);
       update();
     },
-    dispose() { detachScroll(); graph.off('scale', update); toolbar.remove(); },
+    dispose() {
+      detachScroll();
+      graph.off("scale", update);
+      graph.off("node:click", onNodeFocus);
+      container.removeEventListener("touchstart", onTouchStart);
+      container.removeEventListener("touchmove", onTouchMove, true);
+      container.removeEventListener("touchend", onTouchEnd);
+      container.removeEventListener("touchcancel", onTouchEnd);
+      graph.enablePanning?.();
+      host?.classList.remove("edgeever-diagram-reader-host");
+      delete container.dataset.scale;
+    },
   };
 };

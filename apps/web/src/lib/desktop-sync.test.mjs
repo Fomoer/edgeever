@@ -11,6 +11,7 @@ const {
   mergeSyncedMemos,
   normalizeDesktopMemoPayload,
   orderBootstrapNotebooks,
+  orderDesktopSyncChanges,
   resolveDesktopMemoSyncBase,
   rewriteStagedResource,
   shouldAttemptDesktopRecoveryPull,
@@ -100,6 +101,30 @@ describe("desktop bootstrap sync", () => {
       "parent",
       "child",
       "grandchild",
+    ]);
+  });
+
+  test("applies notebook upserts before memos in an incremental change page", () => {
+    const memo = { entityType: "memo", entityId: "memo-1", operation: "upsert", notebook: null };
+    const child = {
+      entityType: "notebook",
+      entityId: "child",
+      operation: "upsert",
+      notebook: { id: "child", parentId: "parent" },
+    };
+    const parent = {
+      entityType: "notebook",
+      entityId: "parent",
+      operation: "upsert",
+      notebook: { id: "parent", parentId: null },
+    };
+    const deleted = { entityType: "notebook", entityId: "gone", operation: "delete", notebook: null };
+
+    expect(orderDesktopSyncChanges([memo, child, deleted, parent]).map((change) => change.entityId)).toEqual([
+      "parent",
+      "child",
+      "gone",
+      "memo-1",
     ]);
   });
 });

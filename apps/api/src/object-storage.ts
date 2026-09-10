@@ -19,6 +19,7 @@ const deriveObjectStorageCredentialKey = (value: string | undefined) => value
 export type ObjectStorageCredentialEnvironment = {
   EDGE_EVER_AUTH_PASSWORD?: string;
   EDGE_EVER_AUTH_PASSWORD_HASH?: string;
+  EDGE_EVER_AUTH_PASSWORD_FALLBACK?: string;
   /** Legacy decryption fallback for credentials saved before auth-derived keys. */
   EDGE_EVER_STORAGE_ENCRYPTION_KEY?: string;
 };
@@ -34,6 +35,7 @@ export const resolveObjectStorageEncryptionKeys = (
   environment: ObjectStorageCredentialEnvironment,
 ) => [
   ...resolveAuthDerivedObjectStorageEncryptionKeys(environment),
+  deriveObjectStorageCredentialKey(resolveCredentialEncryptionKey(environment.EDGE_EVER_AUTH_PASSWORD_FALLBACK)),
   resolveCredentialEncryptionKey(environment.EDGE_EVER_STORAGE_ENCRYPTION_KEY),
 ].filter(Boolean) as string[];
 
@@ -59,6 +61,7 @@ type ObjectStorageEnvironment = {
   storage: { db: DatabaseAdapter; resources: BlobStoreAdapter };
   EDGE_EVER_AUTH_PASSWORD?: string;
   EDGE_EVER_AUTH_PASSWORD_HASH?: string;
+  EDGE_EVER_AUTH_PASSWORD_FALLBACK?: string;
   EDGE_EVER_STORAGE_ENCRYPTION_KEY?: string;
   EDGE_EVER_R2_BUCKET_NAME?: string;
 };

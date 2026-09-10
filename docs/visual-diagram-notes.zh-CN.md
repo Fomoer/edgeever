@@ -29,8 +29,8 @@ IR（Intermediate Representation，中间表示）是图表的结构化事实来
 IR 的核心价值之一，是让 EdgeEver 保留对底层绘图引擎的选择权。IR 负责回答“这张图表达什么”，适配器负责回答“当前引擎如何把它画出来”：
 
 ```text
-                   ┌→ X6 Adapter → Web / 桌面交互编辑
-Diagram IR ────────┼→ Mermaid Adapter → Android / iOS 阅读
+                   ┌→ X6 Adapter → Web / 桌面交互编辑；自有客户端阅读与公开分享
+Diagram IR ────────┼→ Mermaid Adapter → 可移植信封、富文本嵌入图表、IR 解析失败时的降级
                    ├→ Export Adapter → SVG / PNG
                    └→ MCP Tools → AI 读取与修改
 ```
@@ -43,13 +43,15 @@ IR 中应保存稳定的业务语义和必要布局，例如“这是数据库�
 
 节点包含 `id`、`label`、`x`、`y`、`width`、`height`、`shape`，位于系统边界中的节点还包含 `parentId`。连线包含 `source`、`target`，并可携带 `label`、`kind` 和 `bidirectional`。
 
-图表保存为一份可移植 Markdown：正文包含 Mermaid 降级视图，末尾的 `edgeever-diagram-v1` 注释保存 Base64URL 编码的 JSON IR。Mermaid 让不具备交互编辑器的客户端仍可阅读，注释中的 IR 则保证再次打开时可以无损编辑。
+图表保存为一份可移植 Markdown：正文包含 Mermaid 降级视图，末尾的 `edgeever-diagram-v1` 注释保存 Base64URL 编码的 JSON IR。IR 是无损编辑的事实来源。Mermaid fence 是投影，不是实时画布：自有客户端（含公开分享）解析 IR 后由 AntV X6 绘制。保留 fence 是为了让笔记在 EdgeEver 之外的普通 Markdown 中仍可读，以及 IR 注释解析失败时仍能降级显示。
+
+普通富文本笔记里用户手写的 ` ```mermaid ` 代码块是独立功能，不走这套 IR，也不是可视化图表笔记。
 
 IR 的实现和校验集中在 [`packages/shared/src/diagram.ts`](../packages/shared/src/diagram.ts)，避免 Web、Android 和 iOS 各自解释一套格式。
 
 ## 为什么继续使用 AntV X6
 
-EdgeEver 已经围绕 AntV X6 建立了选择、拖拽、缩放、连线、撤销重做、键盘操作、自动布局、历史版本和 PNG/SVG 导出链路。架构图需要的是在这套成熟交互能力上增加语义模型与定制视觉，而不是重新实现一个画布内核。
+EdgeEver 已经围绕 AntV X6 建立了选择、拖拽、缩放、连线、撤销重做、键盘操作、自动布局、历史版本和 PNG/SVG 导出链路。架构图需要的是在这套成熟交互能力上增加语义模型与定制视觉，而不是重新实现一个画布内核。Android 与 iOS 的只读查看也已复用同一套 X6 适配器（`diagramDocumentToX6Cells` 加不可交互的 `Graph`），自有客户端画布不再按「Web 用 X6、移动端用 Mermaid」分轨。
 
 参考项目的价值主要在产品建模和 Typed IR 思路。直接照搬另一套绘图引擎会同时引入其状态管理、坐标体系、交互约定和数据格式，并造成两套画布引擎长期并存。继续复用 X6 可以让三种图表共享基础设施，把开发投入集中在 EdgeEver 自己的语义组件和用户体验上。
 
@@ -57,17 +59,23 @@ EdgeEver 已经围绕 AntV X6 建立了选择、拖拽、缩放、连线、撤�
 
 ## 跨端渲染边界
 
-| 平台 | 能力 | 渲染路径 |
+| 场景 | 能力 | 渲染路径 |
 | --- | --- | --- |
 | Web / PWA / 桌面端 | 创建、编辑、自动布局、历史版本、PNG/SVG 导出 | IR → AntV X6 |
-| Android App | 语义化只读查看，完整保留 IR | IR → Mermaid → 原生笔记 WebView |
-| iOS App | 语义化只读查看，完整保留 IR | IR → Mermaid → WKWebView |
+| Android App | 语义化只读查看，完整保留 IR | IR → AntV X6（笔记 WebView 中的只读 Graph） |
+| iOS App | 语义化只读查看，完整保留 IR | IR → AntV X6（WKWebView 中的只读 Graph） |
+| 图形笔记的公开分享 | 同一份 IR 的只读查看 | IR → AntV X6（只读 Graph） |
+| 普通富文本笔记，含嵌入的 ` ```mermaid ` 代码块 | 创建、编辑、分享、HTML / 打印 / 微信复制 | TipTap；Mermaid 代码块仍走 Mermaid |
+| IR 注释无效或无法解析 | 同一张图形笔记的降级阅读 | Markdown 正文中的 Mermaid fence |
 
 原生 App 暂不开放普通富文本编辑、双击编辑或 AI 改写入口，因为这些路径无法表达图表 IR，可能把结构化图表覆盖成普通文本。用户可在 App 中阅读、同步、分享和查看历史版本，在 Web 或桌面端完成图表编辑。
+
+移动端早期用 Mermaid fence 看图，是因为原生 WebView 尚未封装 AntV X6。那条双轨已经是历史。自有客户端画布（含公开分享）由 IR 经 X6 绘制图形笔记。普通富文本里嵌入的 Mermaid 图表是独立功能，继续走 Mermaid 渲染器。
 
 ## 已确定的设计原则
 
 - 图表语义由 IR 决定，渲染引擎不是数据源。
+- 自有客户端画布由 IR 经 X6 绘制图形笔记。普通富文本里的 ` ```mermaid ` 代码块仍走 Mermaid。图形笔记里持久化的 Mermaid fence 只是可移植信封和降级路径，不是实时画布。
 - 架构组件必须“看外观就知道用途”，名称只是补充。
 - 系统边界是容器关系，不是可连线的普通业务节点。
 - Web 与原生 App 使用同一份持久化数据，不维护平台专属图表副本。
@@ -101,3 +109,5 @@ IR 也可能产生负担：如果格式过度贴近 X6、语义过少、版本�
 ## 后续演进方向
 
 如果要实现原生 App 完整编辑，应继续复用同一 IR，并单独设计触控选择、拖拽、连线、缩放、键盘避让和大图性能。是否复用 X6 WebView 或开发原生画布，应通过原型和性能测试决定，而不应改变已保存的数据格式。
+
+图形笔记的 HTML / 打印 / 微信复制若走通用富文本管道，仍会快照 TipTap HTML 而不是 X6 画布。应先让这些导出与只读 X6 快照对齐，再考虑改动 Markdown 信封。

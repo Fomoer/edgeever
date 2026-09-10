@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ExternalLink, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, ExternalLink, LoaderCircle, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { buildGitHubFeedbackUrl, type DesktopOutboxItem, type Notebook } from "@edgeever/shared";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppConfirmDialog } from "@/components/dialogs/ConfirmDialogs";
 import { getWebSystemInfoItems } from "@/components/settings/SystemInfoCard";
+import { api, getConfiguredDesktopApiBaseUrl } from "@/lib/api";
 import {
   createDesktopSyncDiagnosticText,
   discardDesktopSyncIssue,
@@ -15,6 +17,7 @@ import {
   retryDesktopSyncIssue,
   type DesktopGlobalSyncIssue,
 } from "@/lib/desktop-sync";
+import { getClientRuntimeDiagnostics } from "@/lib/system-diagnostics";
 
 const isRecoverableMissingMemo = (item: DesktopOutboxItem) => item.kind === "memo.update"
   && item.status === "error"
@@ -43,6 +46,32 @@ export const DesktopSyncIssuesDialog = ({
   const [recovering, setRecovering] = useState<DesktopOutboxItem | null>(null);
   const [discarding, setDiscarding] = useState<DesktopOutboxItem | null>(null);
   const [recoveryNotebookId, setRecoveryNotebookId] = useState("");
+  const instanceUrl = getConfiguredDesktopApiBaseUrl();
+  const healthQuery = useQuery({
+    queryKey: ["instance-health", instanceUrl],
+    queryFn: async () => {
+      const startedAt = performance.now();
+      const health = await api.getInstanceHealth();
+      return { health, latencyMs: Math.max(0, Math.round(performance.now() - startedAt)) };
+    },
+    enabled: open && Boolean(instanceUrl),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+  const clientRuntimeQuery = useQuery({
+    queryKey: ["system-info-client-runtime"],
+    queryFn: getClientRuntimeDiagnostics,
+    enabled: open,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: 1,
+  });
+  const releaseQuery = useQuery({
+    queryKey: ["instance-release", instanceUrl],
+    queryFn: () => api.getInstanceRelease(),
+    enabled: open && Boolean(instanceUrl),
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
 
   const availableNotebooks = notebooks;
   const dateTimeFormatter = useMemo(
@@ -58,11 +87,17 @@ export const DesktopSyncIssuesDialog = ({
       text: createDesktopSyncDiagnosticText(items, globalIssue),
     },
     privacyNotice: t("feedback.privacyNotice"),
-    systemInfo: getWebSystemInfoItems(t, i18n.language),
+    systemInfo: getWebSystemInfoItems(t, i18n.language, {
+      clientRuntime: clientRuntimeQuery.data,
+      instance: healthQuery.data?.health,
+      instanceVersion: releaseQuery.data?.version,
+    }),
     systemInfoHeading: t("feedback.systemInfoHeading"),
     systemInfoNotice: t("feedback.systemInfoNotice"),
     titlePrefix: t("notebookPane.syncDetails.reportTitlePrefix"),
-  }), [globalIssue, i18n.language, items, t]);
+  }), [clientRuntimeQuery.data, globalIssue, healthQuery.data, i18n.language, items, releaseQuery.data, t]);
+  const collectingSystemInfo = clientRuntimeQuery.isFetching || healthQuery.isFetching || releaseQuery.isFetching;
+  const canReportIssue = (items.length > 0 || Boolean(globalIssue)) && !collectingSystemInfo;
   const formatTime = (value: string | null | undefined) => {
     if (!value) return null;
     const time = new Date(value);
@@ -207,15 +242,17 @@ export const DesktopSyncIssuesDialog = ({
           </div>
 
           <DialogFooter className="gap-2 sm:justify-between">
-            <Button variant="outline" disabled={items.length === 0 && !globalIssue} asChild={items.length > 0 || Boolean(globalIssue)}>
-              {items.length > 0 || globalIssue ? (
+            <Button variant="outline" disabled={!canReportIssue} asChild={canReportIssue}>
+              {canReportIssue ? (
                 <a href={reportIssueUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="mr-1.5 h-4 w-4" />
                   {t("notebookPane.syncDetails.reportIssue")}
                 </a>
               ) : (
                 <span>
-                  <ExternalLink className="mr-1.5 h-4 w-4" />
+                  {collectingSystemInfo
+                    ? <LoaderCircle className="mr-1.5 h-4 w-4 animate-spin" />
+                    : <ExternalLink className="mr-1.5 h-4 w-4" />}
                   {t("notebookPane.syncDetails.reportIssue")}
                 </span>
               )}

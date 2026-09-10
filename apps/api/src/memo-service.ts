@@ -21,6 +21,7 @@ import { auditStatement } from "./audit";
 import type { AppContext, AuditActor, AuthContext, Bindings } from "./api-context";
 import { AppError } from "./app-error";
 import { createId, isoNow, parseJsonArray } from "./entity-utils";
+import { workspaceInboxId } from "./notebook-service";
 import { sha256 } from "./hash-utils";
 import { getRequiredString } from "./mcp-json-rpc";
 import {
@@ -596,7 +597,13 @@ export const restoreMemosRecord = async (
   const needsInbox = rows.results.some((row) => !activeNotebookIds.has(row.notebook_id));
 
   const inbox = needsInbox
-    ? await db.prepare(`SELECT id FROM notebooks WHERE workspace_id = ? AND slug = 'inbox' AND is_deleted = 0 LIMIT 1`).bind(workspaceId).first<{ id: string }>()
+    ? await db.prepare(
+      `SELECT id FROM notebooks
+       WHERE workspace_id = ? AND is_deleted = 0
+         AND (id = ? OR id = 'nb_inbox' OR slug = 'inbox')
+       ORDER BY CASE WHEN id = ? THEN 0 WHEN id = 'nb_inbox' THEN 1 ELSE 2 END
+       LIMIT 1`,
+    ).bind(workspaceId, workspaceInboxId(workspaceId), workspaceInboxId(workspaceId)).first<{ id: string }>()
     : null;
   if (needsInbox && !inbox) {
     throw new AppError("restore_notebook_missing", "Original notebooks were deleted and the default inbox is unavailable.", 409);

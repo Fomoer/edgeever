@@ -31,6 +31,12 @@ type InstanceSystemDiagnostics = Pick<InstanceHealth, "build" | "containerImageS
   runtime?: string | null;
 };
 
+export type SystemInfoDiagnostics = {
+  clientRuntime?: ClientRuntimeDiagnostics | null;
+  instance?: Partial<InstanceSystemDiagnostics> | null;
+  instanceVersion?: string | null;
+};
+
 type SystemInfoGroup = {
   id: "cloud" | "client" | "connection";
   title: string;
@@ -82,11 +88,7 @@ const getColSpanClass = (colSpan?: SystemInfoItem["colSpan"]) => {
 const getWebSystemInfoGroups = (
   t: (key: string) => string,
   language: string,
-  diagnostics: {
-    clientRuntime?: ClientRuntimeDiagnostics | null;
-    instance?: Partial<InstanceSystemDiagnostics> | null;
-    instanceVersion?: string | null;
-  } = {},
+  diagnostics: SystemInfoDiagnostics = {},
 ): SystemInfoGroup[] => {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || t("systemInfo.unknown");
   const userAgent = navigator.userAgent;
@@ -200,12 +202,8 @@ const getWebSystemInfoGroups = (
 export const getWebSystemInfoItems = (
   t: (key: string) => string,
   language: string,
-  instanceRuntime?: string | null,
-  instanceVersion?: string | null,
-): SystemInfoItem[] => getWebSystemInfoGroups(t, language, {
-  instance: { runtime: instanceRuntime },
-  instanceVersion,
-})
+  diagnostics: SystemInfoDiagnostics = {},
+): SystemInfoItem[] => getWebSystemInfoGroups(t, language, diagnostics)
   .flatMap((group) => group.items);
 
 export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {

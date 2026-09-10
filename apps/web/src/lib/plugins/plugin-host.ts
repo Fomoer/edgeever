@@ -17,8 +17,10 @@ import {
   type PluginNoteSummary,
   type PluginPanel,
   type PluginOpenNoteOptions,
+  type PluginPanelChrome,
   type PluginPanelCloseDecision,
   type PluginPanelOpenOptions,
+  normalizePluginPanelChrome,
   type PluginPermission,
   type PluginApiErrorCode,
   type PluginResource,
@@ -36,7 +38,7 @@ import { markdownToDoc } from "@edgeever/shared";
 import type { EdgeEverRepository } from "@/lib/repository";
 import { WebPluginSecretStore, type PluginSecretStorage } from "@/lib/plugins/plugin-secret-store";
 import { WebPluginPackageStore, type CachedPluginPackage, type PluginPackageStorage } from "@/lib/plugins/plugin-package-store";
-import { downloadGithubExtension, extensionManifestsEqual, parseGithubRepositoryUrl, sha256Hex } from "@/lib/plugins/github-plugin-distribution";
+import { downloadGithubExtension, downloadPinnedGithubExtension, extensionManifestsEqual, parseGithubRepositoryUrl, sha256Hex } from "@/lib/plugins/github-plugin-distribution";
 import { subscribeRepositoryMutations, type RepositoryMutationEvent } from "@/lib/repository-events";
 
 const INSTALLED_EXTENSIONS_STORAGE_KEY = "edgeever.extensions.installed.v1";
@@ -154,6 +156,10 @@ export interface PluginEditorAdapter {
 
 export interface PluginNavigationAdapter {
   openNote(noteId: string, notebookId: string, options?: PluginOpenNoteOptions): void | Promise<void>;
+}
+
+export interface PluginPanelChromeAdapter {
+  set(chrome: PluginPanelChrome): void;
 }
 
 export interface PluginPanelAdapter {
@@ -497,7 +503,12 @@ export class EdgeEverPluginHost {
   }
 
   async installFromGithubRepository(input: string, marketplaceEntry?: MarketplaceEntry, confirmedManifest?: ExtensionManifest) {
-    const downloaded = await downloadGithubExtension(input);
+    // Official marketplace entries carry the live GitHub version after marketplace resolution.
+    const downloaded = marketplaceEntry
+      ? await downloadPinnedGithubExtension(input, marketplaceEntry.verification.version, {
+        requireStyles: Boolean(marketplaceEntry.verification.checksums?.stylesCss),
+      })
+      : await downloadGithubExtension(input);
     assertConfirmedManifest(confirmedManifest, downloaded.manifest);
     if (marketplaceEntry) this.assertMarketplaceDownload(marketplaceEntry, downloaded.manifest, downloaded.checksums);
     return this.replaceInstalledExtension(downloaded.manifest, downloaded.manifestUrl, {
@@ -717,6 +728,7 @@ export class EdgeEverPluginHost {
     container: HTMLElement,
     options?: PluginPanelOpenOptions,
     onRequestClose?: () => void | Promise<void>,
+    chromeAdapter?: PluginPanelChromeAdapter,
   ) {
     const key = `${pluginId}:${panelId}`;
     const panel = this.panels.get(key);
@@ -727,6 +739,11 @@ export class EdgeEverPluginHost {
       state: normalizePanelState(options?.state),
       requestClose: async () => {
         await onRequestClose?.();
+      },
+      shell: {
+        set(chrome) {
+          chromeAdapter?.set(normalizePluginPanelChrome(chrome));
+        },
       },
     });
     if (this.panels.get(key) !== panel) {

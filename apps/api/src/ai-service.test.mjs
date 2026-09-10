@@ -322,6 +322,45 @@ describe("AI model service", () => {
     })).toBeUndefined();
   });
 
+  test("decrypts credentials with persisted fallback secrets after rotation", async () => {
+    const passwordEncrypted = await encryptSecret(
+      "provider-key",
+      resolvePrimaryAiCredentialEncryptionKey({ EDGE_EVER_AUTH_PASSWORD: "original-password" }),
+    );
+    await expect(decryptAiCredential(passwordEncrypted, {
+      EDGE_EVER_AUTH_PASSWORD: "rotated-password",
+      EDGE_EVER_AUTH_PASSWORD_FALLBACK: "original-password",
+    })).resolves.toBe("provider-key");
+
+    const credentialsEncrypted = await encryptSecret(
+      "provider-key",
+      resolvePrimaryAiCredentialEncryptionKey({
+        EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY: "original-credentials-key",
+      }),
+    );
+    await expect(decryptAiCredential(credentialsEncrypted, {
+      EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY: "rotated-credentials-key",
+      EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY_PREVIOUS: "original-credentials-key",
+    })).resolves.toBe("provider-key");
+  });
+
+  test("marks mapped providers when saved credentials are unavailable", () => {
+    const settings = mapAiProviderConfig({
+      id: "aip_personal",
+      workspace_id: "ws_personal",
+      provider: "openai-compatible",
+      display_name: "My model",
+      base_url: "https://models.example.com/v1",
+      api_key_encrypted: "v1.secret.ciphertext",
+      is_enabled: 1,
+      created_at: "2026-08-10T00:00:00.000Z",
+      updated_at: "2026-08-10T00:00:00.000Z",
+    }, [], true);
+    expect(settings.credentialsUnavailable).toBe(true);
+    expect(settings.hasApiKey).toBe(true);
+    expect(JSON.stringify(settings)).not.toContain("ciphertext");
+  });
+
   test("never exposes the encrypted API key in settings", () => {
     const settings = mapAiProviderConfig({
       id: "aip_personal",

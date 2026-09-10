@@ -555,6 +555,7 @@ describe("EdgeEverPluginHost", () => {
       () => { requestedPanelClose = true; },
     );
     expect(panelContainer.panelState).toEqual({ resourceId: "resource-1" });
+    expect(panelContainer.hasPanelShell).toBe(true);
     await panelContainer.requestPanelClose();
     expect(requestedPanelClose).toBe(true);
     disposePanel();

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseExtensionManifest, parseMarketplaceRegistry } from "./index.ts";
+import { normalizePluginPanelChrome, parseExtensionManifest, parseMarketplaceRegistry } from "./index.ts";
 
 describe("extension manifests", () => {
   test("normalizes a plugin manifest", () => {
@@ -129,16 +129,42 @@ describe("extension manifests", () => {
           { key: "limit", type: "number", label: "Limit", default: 10, min: 1, max: 100 },
           { key: "enabled", type: "boolean", label: "Enabled", default: true },
           { key: "format", type: "select", label: "Format", options: [{ value: "md", label: "Markdown" }] },
+          {
+            key: "topics.ai",
+            type: "boolean",
+            label: "AI",
+            default: true,
+            className: "plugin-owned-layout",
+            list: {
+              title: "AI sources",
+              actionLabel: "View sources",
+              className: "ignored",
+              items: [
+                { title: "OpenAI News", description: "openai.com", html: "<script>" },
+                { title: "Google AI" },
+              ],
+            },
+          },
         ],
       },
     });
 
     expect(manifest.type).toBe("plugin");
-    expect(manifest.settings?.fields).toHaveLength(5);
+    expect(manifest.settings?.fields).toHaveLength(6);
     expect(manifest.settings?.fields[0]).toMatchObject({ key: "endpoint", default: "https://example.com" });
     expect(manifest.settings?.fields[0]).not.toHaveProperty("className");
     expect(manifest.settings?.fields[0]).not.toHaveProperty("style");
     expect(manifest.settings?.fields[0]).not.toHaveProperty("html");
+    expect(manifest.settings?.fields[5]).toMatchObject({
+      key: "topics.ai",
+      list: {
+        title: "AI sources",
+        actionLabel: "View sources",
+        items: [{ title: "OpenAI News", description: "openai.com" }, { title: "Google AI" }],
+      },
+    });
+    expect(manifest.settings?.fields[5].list).not.toHaveProperty("className");
+    expect(manifest.settings?.fields[5].list.items[0]).not.toHaveProperty("html");
   });
 
   test("rejects unsafe or ambiguous plugin settings", () => {
@@ -160,6 +186,10 @@ describe("extension manifests", () => {
       ...base,
       settings: { fields: [{ key: "mode", type: "select", label: "Mode", options: [{ value: "a", label: "A" }, { value: "a", label: "Again" }] }] },
     })).toThrow("duplicate select value");
+    expect(() => parseExtensionManifest({
+      ...base,
+      settings: { fields: [{ key: "topics.ai", type: "boolean", label: "AI", list: { items: [] } }] },
+    })).toThrow("between 1 and 100 items");
   });
 });
 
@@ -212,5 +242,34 @@ describe("marketplace registry", () => {
       verification: { version: "1.0.0", checksums: { manifestJson: "a".repeat(64) } },
     };
     expect(() => parseMarketplaceRegistry({ registryVersion: "1", updatedAt: "2026-08-16T00:00:00Z", entries: [entry, entry] })).toThrow("Duplicate");
+  });
+});
+
+describe("panel chrome", () => {
+  test("keeps known chrome fields and drops unknown toolbar items", () => {
+    const onAction = () => {};
+    const chrome = normalizePluginPanelChrome({
+      header: { title: "Tasks", description: null, actions: [{ id: "refresh", label: "Refresh", variant: "primary" }] },
+      toolbar: [
+        { type: "search", key: "q", placeholder: "Search", value: "ship" },
+        { type: "tabs", key: "view", value: "open", options: [{ value: "open", label: "Open" }, { value: "done", label: "Done" }] },
+        { type: "weird", key: "nope" },
+      ],
+      empty: { title: "Nothing here", description: "Create a task" },
+      onAction,
+    });
+    expect(chrome.header).toEqual({ title: "Tasks", description: null, actions: [{ id: "refresh", label: "Refresh", variant: "primary" }] });
+    expect(chrome.toolbar).toEqual([
+      { type: "search", key: "q", placeholder: "Search", value: "ship" },
+      { type: "tabs", key: "view", value: "open", options: [{ value: "open", label: "Open" }, { value: "done", label: "Done" }] },
+    ]);
+    expect(chrome.empty).toEqual({ title: "Nothing here", description: "Create a task" });
+    expect(chrome.onAction).toBe(onAction);
+  });
+
+  test("falls back to the first tab option when the value is unknown", () => {
+    expect(normalizePluginPanelChrome({
+      toolbar: [{ type: "tabs", key: "view", value: "missing", options: [{ value: "open", label: "Open" }] }],
+    }).toolbar).toEqual([{ type: "tabs", key: "view", value: "open", options: [{ value: "open", label: "Open" }] }]);
   });
 });

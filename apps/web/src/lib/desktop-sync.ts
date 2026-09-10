@@ -495,9 +495,9 @@ export const shouldAttemptDesktopRecoveryPull = (
   && phase !== "finalize_resource_remap"
   && shouldPullDesktopChanges(status, online);
 
-export const orderBootstrapNotebooks = (notebooks: SyncBootstrapResponse["notebooks"]) => {
+export const orderBootstrapNotebooks = <T extends { id: string; parentId?: string | null }>(notebooks: T[]) => {
   const remaining = new Map(notebooks.map((notebook) => [notebook.id, notebook]));
-  const ordered: SyncBootstrapResponse["notebooks"] = [];
+  const ordered: T[] = [];
 
   while (remaining.size > 0) {
     let added = 0;
@@ -514,6 +514,32 @@ export const orderBootstrapNotebooks = (notebooks: SyncBootstrapResponse["notebo
   }
 
   return ordered;
+};
+
+export const orderDesktopSyncChanges = <T extends {
+  entityType: string;
+  entityId: string;
+  operation: string;
+  notebook?: { id: string; parentId?: string | null } | null;
+}>(changes: T[]) => {
+  const notebookUpserts: T[] = [];
+  const notebookDeletes: T[] = [];
+  const rest: T[] = [];
+  for (const change of changes) {
+    if (change.entityType !== "notebook") rest.push(change);
+    else if (change.operation === "delete") notebookDeletes.push(change);
+    else notebookUpserts.push(change);
+  }
+  const byId = new Map(notebookUpserts.map((change) => [change.entityId, change]));
+  const orderedUpserts = orderBootstrapNotebooks(
+    notebookUpserts.map((change) => change.notebook ?? { id: change.entityId, parentId: null }),
+  ).flatMap((notebook) => {
+    const change = byId.get(notebook.id);
+    return change ? [change] : [];
+  });
+  const orderedIds = new Set(orderedUpserts.map((change) => change.entityId));
+  const leftoverUpserts = notebookUpserts.filter((change) => !orderedIds.has(change.entityId));
+  return [...orderedUpserts, ...leftoverUpserts, ...notebookDeletes, ...rest];
 };
 
 const bootstrapDesktopMirror = async (reset: boolean) => {
@@ -549,7 +575,7 @@ const pullRemoteChanges = async () => {
     return;
   }
   while (response.changes.length > 0) {
-    await request("sync.apply", { changes: response.changes });
+    await request("sync.apply", { changes: orderDesktopSyncChanges(response.changes) });
     cursor = response.cursor;
     if (!response.hasMore) break;
     response = await api.syncChanges({ cursor, limit: 200 });

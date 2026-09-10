@@ -1,5 +1,20 @@
 import type { MemoDetail, TagSummary } from "@edgeever/shared";
 
+export const memoHasExactTag = (tags: readonly string[] | null | undefined, tag: string) => {
+  const normalized = tag.trim().toLocaleLowerCase();
+  if (!normalized) return true;
+  return (tags ?? []).some((value) => value.trim().toLocaleLowerCase() === normalized);
+};
+
+export const filterLocalMemosByExactTag = <T extends { tags: string[] }>(
+  memos: T[],
+  tag?: string | null
+): T[] => {
+  const normalized = tag?.trim() ?? "";
+  if (!normalized) return memos;
+  return memos.filter((memo) => memoHasExactTag(memo.tags, normalized));
+};
+
 export const summarizeMobileTags = (memos: MemoDetail[]): TagSummary[] => {
   const tags = new Map<string, { memoCount: number; updatedAt: string | null }>();
 

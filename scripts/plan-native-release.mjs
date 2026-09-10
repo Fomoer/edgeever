@@ -53,6 +53,8 @@ export const planNativeRelease = (platform, changedFiles) => {
           "bun.lock",
           "scripts/create-mac-update-metadata.mjs",
           "scripts/create-windows-update-metadata.mjs",
+          "scripts/verify-linux-update-release.mjs",
+          "scripts/verify-linux-appimage-update.mjs",
           "scripts/desktop-icns.mjs",
           "scripts/prepare-desktop-icons.mjs",
           "scripts/pe-imports.mjs",
@@ -60,7 +62,9 @@ export const planNativeRelease = (platform, changedFiles) => {
           "scripts/sign-windows-update-manifest.mjs",
           "scripts/verify-windows-update-release.mjs",
           "scripts/verify-desktop-package.mjs",
+          "scripts/verify-desktop-cross-version-startup.mjs",
           "scripts/verify-packaged-desktop-startup.mjs",
+          "scripts/verify-renderer-origin-migration.mjs",
         ]);
 
   const relevantChanges = runtimeChangedFiles.filter(

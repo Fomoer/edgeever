@@ -5,7 +5,7 @@ export const imageResourceMenuPosition: Partial<ComputePositionConfig> = {
   placement: "bottom-end",
   strategy: "fixed",
   middleware: [
-    offset(8),
+    offset(({ rects }) => Math.max(8, 56 - rects.reference.height)),
     flip({ padding: 12 }),
     shift({ padding: 12 }),
   ],

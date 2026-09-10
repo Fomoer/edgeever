@@ -736,7 +736,7 @@ const DIAGRAM_LAYOUT_STRATEGIES: Record<DiagramKind, DiagramLayoutStrategy> = {
   "mind-map": {
     kind: "mind-map",
     layout: computeMindMapLayout,
-    viewport: { anchor: "root", maxScale: 1 },
+    viewport: { anchor: "root", maxScale: 1, minScale: FLOWCHART_READABLE_MIN_SCALE },
   },
   flowchart: {
     kind: "flowchart",

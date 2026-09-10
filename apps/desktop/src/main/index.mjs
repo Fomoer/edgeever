@@ -4,7 +4,7 @@ import { appendFile, mkdir, open, readdir, readFile, rename, rm, stat, unlink, w
 import { basename, join } from "node:path";
 import { Readable } from "node:stream";
 import { execFile, spawn } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { release as operatingSystemRelease } from "node:os";
 import { SidecarRpcClient } from "./rpc.mjs";
 import { resourceRequestHeaders } from "./resource-request.mjs";
@@ -39,12 +39,32 @@ import {
   fetchTrustedWindowsUpdate,
   verifyDownloadedWindowsUpdate,
 } from "./windows-update-trust.mjs";
+import { instanceReleaseVersionFromPayload, shouldHoldAutoRestartUpdate } from "./instance-update-gate.mjs";
 import electronUpdater from "electron-updater";
 import { createPluginPublicNetworkRuntime } from "./plugin-public-network.mjs";
+import { shouldQuitAfterAllWindowsClosed } from "./window-lifecycle.mjs";
+import {
+  DESKTOP_APP_ENTRY_URL,
+  DESKTOP_APP_ORIGIN,
+  DESKTOP_APP_SCHEME,
+  createDesktopAppProtocolHandler,
+} from "./app-protocol.mjs";
+import {
+  RENDERER_STORAGE_MIGRATION_MARKER,
+  migrateRendererStorageOrigin,
+} from "./renderer-storage-migration.mjs";
 
 const { autoUpdater } = electronUpdater;
 
-const requestedUserDataDirectory = userDataDirectoryFromArguments(process.argv);
+const linuxUpdateTestMode = process.platform === "linux"
+  && process.env.GITHUB_ACTIONS === "true"
+  && process.env.EDGE_EVER_DESKTOP_UPDATE_TEST === "1";
+const linuxUpdateTestFeedUrl = linuxUpdateTestMode
+  ? process.env.EDGE_EVER_DESKTOP_UPDATE_TEST_FEED_URL || ""
+  : "";
+const requestedUserDataDirectory = linuxUpdateTestMode
+  ? process.env.EDGE_EVER_DESKTOP_UPDATE_TEST_USER_DATA || userDataDirectoryFromArguments(process.argv)
+  : userDataDirectoryFromArguments(process.argv);
 if (requestedUserDataDirectory) app.setPath("userData", requestedUserDataDirectory);
 
 const currentDirectory = fileURLToPath(new URL(".", import.meta.url));
@@ -96,6 +116,7 @@ let updateDownloadInFlight = null;
 let updateCheckTimer = null;
 let lastUpdateCheckAt = 0;
 let downloadedUpdateVersion = null;
+let heldUpdateVersion = null;
 let promptedUpdateVersion = null;
 let trustedWindowsUpdate = null;
 let windowsDownloadedUpdateVerified = false;
@@ -113,6 +134,8 @@ let rendererUnresponsiveTimer = null;
 const pluginPublicNetwork = createPluginPublicNetworkRuntime();
 let rendererUnresponsiveDialogOpen = false;
 let recoveredAfterAbnormalExit = false;
+let usePrivateAppProtocol = false;
+let rendererOriginMigrationInProgress = false;
 const pendingScheduledTaskRuns = [];
 const sendScheduledTaskRun = (task, scheduledFor) => {
   const payload = { task, scheduledFor: scheduledFor.toISOString() };
@@ -163,6 +186,9 @@ const migrateLegacyAccountData = async (accountId) => {
 };
 
 protocol.registerSchemesAsPrivileged([{
+  scheme: DESKTOP_APP_SCHEME,
+  privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true, codeCache: true },
+}, {
   scheme: "edgeever-resource",
   privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true },
 }, {
@@ -185,7 +211,7 @@ const writeDiagnostic = async (event, details = {}) => {
 
 const desktopRuntimeSystemInfo = () => ({
   appVersion: app.getVersion(),
-  autoUpdateSupported: process.platform !== "linux",
+  autoUpdateSupported: true,
   platform: process.platform,
   architecture: process.arch,
   osVersion: process.getSystemVersion?.() || "unknown",
@@ -725,6 +751,47 @@ const registerResourceProtocol = () => {
   });
 };
 
+const registerDesktopAppProtocol = () => {
+  protocol.handle(DESKTOP_APP_SCHEME, createDesktopAppProtocolHandler({
+    webRoot: join(process.resourcesPath, "web"),
+  }));
+};
+
+const preparePackagedRendererOrigin = async () => {
+  if (!app.isPackaged || process.env.EDGE_EVER_DESKTOP_WEB_URL) return;
+  if (process.env.EDGE_EVER_FORCE_FILE_RENDERER === "1") {
+    void writeDiagnostic("renderer.app-protocol-disabled");
+    return;
+  }
+
+  const bridgePath = join(process.resourcesPath, "web/desktop-storage-bridge.html");
+  rendererOriginMigrationInProgress = true;
+  try {
+    const result = await migrateRendererStorageOrigin({
+      createWindow: () => new BrowserWindow({
+        show: false,
+        webPreferences: {
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+        },
+      }),
+      legacyBridgeUrl: pathToFileURL(bridgePath).href,
+      targetBridgeUrl: `${DESKTOP_APP_ORIGIN}/desktop-storage-bridge.html`,
+      markerPath: join(app.getPath("userData"), RENDERER_STORAGE_MIGRATION_MARKER),
+    });
+    usePrivateAppProtocol = true;
+    void writeDiagnostic("renderer.origin-ready", { state: result.state, counts: result.counts });
+  } catch (error) {
+    usePrivateAppProtocol = false;
+    void writeDiagnostic("renderer.origin-migration-failed", {
+      message: String(error?.message || error).slice(0, 2000),
+    });
+  } finally {
+    rendererOriginMigrationInProgress = false;
+  }
+};
+
 const refreshTrayMenu = () => {
   if (!tray) return;
   tray.destroy();
@@ -741,9 +808,52 @@ const publishDesktopUpdateStatus = () => {
   mainWindow.webContents.send("desktop:update-status-changed", desktopUpdateStatus());
 };
 
+const readInstanceReleaseVersion = async () => {
+  if (!configuredApiBaseUrl) return null;
+  try {
+    const response = await net.fetch(`${configuredApiBaseUrl}/api/release`);
+    if (!response.ok) return null;
+    return instanceReleaseVersionFromPayload(await response.json());
+  } catch {
+    return null;
+  }
+};
+
+const holdAutoRestartUpdate = async (version) => {
+  heldUpdateVersion = version || "unknown";
+  autoUpdater.autoInstallOnAppQuit = false;
+  updateState = "available";
+  downloadedUpdateVersion = version || downloadedUpdateVersion;
+  refreshTrayMenu();
+  publishDesktopUpdateStatus();
+  await writeDiagnostic("update.held-for-instance", { version: heldUpdateVersion });
+};
+
+const releaseHeldAutoRestartUpdate = async () => {
+  if (!heldUpdateVersion || linuxUpdateTestMode) return false;
+  const instanceVersion = await readInstanceReleaseVersion();
+  if (shouldHoldAutoRestartUpdate(heldUpdateVersion, instanceVersion)) return false;
+  const version = heldUpdateVersion === "unknown" ? downloadedUpdateVersion : heldUpdateVersion;
+  heldUpdateVersion = null;
+  if (process.platform !== "win32" || windowsDownloadedUpdateVerified) {
+    autoUpdater.autoInstallOnAppQuit = true;
+  }
+  updateState = "downloaded";
+  downloadedUpdateVersion = version || downloadedUpdateVersion;
+  refreshTrayMenu();
+  publishDesktopUpdateStatus();
+  await writeDiagnostic("update.released-for-instance", { version: downloadedUpdateVersion });
+  await promptForDownloadedUpdate(downloadedUpdateVersion).catch((error) => {
+    promptedUpdateVersion = null;
+    void writeDiagnostic("update.prompt-failed", { message: error.message });
+  });
+  return true;
+};
+
 const installDownloadedUpdate = () => {
   if (
     updateState !== "downloaded" ||
+    heldUpdateVersion ||
     (process.platform === "win32" && !windowsDownloadedUpdateVerified)
   ) return { started: false };
   // The normal window close handler hides the app. Mark this as a real quit
@@ -805,7 +915,7 @@ const promptForDownloadedUpdate = async (version) => {
 };
 
 const checkForDesktopUpdate = (reason, { force = false, throwOnError = false } = {}) => {
-  if (process.platform === "linux" || !app.isPackaged || process.env.EDGE_EVER_DISABLE_AUTO_UPDATE === "1" || updateState === "downloaded") {
+  if (!app.isPackaged || process.env.EDGE_EVER_DISABLE_AUTO_UPDATE === "1" || updateState === "downloaded") {
     return Promise.resolve(null);
   }
   if (updateCheckInFlight) {
@@ -816,8 +926,11 @@ const checkForDesktopUpdate = (reason, { force = false, throwOnError = false } =
   if (!force && now - lastUpdateCheckAt < updateCheckFocusThrottleMs) return Promise.resolve(null);
   lastUpdateCheckAt = now;
   void writeDiagnostic("update.check-started", { reason });
-  updateCheckInFlight = autoUpdater.checkForUpdates()
-    .then(async (result) => {
+  updateCheckInFlight = Promise.resolve()
+    .then(() => releaseHeldAutoRestartUpdate())
+    .then(async (released) => {
+      if (released || updateState === "downloaded") return null;
+      const result = await autoUpdater.checkForUpdates();
       if (process.platform === "win32" && result?.isUpdateAvailable) {
         trustedWindowsUpdate = await fetchTrustedWindowsUpdate({
           version: result.updateInfo.version,
@@ -837,12 +950,14 @@ const checkForDesktopUpdate = (reason, { force = false, throwOnError = false } =
       return result;
     })
     .catch(async (error) => {
-      updateState = "idle";
-      downloadedUpdateVersion = null;
-      trustedWindowsUpdate = null;
-      windowsDownloadedUpdateVerified = false;
-      refreshTrayMenu();
-      publishDesktopUpdateStatus();
+      if (!heldUpdateVersion) {
+        updateState = "idle";
+        downloadedUpdateVersion = null;
+        trustedWindowsUpdate = null;
+        windowsDownloadedUpdateVerified = false;
+        refreshTrayMenu();
+        publishDesktopUpdateStatus();
+      }
       await writeDiagnostic("update.check-failed", { reason, message: error.message });
       throw error;
     })
@@ -851,9 +966,18 @@ const checkForDesktopUpdate = (reason, { force = false, throwOnError = false } =
 };
 
 const configureAutoUpdater = () => {
-  // Linux Preview updates stay manual until a real AppImage-to-AppImage
-  // transition has passed the same cross-version gate as established clients.
-  if (process.platform === "linux" || !app.isPackaged || process.env.EDGE_EVER_DISABLE_AUTO_UPDATE === "1") return;
+  if (!app.isPackaged || process.env.EDGE_EVER_DISABLE_AUTO_UPDATE === "1") return;
+  if (linuxUpdateTestMode) {
+    if (!/^http:\/\/127\.0\.0\.1:\d+\/$/.test(linuxUpdateTestFeedUrl)) {
+      throw new Error("Linux update verification requires a loopback HTTP feed");
+    }
+    autoUpdater.setFeedURL({ provider: "generic", url: linuxUpdateTestFeedUrl });
+    autoUpdater.disableDifferentialDownload = true;
+    void writeDiagnostic("update.test-started", {
+      version: app.getVersion(),
+      appImage: process.env.APPIMAGE || null,
+    });
+  }
   autoUpdater.autoDownload = process.platform !== "win32";
   autoUpdater.autoInstallOnAppQuit = process.platform !== "win32";
   autoUpdater.autoRunAppAfterInstall = true;
@@ -871,11 +995,15 @@ const configureAutoUpdater = () => {
   autoUpdater.on("update-not-available", () => {
     updateState = "idle";
     downloadedUpdateVersion = null;
+    heldUpdateVersion = null;
     trustedWindowsUpdate = null;
     windowsDownloadedUpdateVerified = false;
     refreshTrayMenu();
     publishDesktopUpdateStatus();
-    void writeDiagnostic("update.not-available");
+    const diagnosticWritten = writeDiagnostic("update.not-available");
+    if (linuxUpdateTestMode) {
+      void diagnosticWritten.finally(() => setTimeout(() => app.quit(), 100));
+    }
   });
   autoUpdater.on("download-progress", (progress) => { void writeDiagnostic("update.download-progress", { percent: progress.percent }); });
   autoUpdater.on("update-downloaded", (info) => {
@@ -891,11 +1019,23 @@ const configureAutoUpdater = () => {
         windowsDownloadedUpdateVerified = true;
         autoUpdater.autoInstallOnAppQuit = true;
       }
-      updateState = "downloaded";
       downloadedUpdateVersion = info?.version || downloadedUpdateVersion;
+      if (!linuxUpdateTestMode) {
+        const instanceVersion = await readInstanceReleaseVersion();
+        if (shouldHoldAutoRestartUpdate(downloadedUpdateVersion, instanceVersion)) {
+          await holdAutoRestartUpdate(downloadedUpdateVersion);
+          return;
+        }
+      }
+      updateState = "downloaded";
+      heldUpdateVersion = null;
       refreshTrayMenu();
       publishDesktopUpdateStatus();
       await writeDiagnostic("update.downloaded", { version: downloadedUpdateVersion });
+      if (linuxUpdateTestMode) {
+        installDownloadedUpdate();
+        return;
+      }
       await promptForDownloadedUpdate(downloadedUpdateVersion).catch((error) => {
         promptedUpdateVersion = null;
         void writeDiagnostic("update.prompt-failed", { message: error.message });
@@ -1095,7 +1235,8 @@ const createWindow = async () => {
 
   try {
     if (app.isPackaged && !process.env.EDGE_EVER_DESKTOP_WEB_URL) {
-      await mainWindow.loadFile(join(process.resourcesPath, "web/index.html"));
+      if (usePrivateAppProtocol) await mainWindow.loadURL(DESKTOP_APP_ENTRY_URL);
+      else await mainWindow.loadFile(join(process.resourcesPath, "web/index.html"));
     } else {
       await mainWindow.loadURL(webUrl);
     }
@@ -1123,7 +1264,7 @@ const createWindow = async () => {
     return { action: "deny" };
   });
   mainWindow.webContents.on("will-navigate", (event, url) => {
-    if (url.startsWith(webUrl) || url.startsWith("edgeever-resource://") || url.startsWith("edgeever-staged://")) return;
+    if (url.startsWith(webUrl) || url.startsWith(`${DESKTOP_APP_ORIGIN}/`) || url.startsWith("edgeever-resource://") || url.startsWith("edgeever-staged://")) return;
     event.preventDefault();
     if (url.startsWith("https://") || url.startsWith("http://")) void shell.openExternal(url);
   });
@@ -1199,7 +1340,9 @@ const startApplication = async () => {
   void writeDiagnostic(recoveredAfterAbnormalExit ? "session.recovered-after-abnormal-exit" : "session.started");
   await writeFile(crashMarkerPath(), new Date().toISOString());
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+  registerDesktopAppProtocol();
   registerResourceProtocol();
+  await preparePackagedRendererOrigin();
   const initialSidecar = await startSidecar();
   if (!initialSidecar) throw new Error("EdgeEver sidecar is unavailable");
   await initialSidecar.waitUntilReady();
@@ -1542,7 +1685,7 @@ app.on("second-instance", (_event, commandLine) => {
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
+  if (shouldQuitAfterAllWindowsClosed({ rendererOriginMigrationInProgress })) app.quit();
 });
 
 app.on("before-quit", (event) => {

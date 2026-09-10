@@ -12,6 +12,7 @@ import {
 } from "@/components/settings/ai-provider-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   SETTINGS_CARD_DESCRIPTION_CLASSNAME,
   SETTINGS_CARD_HEADER_CLASSNAME,
@@ -99,20 +100,27 @@ export const AiModelCard = () => {
 
   const settings = settingsQuery.data;
   const readOnly = settings?.readOnly ?? true;
+  const encryptionConfigured = settings?.encryptionConfigured ?? false;
+  const canAddProvider = !readOnly && encryptionConfigured;
+  const hasUnavailableCredentials = settings?.providers.some((item) => item.credentialsUnavailable) ?? false;
   const getDefaultProviderName = (index: number) => t("aiModel.defaultProviderName", {
     ordinal: formatProviderOrdinal(index + 1, locale),
   });
   const getProviderName = (item: NonNullable<typeof settings>["providers"][number], index: number) =>
-    isLegacyProviderDisplayName(item.displayName, item.provider) ? getDefaultProviderName(index) : item.displayName;
+    isLegacyProviderDisplayName(item.displayName, item.provider) || !item.displayName
+      ? getDefaultProviderName(index)
+      : item.displayName;
   const allModels = settings?.providers.flatMap((item, index) =>
     item.models.map((model) => ({ ...model, providerName: getProviderName(item, index), providerEnabled: item.isEnabled }))) ?? [];
   const defaultModelAvailable = !settings?.defaultModelId
     || allModels.some((model) => model.id === settings.defaultModelId && model.providerEnabled);
   const error = defaultMutation.error ?? settingsQuery.error;
   const openAddDialog = () => {
+    if (!canAddProvider) return;
     resetAddForm(getDefaultProviderName(settings?.providers.length ?? 0));
     setShowAdd(true);
   };
+  const addDisabledReason = !encryptionConfigured ? t("aiModel.addDisabledReason") : undefined;
 
   return (
     <Collapsible open={expanded} onOpenChange={setExpanded} asChild>
@@ -137,9 +145,14 @@ export const AiModelCard = () => {
               <p className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />{t("common.loading")}</p>
             ) : (
               <>
-                {!settings?.encryptionConfigured ? (
+                {!encryptionConfigured ? (
                   <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
                     <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />{t("aiModel.encryptionKeyMissing")}
+                  </p>
+                ) : null}
+                {hasUnavailableCredentials ? (
+                  <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+                    <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />{t("aiModel.savedCredentialsUnavailable")}
                   </p>
                 ) : null}
 
@@ -205,9 +218,11 @@ export const AiModelCard = () => {
                         {settings?.providers.length ?? 0}
                       </span>
                     </div>
-                    <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 bg-white text-xs" disabled={readOnly} onClick={openAddDialog}>
-                      <Plus className="h-3.5 w-3.5" />{t("aiModel.addProvider")}
-                    </Button>
+                    <DisabledActionTooltip label={!canAddProvider ? addDisabledReason : undefined}>
+                      <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 bg-white text-xs" disabled={!canAddProvider} onClick={openAddDialog}>
+                        <Plus className="h-3.5 w-3.5" />{t("aiModel.addProvider")}
+                      </Button>
+                    </DisabledActionTooltip>
                   </div>
 
                   {settings?.providers.length ? (
@@ -237,11 +252,16 @@ export const AiModelCard = () => {
 
                 <Dialog open={showAdd} onOpenChange={handleAddDialogChange}>
                   <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
-                    <form className="grid gap-5" onSubmit={(event: FormEvent) => { event.preventDefault(); createMutation.mutate(); }}>
+                    <form className="grid gap-5" onSubmit={(event: FormEvent) => { event.preventDefault(); if (!canAddProvider) return; createMutation.mutate(); }}>
                       <DialogHeader>
                         <DialogTitle>{t("aiModel.addProvider")}</DialogTitle>
                         <DialogDescription>{t("aiModel.addProviderDescription")}</DialogDescription>
                       </DialogHeader>
+                      {!encryptionConfigured ? (
+                        <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+                          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />{t("aiModel.encryptionKeyMissing")}
+                        </p>
+                      ) : null}
                       <div className="grid gap-4 sm:grid-cols-2">
                         <Field label={t("aiModel.displayName")}>
                           <Input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={80} />
@@ -272,20 +292,22 @@ export const AiModelCard = () => {
                       </div>
                       {createMutation.isError ? (
                         <p className="text-xs font-medium text-rose-600" role="alert">
-                          {aiErrorMessage(createMutation.error, t("aiModel.failed"), t("aiModel.encryptionKeyMissing"))}
+                          {aiErrorMessage(createMutation.error, t("aiModel.failed"), t("aiModel.encryptionKeyMissing"), t("aiModel.savedCredentialsUnavailable"))}
                         </p>
                       ) : null}
                       <DialogFooter className="gap-2 sm:space-x-0">
                         <Button type="button" variant="outline" onClick={() => handleAddDialogChange(false)}>{t("common.cancel")}</Button>
-                        <Button type="submit" variant="solid" disabled={readOnly || createMutation.isPending || !settings?.encryptionConfigured}>
-                          {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{t("aiModel.createProvider")}
-                        </Button>
+                        <DisabledActionTooltip label={!canAddProvider ? addDisabledReason : undefined}>
+                          <Button type="submit" variant="solid" disabled={!canAddProvider || createMutation.isPending}>
+                            {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{t("aiModel.createProvider")}
+                          </Button>
+                        </DisabledActionTooltip>
                       </DialogFooter>
                     </form>
                   </DialogContent>
                 </Dialog>
 
-                {error ? <p className="text-xs font-medium text-rose-600" role="alert">{aiErrorMessage(error, t("aiModel.failed"), t("aiModel.encryptionKeyMissing"))}</p> : null}
+                {error ? <p className="text-xs font-medium text-rose-600" role="alert">{aiErrorMessage(error, t("aiModel.failed"), t("aiModel.encryptionKeyMissing"), t("aiModel.savedCredentialsUnavailable"))}</p> : null}
               </>
             )}
           </CardContent>
@@ -300,3 +322,17 @@ const Field = ({ label, hint, children }: { label: string; hint?: string; childr
     {label}{children}{hint ? <span className="text-xs font-normal leading-4 text-slate-500">{hint}</span> : null}
   </label>
 );
+
+const DisabledActionTooltip = ({ label, children }: { label?: string; children: ReactNode }) => {
+  if (!label) return children;
+  return (
+    <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex" tabIndex={0}>{children}</span>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};

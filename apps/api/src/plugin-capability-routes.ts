@@ -29,7 +29,7 @@ export function registerPluginCapabilityRoutes(app: Hono<AppEnv>, dependencies: 
   }
   app.get('/api/v1/plugins/ai/status', async c => {
     if (dependencies.aiStatus) return c.json(await dependencies.aiStatus());
-    const settings = await getAiSettings(c.env.storage.db, getWorkspaceId(c), Boolean(resolvePrimaryAiCredentialEncryptionKey(c.env)), false);
+    const settings = await getAiSettings(c.env.storage.db, getWorkspaceId(c), Boolean(resolvePrimaryAiCredentialEncryptionKey(c.env)), false, undefined, c.env);
     const provider = settings.providers.find(p => p.isEnabled && p.models.some(m => m.id === settings.defaultModelId));
     const model = provider?.models.find(m => m.id === settings.defaultModelId);
     return c.json({ configured: Boolean(model), ...(model ? { modelName: model.displayName } : {}) });

@@ -7,25 +7,26 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useQuery } from "@tanstack/react-query";
 import { Clock3, FileText, LoaderCircle, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
 import { api } from "@/lib/api";
 import { EdgeEverCodeBlock, codeBlockLowlight } from "@/lib/code-block";
 import { withEnvironmentTitlePrefix } from "@/lib/environment-title";
+import { resolvePublicShareBody } from "@/lib/public-share-body";
 import {
   parseImageWidth,
   getImageReferrerPolicy,
   ImageGallery,
   MergeDivider,
   PluginEmbed,
-  resolveMemoContentDoc,
-  rewriteMemoResourcesForShare,
   type PublicMemoShare,
 } from "@edgeever/shared";
 import { createEdgeEverMathematics } from "@edgeever/shared/mathematics";
 import { PdfAttachment } from "@/components/editor/PdfAttachment";
 import { FileAttachment } from "@/components/editor/FileAttachment";
+
+const ReadOnlyX6Diagram = lazy(() => import("@/components/ReadOnlyX6Diagram"));
 
 const SharedImage = Image.extend({
   addAttributes() {
@@ -77,15 +78,7 @@ const SharedThemeBlock = Node.create({
   },
 });
 
-const SharedDocument = ({ share, token }: { share: PublicMemoShare; token: string }) => {
-  const content = useMemo(
-    () => rewriteMemoResourcesForShare(
-      resolveMemoContentDoc(share.contentJson, share.contentMarkdown),
-      token,
-      share.memoShareTokens,
-    ),
-    [share, token],
-  );
+const SharedRichText = ({ content }: { content: PublicMemoShare["contentJson"] }) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ codeBlock: false, link: { openOnClick: true } }),
@@ -113,6 +106,32 @@ const SharedDocument = ({ share, token }: { share: PublicMemoShare; token: strin
   }, [content]);
 
   return <EditorContent editor={editor} />;
+};
+
+const SharedDocument = ({
+  locale,
+  share,
+  token,
+}: {
+  locale: "zh-CN" | "en-US";
+  share: PublicMemoShare;
+  token: string;
+}) => {
+  const body = useMemo(() => resolvePublicShareBody(share, token), [share, token]);
+  if (body.type === "diagram") {
+    return (
+      <Suspense
+        fallback={
+          <div className="flex min-h-[360px] items-center justify-center text-slate-400">
+            <LoaderCircle className="h-6 w-6 animate-spin" />
+          </div>
+        }
+      >
+        <ReadOnlyX6Diagram diagram={body.diagram} locale={locale} theme="light" />
+      </Suspense>
+    );
+  }
+  return <SharedRichText content={body.content} />;
 };
 
 export const PublicSharePage = () => {
@@ -189,7 +208,11 @@ export const PublicSharePage = () => {
           ) : null}
         </header>
         <div className="edgeever-editor px-1 py-4 sm:px-4 sm:py-7" data-editor-theme="default">
-          <SharedDocument share={share} token={token} />
+          <SharedDocument
+            locale={(i18n.resolvedLanguage || i18n.language || "zh-CN").startsWith("en") ? "en-US" : "zh-CN"}
+            share={share}
+            token={token}
+          />
         </div>
       </article>
     </main>

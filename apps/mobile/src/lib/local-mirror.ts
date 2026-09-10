@@ -9,7 +9,7 @@ import {
   type TagSummary,
 } from "@edgeever/shared";
 import * as SQLite from "expo-sqlite";
-import { summarizeMobileTags } from "./mobile-tags";
+import { filterLocalMemosByExactTag, summarizeMobileTags } from "./mobile-tags";
 
 const DATABASE_NAME = "edgeever-mobile.db";
 const BOOTSTRAP_PAGE_SIZE = 200;
@@ -117,12 +117,6 @@ export const listLocalMemos = async (scope: string, params: LocalMemoListParams)
     const q = `%${params.q.trim()}%`;
     binds.push(q, q, q);
   }
-  if (params.tag?.trim()) {
-    conditions.push(
-      "EXISTS (SELECT 1 FROM json_each(mobile_memos.data_json, '$.tags') AS memo_tag WHERE LOWER(CAST(memo_tag.value AS TEXT)) = LOWER(?))"
-    );
-    binds.push(params.tag.trim());
-  }
   if (params.filter === "tagged") {
     conditions.push("tags_text <> ''");
   } else if (params.filter === "untagged") {
@@ -138,14 +132,40 @@ export const listLocalMemos = async (scope: string, params: LocalMemoListParams)
       : params.sort === "title-asc"
         ? "is_pinned DESC, title COLLATE NOCASE ASC, updated_at DESC, id DESC"
         : "is_pinned DESC, updated_at DESC, id DESC";
-  const countRow = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM mobile_memos WHERE ${conditions.join(" AND ")}`,
-    ...binds
-  );
+  const tag = params.tag?.trim() ?? "";
   const limit = params.limit ?? 50;
   const offset = Math.max(0, params.offset ?? 0);
+  const whereSql = conditions.join(" AND ");
+
+  if (tag) {
+    const rows = await db.getAllAsync<StoredMemoRow>(
+      `SELECT data_json FROM mobile_memos WHERE ${whereSql} ORDER BY ${orderBy}`,
+      ...binds
+    );
+    const memos = filterLocalMemosByExactTag(
+      rows.flatMap((row) => {
+        try {
+          return [toMemoSummary(JSON.parse(row.data_json) as MemoDetail)];
+        } catch {
+          return [];
+        }
+      }),
+      tag
+    );
+    const page = memos.slice(offset, offset + limit);
+    return {
+      memos: page,
+      totalCount: memos.length,
+      nextCursor: offset + page.length < memos.length ? String(offset + page.length) : null,
+    };
+  }
+
+  const countRow = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM mobile_memos WHERE ${whereSql}`,
+    ...binds
+  );
   const rows = await db.getAllAsync<StoredMemoRow>(
-    `SELECT data_json FROM mobile_memos WHERE ${conditions.join(" AND ")} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
+    `SELECT data_json FROM mobile_memos WHERE ${whereSql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
     ...binds,
     limit,
     offset

@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { BadgeCheck, BookOpen, CalendarClock, Download, ExternalLink, History, PanelRightOpen, Play, Puzzle, RefreshCw, Settings2, Trash2 } from "lucide-react";
+import { BookOpen, CalendarClock, Download, ExternalLink, History, PanelRightOpen, Play, Puzzle, RefreshCw, Settings2, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,12 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { EdgeEverPluginHost, InstalledExtension, RegisteredPluginCommand, RegisteredPluginPanel } from "@/lib/plugins/plugin-host";
+import { PluginCatalogCard } from "@/components/plugins/PluginCatalogCard";
 import { PluginPanelDialog } from "@/components/plugins/PluginPanelDialog";
 import { loadResolvedPluginMarketplace } from "@/lib/plugins/plugin-marketplace";
-import { GitHubMark, GitHubRepositoryLink } from "@/components/GitHubRepositoryLink";
+import { GitHubMark } from "@/components/GitHubRepositoryLink";
 import { applyPluginUpdate, checkPluginUpdates, type PluginUpdateInfo } from "@/lib/plugins/plugin-updates";
 import { PluginUpdateDialog } from "@/components/plugins/PluginUpdateDialog";
 import { PluginSettingsSection } from "@/components/plugins/PluginSettingsSection";
+import { buildPluginCatalogItems, getPluginCatalogSourceKey } from "@/lib/plugins/plugin-catalog";
 import { getPluginDetailPage, getPluginDetailPath, hasPluginSettings, type PluginDetailPage } from "@/lib/plugins/plugin-navigation";
 import type { ScheduledTask } from "@edgeever/shared";
 import { api, getOrCreateClientDeviceId } from "@/lib/api";
@@ -324,6 +326,7 @@ export const PluginManagerCard = ({
     refetchInterval: 30 * 60_000,
     refetchOnWindowFocus: true,
   });
+  const catalogItems = buildPluginCatalogItems(marketplaceQuery.data?.entries ?? [], snapshot.extensions);
   const selectedExtension = selectedPluginId
     ? snapshot.extensions.find((extension) => extension.manifest.id === selectedPluginId)
     : undefined;
@@ -374,12 +377,11 @@ export const PluginManagerCard = ({
         ["plugin-updates", extensionVersionKey, refreshedMarketplace.data?.updatedAt ?? "unavailable"],
         result,
       );
-      const firstCheckError = Object.values({
-        ...(refreshedMarketplace.data?.resolutionErrors ?? {}),
-        ...result.errors,
-      })[0];
-      setLastManualCheckCount(firstCheckError ? null : result.updates.length);
-      if (firstCheckError) setError(t("plugins.updates.checkFailed", { message: firstCheckError }));
+      setLastManualCheckCount(result.updates.length);
+      const checkErrors = Object.values(result.errors);
+      if (checkErrors.length > 0 && checkErrors.length === snapshot.extensions.length) {
+        setError(t("plugins.updates.checkFailed", { message: checkErrors[0] }));
+      }
     } catch (checkError) {
       setError(checkError instanceof Error ? checkError.message : String(checkError));
     } finally {
@@ -388,10 +390,13 @@ export const PluginManagerCard = ({
   };
 
   const toggleExtension = (extension: InstalledExtension, enabled: boolean) => {
+    const catalogItem = catalogItems.find((item) => item.id === extension.manifest.id)
+      ?? { id: extension.manifest.id, extension };
     if (shouldRequestPluginTrustAcknowledgement({
       acknowledged: hasAcknowledgedPluginTrustWarning(),
       enabled,
       extensionType: extension.manifest.type,
+      isOfficial: getPluginCatalogSourceKey(catalogItem) === "official",
     })) {
       setPendingTrustPluginId(extension.manifest.id);
       return;
@@ -463,6 +468,17 @@ export const PluginManagerCard = ({
       <CardContent className="grid gap-4 p-4 pt-0 sm:px-5 sm:pb-5">
         {error ? <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{error}</div> : null}
 
+        {marketplaceQuery.isError ? (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+            <span>{t("plugins.marketplace.loadFailed", {
+              message: marketplaceQuery.error instanceof Error ? marketplaceQuery.error.message : String(marketplaceQuery.error),
+            })}</span>
+            <Button size="sm" variant="outline" className="h-7 bg-white px-2 text-xs" onClick={() => void marketplaceQuery.refetch()}>
+              {t("plugins.marketplace.retry")}
+            </Button>
+          </div>
+        ) : null}
+
         {!selectedPluginId ? <LegacyManualScheduledTasksSection /> : null}
 
         {selectedPluginId ? (
@@ -497,67 +513,6 @@ export const PluginManagerCard = ({
           )
         ) : (
           <>
-        {(marketplaceQuery.data?.entries.length ?? 0) > 0 ? (
-          <div className={PLUGIN_CARD_GRID_CLASS_NAME}>
-            {(marketplaceQuery.data?.entries ?? []).map((entry) => {
-              const installed = snapshot.extensions.find((extension) => extension.manifest.id === entry.id);
-              const currentVerified = installed?.source.verified && installed.manifest.version === entry.verification.version;
-              const marketplaceUpdate = updateQuery.data?.updates.find((update) => update.pluginId === entry.id && update.marketplaceEntry);
-              const actionId = `marketplace:${entry.id}`;
-              return (
-                <article key={entry.id} className="flex min-w-0 flex-col rounded-lg border border-emerald-100 bg-white p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate text-sm font-semibold text-slate-900">{entry.name}</span>
-                          <BadgeCheck className="h-4 w-4 shrink-0 text-emerald-600" aria-label={t("plugins.marketplace.verified")} />
-                          {entry.publisher === "edgeever" ? (
-                            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                              {t("plugins.marketplace.officialAutoUpdate")}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-0.5 text-[10px] text-slate-400">{entry.author} · {entry.category} · v{entry.verification.version}</div>
-                      </div>
-                      <GitHubRepositoryLink
-                        href={entry.repositoryUrl}
-                        label={t("plugins.marketplace.openRepository", { name: entry.name })}
-                        showTooltip={false}
-                        className="h-7 w-7 shrink-0 justify-center rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
-                        iconClassName="h-3.5 w-3.5"
-                      />
-                    </div>
-                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">{entry.description}</p>
-                    <Button
-                      size="sm"
-                      variant={currentVerified ? "soft" : "outline"}
-                      className="mt-3 h-8 gap-1.5 text-xs"
-                      disabled={Boolean(currentVerified) || pendingId === actionId || Boolean(installed?.source.kind === "marketplace" && !marketplaceUpdate)}
-                      onClick={() => {
-                        if (marketplaceUpdate) {
-                          setPendingUpdate(marketplaceUpdate);
-                          return;
-                        }
-                        void run(actionId, async () => { await host.installMarketplaceEntry(entry); });
-                      }}
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      {pendingId === actionId
-                        ? t("plugins.installing")
-                        : marketplaceUpdate
-                          ? t("plugins.updates.update")
-                          : currentVerified
-                          ? t("plugins.marketplace.installed")
-                          : installed
-                            ? t("plugins.marketplace.installVerified")
-                            : t("plugins.install")}
-                    </Button>
-                </article>
-              );
-            })}
-          </div>
-        ) : null}
-
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             aria-label={t("plugins.installSource")}
@@ -571,150 +526,43 @@ export const PluginManagerCard = ({
           </Button>
         </div>
 
-        {snapshot.extensions.length === 0 ? (
+        {marketplaceQuery.isLoading && catalogItems.length === 0 ? null : catalogItems.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-200 p-5 text-center text-xs text-slate-500">
             {t("plugins.empty")}
           </div>
         ) : (
           <div className={PLUGIN_CARD_GRID_CLASS_NAME}>
-            {snapshot.extensions.map((extension) => {
-              const id = extension.manifest.id;
-              const availableUpdate = updateQuery.data?.updates.find((update) => update.pluginId === id);
-              const commands = snapshot.commands.filter((command) => command.pluginId === id);
-              const panels = snapshot.panels.filter((panel) => panel.pluginId === id);
-              return (
-                <section
-                  key={id}
-                  role="link"
-                  tabIndex={0}
-                  aria-label={t("plugins.details.open", { name: extension.manifest.name })}
-                  className="flex min-w-0 cursor-pointer flex-col rounded-lg border border-slate-200 bg-white p-3 transition-colors hover:border-emerald-300 hover:bg-emerald-50/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
-                  onClick={(event) => {
-                    if ((event.target as HTMLElement).closest("button, a")) return;
-                    onOpenPlugin?.(id);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
-                      event.preventDefault();
-                      onOpenPlugin?.(id);
-                    }
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="truncate text-sm font-semibold text-slate-900">{extension.manifest.name}</span>
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                          {extension.manifest.type}
-                        </span>
-                        <span className="text-[11px] text-slate-400">v{extension.manifest.version}</span>
-                        {availableUpdate ? (
-                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                            {t("plugins.updates.available", { version: availableUpdate.latestVersion })}
-                          </span>
-                        ) : null}
-                        <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] ${extension.source.verified ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                          {extension.source.verified ? <BadgeCheck className="h-3 w-3" /> : extension.source.kind === "github" ? <GitHubMark className="h-3 w-3" /> : null}
-                          {t(`plugins.sources.${extension.source.verified ? "verified" : extension.source.kind}`)}
-                        </span>
-                      </div>
-                      {extension.manifest.description ? <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{extension.manifest.description}</p> : null}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      {extension.source.repositoryUrl ? (
-                        <GitHubRepositoryLink
-                          href={extension.source.repositoryUrl}
-                          label={t("plugins.marketplace.openRepository", { name: extension.manifest.name })}
-                          showTooltip={false}
-                          className="h-7 w-7 justify-center rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
-                          iconClassName="h-3.5 w-3.5"
-                        />
-                      ) : null}
-                      <Switch
-                        aria-label={t("plugins.toggle", { name: extension.manifest.name })}
-                        checked={extension.enabled}
-                        disabled={pendingId === id}
-                        onCheckedChange={(enabled) => toggleExtension(extension, enabled)}
-                      />
-                    </div>
-                  </div>
-
-                  {extension.manifest.type === "plugin" && extension.manifest.permissions.length > 0 ? (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {extension.manifest.permissions.slice(0, 3).map((permission) => (
-                        <span key={permission} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                          {permission === "network:public" ? t("plugins.permissions.publicNetwork") : permissionLabel(permission)}
-                        </span>
-                      ))}
-                      {extension.manifest.permissions.length > 3 ? (
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                          +{extension.manifest.permissions.length - 3}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {extension.error ? <div className="mt-2 text-xs text-rose-600">{extension.error}</div> : null}
-
-                  <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-3">
-                    {hasPluginSettings(extension.manifest) ? (
-                      <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
-                        <Link to={getPluginDetailPath(id, "settings")} aria-label={t("plugins.settings.open", { name: extension.manifest.name })}>
-                          <Settings2 className="h-3.5 w-3.5" />
-                          {t("plugins.settings.title")}
-                        </Link>
-                      </Button>
-                    ) : null}
-                    {availableUpdate ? (
-                      <Button
-                        size="sm"
-                        className="h-8 gap-1.5 text-xs"
-                        disabled={pendingId === `update:${id}`}
-                        onClick={() => setPendingUpdate(availableUpdate)}
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        {t("plugins.updates.update")}
-                      </Button>
-                    ) : null}
-                    {commands.map((command) => (
-                      <Button
-                        key={command.id}
-                        size="sm"
-                        variant="outline"
-                        className="h-8 gap-1.5 text-xs"
-                        disabled={pendingId === `${id}:${command.id}`}
-                        onClick={() => void run(`${id}:${command.id}`, () => host.runCommand(id, command.id))}
-                      >
-                        <Play className="h-3.5 w-3.5" />
-                        {command.title}
-                      </Button>
-                    ))}
-                    {panels.map((panel) => (
-                      <Button
-                        key={panel.id}
-                        size="sm"
-                        variant="outline"
-                        className="h-8 gap-1.5 text-xs"
-                        onClick={() => setActivePanel(panel)}
-                      >
-                        <PanelRightOpen className="h-3.5 w-3.5" />
-                        {panel.title}
-                      </Button>
-                    ))}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="ml-auto h-8 gap-1.5 text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                      disabled={pendingId === `remove:${id}`}
-                      onClick={() => void run(`remove:${id}`, () => host.uninstall(id))}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      {t("plugins.uninstall")}
-                    </Button>
-                  </div>
-                </section>
-              );
-            })}
+            {catalogItems.map((item) => (
+              <PluginCatalogCard
+                key={item.id}
+                item={item}
+                update={updateQuery.data?.updates.find((update) => update.pluginId === item.id)}
+                commands={snapshot.commands.filter((command) => command.pluginId === item.id)}
+                panels={snapshot.panels.filter((panel) => panel.pluginId === item.id)}
+                pendingId={pendingId}
+                onOpenPlugin={onOpenPlugin}
+                onToggle={(enabled) => {
+                  if (item.extension) toggleExtension(item.extension, enabled);
+                }}
+                onInstallMarketplace={() => {
+                  const entry = item.marketplaceEntry;
+                  if (!entry) return;
+                  void run(`marketplace:${item.id}`, async () => {
+                    await host.installMarketplaceEntry(entry);
+                  });
+                }}
+                onUpdate={() => {
+                  const nextUpdate = updateQuery.data?.updates.find((candidate) => candidate.pluginId === item.id);
+                  if (nextUpdate) setPendingUpdate(nextUpdate);
+                }}
+                onRunCommand={(command) => void run(
+                  `${item.id}:${command.id}`,
+                  () => host.runCommand(item.id, command.id),
+                )}
+                onOpenPanel={setActivePanel}
+                onUninstall={() => void run(`remove:${item.id}`, () => host.uninstall(item.id))}
+              />
+            ))}
           </div>
         )}
           </>

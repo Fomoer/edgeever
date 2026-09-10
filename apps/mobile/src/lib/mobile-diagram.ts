@@ -1,5 +1,4 @@
 import {
-  diagramFallbackMarkdown,
   hasDiagramDocumentMarker,
   markdownToDoc,
   parseDiagramDocument,
@@ -15,13 +14,14 @@ export const getMobileVisualDiagramKind = (contentMarkdown: string): DiagramKind
 export const hasMobileVisualDiagram = (contentMarkdown: string) =>
   hasDiagramDocumentMarker(contentMarkdown);
 
-/** Render visual-note envelopes through the native Mermaid viewer without discarding their IR. */
+/** Viewer TipTap payload for a visual-diagram envelope. Valid IR is drawn by read-only X6, so this returns an empty doc instead of a hidden Mermaid projection. Invalid envelopes keep the stripped Mermaid fence as degraded content. */
 export const resolveMobileMemoViewerContent = (
   contentJson: TiptapDoc | null | undefined,
   contentMarkdown: string,
 ) => {
-  const diagram = parseDiagramDocument(contentMarkdown);
-  if (diagram) return markdownToDoc(diagramFallbackMarkdown(diagram));
+  if (parseDiagramDocument(contentMarkdown)) {
+    return { type: "doc", content: [{ type: "paragraph" }] } satisfies TiptapDoc;
+  }
   if (hasDiagramDocumentMarker(contentMarkdown)) {
     return markdownToDoc(stripDiagramDocumentMarker(contentMarkdown));
   }

@@ -14,6 +14,17 @@ import type {
 } from "./storage-contract";
 
 export const DEFAULT_WORKSPACE_ID = "ws_default";
+export const LEGACY_INBOX_NOTEBOOK_ID = "nb_inbox";
+
+export const workspaceInboxId = (workspaceId: string) => `${workspaceId}_inbox`;
+
+export const isInboxNotebookId = (id: string, workspaceId: string) =>
+  id === LEGACY_INBOX_NOTEBOOK_ID || id === workspaceInboxId(workspaceId);
+
+export const isInboxNotebook = (
+  notebook: { id: string; slug?: string | null },
+  workspaceId: string,
+) => isInboxNotebookId(notebook.id, workspaceId) || notebook.slug === "inbox";
 
 export type UserWorkspace = {
   workspaceId: string;
@@ -29,7 +40,7 @@ export type DefaultNotebookRow = {
 };
 
 export const createDefaultNotebookRows = (workspaceId: string): DefaultNotebookRow[] => [
-  { id: `${workspaceId}_inbox`, name: "等待分类", slug: "inbox", color: "#0f766e", sortOrder: 10 },
+  { id: workspaceInboxId(workspaceId), name: "等待分类", slug: "inbox", color: "#0f766e", sortOrder: 10 },
   { id: `${workspaceId}_projects`, name: "工作项目", slug: "work-projects", color: "#2563eb", sortOrder: 20 },
   { id: `${workspaceId}_learning`, name: "学习资料", slug: "learning-resources", color: "#7c3aed", sortOrder: 30 },
   { id: `${workspaceId}_creative`, name: "灵感创作", slug: "creative-ideas", color: "#db2777", sortOrder: 40 },

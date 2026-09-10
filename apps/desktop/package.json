@@ -1,6 +1,6 @@
 {
   "name": "@edgeever/desktop",
-  "version": "1.62.0",
+  "version": "1.64.0",
   "desktopName": "EdgeEver",
   "private": true,
   "description": "Native EdgeEver desktop client",
@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "electron .",
     "start": "electron .",
-    "dist": "electron-builder --config electron-builder.yml"
+    "dist": "electron-builder --config electron-builder.yml",
+    "verify-origin-migration": "electron ../../scripts/renderer-origin-verifier"
   },
   "devDependencies": {
     "electron": "^44.0.0",

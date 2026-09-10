@@ -1,6 +1,6 @@
 import type { Hono } from "hono";
 import type { AppEnv } from "./api-context";
-import { apiError, badRequest } from "./http-errors";
+import { apiError, badRequest, notFound } from "./http-errors";
 
 const GITHUB_API_VERSION = "2022-11-28";
 const OWNER_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,38})$/i;
@@ -55,6 +55,184 @@ export const downloadGithubReleaseAsset = async ({
   return readBoundedAsset(response, assetName);
 };
 
+class GithubUpstreamError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "GithubUpstreamError";
+    this.status = status;
+  }
+}
+
+export const readGithubRepositoryManifestText = async ({
+  owner,
+  repository,
+  request = fetch,
+}: {
+  owner: string;
+  repository: string;
+  request?: typeof fetch;
+}) => {
+  if (!hasValidRepositoryCoordinates(owner, repository)) throw new Error("Invalid GitHub repository coordinates.");
+  const response = await request(`https://api.github.com/repos/${owner}/${repository}/contents/manifest.json`, {
+    headers: {
+      Accept: "application/vnd.github.raw+json",
+      "User-Agent": "EdgeEver",
+      "X-GitHub-Api-Version": GITHUB_API_VERSION,
+    },
+  });
+  if (response.status === 404) throw new GithubUpstreamError("Repository manifest was not found.", 404);
+  if (!response.ok) {
+    if (response.status === 403 || response.status === 429) {
+      for (const ref of ["HEAD", "main", "master"] as const) {
+        const raw = await request(`https://raw.githubusercontent.com/${owner}/${repository}/${ref}/manifest.json`, {
+          headers: { "User-Agent": "EdgeEver" },
+        });
+        if (raw.ok) {
+          const text = await raw.text();
+          if (new TextEncoder().encode(text).byteLength > ASSET_LIMITS["manifest.json"]) {
+            throw new Error("manifest.json exceeds the allowed package size.");
+          }
+          return text;
+        }
+      }
+    }
+    throw new Error(`Repository manifest request failed with HTTP ${response.status}.`);
+  }
+  const text = await response.text();
+  if (new TextEncoder().encode(text).byteLength > ASSET_LIMITS["manifest.json"]) {
+    throw new Error("manifest.json exceeds the allowed package size.");
+  }
+  return text;
+};
+
+const assertManifestSize = (text: string) => {
+  if (new TextEncoder().encode(text).byteLength > ASSET_LIMITS["manifest.json"]) {
+    throw new Error("manifest.json exceeds the allowed package size.");
+  }
+  return text;
+};
+
+const isRetriableGithubLookupError = (error: unknown) => {
+  if (error instanceof GithubUpstreamError) return false;
+  return error instanceof Error && !error.message.includes("exceeds the allowed package size");
+};
+
+export const readGithubLatestReleaseManifestText = async ({
+  owner,
+  repository,
+  request = fetch,
+}: {
+  owner: string;
+  repository: string;
+  request?: typeof fetch;
+}) => {
+  if (!hasValidRepositoryCoordinates(owner, repository)) throw new Error("Invalid GitHub repository coordinates.");
+  try {
+    const response = await request(
+      `https://github.com/${owner}/${repository}/releases/latest/download/manifest.json`,
+      {
+        redirect: "follow",
+        headers: { "User-Agent": "EdgeEver" },
+      },
+    );
+    if (response.ok) return assertManifestSize(await response.text());
+  } catch (error) {
+    if (!isRetriableGithubLookupError(error)) throw error;
+  }
+
+  try {
+    const response = await request(`https://api.github.com/repos/${owner}/${repository}/releases/latest`, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "EdgeEver",
+        "X-GitHub-Api-Version": GITHUB_API_VERSION,
+      },
+    });
+    if (response.ok) {
+      const release = await response.json() as { tag_name?: unknown };
+      if (typeof release.tag_name === "string" && RELEASE_TAG_PATTERN.test(release.tag_name)) {
+        const buffer = await downloadGithubReleaseAssetByTag({
+          owner,
+          repository,
+          releaseTag: release.tag_name,
+          assetName: "manifest.json",
+          request,
+        });
+        return assertManifestSize(new TextDecoder().decode(buffer));
+      }
+    }
+  } catch (error) {
+    if (!isRetriableGithubLookupError(error)) throw error;
+  }
+
+  return readGithubRepositoryManifestText({ owner, repository, request });
+};
+
+export const readGithubReleaseByTag = async ({
+  owner,
+  repository,
+  releaseTag,
+  request = fetch,
+}: {
+  owner: string;
+  repository: string;
+  releaseTag: string;
+  request?: typeof fetch;
+}) => {
+  if (!hasValidRepositoryCoordinates(owner, repository) || !RELEASE_TAG_PATTERN.test(releaseTag)) {
+    throw new Error("Invalid GitHub release coordinates.");
+  }
+  const response = await request(
+    `https://api.github.com/repos/${owner}/${repository}/releases/tags/${encodeURIComponent(releaseTag)}`,
+    {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "EdgeEver",
+        "X-GitHub-Api-Version": GITHUB_API_VERSION,
+      },
+    },
+  );
+  if (response.status === 404) throw new GithubUpstreamError("GitHub release was not found.", 404);
+  if (!response.ok) throw new Error(`GitHub release request failed with HTTP ${response.status}.`);
+  const release = await response.json() as {
+    tag_name?: unknown;
+    draft?: unknown;
+    assets?: unknown;
+  };
+  if (typeof release.tag_name !== "string" || !Array.isArray(release.assets)) {
+    throw new Error("GitHub release response is invalid.");
+  }
+  return {
+    tag_name: release.tag_name,
+    draft: release.draft === true,
+    assets: release.assets.flatMap((asset) => {
+      if (!asset || typeof asset !== "object") return [];
+      const record = asset as Record<string, unknown>;
+      if (typeof record.id !== "number" || typeof record.name !== "string" || typeof record.size !== "number") return [];
+      if (typeof record.url !== "string" || typeof record.browser_download_url !== "string") return [];
+      return [{
+        id: record.id,
+        name: record.name,
+        size: record.size,
+        url: record.url,
+        browser_download_url: record.browser_download_url,
+        ...(typeof record.digest === "string" ? { digest: record.digest } : {}),
+      }];
+    }),
+  };
+};
+
+const githubUpstreamError = (context: Parameters<typeof apiError>[0], error: unknown) => {
+  if (error instanceof GithubUpstreamError && error.status === 404) return notFound(context, error.message);
+  return apiError(
+    context,
+    "github_metadata_request_failed",
+    error instanceof Error ? error.message : "GitHub plugin metadata request failed.",
+    502,
+  );
+};
+
 export const downloadGithubReleaseAssetByTag = async ({
   owner,
   repository,
@@ -71,15 +249,114 @@ export const downloadGithubReleaseAssetByTag = async ({
   if (!hasValidRepositoryCoordinates(owner, repository) || !RELEASE_TAG_PATTERN.test(releaseTag)) {
     throw new Error("Invalid GitHub release coordinates.");
   }
-  const url = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/releases/download/${encodeURIComponent(releaseTag)}/${encodeURIComponent(assetName)}`;
-  const response = await request(url, {
-    redirect: "follow",
-    headers: { "User-Agent": "EdgeEver" },
-  });
-  return readBoundedAsset(response, assetName);
+  const url = `https://github.com/${owner}/${repository}/releases/download/${releaseTag}/${assetName}`;
+  try {
+    const response = await request(url, {
+      redirect: "follow",
+      headers: { "User-Agent": "EdgeEver" },
+    });
+    return await readBoundedAsset(response, assetName);
+  } catch (error) {
+    const release = await readGithubReleaseByTag({ owner, repository, releaseTag, request });
+    const asset = release.assets.find((candidate) => candidate.name === assetName);
+    if (!asset) {
+      const missing = new GithubUpstreamError(`GitHub Release ${releaseTag} is missing ${assetName}.`, 404);
+      missing.cause = error;
+      throw missing;
+    }
+    return downloadGithubReleaseAsset({
+      owner,
+      repository,
+      assetId: String(asset.id),
+      assetName,
+      request,
+    });
+  }
 };
 
+const PLUGIN_MANIFEST_CACHE_TTL_MS = 300_000;
+const PLUGIN_MANIFEST_CACHE_LIMIT = 64;
+const pluginManifestMemoryCache = new Map<string, { text: string; expiresAt: number }>();
+
+const readCachedPluginManifest = (key: string) => {
+  const entry = pluginManifestMemoryCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    pluginManifestMemoryCache.delete(key);
+    return null;
+  }
+  return entry.text;
+};
+
+const writeCachedPluginManifest = (key: string, text: string) => {
+  if (pluginManifestMemoryCache.size >= PLUGIN_MANIFEST_CACHE_LIMIT) {
+    const oldest = pluginManifestMemoryCache.keys().next().value;
+    if (typeof oldest === "string") pluginManifestMemoryCache.delete(oldest);
+  }
+  pluginManifestMemoryCache.set(key, { text, expiresAt: Date.now() + PLUGIN_MANIFEST_CACHE_TTL_MS });
+};
+
+const respondWithGithubManifestText = (
+  context: { text: (body: string, status: number, headers: Record<string, string>) => Response },
+  text: string,
+) => context.text(text, 200, {
+  "Cache-Control": "private, max-age=300",
+  "Content-Type": "application/json; charset=utf-8",
+});
+
 export const registerPluginDistributionRoutes = (app: Hono<AppEnv>) => {
+  app.get("/api/v1/plugins/github/:owner/:repository/latest-manifest", async (context) => {
+    const owner = context.req.param("owner");
+    const repository = context.req.param("repository");
+    if (!hasValidRepositoryCoordinates(owner, repository)) {
+      return badRequest(context, "Invalid GitHub repository coordinates.");
+    }
+    const cacheKey = `latest:${owner}/${repository}`;
+    const cached = readCachedPluginManifest(cacheKey);
+    if (cached) return respondWithGithubManifestText(context, cached);
+    try {
+      const text = await readGithubLatestReleaseManifestText({ owner, repository });
+      writeCachedPluginManifest(cacheKey, text);
+      return respondWithGithubManifestText(context, text);
+    } catch (error) {
+      return githubUpstreamError(context, error);
+    }
+  });
+
+  app.get("/api/v1/plugins/github/:owner/:repository/manifest", async (context) => {
+    const owner = context.req.param("owner");
+    const repository = context.req.param("repository");
+    if (!hasValidRepositoryCoordinates(owner, repository)) {
+      return badRequest(context, "Invalid GitHub repository coordinates.");
+    }
+    const cacheKey = `branch:${owner}/${repository}`;
+    const cached = readCachedPluginManifest(cacheKey);
+    if (cached) return respondWithGithubManifestText(context, cached);
+    try {
+      const text = await readGithubRepositoryManifestText({ owner, repository });
+      writeCachedPluginManifest(cacheKey, text);
+      return respondWithGithubManifestText(context, text);
+    } catch (error) {
+      return githubUpstreamError(context, error);
+    }
+  });
+
+  app.get("/api/v1/plugins/github/:owner/:repository/releases/tags/:releaseTag", async (context) => {
+    const owner = context.req.param("owner");
+    const repository = context.req.param("repository");
+    const releaseTag = context.req.param("releaseTag");
+    if (!hasValidRepositoryCoordinates(owner, repository) || !RELEASE_TAG_PATTERN.test(releaseTag)) {
+      return badRequest(context, "Invalid GitHub release coordinates.");
+    }
+    try {
+      const release = await readGithubReleaseByTag({ owner, repository, releaseTag });
+      context.header("Cache-Control", "private, max-age=60");
+      return context.json(release);
+    } catch (error) {
+      return githubUpstreamError(context, error);
+    }
+  });
+
   app.get("/api/v1/plugins/github/:owner/:repository/releases/:releaseTag/assets/:assetName", async (context) => {
     const owner = context.req.param("owner");
     const repository = context.req.param("repository");

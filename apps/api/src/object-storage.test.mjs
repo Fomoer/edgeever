@@ -51,6 +51,19 @@ describe("object storage credential encryption", () => {
     expect(resolveObjectStorageEncryptionKeys(environment)).toEqual(["legacy-storage-key"]);
   });
 
+  test("decrypts rotated object-storage secrets with the persisted auth fallback", () => {
+    const environment = {
+      EDGE_EVER_AUTH_PASSWORD: "rotated-password",
+      EDGE_EVER_AUTH_PASSWORD_FALLBACK: "original-password",
+    };
+
+    expect(resolvePrimaryObjectStorageEncryptionKey(environment))
+      .toBe("edgeever:object-storage:v1:rotated-password");
+    expect(resolveObjectStorageEncryptionKeys(environment)).toContain(
+      "edgeever:object-storage:v1:original-password",
+    );
+  });
+
   test("migrates a legacy object-storage credential after decrypting it", async () => {
     const plaintext = "legacy-secret-access-key";
     const legacyKey = "legacy-storage-key";

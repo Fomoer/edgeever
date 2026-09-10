@@ -41,6 +41,11 @@ export * from "./pdf-attachment";
 export * from "./types";
 export * from './plugin-capabilities';
 
-export { attachDiagramReader } from "./diagram-reader";
+export {
+  attachDiagramReader,
+  DIAGRAM_READER_MIN_SCALE,
+  diagramReaderFocusNode,
+  diagramReaderOpeningMode,
+} from "./diagram-reader";
 
 export { attachDiagramScroll } from "./diagram-scroll";

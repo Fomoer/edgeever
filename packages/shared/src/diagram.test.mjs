@@ -65,7 +65,7 @@ describe("diagram document", () => {
     expect(stripDiagramDocumentMarker(invalid)).toContain("```mermaid");
   });
 
-  test("persists a Mermaid fallback that native app viewers can render", () => {
+  test("persists a Mermaid fallback in the portable Markdown envelope", () => {
     const markdown = serializeDiagramDocument(createDefaultDiagramDocument("flowchart"));
     expect(markdown).toContain("# 流程图");
     expect(markdown).toContain("```mermaid\nflowchart TD");

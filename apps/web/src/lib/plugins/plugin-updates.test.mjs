@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { checkInstalledExtensionUpdate, checkPluginUpdates, updateOfficialMarketplacePlugins } from "./plugin-updates.ts";
 
 const pluginManifest = {
@@ -55,6 +56,30 @@ describe("plugin update checks", () => {
 
     expect(update?.latestVersion).toBe("1.2.0");
     expect(update?.marketplaceEntry).toEqual(entry);
+  });
+
+  test("checks GitHub-installed plugins from the latest Release without using the REST API", async () => {
+    const calls = [];
+    const request = async (input) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.includes("api.github.com")) throw new Error(`should not use GitHub REST: ${url}`);
+      if (url.endsWith("/releases/latest/download/manifest.json")) {
+        return new Response(JSON.stringify({ ...pluginManifest, version: "1.2.0" }));
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    };
+
+    const update = await checkInstalledExtensionUpdate(
+      installed({
+        source: { kind: "github", verified: false, repositoryUrl: "https://github.com/example/plugin" },
+      }),
+      [],
+      request,
+    );
+
+    expect(update?.latestVersion).toBe("1.2.0");
+    expect(calls.some((url) => url.includes("api.github.com"))).toBe(false);
   });
 
   test("does not offer the same or an older version", async () => {
@@ -119,5 +144,14 @@ describe("plugin update checks", () => {
 
     expect(installedIds).toEqual([pluginManifest.id]);
     expect(result.updated.map((update) => update.pluginId)).toEqual([pluginManifest.id]);
+  });
+});
+
+describe("official plugin auto-update workspace notice", () => {
+  test("updates silently without interrupting the workspace", () => {
+    const workspace = readFileSync(new URL("../../components/WorkspaceApp.tsx", import.meta.url), "utf8");
+    expect(workspace).toContain("updateOfficialMarketplacePlugins");
+    expect(workspace).not.toContain("officialAutoUpdated");
+    expect(workspace).not.toContain("result.updated.length");
   });
 });

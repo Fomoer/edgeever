@@ -1,21 +1,21 @@
 {
-  "version": "1.62.0",
+  "version": "1.64.0",
   "changes": {
     "en-US": [
-      "Diagrams now offer smoother canvas navigation, clearer multi-selection feedback, refined mind-map and flowchart styling, ten color schemes, and new organization, timeline, and fishbone layouts.",
-      "Extensions now use clearer trusted-code and network permissions, host-rendered settings, settings-change notifications, automatic updates for official plugins, and a new official AI RSS plugin.",
-      "Android and iOS users can filter notes by tag from the native workspace.",
-      "Linux x64 is now available as an AppImage Preview download.",
-      "Desktop attachment downloads preserve their original filenames.",
-      "Docker self-hosting starts more reliably across supported Linux environments and now packages all runtime dependencies correctly."
+      "Filter notes from a visible tag on Android and iOS. Desktop and mobile lists now match the exact tag, so similarly named tags no longer leak into the result.",
+      "Plugins can describe panel header actions, search, tabs, and empty states through the host UI, and setting lists open in a dialog.",
+      "Official plugin update checks no longer depend on GitHub REST quota and fall back when asset downloads fail. Official plugins skip the community trust dialog and no longer interrupt with an auto-update notice.",
+      "Large mind maps on phones open at a readable size, fill the remaining viewport, pinch-zoom, and focus a topic on tap.",
+      "Keep desktop pull working when the inbox was renamed or deleted. The instance restores a stable inbox identity; update both the instance and the desktop app.",
+      "Hold in-app auto-restart until the connected instance catches up with GitHub latest. Manual downloads are unchanged."
     ],
     "zh-CN": [
-      "图表现已支持更顺畅的画布导航、更清晰的多选反馈、优化的思维导图与流程图样式、十种配色方案，以及组织架构图、时间线和鱼骨图布局。",
-      "扩展现采用更清晰的受信任代码与网络权限、宿主渲染设置和设置变更通知；官方插件可自动更新，并新增官方 AI RSS 插件。",
-      "Android 与 iOS 用户现在可以在原生工作区中按标签筛选笔记。",
-      "现已提供 Linux x64 AppImage Preview 下载。",
-      "桌面端下载附件时会保留原始文件名。",
-      "Docker 自托管在受支持的 Linux 环境中启动更可靠，并会正确打包全部运行时依赖。"
+      "Android 和 iOS 可从可见标签筛选笔记；桌面端和移动端列表按精确标签匹配，相近名称的标签不再混入结果。",
+      "插件可通过宿主界面描述面板标题操作、搜索、标签页和空状态，设置项也会以对话框列表呈现。",
+      "官方插件更新检查不再依赖 GitHub REST 配额，下载失败会回退；官方插件不再弹出社区信任确认或自动更新打断提示。",
+      "手机端打开大型思维导图时不再缩成无法阅读的全图，画布铺满剩余视口，支持捏合缩放并点选主题。",
+      "修复桌面端在收件箱被改名或删除后无法拉取同步的问题。实例会恢复稳定的收件箱身份；请同时更新实例和桌面端。",
+      "桌面端在所连接实例尚未跟上 GitHub 最新版本时，会暂缓应用内自动重启，避免客户端比实例更新。手动下载不受影响。"
     ]
   }
 }

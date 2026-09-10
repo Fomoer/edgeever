@@ -46,6 +46,17 @@ export interface PluginManifest {
   settings?: PluginSettingsSchema;
 }
 
+export interface PluginSettingListItem {
+  title: string;
+  description?: string;
+}
+
+export interface PluginSettingList {
+  title?: string;
+  actionLabel?: string;
+  items: PluginSettingListItem[];
+}
+
 /**
  * Declarative setting metadata. EdgeEver owns the layout, controls, validation,
  * state feedback, and responsive behavior; plugins cannot supply presentation code or styles.
@@ -55,6 +66,8 @@ interface PluginSettingBase {
   label: string;
   description?: string;
   required?: boolean;
+  /** Host-rendered read-only items, opened from a small entry next to the field. */
+  list?: PluginSettingList;
 }
 
 export type PluginSettingField =
@@ -339,9 +352,58 @@ export interface PluginPanelOpenOptions {
   state?: PluginJsonValue;
 }
 
+export type PluginPanelActionVariant = "default" | "primary" | "ghost";
+
+export interface PluginPanelAction {
+  id: string;
+  label: string;
+  variant?: PluginPanelActionVariant;
+  disabled?: boolean;
+}
+
+export interface PluginPanelSelectOption {
+  value: string;
+  label: string;
+}
+
+export type PluginPanelToolbarItem =
+  | { type: "search"; key: string; placeholder?: string; value?: string }
+  | { type: "tabs"; key: string; value?: string; options: PluginPanelSelectOption[] }
+  | { type: "select"; key: string; label?: string; value?: string; options: PluginPanelSelectOption[] }
+  | { type: "button"; key: string; label: string; variant?: PluginPanelActionVariant; disabled?: boolean };
+
+export interface PluginPanelEmptyState {
+  title: string;
+  description?: string;
+  action?: PluginPanelAction;
+}
+
+/**
+ * Host-rendered panel chrome. Plugins describe intent; EdgeEver owns layout and controls.
+ * Callbacks stay in-memory and are not serialized with panel open state.
+ */
+export interface PluginPanelChrome {
+  header?: {
+    title?: string;
+    /** Pass `null` to hide the host's default panel description. */
+    description?: string | null;
+    actions?: PluginPanelAction[];
+  };
+  toolbar?: PluginPanelToolbarItem[];
+  empty?: PluginPanelEmptyState | null;
+  onAction?: (id: string) => void;
+  onChange?: (key: string, value: string) => void;
+}
+
+export interface PluginPanelShell {
+  set(chrome: PluginPanelChrome): void;
+}
+
 export interface PluginPanelMountContext {
   state: PluginJsonValue | null;
   requestClose(): Promise<void>;
+  /** Host-rendered header, toolbar, and empty state. `set` is a no-op when the host has no chrome adapter. */
+  shell: PluginPanelShell;
 }
 
 export type PluginPanelCloseDecision = boolean | {
@@ -495,6 +557,97 @@ const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const PANEL_CHROME_ID = /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/;
+const PANEL_ACTION_VARIANTS = new Set<PluginPanelActionVariant>(["default", "primary", "ghost"]);
+
+const clipChromeText = (value: unknown, fallback = "", max = 200) => {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed.length > max ? trimmed.slice(0, max) : trimmed;
+};
+
+const normalizePanelAction = (value: unknown): PluginPanelAction | null => {
+  if (!isRecord(value) || typeof value.id !== "string" || !PANEL_CHROME_ID.test(value.id)) return null;
+  const label = clipChromeText(value.label);
+  if (!label) return null;
+  const variant = PANEL_ACTION_VARIANTS.has(value.variant as PluginPanelActionVariant) ? value.variant as PluginPanelActionVariant : undefined;
+  return { id: value.id, label, ...(variant ? { variant } : {}), ...(value.disabled === true ? { disabled: true } : {}) };
+};
+
+const normalizePanelOptions = (value: unknown): PluginPanelSelectOption[] => {
+  if (!Array.isArray(value)) return [];
+  const options: PluginPanelSelectOption[] = [];
+  for (const item of value.slice(0, 24)) {
+    if (!isRecord(item) || typeof item.value !== "string" || !item.value || item.value.length > 64) continue;
+    const label = clipChromeText(item.label, item.value);
+    options.push({ value: item.value, label });
+  }
+  return options;
+};
+
+const normalizeToolbarItem = (value: unknown): PluginPanelToolbarItem | null => {
+  if (!isRecord(value) || typeof value.key !== "string" || !PANEL_CHROME_ID.test(value.key)) return null;
+  if (value.type === "search") {
+    return {
+      type: "search",
+      key: value.key,
+      ...(typeof value.placeholder === "string" ? { placeholder: clipChromeText(value.placeholder, "", 80) } : {}),
+      ...(typeof value.value === "string" ? { value: value.value.slice(0, 200) } : {}),
+    };
+  }
+  if (value.type === "tabs" || value.type === "select") {
+    const options = normalizePanelOptions(value.options);
+    if (!options.length) return null;
+    const selected = typeof value.value === "string" && options.some((option) => option.value === value.value) ? value.value : options[0].value;
+    return {
+      type: value.type,
+      key: value.key,
+      value: selected,
+      options,
+      ...(value.type === "select" && typeof value.label === "string" ? { label: clipChromeText(value.label, "", 40) } : {}),
+    };
+  }
+  if (value.type === "button") {
+    const action = normalizePanelAction({ ...value, id: value.key });
+    if (!action) return null;
+    return { type: "button", key: value.key, label: action.label, ...(action.variant ? { variant: action.variant } : {}), ...(action.disabled ? { disabled: true } : {}) };
+  }
+  return null;
+};
+
+/** Strips unknown fields and clamps sizes so host chrome rendering stays bounded. */
+export const normalizePluginPanelChrome = (value: PluginPanelChrome | null | undefined): PluginPanelChrome => {
+  if (!isRecord(value)) return {};
+  const chrome: PluginPanelChrome = {};
+  if (isRecord(value.header)) {
+    const actions = Array.isArray(value.header.actions)
+      ? value.header.actions.map(normalizePanelAction).filter((action): action is PluginPanelAction => Boolean(action)).slice(0, 8)
+      : [];
+    chrome.header = {
+      ...(typeof value.header.title === "string" ? { title: clipChromeText(value.header.title, "", 80) } : {}),
+      ...(value.header.description === null ? { description: null } : typeof value.header.description === "string" ? { description: clipChromeText(value.header.description, "", 200) } : {}),
+      ...(actions.length ? { actions } : {}),
+    };
+  }
+  if (Array.isArray(value.toolbar)) {
+    chrome.toolbar = value.toolbar.map(normalizeToolbarItem).filter((item): item is PluginPanelToolbarItem => Boolean(item)).slice(0, 16);
+  }
+  if (value.empty === null) chrome.empty = null;
+  else if (isRecord(value.empty)) {
+    const title = clipChromeText(value.empty.title, "", 80);
+    if (title) {
+      chrome.empty = {
+        title,
+        ...(typeof value.empty.description === "string" ? { description: clipChromeText(value.empty.description) } : {}),
+        ...(normalizePanelAction(value.empty.action) ? { action: normalizePanelAction(value.empty.action)! } : {}),
+      };
+    }
+  }
+  if (typeof value.onAction === "function") chrome.onAction = value.onAction as PluginPanelChrome["onAction"];
+  if (typeof value.onChange === "function") chrome.onChange = value.onChange as PluginPanelChrome["onChange"];
+  return chrome;
+};
+
 const COLOR_THEME_TOKENS = new Set<ThemeTokenName>([
   "color.background", "color.surface", "color.surfaceMuted", "color.text", "color.textMuted",
   "color.border", "color.accent", "color.accentForeground", "color.success", "color.warning", "color.danger",
@@ -548,6 +701,36 @@ const normalizeThemeTokens = (value: unknown): ThemeTokens => {
 
 const SETTING_KEY_PATTERN = /^[a-z][a-z0-9._-]*$/;
 
+const normalizeSettingList = (field: Record<string, unknown>, key: string): PluginSettingList | undefined => {
+  if (field.list === undefined) return undefined;
+  if (!isRecord(field.list) || !Array.isArray(field.list.items) || field.list.items.length === 0 || field.list.items.length > 100) {
+    throw new Error(`Plugin setting ${key} list requires between 1 and 100 items.`);
+  }
+  if (field.list.title !== undefined && (typeof field.list.title !== "string" || !field.list.title.trim() || field.list.title.length > 200)) {
+    throw new Error(`Plugin setting ${key} list title must be at most 200 characters.`);
+  }
+  if (field.list.actionLabel !== undefined && (typeof field.list.actionLabel !== "string" || !field.list.actionLabel.trim() || field.list.actionLabel.length > 40)) {
+    throw new Error(`Plugin setting ${key} list action label must be at most 40 characters.`);
+  }
+  const items = field.list.items.map((item, index): PluginSettingListItem => {
+    if (!isRecord(item) || typeof item.title !== "string" || !item.title.trim() || item.title.length > 200) {
+      throw new Error(`Plugin setting ${key} list item ${index + 1} requires a title of at most 200 characters.`);
+    }
+    if (item.description !== undefined && (typeof item.description !== "string" || item.description.length > 200)) {
+      throw new Error(`Plugin setting ${key} list item ${index + 1} description is too long.`);
+    }
+    return {
+      title: item.title.trim(),
+      ...(typeof item.description === "string" && item.description.trim() ? { description: item.description.trim() } : {}),
+    };
+  });
+  return {
+    items,
+    ...(typeof field.list.title === "string" ? { title: field.list.title.trim() } : {}),
+    ...(typeof field.list.actionLabel === "string" ? { actionLabel: field.list.actionLabel.trim() } : {}),
+  };
+};
+
 const normalizePluginSettings = (value: unknown): PluginSettingsSchema => {
   if (!isRecord(value) || !Array.isArray(value.fields)) throw new Error("Plugin settings must contain a fields array.");
   if (value.fields.length > 50) throw new Error("Plugin settings cannot contain more than 50 fields.");
@@ -560,11 +743,13 @@ const normalizePluginSettings = (value: unknown): PluginSettingsSchema => {
     keys.add(field.key);
     if (typeof field.label !== "string" || !field.label.trim() || field.label.length > 200) throw new Error(`Plugin setting ${field.key} requires a label of at most 200 characters.`);
     if (typeof field.description === "string" && field.description.length > 1000) throw new Error(`Plugin setting ${field.key} description is too long.`);
+    const list = normalizeSettingList(field, field.key);
     const common = {
       key: field.key,
       label: field.label.trim(),
       ...(typeof field.description === "string" && field.description.trim() ? { description: field.description.trim() } : {}),
       ...(field.required === true ? { required: true } : {}),
+      ...(list ? { list } : {}),
     };
     if (field.type === "text" || field.type === "secret") {
       if (field.type === "secret" && field.default !== undefined) throw new Error(`Secret setting ${field.key} cannot declare a default value.`);

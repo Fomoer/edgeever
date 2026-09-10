@@ -35,8 +35,9 @@ persistent `/data` mount:
 
 ```text
 EdgeEver container
-├── SQLite database       -> /data/edgeever.sqlite
-└── attachment store      -> /data/resources
+├── SQLite database          -> /data/edgeever.sqlite
+├── credential secrets       -> /data/edgeever-secrets.json
+└── attachment store         -> /data/resources
 ```
 
 The self-hosted adapter preserves the existing SQLite schema and
@@ -55,11 +56,14 @@ ambiguous.
 - Keep the current migration files append-only; do not fork the schema for
   Docker.
 - Keep root secrets in environment variables or Docker secrets, never in the
-  image or database. Object-storage secrets and personal AI model API keys use
-  separate purpose-specific keys derived from the existing instance
-  authentication secret. An optional `EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY`
-  can override the AI credential key for advanced rotation.
-  Stored credentials must remain AES-GCM ciphertext.
+  image or database. The self-hosted runtime may persist a copy on `/data`
+  outside SQLite so NAS/GUI upgrades that drop container environment variables
+  keep credential encryption. Cloudflare continues to use Worker secrets only.
+  Object-storage secrets and personal AI model API keys use separate
+  purpose-specific keys derived from the existing instance authentication
+  secret. An optional `EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY` can override the
+  AI credential key for advanced rotation. Stored credentials must remain
+  AES-GCM ciphertext.
 - Make `/data` the only required persistent application path so NAS users can
   back up one volume.
 - Support `EDGE_EVER_AUTH_USERNAME`, `EDGE_EVER_AUTH_PASSWORD`, and session

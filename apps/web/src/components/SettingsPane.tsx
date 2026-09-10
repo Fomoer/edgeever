@@ -33,6 +33,7 @@ import { DesktopLocalDataCard } from "./settings/DesktopLocalDataCard";
 import { LoginDevicesCard } from "./settings/LoginDevicesCard";
 import { EvernoteImportGuideCard } from "./settings/EvernoteImportGuideCard";
 import { FeedbackLink } from "./settings/FeedbackLink";
+import { ProductHuntLink } from "./settings/ProductHuntLink";
 import { McpConfigCard } from "./settings/McpConfigCard";
 import { PreferenceCard } from "./settings/PreferenceCard";
 import { PasswordCard } from "./settings/PasswordCard";
@@ -235,6 +236,7 @@ export const SettingsPane = ({
               onEditorContentAlignmentChange={onEditorContentAlignmentChange}
             />
             <FeedbackLink className="hidden lg:flex" />
+            <ProductHuntLink className="hidden lg:flex" />
           </SettingsGroup>
         );
       case "paw":
@@ -457,6 +459,7 @@ export const SettingsPane = ({
                   <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
                 </button>
                 <FeedbackLink />
+                <ProductHuntLink />
               </div>
             </div>
           ) : (

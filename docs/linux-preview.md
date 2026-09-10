@@ -17,10 +17,17 @@ chmod +x EdgeEver-*-linux-x64.AppImage
 The checksum detects a damaged or mismatched download; it is not a code-signing
 identity. Do not download the Preview from third-party mirrors.
 
-Automatic updates are intentionally disabled during the initial Preview.
-Download the newer AppImage from the latest formal Release and replace the old
-file manually. Automatic updates will only be enabled after a real
-AppImage-to-AppImage upgrade has passed the cross-version release gate.
+The Preview checks formal GitHub Releases for updates, downloads a newer
+AppImage in the background, and replaces the current AppImage after you choose
+to restart. Releases must pass a real AppImage-to-AppImage cross-version gate
+before publication. Versions released before automatic updates were enabled
+still require one final manual replacement.
+
+Automatic replacement requires write access to both the current AppImage and
+its containing directory. An AppImage kept in a user-owned Downloads or
+Applications directory normally satisfies this requirement. A system-wide copy
+owned by an administrator, such as one under `/opt`, must be updated manually
+or made writable by the administrator.
 
 An AppImage does not install a desktop launcher or file associations by itself.
 Desktop integration can be managed by the user's AppImage launcher or desktop

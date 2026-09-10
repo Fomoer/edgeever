@@ -34,10 +34,39 @@ describe("plugin trust acknowledgement", () => {
     expect(() => acknowledgePluginTrustWarning(storage)).not.toThrow();
   });
 
-  test("asks only before the first client-plugin enable", () => {
-    expect(shouldRequestPluginTrustAcknowledgement({ acknowledged: false, enabled: true, extensionType: "plugin" })).toBe(true);
-    expect(shouldRequestPluginTrustAcknowledgement({ acknowledged: true, enabled: true, extensionType: "plugin" })).toBe(false);
-    expect(shouldRequestPluginTrustAcknowledgement({ acknowledged: false, enabled: false, extensionType: "plugin" })).toBe(false);
-    expect(shouldRequestPluginTrustAcknowledgement({ acknowledged: false, enabled: true, extensionType: "theme" })).toBe(false);
+  test("asks only before the first community client-plugin enable", () => {
+    expect(shouldRequestPluginTrustAcknowledgement({
+      acknowledged: false,
+      enabled: true,
+      extensionType: "plugin",
+      isOfficial: false,
+    })).toBe(true);
+    expect(shouldRequestPluginTrustAcknowledgement({
+      acknowledged: true,
+      enabled: true,
+      extensionType: "plugin",
+      isOfficial: false,
+    })).toBe(false);
+    expect(shouldRequestPluginTrustAcknowledgement({
+      acknowledged: false,
+      enabled: false,
+      extensionType: "plugin",
+      isOfficial: false,
+    })).toBe(false);
+    expect(shouldRequestPluginTrustAcknowledgement({
+      acknowledged: false,
+      enabled: true,
+      extensionType: "theme",
+      isOfficial: false,
+    })).toBe(false);
+  });
+
+  test("does not treat official plugins as community plugins", () => {
+    expect(shouldRequestPluginTrustAcknowledgement({
+      acknowledged: false,
+      enabled: true,
+      extensionType: "plugin",
+      isOfficial: true,
+    })).toBe(false);
   });
 });

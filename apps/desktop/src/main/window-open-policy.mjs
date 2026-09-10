@@ -11,8 +11,11 @@ export const isAllowedPrintPreviewUrl = (targetUrl, appUrl) => {
       return target.protocol === "file:" && target.pathname === expected.pathname;
     }
 
-    const expected = new URL("/note-print.html", currentApp.origin);
-    return target.origin === expected.origin && target.pathname === expected.pathname;
+    const expected = new URL("/note-print.html", currentApp);
+    return target.protocol === expected.protocol &&
+      target.hostname === expected.hostname &&
+      target.port === expected.port &&
+      target.pathname === expected.pathname;
   } catch {
     return false;
   }

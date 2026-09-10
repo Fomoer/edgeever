@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
+  createDefaultNotebookRows,
   createWorkspaceDefaultSeedStatements,
   ensureUserWorkspace,
+  isInboxNotebook,
+  workspaceInboxId,
 } from "./workspace-provisioning.ts";
 
 const statement = (sql, calls) => ({
@@ -20,6 +23,15 @@ const statement = (sql, calls) => ({
 });
 
 describe("workspace provisioning", () => {
+  test("uses a stable workspace-scoped inbox id", () => {
+    expect(workspaceInboxId("ws_1")).toBe("ws_1_inbox");
+    expect(createDefaultNotebookRows("ws_1")[0]).toMatchObject({
+      id: "ws_1_inbox",
+      slug: "inbox",
+    });
+    expect(isInboxNotebook({ id: "ws_1_inbox", slug: "shou-ji-xiang" }, "ws_1")).toBe(true);
+  });
+
   test("does not restore defaults while resolving an existing workspace", async () => {
     const calls = [];
     let batchCount = 0;

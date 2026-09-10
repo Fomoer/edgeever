@@ -68,6 +68,7 @@ export const nativeReleaseAssetsReady = ({
       "latest.yml",
       "latest-windows.json",
       "SHA256SUMS-windows.txt",
+      "latest-linux.yml",
       "SHA256SUMS-linux.txt",
     ]) {
       if (assetNames.filter((assetName) => assetName === name).length !== 1) {

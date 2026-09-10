@@ -21,6 +21,22 @@ const notesViewSource = readFileSync(
   new URL("../apps/mobile/src/screens/WorkspaceNotesView.tsx", import.meta.url),
   "utf8"
 );
+const iosWorkspaceViewSource = readFileSync(
+  new URL("../apps/ios/EdgeEver/Features/Workspace/WorkspaceView.swift", import.meta.url),
+  "utf8"
+);
+const mobileTagsSource = readFileSync(
+  new URL("../apps/mobile/src/lib/mobile-tags.ts", import.meta.url),
+  "utf8"
+);
+const mobileLocalMirrorSource = readFileSync(
+  new URL("../apps/mobile/src/lib/local-mirror.ts", import.meta.url),
+  "utf8"
+);
+const iosLocalMirrorSource = readFileSync(
+  new URL("../apps/ios/EdgeEver/Data/Database/LocalMirrorRepository.swift", import.meta.url),
+  "utf8"
+);
 const mobileDomSource = readFileSync(
   new URL("../apps/mobile/src/lib/mobile-dom.ts", import.meta.url),
   "utf8"
@@ -93,6 +109,28 @@ describe("mobile app scope", () => {
     expect(localTiptapEditorSource).toContain('visualViewport?.addEventListener("resize", ensureSelectionVisible)');
     expect(localTiptapEditorSource).toContain("--edgeever-keyboard-inset");
     expect(localTiptapEditorSource).toContain("scrollEditorPositionIntoView(editor, editor.state.selection.head)");
+  });
+
+  test("puts specific tag filtering on the visible list chip instead of tagged/untagged toggles", () => {
+    expect(notesViewSource).toContain("onOpenTagFilter");
+    expect(notesViewSource).toContain('label={selectedTag ? `#${selectedTag}` : "按标签筛选"}');
+    expect(notesViewSource).not.toContain('label="有标签"');
+    expect(notesViewSource).not.toContain('label="无标签"');
+    expect(workspaceSource).toContain("onOpenTagFilter={() => setTagFilterPickerOpen(true)}");
+
+    expect(iosWorkspaceViewSource).toContain("store.showTagFilterPicker = true");
+    expect(iosWorkspaceViewSource).toContain('env.preferences.t("按标签筛选", en: "Filter by tag")');
+    expect(iosWorkspaceViewSource).not.toContain('env.preferences.t("有标签", en: "Tagged")');
+    expect(iosWorkspaceViewSource).not.toContain('env.preferences.t("无标签", en: "Untagged")');
+  });
+
+  test("applies exact tag matching in the local memo list instead of json_each on the full note blob", () => {
+    expect(workspaceSource).toContain("tag: memoView === \"notebook\" ? selectedTag ?? undefined : undefined");
+    expect(mobileTagsSource).toContain("filterLocalMemosByExactTag");
+    expect(mobileLocalMirrorSource).toContain("filterLocalMemosByExactTag");
+    expect(mobileLocalMirrorSource).not.toContain("json_each(mobile_memos.data_json");
+    expect(iosLocalMirrorSource).toContain("MobileUI.memoHasExactTag");
+    expect(iosLocalMirrorSource).not.toContain("json_each(mobile_memos.data_json");
   });
 
   test("keeps Android memo list motion and spring feedback", () => {

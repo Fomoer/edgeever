@@ -31,8 +31,9 @@ SQLite 仍是自托管默认数据库；未来 PostgreSQL 更适合较大团队�
 
 ```text
 EdgeEver 容器
-├── SQLite 数据库       -> /data/edgeever.sqlite
-└── 附件存储             -> /data/resources
+├── SQLite 数据库          -> /data/edgeever.sqlite
+├── 凭据加密根密钥         -> /data/edgeever-secrets.json
+└── 附件存储               -> /data/resources
 ```
 
 自托管适配器继续复用现有 SQLite 结构和 `migrations/*.sql`；附件继续使用
@@ -46,7 +47,7 @@ S3 兼容对象存储两种后端。
 
 - 保持 `/api/*`、`/mcp`、`/api/openapi.json` 和 `/api/health` 不变。
 - 继续追加 `migrations/*.sql`，禁止为 Docker 分叉数据库结构。
-- 根密钥必须通过环境变量或 Docker secrets 注入，不能写入镜像或数据库。对象存储 Secret 与个人 AI 模型 API Key 默认从已有实例认证 Secret 派生各自用途的专用密钥；高级 AI 密钥轮换场景可选用 `EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY` 覆盖。所有凭据在数据库中只能保存为 AES-GCM 密文。
+- 根密钥必须通过环境变量或 Docker secrets 注入，不能写入镜像或数据库。自托管运行入口可以把副本写在 `/data`（SQLite 之外），以便 NAS/GUI 升级丢掉容器环境变量后仍能加密凭据。Cloudflare 继续只使用 Worker Secret。对象存储 Secret 与个人 AI 模型 API Key 默认从已有实例认证 Secret 派生各自用途的专用密钥；高级 AI 密钥轮换场景可选用 `EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY` 覆盖。所有凭据在数据库中只能保存为 AES-GCM 密文。
 - 将 `/data` 作为唯一必需的应用持久化路径，方便 NAS 用户备份一个卷。
 - 容器入口需要支持 `EDGE_EVER_AUTH_USERNAME`、`EDGE_EVER_AUTH_PASSWORD` 和
   会话配置，同时不能把 Cloudflare 专有配置当作前置条件。

@@ -23,4 +23,12 @@ describe("desktop window open policy", () => {
     expect(isAllowedPrintPreviewUrl("https://example.com/note-print.html", appUrl)).toBe(false);
     expect(isAllowedPrintPreviewUrl("http://127.0.0.1:5173/settings", appUrl)).toBe(false);
   });
+
+  test("allows only the print preview on the private desktop origin", () => {
+    const appUrl = "edgeever-app://app/index.html";
+
+    expect(isAllowedPrintPreviewUrl("edgeever-app://app/note-print.html?token=abc", appUrl)).toBe(true);
+    expect(isAllowedPrintPreviewUrl("edgeever-app://other/note-print.html", appUrl)).toBe(false);
+    expect(isAllowedPrintPreviewUrl("edgeever-app://app/mobile-edit.html", appUrl)).toBe(false);
+  });
 });

@@ -59,9 +59,11 @@ export const resolveCredentialEncryptionKey = (value: string | undefined) => {
 
 export type AiCredentialEnvironment = {
   EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY?: string;
+  EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY_PREVIOUS?: string;
   EDGE_EVER_STORAGE_ENCRYPTION_KEY?: string;
   EDGE_EVER_AUTH_PASSWORD?: string;
   EDGE_EVER_AUTH_PASSWORD_HASH?: string;
+  EDGE_EVER_AUTH_PASSWORD_FALLBACK?: string;
 };
 
 const uniqueKeys = (values: Array<string | undefined>) => Array.from(new Set(values.filter(Boolean) as string[]));
@@ -79,6 +81,8 @@ export const resolveAiCredentialEncryptionKeys = (environment: AiCredentialEnvir
   deriveAiCredentialKey(resolveCredentialEncryptionKey(environment.EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY)),
   deriveAiCredentialKey(resolveCredentialEncryptionKey(environment.EDGE_EVER_AUTH_PASSWORD)),
   deriveAiCredentialKey(resolveCredentialEncryptionKey(environment.EDGE_EVER_AUTH_PASSWORD_HASH)),
+  deriveAiCredentialKey(resolveCredentialEncryptionKey(environment.EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY_PREVIOUS)),
+  deriveAiCredentialKey(resolveCredentialEncryptionKey(environment.EDGE_EVER_AUTH_PASSWORD_FALLBACK)),
   resolveCredentialEncryptionKey(environment.EDGE_EVER_STORAGE_ENCRYPTION_KEY),
 ]);
 
@@ -154,6 +158,7 @@ export const mapAiModelConfig = (row: AiModelConfigRow): AiModelConfig => ({
 export const mapAiProviderConfig = (
   row: AiProviderConfigRow,
   models: AiModelConfigRow[],
+  credentialsUnavailable = false,
 ): AiProviderConfig => ({
   id: row.id,
   provider: row.provider,
@@ -162,7 +167,24 @@ export const mapAiProviderConfig = (
   isEnabled: Boolean(row.is_enabled),
   hasApiKey: Boolean(row.api_key_encrypted),
   models: models.filter((model) => model.provider_config_id === row.id).map(mapAiModelConfig),
+  ...(credentialsUnavailable ? { credentialsUnavailable: true } : {}),
 });
+
+const withAiCredentialAvailability = async (
+  row: AiProviderConfigRow,
+  models: AiModelConfigRow[],
+  encryptionConfigured: boolean,
+  environment?: AiCredentialEnvironment,
+): Promise<AiProviderConfig> => {
+  const mapped = mapAiProviderConfig(row, models);
+  if (!encryptionConfigured || !environment || !row.api_key_encrypted) return mapped;
+  try {
+    await decryptAiCredential(row.api_key_encrypted, environment);
+    return mapped;
+  } catch {
+    return mapAiProviderConfig(row, models, true);
+  }
+};
 
 export const getAiSettings = async (
   db: DatabaseAdapter,
@@ -170,6 +192,7 @@ export const getAiSettings = async (
   encryptionConfigured: boolean,
   readOnly: boolean,
   locale?: string,
+  environment?: AiCredentialEnvironment,
 ): Promise<AiSettings> => {
   const [providersResult, modelsResult, defaultModelId, promptRow] = await Promise.all([
     db.prepare(
@@ -191,8 +214,8 @@ export const getAiSettings = async (
   const customizedPrompt = promptRow?.tag_suggestion_prompt?.trim() || null;
 
   return {
-    providers: providersResult.results.map((provider) =>
-      mapAiProviderConfig(provider, modelsResult.results)),
+    providers: await Promise.all(providersResult.results.map((provider) =>
+      withAiCredentialAvailability(provider, modelsResult.results, encryptionConfigured, environment))),
     defaultModelId,
     tagSuggestionPrompt: customizedPrompt ?? getDefaultAiTagSuggestionPrompt(locale),
     tagSuggestionPromptCustomized: Boolean(customizedPrompt),

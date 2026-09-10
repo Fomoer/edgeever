@@ -4,6 +4,7 @@ import { CheckCircle2, Cloud, Database, Loader2, TriangleAlert } from "lucide-re
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   SETTINGS_CARD_DESCRIPTION_CLASSNAME,
   SETTINGS_CARD_HEADER_CLASSNAME,
@@ -146,7 +147,20 @@ export const ObjectStorageCard = ({ demoMode }: { demoMode: boolean }) => {
 
             <div className="flex flex-wrap justify-end gap-2">
               {provider === "s3" ? <Button type="button" variant="outline" disabled={testMutation.isPending || saveMutation.isPending} onClick={() => testMutation.mutate()}>{testMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{t("objectStorage.test")}</Button> : null}
-              <Button type="submit" disabled={demoMode || saveMutation.isPending || (provider === "s3" && !encryptionConfigured)}>{saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{t("common.save")}</Button>
+              {provider === "s3" && !encryptionConfigured ? (
+                <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex" tabIndex={0}>
+                        <Button type="submit" disabled>{saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{t("common.save")}</Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">{t("objectStorage.authenticationRequired")}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Button type="submit" disabled={demoMode || saveMutation.isPending}>{saveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{t("common.save")}</Button>
+              )}
             </div>
             <p className="text-xs leading-5 text-slate-500">{demoMode ? t("objectStorage.demoDisabled") : t("objectStorage.switchHint")}</p>
           </form>

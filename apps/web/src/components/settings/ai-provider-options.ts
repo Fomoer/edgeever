@@ -17,10 +17,18 @@ export const formatProviderOrdinal = (position: number, locale: string) => {
   return `${tens === 1 ? "" : chineseDigits[tens]}十${ones ? chineseDigits[ones] : ""}`;
 };
 
-export const isLegacyProviderDisplayName = (displayName: string, provider: AiProvider) =>
-  displayName.trim().toLocaleLowerCase() === providerDefaults[provider].displayName.toLocaleLowerCase();
+export const trimAiText = (value: string | null | undefined) => (value ?? "").trim();
 
-export const aiErrorMessage = (error: unknown, fallback: string, encryptionMessage: string) => {
+export const isLegacyProviderDisplayName = (displayName: string | null | undefined, provider: AiProvider) =>
+  trimAiText(displayName).toLocaleLowerCase() === (providerDefaults[provider]?.displayName ?? "").toLocaleLowerCase();
+
+export const aiErrorMessage = (
+  error: unknown,
+  fallback: string,
+  encryptionMessage: string,
+  unavailableMessage = encryptionMessage,
+) => {
   if (error instanceof ApiRequestError && error.code === "ai_encryption_key_missing") return encryptionMessage;
+  if (error instanceof ApiRequestError && error.code === "ai_credentials_unavailable") return unavailableMessage;
   return error instanceof Error ? error.message : fallback;
 };

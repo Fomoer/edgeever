@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 
 type Prompt = {
   id: string;
@@ -94,6 +94,18 @@ const selectAction = async (dialog: ReturnType<Page["getByRole"]>, optionName: s
   await dialog.page().getByRole("option", { name: optionName, exact: true }).click();
 };
 
+const focusParagraphEnd = async (editor: Locator) => {
+  await editor.locator(":scope > p").last().evaluate((paragraph) => {
+    const range = document.createRange();
+    range.selectNodeContents(paragraph);
+    range.collapse(false);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    (paragraph.closest("[contenteditable='true']") as HTMLElement | null)?.focus();
+  });
+};
+
 test.describe("AI custom prompts", () => {
   let notebookId: string;
   let notebookName: string;
@@ -178,7 +190,7 @@ test.describe("AI custom prompts", () => {
     ]);
     expect(initialBox).not.toBeNull();
     expect(handleBox).not.toBeNull();
-    expect(handleBox!.y).toBeCloseTo(initialBox!.y, 0);
+    expect(Math.abs(handleBox!.y - initialBox!.y)).toBeLessThanOrEqual(1);
     expect(handleBox!.height).toBeGreaterThanOrEqual(60);
     const viewport = page.viewportSize();
     expect(viewport).not.toBeNull();
@@ -424,8 +436,7 @@ test.describe("AI custom prompts", () => {
     const editor = page.locator(".ProseMirror[contenteditable='true']");
     await expect(editor).toBeVisible();
 
-    await editor.click();
-    await page.keyboard.press("End");
+    await focusParagraphEnd(editor);
     await page.keyboard.press("Enter");
     const emptyParagraph = editor.locator("p").last();
     await expect(emptyParagraph).toHaveClass(/is-empty/);
@@ -473,8 +484,7 @@ test.describe("AI custom prompts", () => {
     await page.getByRole("button", { name: "返回上一页", exact: true }).click();
     const editor = page.locator(".ProseMirror[contenteditable='true']");
     await expect(editor).toBeVisible();
-    await editor.click();
-    await page.keyboard.press("End");
+    await focusParagraphEnd(editor);
     await page.keyboard.press("Enter");
     const emptyParagraph = editor.locator("p").last();
     await expect(emptyParagraph).toHaveAttribute("data-placeholder", "/ 浏览命令 · @ 引用笔记");

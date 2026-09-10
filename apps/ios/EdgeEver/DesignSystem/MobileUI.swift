@@ -83,6 +83,14 @@ enum MobileUI {
         guard current.count < maxSelections else { return current }
         return current + [tag]
     }
+
+    static func memoHasExactTag(tags: [String], tag: String) -> Bool {
+        let normalized = tag.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalized.isEmpty else { return true }
+        return tags.contains {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalized
+        }
+    }
 }
 
 struct NotebookTreeItem: Identifiable, Equatable {

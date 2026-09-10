@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { usePwaInstall } from "./PwaInstallContext";
+import { getAppAssetPath } from "@/lib/app-page-path";
 
 export const PwaIosPrompt = () => {
   const { t } = useTranslation();
@@ -26,7 +27,7 @@ export const PwaIosPrompt = () => {
 
         <div className="flex items-start gap-3.5 pr-6">
           <img
-            src="/favicon.svg"
+            src={getAppAssetPath("favicon.svg", import.meta.env.BASE_URL)}
             alt=""
             aria-hidden="true"
             className="h-11 w-11 shrink-0"

@@ -11,6 +11,7 @@ import {
   SETTINGS_CARD_TITLE_CLASSNAME,
 } from "./settings-ui";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { trimAiText } from "@/components/settings/ai-provider-options";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -26,19 +27,20 @@ export const AiTagSuggestionPromptCard = () => {
   const [prompt, setPrompt] = useState("");
 
   useEffect(() => {
-    if (settingsQuery.data) setPrompt(settingsQuery.data.tagSuggestionPrompt);
+    if (settingsQuery.data) setPrompt(settingsQuery.data.tagSuggestionPrompt ?? "");
   }, [settingsQuery.data]);
 
   const updateMutation = useMutation({
     mutationFn: (nextPrompt: string | null) => api.updateAiTagSuggestionPrompt({ prompt: nextPrompt }, locale),
     onSuccess: async (settings) => {
-      setPrompt(settings.tagSuggestionPrompt);
+      setPrompt(settings.tagSuggestionPrompt ?? "");
       await queryClient.invalidateQueries({ queryKey: ["ai-settings"] });
     },
   });
   const settings = settingsQuery.data;
-  const trimmedPrompt = prompt.trim();
-  const unchanged = Boolean(settings) && trimmedPrompt === settings?.tagSuggestionPrompt;
+  const promptText = prompt ?? "";
+  const trimmedPrompt = trimAiText(promptText);
+  const unchanged = Boolean(settings) && trimmedPrompt === (settings?.tagSuggestionPrompt ?? "");
   const disabled = !settings || settings.readOnly || updateMutation.isPending;
   const error = updateMutation.error ?? settingsQuery.error;
 
@@ -75,9 +77,9 @@ export const AiTagSuggestionPromptCard = () => {
                   disabled={disabled}
                   maxLength={4000}
                   onChange={(event) => setPrompt(event.target.value)}
-                  value={prompt}
+                  value={promptText}
                 />
-                <div className="text-right text-xs text-slate-500">{prompt.length}/4000</div>
+                <div className="text-right text-xs text-slate-500">{promptText.length}/4000</div>
                 {error ? <p className="text-xs font-medium text-rose-600" role="alert">{t("settings.aiTagPromptFailed")}</p> : null}
                 {updateMutation.isSuccess ? <p className="text-xs font-medium text-emerald-700" role="status">{t("settings.aiTagPromptSaved")}</p> : null}
                 <div className="flex flex-wrap justify-end gap-2">

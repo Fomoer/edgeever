@@ -85,6 +85,7 @@ const readSettings = (context: AppContext, dependencies: AiRouteDependencies) =>
   encryptionConfigured(context),
   dependencies.isDemoMode(context.env),
   context.req.query("locale"),
+  context.env,
 );
 
 const denyMutation = (context: AppContext, dependencies: AiRouteDependencies) => {

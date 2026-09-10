@@ -79,7 +79,9 @@ describe("native release planning", () => {
       "scripts/run-desktop-builder.mjs",
       "scripts/sign-windows-update-manifest.mjs",
       "scripts/verify-windows-update-release.mjs",
+      "scripts/verify-desktop-cross-version-startup.mjs",
       "scripts/verify-packaged-desktop-startup.mjs",
+      "scripts/verify-renderer-origin-migration.mjs",
     ];
     expect(planNativeRelease("desktop", changedFiles)).toEqual({
       rebuild: true,

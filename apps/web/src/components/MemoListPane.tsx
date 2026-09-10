@@ -6,6 +6,7 @@ import {
   useRef,
   useEffect,
   type MouseEvent,
+  type DragEvent as ReactDragEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
@@ -43,6 +44,7 @@ import {
   Share2,
   FileDown,
   FileCode2,
+  FileUp,
   Printer,
   Pencil,
   Copy,
@@ -383,6 +385,7 @@ export const MemoListPane = ({
   onOpenSettings,
   onSyncMemos,
   onCreateMemo,
+  onImportMarkdownFiles,
   isSyncingMemos,
   canSyncMemos,
   mobileListActionsOpen,
@@ -458,6 +461,7 @@ export const MemoListPane = ({
   onOpenSettings: () => void;
   onSyncMemos: () => void;
   onCreateMemo: () => void;
+  onImportMarkdownFiles: (files: File[]) => void;
   isSyncingMemos: boolean;
   canSyncMemos: boolean;
   mobileListActionsOpen: boolean;
@@ -480,6 +484,7 @@ export const MemoListPane = ({
   const [lastSelectedMemoId, setLastSelectedMemoId] = useState<string | null>(null);
   const [moveTargetNotebookId, setMoveTargetNotebookId] = useState("");
   const [memoIdCopyNotice, setMemoIdCopyNotice] = useState<{ status: "copied" | "error"; id: string } | null>(null);
+  const [fileDragActive, setFileDragActive] = useState(false);
 
   const filterOptions = useMemo(() => getMemoFilterOptions(t), [t]);
   const memoSortOptions = useMemo(() => getMemoSortOptions(t), [t]);
@@ -547,6 +552,34 @@ export const MemoListPane = ({
     : isSyncingMemos
       ? t("memoList.manualSyncing")
       : t("memoList.manualSync");
+
+  const hasFileDrag = (event: ReactDragEvent<HTMLDivElement>) =>
+    Array.from(event.dataTransfer.types).includes("Files");
+
+  const handleFileDragEnter = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (!canCreateMemo || view === "trash" || !hasFileDrag(event)) return;
+    event.preventDefault();
+    setFileDragActive(true);
+  };
+
+  const handleFileDragOver = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (!canCreateMemo || view === "trash" || !hasFileDrag(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    if (!fileDragActive) setFileDragActive(true);
+  };
+
+  const handleFileDragLeave = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
+    setFileDragActive(false);
+  };
+
+  const handleFileDrop = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (!canCreateMemo || view === "trash" || !hasFileDrag(event)) return;
+    event.preventDefault();
+    setFileDragActive(false);
+    onImportMarkdownFiles(Array.from(event.dataTransfer.files));
+  };
 
   const requestContextDocumentAction = (action: MemoDocumentAction) => {
     if (!memoContextMenu) {
@@ -947,7 +980,20 @@ export const MemoListPane = ({
       className="relative flex h-full min-h-0 flex-col outline-none"
       tabIndex={0}
       onKeyDown={handleListKeyDown}
+      onDragEnter={handleFileDragEnter}
+      onDragOver={handleFileDragOver}
+      onDragLeave={handleFileDragLeave}
+      onDrop={handleFileDrop}
     >
+      {fileDragActive && (
+        <div className="pointer-events-none absolute inset-2 z-40 flex items-center justify-center rounded-lg border-2 border-dashed border-emerald-500 bg-emerald-50/95 p-6 text-center shadow-lg backdrop-blur-sm">
+          <div>
+            <FileUp className="mx-auto h-8 w-8 text-emerald-600" />
+            <div className="mt-3 text-sm font-semibold text-emerald-950">{t("memoList.dropMarkdownTitle")}</div>
+            <div className="mt-1 text-xs text-emerald-800">{t("memoList.dropMarkdownDescription")}</div>
+          </div>
+        </div>
+      )}
       <header className="border-b border-slate-200 bg-slate-50 px-4 pb-2 pt-[max(0.375rem,env(safe-area-inset-bottom))] lg:bg-transparent lg:py-3 lg:pt-3">
         {selectionMode ? (
           <div className="mb-3 flex h-10 min-w-0 items-center gap-3 lg:hidden">
@@ -1395,7 +1441,7 @@ export const MemoListPane = ({
                 : t("memoList.noFilteredDescription")}
             </div>
             {memos.length === 0 && canCreateMemo && view !== "trash" && (
-              <Button className="mt-4 justify-center" size="sm" variant="solid" onClick={onCreateMemo} disabled={isCreating}>
+              <Button className="mt-4 justify-center" size="sm" variant="solid" onClick={() => onCreateMemo()} disabled={isCreating}>
                 <FilePlus2 className="h-4 w-4" />
                 {t("memoList.newMemo")}
               </Button>

@@ -19,3 +19,12 @@ describe("desktop memo list spacing", () => {
     expect(source).toContain("lg:px-0 lg:pb-3 lg:[scrollbar-gutter:stable_both-edges]");
   });
 });
+
+describe("empty memo list creation", () => {
+  test("does not forward the React click event as a memo kind", () => {
+    const source = readFileSync(new URL("./MemoListPane.tsx", import.meta.url), "utf8");
+
+    expect(source).toContain('onClick={() => onCreateMemo()} disabled={isCreating}');
+    expect(source).not.toContain('onClick={onCreateMemo} disabled={isCreating}');
+  });
+});

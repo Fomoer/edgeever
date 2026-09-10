@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { loadPluginMarketplace } from "@/lib/plugins/plugin-marketplace";
 
 const BubbleMenuTransactionRegression = () => {
   const [transactionCount, setTransactionCount] = useState(0);
@@ -75,18 +76,36 @@ const useDiagramEditorRegressionReady = () => {
   return ready;
 };
 
+const useBundledMarketplaceRegressionReady = () => {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    void loadPluginMarketplace().then((registry) => {
+      if (mounted && registry.entries.length > 0) setReady(true);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return ready;
+};
+
 const DesktopRendererTest = () => {
   const diagramEditorReady = useDiagramEditorRegressionReady();
+  const bundledMarketplaceReady = useBundledMarketplaceRegressionReady();
 
   return (
     <main
       data-desktop-renderer-test-ready
       data-diagram-editor-regression-ready={diagramEditorReady ? "true" : "false"}
+      data-bundled-marketplace-regression-ready={bundledMarketplaceReady ? "true" : "false"}
     >
       <BubbleMenuTransactionRegression />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button aria-label="More actions" title="More actions">
+          <Button aria-label="More actions">
             More
           </Button>
         </DropdownMenuTrigger>

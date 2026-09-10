@@ -148,10 +148,18 @@ const DEMO_RESET_COOLDOWN_MS = 60 * 1000;
 const DEFAULT_R2_BUCKET_NAME = "edgeever-resources";
 const app = new Hono<AppEnv>();
 
+// Packaged desktop uses edgeever-app://app; the previous file:// renderer sent Origin "null".
+const API_CORS_ORIGINS = [
+  "http://127.0.0.1:5173",
+  "http://localhost:5173",
+  "null",
+  "edgeever-app://app",
+];
+
 app.use(
   "/api/*",
   cors({
-    origin: ["http://127.0.0.1:5173", "http://localhost:5173", "null"],
+    origin: API_CORS_ORIGINS,
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
@@ -161,7 +169,7 @@ app.use(
 app.use(
   "/mcp",
   cors({
-    origin: ["http://127.0.0.1:5173", "http://localhost:5173", "null"],
+    origin: API_CORS_ORIGINS,
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "OPTIONS"],
     credentials: true,

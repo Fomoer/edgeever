@@ -21,7 +21,8 @@ enum TipTapContentSource: Sendable {
         // (tables / headings) that a flattened contentJson lost.
         if mode == .viewer {
             // Visual diagram metadata lives only in Markdown. The editor bundle
-            // converts both current and legacy envelopes into a Mermaid view.
+            // parses the IR and mounts read-only X6; invalid envelopes keep the
+            // Mermaid fence as degraded viewer content.
             if markdown.contains("<!-- edgeever-diagram-v1:") {
                 return Decision(useJSON: false, payload: markdown, fingerprint: "md:\(markdown)")
             }

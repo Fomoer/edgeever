@@ -1,6 +1,7 @@
 import { type InfiniteData, type QueryClient } from "@tanstack/react-query";
 import type { MemoDetail, MemoSummary, Notebook, TiptapDoc } from "@edgeever/shared";
 import { listLocalMemos } from "../lib/local-mirror";
+import { memoHasExactTag } from "../lib/mobile-tags";
 import { markdownToLocalText, sortMemoSummaries } from "./workspace-utils";
 
 const ALL_NOTES_ID = "all";
@@ -44,7 +45,7 @@ export const memoMatchesListQuery = (memo: MemoSummary, queryKey: readonly unkno
   const notebookId = queryKey[3];
   const filter = queryKey[4];
   const notebookIds = Array.isArray(queryKey[6]) ? queryKey[6] : [];
-  const tag = typeof queryKey[7] === "string" ? queryKey[7].trim().toLocaleLowerCase() : "";
+  const tag = typeof queryKey[7] === "string" ? queryKey[7] : "";
 
   if ((view === "trash") !== memo.isDeleted) {
     return false;
@@ -52,7 +53,7 @@ export const memoMatchesListQuery = (memo: MemoSummary, queryKey: readonly unkno
   if (notebookId !== ALL_NOTES_ID && !notebookIds.includes(memo.notebookId)) {
     return false;
   }
-  if (tag && !memo.tags.some((memoTag) => memoTag.toLocaleLowerCase() === tag)) {
+  if (tag && !memoHasExactTag(memo.tags, tag)) {
     return false;
   }
   if (filter === "tagged" && memo.tags.length === 0) {

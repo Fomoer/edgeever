@@ -8,10 +8,11 @@ const systemInfoSource = readFileSync(new URL("../../../web/src/components/setti
 const notebookPaneSource = readFileSync(new URL("../../../web/src/components/NotebookPane.tsx", import.meta.url), "utf8");
 
 describe("desktop update flow", () => {
-  test("keeps Linux Preview updates manual until a cross-version AppImage test passes", () => {
-    expect(mainSource).toContain('process.platform === "linux" || !app.isPackaged');
-    expect(mainSource).toContain("Linux Preview updates stay manual");
-    expect(mainSource).toContain('autoUpdateSupported: process.platform !== "linux"');
+  test("enables automatic updates for packaged Linux AppImages", () => {
+    expect(mainSource).not.toContain('process.platform === "linux" || !app.isPackaged');
+    expect(mainSource).toContain('autoUpdateSupported: true');
+    expect(mainSource).toContain('process.env.GITHUB_ACTIONS === "true"');
+    expect(mainSource).toContain("Linux update verification requires a loopback HTTP feed");
     expect(systemInfoSource).toContain("desktopAutoUpdateSupported");
     expect(systemInfoSource).toContain('t("systemInfo.desktopDownloadLatest")');
   });
@@ -75,5 +76,15 @@ describe("desktop update flow", () => {
     expect(noticeSource).toContain('role="alert"');
     expect(notebookPaneSource).toContain("<DesktopUpdateNotice />");
     expect(notebookPaneSource).toContain('className="flex items-center gap-1"');
+  });
+
+  test("holds in-app restart installation while the GitHub release is newer than the instance", () => {
+    expect(mainSource).toContain("shouldHoldAutoRestartUpdate(downloadedUpdateVersion, instanceVersion)");
+    expect(mainSource).toContain("holdAutoRestartUpdate(downloadedUpdateVersion)");
+    expect(mainSource).toContain('writeDiagnostic("update.held-for-instance"');
+    expect(mainSource).toContain("autoUpdater.autoInstallOnAppQuit = false");
+    expect(mainSource).toContain("releaseHeldAutoRestartUpdate()");
+    expect(mainSource).toContain("${configuredApiBaseUrl}/api/release");
+    expect(mainSource).toContain("heldUpdateVersion ||");
   });
 });

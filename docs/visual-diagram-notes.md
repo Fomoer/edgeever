@@ -29,8 +29,8 @@ The original mind-map and flowchart notes already use IR v1. Architecture diagra
 One of the IR's central benefits is preserving EdgeEver's freedom to choose its underlying rendering engines. The IR answers “what does this diagram mean?”, while an adapter answers “how does this engine draw it?”:
 
 ```text
-                   ┌→ X6 Adapter → Web / desktop interactive editing
-Diagram IR ────────┼→ Mermaid Adapter → Android / iOS viewing
+                   ┌→ X6 Adapter → Web / desktop editing; first-party viewing and public share
+Diagram IR ────────┼→ Mermaid Adapter → portable envelope, rich-text embedded diagrams, IR-parse fallback
                    ├→ Export Adapter → SVG / PNG
                    └→ MCP Tools → AI reading and modification
 ```
@@ -43,13 +43,15 @@ The IR should contain stable business semantics and necessary layout facts, such
 
 A node contains `id`, `label`, `x`, `y`, `width`, `height`, and `shape`; a node inside a system boundary also has `parentId`. An edge contains `source` and `target`, with optional `label`, `kind`, and `bidirectional` fields.
 
-A diagram is stored as portable Markdown. Its body contains a Mermaid fallback, while a trailing `edgeever-diagram-v1` comment carries the Base64URL-encoded JSON IR. Mermaid keeps the note readable in clients without the interactive editor, while the embedded IR preserves lossless editing when the note is reopened.
+A diagram is stored as portable Markdown. Its body contains a Mermaid fallback, while a trailing `edgeever-diagram-v1` comment carries the Base64URL-encoded JSON IR. The IR is the source of truth for lossless editing. The Mermaid fence is a projection, not the live canvas: first-party clients, including public share, parse the IR and draw with AntV X6. The fence remains so the note stays readable as ordinary Markdown outside EdgeEver, and when the IR comment fails to parse.
+
+User-authored ` ```mermaid ` code blocks in ordinary rich-text notes are a separate product feature. They do not use this IR and are not visual-diagram notes.
 
 IR parsing and validation live in [`packages/shared/src/diagram.ts`](../packages/shared/src/diagram.ts), so Web, Android, and iOS do not maintain competing interpretations of the format.
 
 ## Why EdgeEver continues to use AntV X6
 
-EdgeEver already has selection, dragging, zooming, connections, undo and redo, keyboard controls, automatic layout, revision history, and PNG/SVG export built around AntV X6. Architecture diagrams need semantic modeling and custom visuals on top of that mature interaction layer, not another canvas core.
+EdgeEver already has selection, dragging, zooming, connections, undo and redo, keyboard controls, automatic layout, revision history, and PNG/SVG export built around AntV X6. Architecture diagrams need semantic modeling and custom visuals on top of that mature interaction layer, not another canvas core. Android and iOS now use the same X6 adapter for read-only viewing (`diagramDocumentToX6Cells` plus a non-interactive `Graph`), so first-party canvases no longer split between X6 on Web and Mermaid on mobile.
 
 The reference project is most valuable for its product modeling and Typed IR ideas. Copying another drawing engine would also import its state management, coordinate system, interaction conventions, and data format, leaving EdgeEver with two canvas engines to maintain. Reusing X6 lets all three diagram types share infrastructure while development focuses on EdgeEver's own semantics and experience.
 
@@ -57,17 +59,23 @@ This does not mean rendering every component as the same X6 node. X6 is only the
 
 ## Cross-platform rendering boundary
 
-| Platform | Capability | Rendering path |
+| Surface | Capability | Rendering path |
 | --- | --- | --- |
 | Web / PWA / desktop | Create, edit, auto-layout, revision history, and PNG/SVG export | IR → AntV X6 |
-| Android app | Semantic read-only view with complete IR preservation | IR → Mermaid → native note WebView |
-| iOS app | Semantic read-only view with complete IR preservation | IR → Mermaid → WKWebView |
+| Android app | Semantic read-only view with complete IR preservation | IR → AntV X6 (read-only Graph in the note WebView) |
+| iOS app | Semantic read-only view with complete IR preservation | IR → AntV X6 (read-only Graph in WKWebView) |
+| Public share of a visual diagram note | Read-only view of the same IR | IR → AntV X6 (read-only Graph) |
+| Ordinary rich-text notes, including embedded ` ```mermaid ` blocks | Create, edit, share, HTML / print / WeChat copy | TipTap; Mermaid code blocks stay Mermaid |
+| Invalid or unreadable IR comment | Degraded read of the same visual diagram note | Mermaid fence in the Markdown body |
 
 The native apps currently hide regular rich-text editing, double-tap editing, and AI rewriting for visual diagram notes. Those paths cannot represent diagram IR and could overwrite a structured diagram with plain text. Users can read, sync, share, and inspect history in the apps, while editing remains available on Web and desktop.
+
+An early mobile viewer used the Mermaid fence because AntV X6 was not yet wrapped in the native WebViews. That dual-track is historical. First-party canvases, including public share, render visual diagram notes from IR through X6. Embedded Mermaid diagrams in ordinary rich-text notes remain a separate feature and keep using the Mermaid renderer.
 
 ## Agreed design principles
 
 - Diagram semantics belong to the IR; the rendering engine is not the data source.
+- First-party canvases render visual diagram notes from IR through X6. Embedded ` ```mermaid ` blocks in ordinary rich-text notes stay on Mermaid. The persisted Mermaid fence on a visual diagram note is only a portable envelope and a degraded fallback, not the live canvas.
 - Architecture components must communicate their purpose visually; names are supplementary.
 - A system boundary is a containment relationship, not a normal connectable business node.
 - Web and native apps consume the same persisted data rather than platform-specific diagram copies.
@@ -101,3 +109,5 @@ An IR can still become a liability if it mirrors X6 too closely, lacks useful se
 ## Future direction
 
 Full native editing should continue to use the same IR and separately address touch selection, dragging, connections, zooming, keyboard avoidance, and large-diagram performance. Whether that editor uses X6 in a WebView or a native canvas should be decided through prototypes and performance testing without changing the persisted format.
+
+HTML / print / WeChat copy of a visual diagram note still go through the generic rich-text pipeline when that pipeline is used, because those actions currently snapshot TipTap HTML rather than the X6 canvas. Align those exports with a read-only X6 snapshot before considering any change to the Markdown envelope.

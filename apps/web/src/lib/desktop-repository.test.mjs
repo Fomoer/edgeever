@@ -44,6 +44,18 @@ describe("desktop repository notebook filters", () => {
       },
     });
   });
+
+  test("forwards the selected tag to the sidecar list query", async () => {
+    await createDesktopRepository().listMemos({ tag: "AI-RSS" });
+
+    expect(lastRequest).toEqual({
+      method: "memo.list",
+      params: {
+        notebookId: null,
+        tag: "AI-RSS",
+      },
+    });
+  });
 });
 
 describe("desktop repository memo saves", () => {

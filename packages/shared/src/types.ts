@@ -172,6 +172,7 @@ export type AiProviderConfig = {
   isEnabled: boolean;
   hasApiKey: boolean;
   models: AiModelConfig[];
+  credentialsUnavailable?: boolean;
 };
 
 export type AiSettings = {

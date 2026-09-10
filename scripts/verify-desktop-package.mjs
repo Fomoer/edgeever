@@ -74,6 +74,7 @@ const verifyGlibcBaseline = (path, maximum = [2, 35]) => {
 for (const sidecarPath of files.filter((path) => /[\\/]resources[\\/]sidecar[\\/]edgeever-sidecar(?:\.exe)?$/i.test(path))) {
   const bundleRoot = sidecarPath.replace(/[\\/]resources[\\/]sidecar[\\/]edgeever-sidecar(?:\.exe)?$/i, "");
   assert.ok(existsSync(join(bundleRoot, "resources", "web", "index.html")), `Desktop bundle is missing the Web renderer: ${bundleRoot}`);
+  assert.ok(existsSync(join(bundleRoot, "resources", "web", "desktop-storage-bridge.html")), `Desktop bundle is missing the renderer storage bridge: ${bundleRoot}`);
   assert.ok(existsSync(join(bundleRoot, "resources", "migrations")), `Desktop bundle is missing migrations: ${bundleRoot}`);
 }
 

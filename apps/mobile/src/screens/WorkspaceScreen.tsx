@@ -1240,6 +1240,7 @@ export const WorkspaceScreen = ({
           onClearSelection={clearSelection}
           onFilterModeChange={handleMemoFilterModeChange}
           onOpenActions={() => setNotesActionsOpen(true)}
+          onOpenTagFilter={() => setTagFilterPickerOpen(true)}
           onOpenNotebookPicker={() => setNotebookPickerOpen(true)}
           onMemoPress={handleMemoPress}
           onMemoLongPress={(memo) => {

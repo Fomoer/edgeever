@@ -1,0 +1,6 @@
+{
+  "name": "edgeever-renderer-origin-verifier",
+  "private": true,
+  "type": "module",
+  "main": "../verify-renderer-origin-migration.mjs"
+}

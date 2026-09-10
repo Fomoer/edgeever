@@ -1,7 +1,7 @@
 import type { MemoDetail } from "@edgeever/shared";
 import type { Hono } from "hono";
 import type { AppEnv } from "./api-context";
-import { mapNotebook, type NotebookRow } from "./notebook-service";
+import { inboxNotebookIdentitySql, mapNotebook, type NotebookRow } from "./notebook-service";
 import { getWorkspaceId, requireScopes } from "./request-auth";
 
 type MobileSyncChangeRow = {
@@ -46,6 +46,44 @@ type SyncRouteDependencies = {
 // page; querying all of them in one IN clause would make sync return HTTP 500.
 const SYNC_DETAIL_ID_BATCH_SIZE = 90;
 
+// A deleted memo can outlive its original notebook: users may move every active
+// memo to trash and then delete the now-empty notebook. Local mirrors only cache
+// active notebooks, so expose the same destination used by restoreMemosRecord
+// instead of returning a dangling notebook id.
+const syncMemoNotebookIdSql = `CASE
+  WHEN EXISTS (
+    SELECT 1 FROM notebooks source_notebook
+    WHERE source_notebook.id = m.notebook_id
+      AND source_notebook.workspace_id = m.workspace_id
+      AND source_notebook.is_deleted = 0
+  ) THEN m.notebook_id
+  ELSE COALESCE((
+    SELECT inbox.id FROM notebooks inbox
+    WHERE inbox.workspace_id = m.workspace_id
+      AND inbox.is_deleted = 0
+      AND ${inboxNotebookIdentitySql("inbox")}
+    ORDER BY CASE
+      WHEN inbox.id = inbox.workspace_id || '_inbox' THEN 0
+      WHEN inbox.id = 'nb_inbox' THEN 1
+      ELSE 2
+    END
+    LIMIT 1
+  ), m.notebook_id)
+END`;
+
+// Keep active notebook snapshots self-contained even if historical data has an
+// active child whose parent was deleted. The server remains authoritative; the
+// mirror simply presents that orphan as a root notebook.
+const syncNotebookParentIdSql = `CASE
+  WHEN n.parent_id IS NULL OR EXISTS (
+    SELECT 1 FROM notebooks parent_notebook
+    WHERE parent_notebook.id = n.parent_id
+      AND parent_notebook.workspace_id = n.workspace_id
+      AND parent_notebook.is_deleted = 0
+  ) THEN n.parent_id
+  ELSE NULL
+END`;
+
 const splitSyncDetailIds = (ids: string[]) => {
   const batches: string[][] = [];
   for (let index = 0; index < ids.length; index += SYNC_DETAIL_ID_BATCH_SIZE) {
@@ -67,7 +105,7 @@ export const registerSyncRoutes = (
     const afterId = context.req.query("afterId")?.trim() ?? "";
     const [notebookRows, memoRows, totalRow, cursorRow] = await Promise.all([
       context.env.storage.db.prepare(
-        `SELECT n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.sort_order,
+        `SELECT n.id, ${syncNotebookParentIdSql} AS parent_id, n.name, n.slug, n.icon, n.color, n.sort_order,
                 n.created_at, n.updated_at, COUNT(m.id) AS memo_count, MAX(m.updated_at) AS last_memo_updated_at
          FROM notebooks n
          LEFT JOIN memos m ON m.notebook_id = n.id AND m.workspace_id = n.workspace_id AND m.is_deleted = 0
@@ -76,7 +114,7 @@ export const registerSyncRoutes = (
          ORDER BY n.sort_order ASC, n.name ASC`,
       ).bind(workspaceId).all<NotebookRow>(),
       context.env.storage.db.prepare(
-        `SELECT m.id, m.notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned,
+        `SELECT m.id, ${syncMemoNotebookIdSql} AS notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned,
                 m.is_archived, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, mc.revision,
                 mc.content_json, mc.content_markdown, mc.content_text, mc.content_hash,
                 m.source_memo_ids, m.merge_source_count, m.merged_into_memo_id
@@ -168,7 +206,7 @@ export const registerSyncRoutes = (
       Promise.all(splitSyncDetailIds(memoIds).map((batch) => {
         const placeholders = batch.map(() => "?").join(", ");
         return context.env.storage.db.prepare(
-          `SELECT m.id, m.notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned,
+          `SELECT m.id, ${syncMemoNotebookIdSql} AS notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned,
                   m.is_archived, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, mc.revision,
                   mc.content_json, mc.content_markdown, mc.content_text, mc.content_hash,
                   m.source_memo_ids, m.merge_source_count, m.merged_into_memo_id
@@ -180,7 +218,7 @@ export const registerSyncRoutes = (
       Promise.all(splitSyncDetailIds(notebookIds).map((batch) => {
         const placeholders = batch.map(() => "?").join(", ");
         return context.env.storage.db.prepare(
-          `SELECT n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.sort_order,
+          `SELECT n.id, ${syncNotebookParentIdSql} AS parent_id, n.name, n.slug, n.icon, n.color, n.sort_order,
                   n.created_at, n.updated_at, COUNT(m.id) AS memo_count, MAX(m.updated_at) AS last_memo_updated_at
            FROM notebooks n
            LEFT JOIN memos m ON m.notebook_id = n.id AND m.workspace_id = n.workspace_id AND m.is_deleted = 0

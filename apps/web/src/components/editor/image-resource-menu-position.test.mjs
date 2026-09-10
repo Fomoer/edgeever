@@ -33,6 +33,14 @@ describe("image resource menu positioning", () => {
     expectOutsideImage(position, image);
   });
 
+  test("clears the adjustment controls before an image has measurable height", async () => {
+    const image = { x: 300, y: 200, width: 500, height: 0 };
+    const position = await positionMenu(image);
+    expect(position.placement).toBe("bottom-end");
+    expect(position.y).toBeGreaterThanOrEqual(image.y + 56);
+    expectOutsideImage(position, image);
+  });
+
   test("flips above an image near the bottom of the viewport", async () => {
     const image = { x: 300, y: 700, width: 500, height: 60 };
     const position = await positionMenu(image);

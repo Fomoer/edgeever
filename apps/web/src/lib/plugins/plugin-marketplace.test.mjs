@@ -1,9 +1,26 @@
 import { describe, expect, test } from "bun:test";
 import { parseMarketplaceRegistry } from "@edgeever/plugin-api";
 import { sha256Hex } from "./github-plugin-distribution.ts";
-import { resolveOfficialPluginMarketplace } from "./plugin-marketplace.ts";
+import { loadPluginMarketplace, resolveOfficialPluginMarketplace } from "./plugin-marketplace.ts";
 
 describe("bundled plugin marketplace", () => {
+  test("loads the registry beside the packaged desktop renderer", async () => {
+    let requestedUrl = null;
+    const request = async (input) => {
+      requestedUrl = String(input);
+      return Response.json({ registryVersion: "1", updatedAt: "2026-09-08T00:00:00.000Z", entries: [] });
+    };
+
+    await loadPluginMarketplace(
+      "/extensions/registry.json",
+      request,
+      "./",
+      "file:///Applications/EdgeEver.app/Contents/Resources/web/index.html",
+    );
+
+    expect(requestedUrl).toBe("file:///Applications/EdgeEver.app/Contents/Resources/web/extensions/registry.json");
+  });
+
   test("keeps verified checksums aligned with bundled extension files", async () => {
     const registry = parseMarketplaceRegistry(await Bun.file(new URL("../../../public/extensions/registry.json", import.meta.url)).json());
     expect(registry.entries.map((entry) => entry.id)).not.toContain("org.edgeever.examples.recent-notes");
@@ -73,7 +90,9 @@ describe("bundled plugin marketplace", () => {
     };
     const request = async (input) => {
       const url = String(input);
-      if (url.includes("/contents/manifest.json")) return new Response(manifestText);
+      if (url.includes("/releases/latest/download/manifest.json") || url.includes("/contents/manifest.json")) {
+        return new Response(manifestText);
+      }
       if (url.includes("/releases/tags/")) return Response.json({
         tag_name: "v0.5.3",
         draft: false,
@@ -99,6 +118,50 @@ describe("bundled plugin marketplace", () => {
         mainJs: await sha256Hex(assets["main.js"]),
       },
     });
+  });
+
+  test("does not download official plugin packages when the live version already matches", async () => {
+    const checksums = { manifestJson: "a".repeat(64), mainJs: "b".repeat(64) };
+    const registry = parseMarketplaceRegistry({
+      registryVersion: "1",
+      updatedAt: "2026-09-08T00:00:00.000Z",
+      entries: [{
+        id: "org.edgeever.plugins.ai-rss",
+        name: "EdgeEver AI RSS",
+        description: "RSS",
+        author: "EdgeEver",
+        publisher: "edgeever",
+        category: "News & AI",
+        repositoryUrl: "https://github.com/tianma-if/edgeever-ai-rss",
+        distribution: { type: "github", repositoryUrl: "https://github.com/tianma-if/edgeever-ai-rss" },
+        verification: { version: "0.5.5", checksums },
+      }],
+    });
+    const calls = [];
+    const request = async (input) => {
+      calls.push(String(input));
+      if (String(input).includes("/releases/latest/download/manifest.json")) {
+        return new Response(JSON.stringify({
+          type: "plugin",
+          id: "org.edgeever.plugins.ai-rss",
+          name: "EdgeEver AI RSS",
+          version: "0.5.5",
+          apiVersion: "2",
+          settingsUi: "host",
+          entry: "./main.js",
+          permissions: ["ui:notices"],
+        }));
+      }
+      throw new Error(`Unexpected request: ${input}`);
+    };
+
+    const resolved = await resolveOfficialPluginMarketplace(registry, request, async () => {
+      throw new Error("should not download plugin assets");
+    });
+
+    expect(resolved.resolutionErrors).toEqual({});
+    expect(resolved.entries[0].verification).toEqual({ version: "0.5.5", checksums });
+    expect(calls).toHaveLength(1);
   });
 
   test("keeps the pinned release and reports an error when live resolution fails", async () => {

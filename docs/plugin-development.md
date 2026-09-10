@@ -8,7 +8,7 @@ Theme packages contain only a validated manifest and documented design tokens. T
 
 Client plugins use an Obsidian-style trusted-code model. Enabling a plugin trusts it with the full EdgeEver plugin context; declared capabilities are optional descriptive metadata and do not gate API calls. The plugin module runs in the client JavaScript environment, so users must install plugins only from developers they trust.
 
-The first time a user enables a client plugin on a device, EdgeEver presents a community-plugin trust confirmation. Once acknowledged, it is not shown for every plugin. Theme packages do not trigger the confirmation because they cannot execute JavaScript.
+The first time a user enables a community client plugin on a device, EdgeEver presents a community-plugin trust confirmation. Once acknowledged, it is not shown for every plugin. Official plugins (publisher EdgeEver) do not trigger the confirmation. Theme packages also do not trigger it because they cannot execute JavaScript.
 
 Plugins never receive EdgeEver's repository, IndexedDB database, Cloudflare bindings, or internal React state through the public API.
 
@@ -43,9 +43,9 @@ main.js
 styles.css (optional)
 ```
 
-GitHub plugins must use `./main.js` as `entry`, and `main.js` must be a single-file bundle without relative module imports. EdgeEver reads the default-branch manifest, locates the matching Release, downloads assets in parallel, verifies GitHub's SHA-256 digest when present, and caches the verified package in device-local IndexedDB. `main.js` is limited to 5 MB and `styles.css` to 1 MB.
+GitHub plugins must use `./main.js` as `entry`, and `main.js` must be a single-file bundle without relative module imports. EdgeEver reads the default-branch manifest, locates the matching Release, downloads assets in parallel, verifies GitHub's SHA-256 digest when present, and caches the verified package in device-local IndexedDB. Marketplace GitHub metadata and Release assets are fetched through the current EdgeEver instance, so the desktop or browser client does not need direct access to `api.github.com`. `main.js` is limited to 5 MB and `styles.css` to 1 MB.
 
-EdgeEver checks for updates when the Plugin Marketplace opens, when the window regains focus, and every 30 minutes. Marketplace installs whose Registry entry declares `"publisher": "edgeever"` are official EdgeEver extensions and update automatically to the latest checksum-pinned Registry version. Community Marketplace extensions and extensions installed directly from GitHub or a Manifest URL are never updated silently: the user must click Update and confirm. If a manually confirmed version changes declared capabilities or legacy network-host metadata, the confirmation lists those changes for review. For GitHub distribution, the Release `manifest.json` must exactly match the default-branch manifest used for the update prompt or installation is rejected. Marketplace installs only follow newer versions verified in the Registry.
+EdgeEver checks for updates when the Plugin Marketplace opens, when the window regains focus, and every 30 minutes. Marketplace installs whose Registry entry declares `"publisher": "edgeever"` are official EdgeEver extensions. The bundled Registry version is the verified baseline; EdgeEver then resolves the live GitHub default-branch Release through the instance and auto-updates to that newer checksum-pinned version. Community Marketplace extensions and extensions installed directly from GitHub or a Manifest URL are never updated silently: the user must click Update and confirm. If a manually confirmed version changes declared capabilities or legacy network-host metadata, the confirmation lists those changes for review. For GitHub distribution, the Release `manifest.json` must exactly match the default-branch manifest used for the update prompt or installation is rejected.
 
 Updates use a rollback-capable switch. Old and new package versions are cached separately. If the new version cannot activate, EdgeEver restores the previous manifest, enabled state, and package instead of leaving the plugin broken or disabled.
 
@@ -281,7 +281,7 @@ context.events.on("template.updated", ({ template }) => console.log(template.nam
 
 ## Host-rendered settings
 
-Plugins can declare settings that EdgeEver renders consistently on a dedicated Plugin settings page within plugin details. Installed plugin cards and the plugin toolbar menu link directly to this page. Plugins without settings fields have no settings entry, while disabled plugins remain configurable. Settings are stored on the current device only. Put defaults and credentials in settings, and use plugin commands or functional panels for actual operations; ordinary configuration does not need a separate custom panel. Supported field types are `text`, `secret`, `number`, `boolean`, and `select`:
+Plugins can declare settings that EdgeEver renders consistently on a dedicated Plugin settings page within plugin details. Installed plugin cards and the plugin toolbar menu link directly to this page. Plugins without settings fields have no settings entry, while disabled plugins remain configurable. Settings are stored on the current device only. Put defaults and credentials in settings, and use plugin commands or functional panels for actual operations; ordinary configuration does not need a separate custom panel. Supported field types are `text`, `secret`, `number`, `boolean`, and `select`. A field may also declare a read-only `list` of titles and optional descriptions; EdgeEver shows a small entry next to the field and opens the items in a host-rendered dialog.
 
 Plugin API v2 requires `settingsUi: "host"`. The settings Schema is deliberately declarative: EdgeEver owns field layout, controls, spacing, validation, responsive behavior, accessibility, save states, and secret presentation. Presentation properties such as HTML, components, CSS classes, inline styles, colors, typography, or custom setting-page navigation are ignored. A plugin decides what can be configured, not how the settings page looks. Custom settings pages are rejected by the host. Use commands or a clearly named functional panel for workflows such as authorization, connectivity tests, migrations, and index rebuilding; do not recreate ordinary settings in a custom panel.
 
@@ -294,7 +294,20 @@ Plugin API v2 requires `settingsUi: "host"`. The settings Schema is deliberately
       { "key": "format", "type": "select", "label": "Format", "default": "md", "options": [
         { "value": "md", "label": "Markdown" },
         { "value": "html", "label": "HTML" }
-      ] }
+      ] },
+      {
+        "key": "topics.ai",
+        "type": "boolean",
+        "label": "AI",
+        "default": true,
+        "list": {
+          "title": "AI sources",
+          "actionLabel": "View sources",
+          "items": [
+            { "title": "OpenAI News", "description": "openai.com" }
+          ]
+        }
+      }
     ]
   }
 }
@@ -438,6 +451,45 @@ await context.ui.panels.open("dashboard", { state: { resourceId } });
 Every API v2 panel must declare one business purpose: `workflow`, `dashboard`, `preview`, or `onboarding`. A panel is not an alternative settings surface. Persistent booleans, text, numbers, secrets, and fixed-option selections belong in the Manifest settings Schema. Workspace-backed choices that are meaningful only while performing an operation may remain workflow controls until the host settings Schema supports them.
 
 `presentation` accepts `dialog` (the default) or `fullscreen`. `panels.open()` can only open a panel registered by the calling plugin; its optional JSON state is limited to 64 KiB and is delivered through the mount context. `beforeClose()` may return `true` to close, `false` to stay open, or confirmation copy for a host-rendered dialog. The mount context's `requestClose()` follows the same guard.
+
+### Panel chrome
+
+Use `mount` context `shell.set()` for system chrome: title, description, header actions, search, tabs, selects, and empty states. EdgeEver renders those controls with the same components as the rest of the app. The `container` argument remains the plugin body — lists, canvases, and forms stay in plugin DOM.
+
+```js
+mount(container, { shell, requestClose }) {
+  const list = document.createElement("div");
+  container.append(list);
+  const render = (query) => {
+    const tasks = queryTasks(query);
+    shell.set({
+      header: {
+        title: "Tasks",
+        description: `${tasks.length} open`,
+        actions: [{ id: "refresh", label: "Refresh" }],
+      },
+      toolbar: [
+        { type: "tabs", key: "view", value: query.view, options: [
+          { value: "open", label: "Open" },
+          { value: "done", label: "Done" },
+        ] },
+        { type: "search", key: "q", placeholder: "Search tasks", value: query.q },
+        { type: "select", key: "priority", label: "Priority", value: query.priority, options: [
+          { value: "all", label: "All" },
+          { value: "high", label: "High" },
+        ] },
+      ],
+      empty: tasks.length ? null : { title: "No matching tasks" },
+      onAction(id) { if (id === "refresh") render(query); },
+      onChange(key, value) { render({ ...query, [key]: value }); },
+    });
+    list.replaceChildren(...tasks.map(renderRow));
+  };
+  render({ view: "open", q: "", priority: "all" });
+}
+```
+
+Passing `header.description: null` hides the default “provided by a trusted plugin” line from the visible header (it remains available to assistive technology). Plugins that never call `shell.set()` keep the previous nested card layout. Chrome callbacks are in-memory only and are not stored in panel `state`.
 
 ## Desktop plugin entry
 

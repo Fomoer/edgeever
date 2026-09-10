@@ -4,6 +4,13 @@ import { AppError } from "./app-error";
 import { audit, auditStatement } from "./audit";
 import { createId, isoNow, slugify } from "./entity-utils";
 import type { DatabaseAdapter } from "./storage-contract";
+import { isInboxNotebook, workspaceInboxId } from "./workspace-provisioning";
+
+export { isInboxNotebook, workspaceInboxId } from "./workspace-provisioning";
+
+/** SQL identity for the workspace inbox: stable id first, slug as a fallback. */
+export const inboxNotebookIdentitySql = (alias: string) =>
+  `(${alias}.id = ${alias}.workspace_id || '_inbox' OR ${alias}.id = 'nb_inbox' OR ${alias}.slug = 'inbox')`;
 
 export type NotebookRow = {
   id: string;
@@ -195,6 +202,7 @@ export const updateNotebookRecord = async (
   const nextName = input.name ?? current.name;
   const nextParentId = input.parentId === undefined ? current.parentId : input.parentId;
   const nextSortOrder = input.sortOrder ?? current.sortOrder;
+  const nextSlug = isInboxNotebook(current, workspaceId) ? "inbox" : slugify(nextName);
   const now = isoNow();
 
   if (nextParentId === id) {
@@ -220,7 +228,7 @@ export const updateNotebookRecord = async (
          SET name = ?, slug = ?, parent_id = ?, sort_order = ?, updated_at = ?
          WHERE id = ? AND workspace_id = ? AND is_deleted = 0`
       )
-      .bind(nextName, slugify(nextName), nextParentId ?? null, nextSortOrder, now, id, workspaceId),
+      .bind(nextName, nextSlug, nextParentId ?? null, nextSortOrder, now, id, workspaceId),
     auditStatement(db, actor.actorType, actor.actorId, "notebook.update", "notebook", id, input),
   ]);
 
@@ -241,7 +249,7 @@ export const deleteNotebookRecord = async (
 ) => {
   const current = await getNotebook(db, workspaceId, id);
   if (!current) throw new AppError("not_found", "Notebook not found", 404);
-  if (id === "nb_inbox" || current.slug === "inbox") {
+  if (isInboxNotebook(current, workspaceId)) {
     throw new AppError("bad_request", "等待分类不能删除。", 400);
   }
 
@@ -266,8 +274,9 @@ export const deleteNotebookRecord = async (
   await db.prepare(
     `UPDATE notebooks
      SET is_deleted = 1, deleted_at = ?, updated_at = ?
-     WHERE id = ? AND workspace_id = ? AND slug <> 'inbox'`
-  ).bind(now, now, id, workspaceId).run();
+     WHERE id = ? AND workspace_id = ? AND slug <> 'inbox'
+       AND id <> 'nb_inbox' AND id <> ?`
+  ).bind(now, now, id, workspaceId, workspaceInboxId(workspaceId)).run();
   await audit(db, actor.actorType, actor.actorId, "notebook.delete", "notebook", id, {});
 };
 

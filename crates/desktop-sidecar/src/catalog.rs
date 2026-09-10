@@ -5,6 +5,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::memo::memo_value;
 use crate::{enqueue_change, markdown_doc, now_id, string_param, tags_from_json};
 
+pub(crate) fn is_inbox_notebook(id: &str, slug: Option<&str>) -> bool {
+    slug == Some("inbox") || id == "nb_inbox" || id.ends_with("_inbox")
+}
+
 pub(crate) fn list_notebooks(database: &Connection) -> Result<Value, String> {
     let mut statement = database.prepare(
         "SELECT n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.sort_order, n.created_at, n.updated_at,
@@ -65,7 +69,19 @@ pub(crate) fn create_notebook(database: &Connection, params: &Value) -> Result<V
 pub(crate) fn update_notebook(database: &Connection, params: &Value) -> Result<Value, String> {
     let notebook_id = string_param(params, "notebookId")?;
     if let Some(name) = params.get("name").and_then(Value::as_str) {
-        database.execute("UPDATE notebooks SET name = ?1, slug = ?2, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?3 AND is_deleted = 0", rusqlite::params![name, name.to_lowercase().replace(' ', "-"), notebook_id]).map_err(|e| e.to_string())?;
+        let current_slug: Option<String> = database
+            .query_row(
+                "SELECT slug FROM notebooks WHERE id = ?1",
+                [&notebook_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        let slug = if is_inbox_notebook(&notebook_id, current_slug.as_deref()) {
+            "inbox".to_owned()
+        } else {
+            name.to_lowercase().replace(' ', "-")
+        };
+        database.execute("UPDATE notebooks SET name = ?1, slug = ?2, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?3 AND is_deleted = 0", rusqlite::params![name, slug, notebook_id]).map_err(|e| e.to_string())?;
     }
     if params.get("parentId").is_some() {
         database.execute("UPDATE notebooks SET parent_id = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2 AND is_deleted = 0", rusqlite::params![params.get("parentId").and_then(Value::as_str), notebook_id]).map_err(|e| e.to_string())?;
@@ -97,7 +113,7 @@ pub(crate) fn delete_notebook(database: &Connection, params: &Value) -> Result<V
     if child_count > 0 || memo_count > 0 {
         return Err("notebook_not_empty".to_owned());
     }
-    database.execute("UPDATE notebooks SET is_deleted = 1, deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?1 AND slug <> 'inbox'", [&notebook_id]).map_err(|e| e.to_string())?;
+    database.execute("UPDATE notebooks SET is_deleted = 1, deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?1 AND slug <> 'inbox' AND id <> 'nb_inbox' AND id NOT GLOB '*_inbox'", [&notebook_id]).map_err(|e| e.to_string())?;
     enqueue_change(
         database,
         "notebook.delete",

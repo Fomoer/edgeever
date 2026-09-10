@@ -113,12 +113,6 @@ final class LocalMirrorRepository: @unchecked Sendable {
                 let pattern = "%\(q)%"
                 arguments.append(contentsOf: [pattern, pattern, pattern])
             }
-            if let tag = params.tag?.trimmingCharacters(in: .whitespacesAndNewlines), !tag.isEmpty {
-                conditions.append(
-                    "EXISTS (SELECT 1 FROM json_each(mobile_memos.data_json, '$.tags') AS memo_tag WHERE LOWER(CAST(memo_tag.value AS TEXT)) = LOWER(?))"
-                )
-                arguments.append(tag)
-            }
             switch params.filter {
             case .all: break
             case .tagged: conditions.append("tags_text <> ''")
@@ -138,9 +132,39 @@ final class LocalMirrorRepository: @unchecked Sendable {
             }
 
             let whereSQL = conditions.joined(separator: " AND ")
-            let count = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM mobile_memos WHERE \(whereSQL)", arguments: StatementArguments(arguments)) ?? 0
+            let tag = params.tag?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let limit = params.limit
             let offset = max(0, params.offset)
+
+            let decodeRows = { (rows: [Row]) -> [MemoSummary] in
+                var memos: [MemoSummary] = []
+                memos.reserveCapacity(rows.count)
+                for row in rows {
+                    let raw = row["data_json"] as String
+                    guard let detail = try? EdgeEverJSON.decoder.decode(MemoDetail.self, from: Data(raw.utf8)) else {
+                        #if DEBUG
+                        print("LocalMirrorRepository.listMemos: skipped undecodable memo json length=\(raw.count)")
+                        #endif
+                        continue
+                    }
+                    memos.append(detail.asSummary())
+                }
+                return memos
+            }
+
+            if !tag.isEmpty {
+                let rows = try Row.fetchAll(
+                    db,
+                    sql: "SELECT data_json FROM mobile_memos WHERE \(whereSQL) ORDER BY \(orderBy)",
+                    arguments: StatementArguments(arguments)
+                )
+                let memos = decodeRows(rows).filter { MobileUI.memoHasExactTag(tags: $0.tags, tag: tag) }
+                let page = Array(memos.dropFirst(offset).prefix(limit))
+                let next = offset + page.count
+                return LocalMemoListResult(memos: page, totalCount: memos.count, nextOffset: next < memos.count ? next : nil)
+            }
+
+            let count = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM mobile_memos WHERE \(whereSQL)", arguments: StatementArguments(arguments)) ?? 0
             var listArgs = arguments
             listArgs.append(limit)
             listArgs.append(offset)
@@ -150,18 +174,7 @@ final class LocalMirrorRepository: @unchecked Sendable {
                 arguments: StatementArguments(listArgs)
             )
             // Skip corrupt rows instead of failing the entire list (one bad data_json must not blank the feed).
-            var memos: [MemoSummary] = []
-            memos.reserveCapacity(rows.count)
-            for row in rows {
-                let raw = row["data_json"] as String
-                guard let detail = try? EdgeEverJSON.decoder.decode(MemoDetail.self, from: Data(raw.utf8)) else {
-                    #if DEBUG
-                    print("LocalMirrorRepository.listMemos: skipped undecodable memo json length=\(raw.count)")
-                    #endif
-                    continue
-                }
-                memos.append(detail.asSummary())
-            }
+            let memos = decodeRows(rows)
             let next = offset + rows.count
             return LocalMemoListResult(memos: memos, totalCount: count, nextOffset: next < count ? next : nil)
         }

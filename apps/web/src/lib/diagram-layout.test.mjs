@@ -245,4 +245,12 @@ describe("diagram auto layout", () => {
       minScale: 0.85,
     });
   });
+
+  test("keeps mind-map viewports at reading size instead of shrinking the whole tree", () => {
+    expect(getDiagramLayoutViewport("mind-map")).toEqual({
+      anchor: "root",
+      maxScale: 1,
+      minScale: 0.85,
+    });
+  });
 });

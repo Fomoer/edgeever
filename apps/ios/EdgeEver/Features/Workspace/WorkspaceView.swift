@@ -383,27 +383,16 @@ struct WorkspaceView: View {
                     store.reload(env: env)
                 }
                 filterChip(
-                    active: store.filter == .tagged,
-                    systemImage: "tag",
-                    label: env.preferences.t("有标签", en: "Tagged")
+                    active: store.selectedTag != nil,
+                    systemImage: store.selectedTag == nil ? "tag" : "tag.fill",
+                    label: store.selectedTag.map { "#\($0)" }
+                        ?? env.preferences.t("按标签筛选", en: "Filter by tag")
                 ) {
-                    withAnimation(Motion.chip) {
-                        store.toggleFilter(.tagged)
-                    }
-                    store.reload(env: env)
-                }
-                filterChip(
-                    active: store.filter == .untagged,
-                    systemImage: "tag.fill",
-                    label: env.preferences.t("无标签", en: "Untagged")
-                ) {
-                    withAnimation(Motion.chip) {
-                        store.toggleFilter(.untagged)
-                    }
-                    store.reload(env: env)
+                    store.showTagFilterPicker = true
                 }
             }
             .edgeEverSelectionFeedback(store.filter)
+            .animation(Motion.chip, value: store.selectedTag)
             .onChange(of: store.searchText) { _, _ in
                 store.scheduleSearch(env: env)
             }

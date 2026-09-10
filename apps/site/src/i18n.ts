@@ -28,7 +28,7 @@ export const siteCopy = {
   "zh-CN": {
     layout: {
       defaultDescription:
-        "EdgeEver 是开源、原生支持 AI 的自托管笔记与知识库工作区。保留经典印象笔记三栏体验，覆盖 macOS、Windows、iOS、Android 与浏览器剪藏，支持在 Cloudflare 免费额度内运行或使用 Docker 一键自托管。",
+        "EdgeEver 是开源、原生支持 AI 的自托管笔记与知识库工作区。保留经典印象笔记三栏体验，覆盖 macOS、Windows、Linux、iOS、Android 与浏览器剪藏，支持在 Cloudflare 免费额度内运行或使用 Docker 一键自托管。",
       defaultTitle: `EdgeEver - ${siteTaglines["zh-CN"]}`,
       imageAlt: "EdgeEver 笔记应用截图",
       ogLocale: "zh_CN",
@@ -62,8 +62,9 @@ export const siteCopy = {
       demo: "在线演示",
       agentInstall: "一键 AI 部署",
       windows: "Windows",
+      linux: "Linux",
       imageAlt: "EdgeEver product preview",
-      badgeText: "💡 全平台覆盖：macOS、Windows、iOS、Android、浏览器剪藏 · Cloudflare 免费额度 & Docker 一键安装",
+      badgeText: "💡 全平台覆盖：macOS、Windows、Linux、iOS、Android、浏览器剪藏 · Cloudflare 免费额度 & Docker 一键安装",
     },
     bento: {
       eyebrow: "WHY EDGEEVER",
@@ -118,7 +119,7 @@ export const siteCopy = {
       card5: {
         badge: "全端主权",
         title: "全平台客户端与无损 ZIP 归档",
-        desc: "覆盖 macOS、Windows、原生 iOS（SwiftUI）、Android 及剪藏插件；基于标准 SQLite 与无损 ZIP 导出，数据完全自主掌控。",
+        desc: "覆盖 macOS、Windows、Linux、原生 iOS（SwiftUI）、Android 及剪藏插件；基于标准 SQLite 与无损 ZIP 导出，数据完全自主掌控。",
         archiveTitle: "edgeever-backup.zip",
         archiveSub: "包含 Markdown、Front Matter、附件与历史版本",
       },
@@ -292,7 +293,7 @@ export const siteCopy = {
   "en-US": {
     layout: {
       defaultDescription:
-        "EdgeEver is an open-source, AI-native knowledge base and Evernote alternative. Enjoy a classic three-pane workspace across macOS, Windows, iOS, Android, and Web Clipper, running within Cloudflare's free tier or on Docker.",
+        "EdgeEver is an open-source, AI-native knowledge base and Evernote alternative. Enjoy a classic three-pane workspace across macOS, Windows, Linux, iOS, Android, and Web Clipper, running within Cloudflare's free tier or on Docker.",
       defaultTitle: "Open-Source, Self-Hosted Evernote Alternative | EdgeEver",
       imageAlt: "EdgeEver notes app screenshot",
       ogLocale: "en_US",
@@ -326,8 +327,9 @@ export const siteCopy = {
       demo: "Live demo",
       agentInstall: "Deploy with AI",
       windows: "Windows",
+      linux: "Linux",
       imageAlt: "EdgeEver product preview",
-      badgeText: "💡 All Platforms: macOS, Windows, iOS, Android, Web Clipper · Cloudflare Free Tier & 1-Line Docker Deploy",
+      badgeText: "💡 All Platforms: macOS, Windows, Linux, iOS, Android, Web Clipper · Cloudflare Free Tier & 1-Line Docker Deploy",
     },
     bento: {
       eyebrow: "WHY EDGEEVER",
@@ -382,7 +384,7 @@ export const siteCopy = {
       card5: {
         badge: "Data Sovereignty",
         title: "Apps Across Platforms & Lossless ZIP Backup",
-        desc: "Available on macOS, Windows, native iOS (SwiftUI), Android (Google Play/APK), and Web Clipper. Lossless ZIP export and standard SQLite provide full ownership.",
+        desc: "Available on macOS, Windows, Linux, native iOS (SwiftUI), Android (Google Play/APK), and Web Clipper. Lossless ZIP export and standard SQLite provide full ownership.",
         archiveTitle: "edgeever-backup.zip",
         archiveSub: "Markdown + Attachments + Revision History",
       },

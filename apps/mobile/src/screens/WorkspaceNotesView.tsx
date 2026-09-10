@@ -35,6 +35,7 @@ export const NotesView = ({
   onClearSelection,
   onFilterModeChange,
   onOpenActions,
+  onOpenTagFilter,
   onOpenNotebookPicker,
   onMemoLongPress,
   onMemoPress,
@@ -68,6 +69,7 @@ export const NotesView = ({
   onClearSelection: () => void;
   onFilterModeChange: (filterMode: MemoFilterMode) => void;
   onOpenActions: () => void;
+  onOpenTagFilter: () => void;
   onOpenNotebookPicker: () => void;
   onMemoLongPress: (memo: MemoSummary) => void;
   onMemoPress: (memoId: string) => void;
@@ -157,16 +159,10 @@ export const NotesView = ({
                 onPress={() => onFilterModeChange(toggleMobileMemoFilterMode(memoFilterMode, "pinned"))}
               />
               <MobileFilterButton
-                active={memoFilterMode === "tagged"}
-                icon={<Tag color={memoFilterMode === "tagged" ? "#ffffff" : "#475569"} size={18} />}
-                label="有标签"
-                onPress={() => onFilterModeChange(toggleMobileMemoFilterMode(memoFilterMode, "tagged"))}
-              />
-              <MobileFilterButton
-                active={memoFilterMode === "untagged"}
-                icon={<Tag color={memoFilterMode === "untagged" ? "#ffffff" : "#475569"} size={18} />}
-                label="无标签"
-                onPress={() => onFilterModeChange(toggleMobileMemoFilterMode(memoFilterMode, "untagged"))}
+                active={Boolean(selectedTag)}
+                icon={<Tag color={selectedTag ? "#ffffff" : "#475569"} size={18} />}
+                label={selectedTag ? `#${selectedTag}` : "按标签筛选"}
+                onPress={onOpenTagFilter}
               />
           </View>
           {searchActive || filterActive ? (

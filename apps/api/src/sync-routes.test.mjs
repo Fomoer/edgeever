@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { Database } from "bun:sqlite";
 import { Hono } from "hono";
+import { createSelfHostedStorageAdapter } from "./self-hosted-storage-adapter.ts";
 import { registerSyncRoutes } from "./sync-routes.ts";
 
 const agentAuth = {
@@ -26,7 +28,168 @@ const createApp = (auth = agentAuth) => {
   return app;
 };
 
+const createSyncIntegrationFixture = () => {
+  const sqlite = new Database(":memory:");
+  sqlite.exec(`
+    CREATE TABLE workspaces (id TEXT PRIMARY KEY, created_at TEXT NOT NULL);
+    CREATE TABLE notebooks (
+      id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, parent_id TEXT, name TEXT NOT NULL,
+      slug TEXT, icon TEXT, color TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+      is_deleted INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE TABLE memos (
+      id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, notebook_id TEXT NOT NULL, title TEXT,
+      excerpt TEXT NOT NULL DEFAULT '', tags_json TEXT NOT NULL DEFAULT '[]',
+      is_pinned INTEGER NOT NULL DEFAULT 0, is_archived INTEGER NOT NULL DEFAULT 0,
+      is_deleted INTEGER NOT NULL DEFAULT 0, source_memo_ids TEXT NOT NULL DEFAULT '[]',
+      merge_source_count INTEGER NOT NULL DEFAULT 0, merged_into_memo_id TEXT,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT
+    );
+    CREATE TABLE memo_contents (
+      memo_id TEXT PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 0, content_json TEXT NOT NULL,
+      content_markdown TEXT NOT NULL DEFAULT '', content_text TEXT NOT NULL DEFAULT '', content_hash TEXT NOT NULL
+    );
+    CREATE TABLE mobile_sync_changes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id TEXT NOT NULL, entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL, operation TEXT NOT NULL
+    );
+    INSERT INTO workspaces VALUES ('ws_1', '2026-09-09T00:00:00.000Z');
+    INSERT INTO notebooks (id, workspace_id, name, slug, is_deleted, created_at, updated_at) VALUES
+      ('nb_inbox', 'ws_1', 'Inbox', 'inbox', 0, '2026-09-09T00:00:00.000Z', '2026-09-09T00:00:00.000Z'),
+      ('nb_deleted', 'ws_1', 'Deleted', 'deleted', 1, '2026-09-09T00:00:00.000Z', '2026-09-09T00:00:00.000Z'),
+      ('nb_child', 'ws_1', 'Recovered child', 'child', 0, '2026-09-09T00:00:00.000Z', '2026-09-09T00:00:00.000Z');
+    UPDATE notebooks SET parent_id = 'nb_deleted' WHERE id = 'nb_child';
+    INSERT INTO memos (
+      id, workspace_id, notebook_id, title, is_deleted, created_at, updated_at, deleted_at
+    ) VALUES (
+      'memo_trashed', 'ws_1', 'nb_deleted', 'Trashed', 1,
+      '2026-09-09T00:00:00.000Z', '2026-09-09T00:00:00.000Z', '2026-09-09T00:00:00.000Z'
+    );
+    INSERT INTO memo_contents VALUES ('memo_trashed', 1, '{"type":"doc"}', '', '', 'hash');
+    INSERT INTO mobile_sync_changes (workspace_id, entity_type, entity_id, operation) VALUES
+      ('ws_1', 'memo', 'memo_trashed', 'upsert'),
+      ('ws_1', 'notebook', 'nb_child', 'upsert');
+  `);
+  const storage = createSelfHostedStorageAdapter(sqlite, "/tmp/edgeever-sync-route-test-unused");
+  const app = new Hono();
+  app.use("/api/v1/*", async (context, next) => {
+    context.set("auth", agentAuth);
+    await next();
+  });
+  registerSyncRoutes(app, {
+    clampNumber: (value, min, max) => Math.min(Math.max(value, min), max),
+    mapMemoDetail: (row) => ({
+      id: row.id,
+      notebookId: row.notebook_id,
+      title: row.title,
+      isDeleted: row.is_deleted === 1,
+    }),
+  });
+  return { app, sqlite, storage };
+};
+
 describe("sync route contracts", () => {
+  test("keeps bootstrap references inside the active notebook snapshot", async () => {
+    const fixture = createSyncIntegrationFixture();
+    try {
+      const response = await fixture.app.request(
+        "/api/v1/sync/bootstrap?limit=200",
+        {},
+        { storage: fixture.storage },
+      );
+      expect(response.status).toBe(200);
+      const payload = await response.json();
+      expect(payload.notebooks.map((notebook) => notebook.id)).toEqual(["nb_inbox", "nb_child"]);
+      expect(payload.notebooks.find((notebook) => notebook.id === "nb_child")?.parentId).toBeNull();
+      expect(payload.memos).toEqual([{
+        id: "memo_trashed",
+        notebookId: "nb_inbox",
+        title: "Trashed",
+        isDeleted: true,
+      }]);
+    } finally {
+      fixture.sqlite.close();
+    }
+  });
+
+  test("remaps dangling memos onto a renamed workspace inbox", async () => {
+    const sqlite = new Database(":memory:");
+    sqlite.exec(`
+      CREATE TABLE workspaces (id TEXT PRIMARY KEY, created_at TEXT NOT NULL);
+      CREATE TABLE notebooks (
+        id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, parent_id TEXT, name TEXT NOT NULL,
+        slug TEXT, icon TEXT, color TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+        is_deleted INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
+      CREATE TABLE memos (
+        id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, notebook_id TEXT NOT NULL, title TEXT,
+        excerpt TEXT NOT NULL DEFAULT '', tags_json TEXT NOT NULL DEFAULT '[]',
+        is_pinned INTEGER NOT NULL DEFAULT 0, is_archived INTEGER NOT NULL DEFAULT 0,
+        is_deleted INTEGER NOT NULL DEFAULT 0, source_memo_ids TEXT NOT NULL DEFAULT '[]',
+        merge_source_count INTEGER NOT NULL DEFAULT 0, merged_into_memo_id TEXT,
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT
+      );
+      CREATE TABLE memo_contents (
+        memo_id TEXT PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 0, content_json TEXT NOT NULL,
+        content_markdown TEXT NOT NULL DEFAULT '', content_text TEXT NOT NULL DEFAULT '', content_hash TEXT NOT NULL
+      );
+      CREATE TABLE mobile_sync_changes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, workspace_id TEXT NOT NULL, entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL, operation TEXT NOT NULL
+      );
+      INSERT INTO workspaces VALUES ('ws_1', '2026-09-10T00:00:00.000Z');
+      INSERT INTO notebooks (id, workspace_id, name, slug, is_deleted, created_at, updated_at) VALUES
+        ('ws_1_inbox', 'ws_1', '收集箱', 'shou-ji-xiang', 0, '2026-09-10T00:00:00.000Z', '2026-09-10T00:00:00.000Z');
+      INSERT INTO memos (
+        id, workspace_id, notebook_id, title, is_deleted, created_at, updated_at, deleted_at
+      ) VALUES (
+        'memo_trashed', 'ws_1', 'nb_deleted', 'Trashed', 1,
+        '2026-09-10T00:00:00.000Z', '2026-09-10T00:00:00.000Z', '2026-09-10T00:00:00.000Z'
+      );
+      INSERT INTO memo_contents VALUES ('memo_trashed', 1, '{"type":"doc"}', '', '', 'hash');
+    `);
+    const storage = createSelfHostedStorageAdapter(sqlite, "/tmp/edgeever-sync-renamed-inbox-unused");
+    const app = new Hono();
+    app.use("/api/v1/*", async (context, next) => {
+      context.set("auth", agentAuth);
+      await next();
+    });
+    registerSyncRoutes(app, {
+      clampNumber: (value, min, max) => Math.min(Math.max(value, min), max),
+      mapMemoDetail: (row) => ({
+        id: row.id,
+        notebookId: row.notebook_id,
+        title: row.title,
+        isDeleted: row.is_deleted === 1,
+      }),
+    });
+    try {
+      const response = await app.request("/api/v1/sync/bootstrap?limit=200", {}, { storage });
+      expect(response.status).toBe(200);
+      const payload = await response.json();
+      expect(payload.memos[0].notebookId).toBe("ws_1_inbox");
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("normalizes dangling references in incremental changes", async () => {
+    const fixture = createSyncIntegrationFixture();
+    try {
+      const response = await fixture.app.request(
+        "/api/v1/sync/changes?cursor=0&limit=200",
+        {},
+        { storage: fixture.storage },
+      );
+      expect(response.status).toBe(200);
+      const payload = await response.json();
+      expect(payload.changes[0].memo.notebookId).toBe("nb_inbox");
+      expect(payload.changes[1].notebook.parentId).toBeNull();
+    } finally {
+      fixture.sqlite.close();
+    }
+  });
+
   test("requires both notebook and memo read scopes", async () => {
     const app = createApp({ ...agentAuth, scopes: ["read:memos"] });
     const response = await app.request("/api/v1/sync/bootstrap", {}, {
@@ -49,8 +212,8 @@ describe("sync route contracts", () => {
       prepare: (sql) => ({
         bind: () => ({
           all: async () => {
-            if (sql.includes("FROM notebooks")) return { results: [] };
             if (sql.includes("FROM memos m")) return { results: memoRows };
+            if (sql.includes("FROM notebooks n")) return { results: [] };
             return { results: [] };
           },
           first: async () => {

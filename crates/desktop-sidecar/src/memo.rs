@@ -400,6 +400,12 @@ pub(crate) fn list_memos(database: &Connection, params: &Value) -> Result<Value,
         None
     };
     let notebook_ids_json = Value::Array(notebook_ids).to_string();
+    let tag = params
+        .get("tag")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_owned();
     let filter = match params.get("filter").and_then(Value::as_str) {
         Some("pinned") => " AND m.is_pinned = 1",
         Some("tagged") => " AND json_array_length(m.tags_json) > 0",
@@ -424,13 +430,20 @@ pub(crate) fn list_memos(database: &Connection, params: &Value) -> Result<Value,
         .and_then(Value::as_i64)
         .unwrap_or(0)
         .max(0);
+    let where_clause = format!(
+        "m.is_deleted = ?1 AND (?2 = '' OR lower(COALESCE(m.title, '') || ' ' || m.excerpt || ' ' || c.content_text || ' ' || m.tags_json) LIKE '%' || lower(?2) || '%')
+            AND (?3 IS NULL OR m.notebook_id = ?3)
+            AND (?4 = '[]' OR m.notebook_id IN (SELECT value FROM json_each(?4)))
+            AND (?5 = '' OR EXISTS (
+                SELECT 1 FROM json_each(m.tags_json) AS memo_tag
+                WHERE LOWER(TRIM(CAST(memo_tag.value AS TEXT))) = LOWER(?5)
+            )){filter}"
+    );
     let query = format!("SELECT m.id, m.notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned, m.is_archived, m.is_deleted,
                 c.revision, m.created_at, m.updated_at, m.deleted_at
            FROM memos m JOIN memo_contents c ON c.memo_id = m.id
-          WHERE m.is_deleted = ?1 AND (?2 = '' OR lower(COALESCE(m.title, '') || ' ' || m.excerpt || ' ' || c.content_text || ' ' || m.tags_json) LIKE '%' || lower(?2) || '%')
-            AND (?3 IS NULL OR m.notebook_id = ?3)
-            AND (?4 = '[]' OR m.notebook_id IN (SELECT value FROM json_each(?4))){}
-          ORDER BY {} LIMIT ?5 OFFSET ?6", filter, order);
+          WHERE {where_clause}
+          ORDER BY {order} LIMIT ?6 OFFSET ?7");
     let mut statement = database.prepare(&query).map_err(|e| e.to_string())?;
     let rows = statement
         .query_map(
@@ -439,6 +452,7 @@ pub(crate) fn list_memos(database: &Connection, params: &Value) -> Result<Value,
                 q,
                 notebook_id,
                 notebook_ids_json,
+                tag,
                 limit,
                 offset
             ],
@@ -446,11 +460,13 @@ pub(crate) fn list_memos(database: &Connection, params: &Value) -> Result<Value,
         )
         .map_err(|e| e.to_string())?;
     let memos: Result<Vec<_>, _> = rows.collect();
-    let count_query = format!("SELECT COUNT(*) FROM memos m JOIN memo_contents c ON c.memo_id = m.id WHERE m.is_deleted = ?1 AND (?2 = '' OR lower(COALESCE(m.title, '') || ' ' || m.excerpt || ' ' || c.content_text || ' ' || m.tags_json) LIKE '%' || lower(?2) || '%') AND (?3 IS NULL OR m.notebook_id = ?3) AND (?4 = '[]' OR m.notebook_id IN (SELECT value FROM json_each(?4))){}", filter);
+    let count_query = format!(
+        "SELECT COUNT(*) FROM memos m JOIN memo_contents c ON c.memo_id = m.id WHERE {where_clause}"
+    );
     let total: i64 = database
         .query_row(
             &count_query,
-            rusqlite::params![trash as i64, q, notebook_id, notebook_ids_json],
+            rusqlite::params![trash as i64, q, notebook_id, notebook_ids_json, tag],
             |row| row.get(0),
         )
         .map_err(|e| e.to_string())?;
