@@ -71,9 +71,8 @@ interface SettingsPaneProps {
 }
 
 // Slate and brand color variables already switch values with the root theme.
-// Keep this pane on the base utilities so dark variants do not invert them twice.
 const SettingsGroup = ({ children }: { children: ReactNode }) => (
-  <div className="min-w-0 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white [&>*]:rounded-none [&>*]:border-0 [&>*]:bg-transparent">
+  <div className="min-w-0 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-card [&>*]:rounded-none [&>*]:border-0 [&>*]:bg-transparent">
     {children}
   </div>
 );
@@ -309,7 +308,7 @@ export const SettingsPane = ({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden bg-slate-50">
-      <header className="flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-end justify-between border-b border-slate-200 bg-white px-4 pb-3 pt-[env(safe-area-inset-top)] lg:h-16 lg:items-center lg:px-6 lg:pb-0 lg:pt-0">
+      <header className="flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-end justify-between border-b border-slate-200 bg-card px-4 pb-3 pt-[env(safe-area-inset-top)] lg:h-16 lg:items-center lg:px-6 lg:pb-0 lg:pt-0">
         <div className="flex min-w-0 items-center gap-3">
           <Button
             size="icon"
@@ -386,7 +385,7 @@ export const SettingsPane = ({
           {activeMobileTab === null ? (
             /* 分类主菜单 */
             <div className="grid gap-2">
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-card">
                 <button
                   type="button"
                   onClick={onOpenTemplates}
@@ -414,7 +413,7 @@ export const SettingsPane = ({
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
               </div>
-              <div className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-card">
                 {tabItems.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -440,7 +439,7 @@ export const SettingsPane = ({
                   );
                 })}
               </div>
-              <div className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-card">
                 <button
                   type="button"
                   onClick={() => setSystemInfoOpen(true)}

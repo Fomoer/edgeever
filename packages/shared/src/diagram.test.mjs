@@ -184,6 +184,9 @@ describe("diagram document", () => {
     expect(dark.nodes.find((node) => node.id === "api").attrs.body.fill).not.toBe(
       dark.nodes.find((node) => node.id === "database").attrs.body.fill,
     );
+    expect(projected.edges[0].source.port).toBeDefined();
+    expect(projected.edges[0].target.port).toBeDefined();
+    expect(["normal", "manhattan"]).toContain(projected.edges[0].router.name);
   });
 
   test("rejects malformed and dangling graph data", () => {

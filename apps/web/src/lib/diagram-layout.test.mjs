@@ -7,6 +7,7 @@ import {
   compactMindMapNodeSize,
   computeDiagramLayout,
   computeDiagramLayoutResult,
+  DIAGRAM_READABLE_MIN_SCALE,
   getDiagramLayoutViewport,
 } from "./diagram-layout.ts";
 
@@ -235,22 +236,99 @@ describe("diagram auto layout", () => {
       expect(child.x + child.width).toBeLessThan(boundary.x + boundary.width);
       expect(child.y + child.height).toBeLessThan(boundary.y + boundary.height);
     }
-    expect(result.viewport.minScale).toBe(0.64);
+    expect(result.viewport.minScale).toBe(DIAGRAM_READABLE_MIN_SCALE);
+    expect(result.viewport.maxScale).toBe(1);
   });
 
-  test("keeps flowchart viewports at reading size instead of shrinking the whole stack", () => {
+  test("keeps ungrouped architecture terminals next to the groups they connect to", () => {
+    const document = compileDiagramIr({
+      kind: "architecture",
+      nodes: [
+        { id: "client", label: "Client", type: "client" },
+        { id: "app", label: "App", type: "boundary" },
+        { id: "web", label: "Web", type: "frontend", parentId: "app" },
+        { id: "core", label: "Core", type: "boundary" },
+        { id: "api", label: "API", type: "service", parentId: "core" },
+        { id: "out", label: "CDN", type: "external" },
+      ],
+      edges: [
+        { source: "client", target: "web" },
+        { source: "web", target: "api" },
+        { source: "api", target: "out" },
+      ],
+    });
+    const byId = Object.fromEntries(document.nodes.map((node) => [node.id, node]));
+    const center = (id) => ({ x: byId[id].x + byId[id].width / 2, y: byId[id].y + byId[id].height / 2 });
+    const distance = (leftId, rightId) => {
+      const left = center(leftId);
+      const right = center(rightId);
+      return Math.hypot(left.x - right.x, left.y - right.y);
+    };
+    const overlaps = (leftId, rightId, gap = 8) => {
+      const left = byId[leftId];
+      const right = byId[rightId];
+      return left.x < right.x + right.width + gap && left.x + left.width + gap > right.x
+        && left.y < right.y + right.height + gap && left.y + left.height + gap > right.y;
+    };
+    expect(byId.client.x).toBeLessThan(byId.web.x);
+    expect(byId.web.x).toBeLessThan(byId.api.x);
+    expect(byId.api.x).toBeLessThan(byId.out.x);
+    expect(distance("client", "web")).toBeLessThan(420);
+    expect(distance("out", "api")).toBeLessThan(420);
+    expect(overlaps("client", "app")).toBeFalse();
+    expect(overlaps("out", "core")).toBeFalse();
+  });
+
+  test("lays out architecture group internals without letting cross-group back edges stretch the group", () => {
+    const document = compileDiagramIr({
+      kind: "architecture",
+      nodes: [
+        { id: "ingress", label: "Ingress", type: "boundary" },
+        { id: "a1", label: "Parse", type: "frontend", parentId: "ingress" },
+        { id: "a2", label: "Guard", type: "security", parentId: "ingress" },
+        { id: "runtime", label: "Runtime", type: "boundary" },
+        { id: "b1", label: "Encode", type: "storage", parentId: "runtime" },
+        { id: "b2", label: "Attend", type: "service", parentId: "runtime" },
+        { id: "b3", label: "Project", type: "service", parentId: "runtime" },
+        { id: "loop", label: "Cache", type: "database" },
+      ],
+      edges: [
+        { source: "a1", target: "a2" },
+        { source: "a2", target: "b1" },
+        { source: "b1", target: "b2" },
+        { source: "b2", target: "b3" },
+        { source: "b3", target: "loop" },
+        { source: "loop", target: "b1" },
+      ],
+    });
+    const byId = Object.fromEntries(document.nodes.map((node) => [node.id, node]));
+    const centerY = (id) => byId[id].y + byId[id].height / 2;
+    expect(byId.a1.x).toBeLessThan(byId.a2.x);
+    expect(Math.abs(centerY("a1") - centerY("a2"))).toBeLessThanOrEqual(24);
+    expect(byId.b1.x).toBeLessThan(byId.b2.x);
+    expect(byId.b2.x).toBeLessThan(byId.b3.x);
+    expect(Math.abs(centerY("b1") - centerY("b3"))).toBeLessThanOrEqual(24);
+    expect(byId.runtime.height).toBeLessThan(280);
+    const loopCenter = { x: byId.loop.x + byId.loop.width / 2, y: byId.loop.y + byId.loop.height / 2 };
+    const b3Center = { x: byId.b3.x + byId.b3.width / 2, y: byId.b3.y + byId.b3.height / 2 };
+    expect(Math.hypot(loopCenter.x - b3Center.x, loopCenter.y - b3Center.y)).toBeLessThan(420);
+  });
+
+  test("caps auto-layout zoom at 100% and refuses to shrink below reading size", () => {
     expect(getDiagramLayoutViewport("flowchart")).toEqual({
       anchor: "center",
       maxScale: 1,
-      minScale: 0.85,
+      minScale: DIAGRAM_READABLE_MIN_SCALE,
     });
-  });
-
-  test("keeps mind-map viewports at reading size instead of shrinking the whole tree", () => {
     expect(getDiagramLayoutViewport("mind-map")).toEqual({
       anchor: "root",
       maxScale: 1,
-      minScale: 0.85,
+      minScale: DIAGRAM_READABLE_MIN_SCALE,
+    });
+    expect(getDiagramLayoutViewport("architecture")).toEqual({
+      anchor: "leftmost",
+      maxScale: 1,
+      minScale: DIAGRAM_READABLE_MIN_SCALE,
     });
   });
 });

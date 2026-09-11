@@ -485,7 +485,7 @@ export const EditorPane = (props: EditorPaneProps) => {
 
   if (editingActive) {
     return (
-      <div className="flex h-full min-h-0 items-center justify-center bg-white text-sm font-medium text-slate-400">
+      <div className="flex h-full min-h-0 items-center justify-center bg-card text-sm font-medium text-slate-400">
         {t("editor.openEditor")}
       </div>
     );
@@ -3550,7 +3550,7 @@ const RichEditorPane = ({
 
   if (isSelectionMode) {
     return (
-      <div className="flex h-full min-w-0 flex-col bg-white">
+      <div className="flex h-full min-w-0 flex-col bg-card">
         {selectionActionBar}
       </div>
     );
@@ -3558,7 +3558,7 @@ const RichEditorPane = ({
 
   if (isLoading && !memo) {
     return (
-      <div className="flex h-full min-w-0 flex-col bg-white">
+      <div className="flex h-full min-w-0 flex-col bg-card">
         <EmptyEditorHeader />
         {selectionActionBar}
         <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-slate-500">{t("editor.loading")}</div>
@@ -3568,7 +3568,7 @@ const RichEditorPane = ({
 
   if (!memo) {
     return (
-      <div className="flex h-full min-w-0 flex-col bg-white">
+      <div className="flex h-full min-w-0 flex-col bg-card">
         <EmptyEditorHeader />
         {selectionActionBar}
         <div className="flex min-h-0 flex-1 items-center justify-center px-8 text-center">
@@ -3773,7 +3773,7 @@ const RichEditorPane = ({
       };
 
   return (
-    <div className="relative flex h-full min-w-0 flex-col bg-white">
+    <div className="relative flex h-full min-w-0 flex-col bg-card">
       {selectionActionBar}
       <ExternalLinkDialog
         open={externalLinkDialogOpen}
@@ -3796,7 +3796,7 @@ const RichEditorPane = ({
           onInsert={insertMemoLink}
         />
       )}
-      <header className="shrink-0 border-b border-slate-200 bg-white">
+      <header className="shrink-0 border-b border-slate-200 bg-card">
         <div className={MEMO_EDITOR_TOP_ROW_CLASS_NAME}>
           <MemoEditorTopRowLeading
             desktopFocusMode={desktopFocusMode}
@@ -4243,7 +4243,7 @@ const RichEditorPane = ({
             : {}),
         } as CSSProperties}
         className={cn(
-          "edgeever-editor relative min-h-0 flex-1 bg-white",
+          "edgeever-editor relative min-h-0 flex-1 bg-card",
           useMobilePlainTextEditor
             ? "overflow-visible"
             : useMarkdownSourceEditor
@@ -4317,7 +4317,7 @@ const RichEditorPane = ({
                   spellCheck
                   data-edgeever-mobile-editor="plain-textarea"
                   aria-label={t("editor.noteBodyAria")}
-                  className="block min-h-[60dvh] w-full resize-none border border-slate-200 bg-white px-4 py-3 pr-32 text-base leading-7 text-slate-950 outline-none placeholder:text-slate-400 sm:px-7"
+                  className="block min-h-[60dvh] w-full resize-none border border-slate-200 bg-card px-4 py-3 pr-32 text-base leading-7 text-slate-950 outline-none placeholder:text-slate-400 sm:px-7"
                   placeholder={t("editor.placeholder")}
                   style={{ WebkitUserSelect: "text", userSelect: "text", caretColor: "auto" }}
                 />
@@ -4330,7 +4330,7 @@ const RichEditorPane = ({
                       {t("editor.paste")}
                   </button>
                   <button
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 shadow-sm"
+                    className="rounded-full border border-slate-200 bg-card px-3 py-1.5 text-sm font-semibold text-slate-700 shadow-sm"
                     type="button"
                     onClick={handleMobilePromptInput}
                   >

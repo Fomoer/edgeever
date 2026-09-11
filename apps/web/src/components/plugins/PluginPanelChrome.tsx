@@ -80,7 +80,7 @@ export const PluginPanelHeaderActions = ({ chrome }: { chrome: PluginPanelChrome
   const actions = chrome.header?.actions ?? [];
   if (!actions.length) return null;
   return (
-    <div className="flex flex-wrap justify-end gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {actions.map((action) => <ActionButton key={action.id} action={action} onAction={chrome.onAction} />)}
     </div>
   );

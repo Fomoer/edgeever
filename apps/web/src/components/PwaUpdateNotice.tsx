@@ -106,7 +106,7 @@ export const PwaUpdateNotice = () => {
   return (
     <div
       className={cn(
-        "fixed z-[80] max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white/95 p-3 text-slate-900 shadow-[0_18px_48px_rgba(15,23,42,0.16)] backdrop-blur",
+        "fixed z-[80] max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-card/95 p-3 text-slate-900 shadow-[0_18px_48px_rgba(15,23,42,0.16)] backdrop-blur",
         displayMode.isDesktop
           ? "right-5 top-5 w-[22rem]"
           : "inset-x-4 bottom-[calc(4rem+env(safe-area-inset-bottom))]"

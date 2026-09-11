@@ -50,7 +50,7 @@ export const AppConfirmDialog = ({
 
   return (
     <Dialog open={true} onOpenChange={(open) => { if (!open && !isWorking) onCancel(); }}>
-      <DialogContent className="max-w-md p-0 overflow-hidden border border-slate-200 bg-white shadow-lg rounded-lg">
+      <DialogContent className="max-w-md p-0 overflow-hidden border border-slate-200 bg-card shadow-lg rounded-lg">
         <DialogHeader className="flex flex-row items-start gap-4 border-b border-slate-200 px-5 py-5 text-left">
           <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", toneClassName)}>
             <Icon className="h-5 w-5" />
@@ -150,7 +150,7 @@ export const NotebookNameDialog = ({
 
   return (
     <Dialog open={true} onOpenChange={(open) => { if (!open && !isSaving) onCancel(); }}>
-      <DialogContent className="max-w-md p-0 overflow-hidden border border-slate-200 bg-white shadow-lg rounded-lg">
+      <DialogContent className="max-w-md p-0 overflow-hidden border border-slate-200 bg-card shadow-lg rounded-lg">
         <form
           onSubmit={(event) => {
             event.preventDefault();

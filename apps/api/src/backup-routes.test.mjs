@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
-import { mapJsonBackupRevision, registerBackupRoutes } from "./backup-routes.ts";
+import {
+  MAX_MARKDOWN_EXPORT_MEMO_IDS,
+  mapJsonBackupRevision,
+  parseMarkdownExportMemoIds,
+  registerBackupRoutes,
+} from "./backup-routes.ts";
 
 const userAuth = {
   kind: "user",
@@ -64,18 +69,25 @@ const resourceRow = {
   updated_at: "2026-08-08T00:00:00.000Z",
 };
 
-const createDatabase = () => ({
-  prepare: (sql) => ({
-    bind: () => ({
-      all: async () => {
-        if (sql.includes("FROM memos m")) return { results: [memoRow] };
-        if (sql.includes("FROM resources")) return { results: [resourceRow] };
-        return { results: [] };
+const createDatabase = () => {
+  const statements = [];
+  return {
+    statements,
+    prepare: (sql) => ({
+      bind: (...args) => {
+        statements.push({ sql, args });
+        return {
+          all: async () => {
+            if (sql.includes("FROM memos m")) return { results: [memoRow] };
+            if (sql.includes("FROM resources")) return { results: [resourceRow] };
+            return { results: [] };
+          },
+          first: async () => sql.includes("COUNT(*)") ? { count: 2 } : null,
+        };
       },
-      first: async () => sql.includes("COUNT(*)") ? { count: 2 } : null,
     }),
-  }),
-});
+  };
+};
 
 const createDependencies = (overrides = {}) => ({
   clampNumber: (value, min, max) => Math.min(Math.max(value, min), max),
@@ -114,10 +126,11 @@ describe("backup route contracts", () => {
   });
 
   test("returns a paginated export with mapped resources", async () => {
+    const database = createDatabase();
     const response = await createApp(createDependencies()).request(
       "/api/v1/exports/markdown?limit=1&offset=0",
       {},
-      { storage: { db: createDatabase(), resources: {} } },
+      { storage: { db: database, resources: {} } },
     );
 
     expect(response.status).toBe(200);
@@ -126,6 +139,78 @@ describe("backup route contracts", () => {
       resources: [{ id: "res_1", memoId: "memo_1", filename: "note.txt" }],
       totalCount: 2,
       nextOffset: 1,
+    });
+    expect(database.statements.some((statement) => statement.sql.includes("json_each"))).toBe(false);
+  });
+
+  test("filters markdown export pages to requested memo ids in the current workspace", async () => {
+    const database = createDatabase();
+    const response = await createApp(createDependencies()).request(
+      "/api/v1/exports/markdown?ids=memo_1,memo_missing&limit=50&offset=0",
+      {},
+      { storage: { db: database, resources: {} } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      memos: [{ id: "memo_1", title: "Backup memo" }],
+      resources: [{ id: "res_1", memoId: "memo_1", filename: "note.txt" }],
+    });
+    const memoQuery = database.statements.find((statement) => statement.sql.includes("FROM memos m"));
+    expect(memoQuery.sql).toContain("json_each(?)");
+    expect(memoQuery.sql).toContain("m.workspace_id = ?");
+    expect(memoQuery.sql).toContain("m.is_deleted = 0");
+    expect(memoQuery.args[0]).toBe("ws_1");
+    expect(JSON.parse(memoQuery.args[1])).toEqual(["memo_1", "memo_missing"]);
+  });
+
+  test("rejects markdown export requests that exceed the batch size", async () => {
+    const ids = Array.from({ length: MAX_MARKDOWN_EXPORT_MEMO_IDS + 1 }, (_, index) => `memo_${index}`).join(",");
+    const response = await createApp(createDependencies()).request(
+      `/api/v1/exports/markdown?ids=${ids}`,
+      {},
+      {
+        storage: {
+          db: { prepare: () => { throw new Error("Unexpected database access"); } },
+          resources: {},
+        },
+      },
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: { code: "bad_request" },
+    });
+  });
+
+  test("returns an empty markdown export page when ids is present but empty", async () => {
+    const response = await createApp(createDependencies()).request(
+      "/api/v1/exports/markdown?ids=",
+      {},
+      {
+        storage: {
+          db: { prepare: () => { throw new Error("Unexpected database access"); } },
+          resources: {},
+        },
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      memos: [],
+      resources: [],
+      totalCount: 0,
+      nextOffset: null,
+    });
+  });
+
+  test("parses markdown export memo ids without interpolating them into SQL", () => {
+    expect(parseMarkdownExportMemoIds(undefined)).toEqual({ ids: null });
+    expect(parseMarkdownExportMemoIds("")).toEqual({ ids: [] });
+    expect(parseMarkdownExportMemoIds(" memo_1, memo_2, memo_1 ")).toEqual({ ids: ["memo_1", "memo_2"] });
+    expect(parseMarkdownExportMemoIds(Array.from({ length: 101 }, (_, index) => `memo_${index}`).join(","))).toEqual({
+      ids: null,
+      error: "too_many",
     });
   });
 

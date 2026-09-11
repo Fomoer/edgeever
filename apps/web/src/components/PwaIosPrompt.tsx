@@ -13,7 +13,7 @@ export const PwaIosPrompt = () => {
 
   return (
     <div className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-md animate-in fade-in slide-in-from-bottom-5 duration-300">
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-card/95 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
         {/* Decorative top accent line */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
         
@@ -43,7 +43,7 @@ export const PwaIosPrompt = () => {
             
             <div className="mt-3.5 flex flex-col gap-2 rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">
               <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white border border-slate-200/60 shadow-sm text-slate-500 shrink-0">
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-card border border-slate-200/60 shadow-sm text-slate-500 shrink-0">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
                     <polyline points="16 6 12 2 8 6" />
@@ -55,7 +55,7 @@ export const PwaIosPrompt = () => {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white border border-slate-200/60 shadow-sm text-slate-500 shrink-0">
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-card border border-slate-200/60 shadow-sm text-slate-500 shrink-0">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                     <line x1="12" y1="8" x2="12" y2="16" />

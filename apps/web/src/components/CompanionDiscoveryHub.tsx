@@ -109,7 +109,7 @@ export default function CompanionDiscoveryHub({ scope, onOpenNote, onNotesChange
           <Button variant="ghost" size="icon" className="relative h-8 w-8 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-emerald-500/70"
             aria-label={t("companion.discovery.title")} onClick={() => { setOpen(true); void feed.refetch(); }}>
             <PawPrint className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
-            {items.some(item => !item.seen && item.action?.status !== "applied") ? <span aria-label={t("companion.discovery.unread")} className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" /> : null}
+            {items.some(item => !item.seen && item.action?.status !== "applied") ? <span aria-label={t("companion.discovery.unread")} className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-2 ring-white " /> : null}
           </Button>
         </TooltipTrigger>
         <TooltipContent>{t("companion.discovery.title")}</TooltipContent>
@@ -117,18 +117,18 @@ export default function CompanionDiscoveryHub({ scope, onOpenNote, onNotesChange
     </TooltipProvider>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="grid max-h-[min(760px,calc(100dvh-2rem))] w-[calc(100%-2rem)] max-w-xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0">
-        <DialogHeader className="border-b border-slate-100 px-5 py-4 text-left dark:border-slate-800">
+        <DialogHeader className="border-b border-slate-100 px-5 py-4 text-left ">
           <div className="flex items-center justify-between pr-8">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20 dark:bg-emerald-950/50 dark:text-emerald-400 dark:ring-emerald-500/30">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20   ">
                 <PawPrint className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="flex items-center gap-2">
-                <DialogTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                <DialogTitle className="text-base font-semibold text-slate-900 ">
                   {t("companion.discovery.title")}
                 </DialogTitle>
                 {items.length > 0 ? (
-                  <Badge variant="outline" className="border-emerald-600/20 bg-emerald-50 px-2 font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  <Badge variant="outline" className="border-emerald-600/20 bg-emerald-50 px-2 font-medium text-emerald-700   ">
                     {items.length}
                   </Badge>
                 ) : null}
@@ -149,10 +149,10 @@ export default function CompanionDiscoveryHub({ scope, onOpenNote, onNotesChange
           ) : null}
           {!feed.isPending && !feed.isError && !items.length ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-500 dark:ring-slate-800">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 ring-1 ring-slate-200   ">
                 <PawPrint className="h-6 w-6 stroke-[1.5]" />
               </div>
-              <p className="max-w-xs text-sm font-medium text-slate-600 dark:text-slate-300">
+              <p className="max-w-xs text-sm font-medium text-slate-600 ">
                 {t("companion.discovery.empty")}
               </p>
             </div>
@@ -163,11 +163,11 @@ export default function CompanionDiscoveryHub({ scope, onOpenNote, onNotesChange
             onSeen={() => { void api.acknowledgeCompanionDiscovery(item.id).then(() => client.setQueryData<CompanionDiscoveryItem[]>(discoveryFeedKey(scope),
               current => current?.map(entry => entry.id === item.id ? { ...entry, seen: true } : entry))).catch(() => {}); }} />)}
         </div>
-        <div className="flex justify-end border-t border-slate-100 bg-slate-50/50 px-5 py-2.5 dark:border-slate-800 dark:bg-slate-900/50">
+        <div className="flex justify-end border-t border-slate-100 bg-slate-50/50 px-5 py-2.5  ">
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 shrink-0 gap-1.5 px-2 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+            className="h-7 shrink-0 gap-1.5 px-2 text-xs text-slate-600 hover:text-slate-900  "
             onClick={() => { setOpen(false); onOpenSettings(); }}
           >
             <Settings className="h-3.5 w-3.5" />
@@ -204,15 +204,15 @@ function DiscoveryCard({ item, busy, open, onApply, onDismiss, onOpenNote, onSee
 
   return (
     <article ref={ref}>
-      <Card className="group relative flex flex-col gap-3 rounded-xl border border-slate-200/90 bg-white p-4 shadow-xs transition-all hover:border-slate-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700">
+      <Card className="group relative flex flex-col gap-3 rounded-xl border border-slate-200/90 bg-card p-4 shadow-xs transition-all hover:border-slate-300 hover:shadow-sm   ">
       <CardHeader className="flex-row items-start justify-between gap-3 p-0">
         <div className="min-w-0">
-          <CardTitle className="line-clamp-1 break-words text-sm leading-snug text-slate-900 dark:text-slate-100">
+          <CardTitle className="line-clamp-1 break-words text-sm leading-snug text-slate-900 ">
             {item.title}
           </CardTitle>
         </div>
         {formattedDate ? (
-          <time className="shrink-0 pt-0.5 font-mono text-[11px] text-slate-400 dark:text-slate-500">
+          <time className="shrink-0 pt-0.5 font-mono text-[11px] text-slate-400 ">
             {formattedDate}
           </time>
         ) : null}
@@ -228,12 +228,12 @@ function DiscoveryCard({ item, busy, open, onApply, onDismiss, onOpenNote, onSee
           <ul className="mt-2 space-y-1">{item.memories.map(memory => <li key={memory.id}>{companionMemoryText(memory, t)}</li>)}</ul>
         </details> : null}
         {!item.action ? (
-          <p className="line-clamp-4 whitespace-pre-wrap break-words text-xs leading-relaxed text-slate-600 sm:text-sm dark:text-slate-300">
+          <p className="line-clamp-4 whitespace-pre-wrap break-words text-xs leading-relaxed text-slate-600 sm:text-sm ">
             {item.body}
           </p>
         ) : null}
         {item.kind === "append" ? (
-          <p className="rounded-lg border border-emerald-100 bg-emerald-50/50 p-2.5 text-xs leading-relaxed text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-400">
+          <p className="rounded-lg border border-emerald-100 bg-emerald-50/50 p-2.5 text-xs leading-relaxed text-emerald-700   ">
             {t("companion.discovery.appendHelp")}
           </p>
         ) : null}
@@ -253,9 +253,9 @@ function DiscoveryCard({ item, busy, open, onApply, onDismiss, onOpenNote, onSee
                 size="sm"
                 variant="outline"
                 onClick={() => onOpenNote(source.id, source.notebookId)}
-                className="group/btn h-7 max-w-full gap-1.5 bg-slate-50/70 px-2.5 text-xs text-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-300"
+                className="group/btn h-7 max-w-full gap-1.5 bg-slate-50/70 px-2.5 text-xs text-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50 hover:text-emerald-700      "
               >
-                <FileText className="h-3 w-3 shrink-0 text-slate-400 group-hover/btn:text-emerald-600 dark:group-hover/btn:text-emerald-400" />
+                <FileText className="h-3 w-3 shrink-0 text-slate-400 group-hover/btn:text-emerald-600 " />
                 <span className="max-w-[260px] truncate">{source.title || t("common.untitledMemo")}</span>
                 <ArrowUpRight className="h-3 w-3 shrink-0 opacity-40 group-hover/btn:opacity-100" />
               </Button>
@@ -264,13 +264,13 @@ function DiscoveryCard({ item, busy, open, onApply, onDismiss, onOpenNote, onSee
         ) : null}
       </CardContent>
       {!item.action ? (
-        <CardFooter className="justify-end border-t border-slate-100 p-0 pt-2.5 dark:border-slate-800/80">
+        <CardFooter className="justify-end border-t border-slate-100 p-0 pt-2.5 ">
           <Button
             size="sm"
             variant="ghost"
             disabled={busy}
             onClick={onDismiss}
-            className="h-7 px-2 text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            className="h-7 px-2 text-xs text-slate-400 hover:text-slate-700 "
           >
             {t("companion.discovery.dismiss")}
           </Button>

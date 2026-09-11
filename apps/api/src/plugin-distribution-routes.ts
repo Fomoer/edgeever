@@ -194,6 +194,30 @@ export const readGithubReleaseByTag = async ({
     },
   );
   if (response.status === 404) throw new GithubUpstreamError("GitHub release was not found.", 404);
+  if (response.status === 403 || response.status === 429) {
+    const publicUrl = `https://github.com/${owner}/${repository}/releases/download/${releaseTag}/manifest.json`;
+    try {
+      const publicManifest = await request(publicUrl, {
+        redirect: "follow",
+        headers: { "User-Agent": "EdgeEver" },
+      });
+      if (publicManifest.ok) {
+        return {
+          tag_name: releaseTag,
+          draft: false,
+          assets: (["manifest.json", "main.js", "styles.css"] as const).map((name) => ({
+            id: 0,
+            name,
+            size: 0,
+            url: "",
+            browser_download_url: `https://github.com/${owner}/${repository}/releases/download/${releaseTag}/${name}`,
+          })),
+        };
+      }
+    } catch {
+      // Keep the original GitHub API status when the public download URL is also blocked.
+    }
+  }
   if (!response.ok) throw new Error(`GitHub release request failed with HTTP ${response.status}.`);
   const release = await response.json() as {
     tag_name?: unknown;

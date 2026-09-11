@@ -112,6 +112,28 @@ export const mapJsonBackupRevision = (row: BackupRevisionRow): JsonBackupRevisio
   createdAt: row.created_at,
 });
 
+export const MAX_MARKDOWN_EXPORT_MEMO_IDS = 100;
+
+export const parseMarkdownExportMemoIds = (value: string | undefined): { ids: string[] | null; error?: "too_many" } => {
+  if (value === undefined) {
+    return { ids: null };
+  }
+
+  const ids = [...new Set(value.split(",").map((item) => item.trim()).filter(Boolean))];
+  if (ids.length > MAX_MARKDOWN_EXPORT_MEMO_IDS) {
+    return { ids: null, error: "too_many" };
+  }
+
+  return { ids };
+};
+
+const MEMO_EXPORT_SELECT_SQL = `SELECT m.id, m.notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned,
+            m.is_archived, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, mc.revision,
+            mc.content_json, mc.content_markdown, mc.content_text, mc.content_hash,
+            m.source_memo_ids, m.merge_source_count, m.merged_into_memo_id
+     FROM memos m
+     INNER JOIN memo_contents mc ON mc.memo_id = m.id`;
+
 const listBackupPage = async (
   database: DatabaseAdapter,
   workspaceId: string,
@@ -119,12 +141,7 @@ const listBackupPage = async (
   offset: number,
 ) => Promise.all([
   database.prepare(
-    `SELECT m.id, m.notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned,
-            m.is_archived, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, mc.revision,
-            mc.content_json, mc.content_markdown, mc.content_text, mc.content_hash,
-            m.source_memo_ids, m.merge_source_count, m.merged_into_memo_id
-     FROM memos m
-     INNER JOIN memo_contents mc ON mc.memo_id = m.id
+    `${MEMO_EXPORT_SELECT_SQL}
      WHERE m.workspace_id = ? AND m.is_deleted = 0
      ORDER BY m.created_at ASC, m.id ASC
      LIMIT ? OFFSET ?`,
@@ -133,6 +150,44 @@ const listBackupPage = async (
     `SELECT COUNT(*) AS count FROM memos WHERE workspace_id = ? AND is_deleted = 0`,
   ).bind(workspaceId).first<{ count: number }>(),
 ]);
+
+const emptyMarkdownExportPage = async () => [
+  { results: [] as BackupMemoDetailRow[] },
+  { count: 0 },
+] as const;
+
+const listMarkdownExportPage = async (
+  database: DatabaseAdapter,
+  workspaceId: string,
+  limit: number,
+  offset: number,
+  memoIds: string[] | null,
+) => {
+  if (memoIds && memoIds.length === 0) {
+    return emptyMarkdownExportPage();
+  }
+
+  if (!memoIds) {
+    return listBackupPage(database, workspaceId, limit, offset);
+  }
+
+  // json_each keeps the D1 bound-parameter count fixed (workspace + JSON + limit/offset).
+  const memoIdsJson = JSON.stringify(memoIds);
+  return Promise.all([
+    database.prepare(
+      `${MEMO_EXPORT_SELECT_SQL}
+       WHERE m.workspace_id = ? AND m.is_deleted = 0
+         AND m.id IN (SELECT value FROM json_each(?))
+       ORDER BY m.created_at ASC, m.id ASC
+       LIMIT ? OFFSET ?`,
+    ).bind(workspaceId, memoIdsJson, limit, offset).all<BackupMemoDetailRow>(),
+    database.prepare(
+      `SELECT COUNT(*) AS count FROM memos
+       WHERE workspace_id = ? AND is_deleted = 0
+         AND id IN (SELECT value FROM json_each(?))`,
+    ).bind(workspaceId, memoIdsJson).first<{ count: number }>(),
+  ]);
+};
 
 export const registerBackupRoutes = (
   app: Hono<AppEnv>,
@@ -144,8 +199,18 @@ export const registerBackupRoutes = (
 
     const limit = dependencies.clampNumber(Number(context.req.query("limit") ?? 50), 1, 100);
     const offset = dependencies.clampNumber(Number(context.req.query("offset") ?? 0), 0, 1_000_000);
+    const parsedIds = parseMarkdownExportMemoIds(context.req.query("ids"));
+    if (parsedIds.error === "too_many") {
+      return badRequest(context, `Export at most ${MAX_MARKDOWN_EXPORT_MEMO_IDS} notes at a time.`);
+    }
     const workspaceId = getWorkspaceId(context);
-    const [memoRows, totalRow] = await listBackupPage(context.env.storage.db, workspaceId, limit, offset);
+    const [memoRows, totalRow] = await listMarkdownExportPage(
+      context.env.storage.db,
+      workspaceId,
+      limit,
+      offset,
+      parsedIds.ids,
+    );
     const memoIds = memoRows.results.map((row) => row.id);
     let resources: Resource[] = [];
 

@@ -189,7 +189,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
     resource.memoDeleted ? t("assets.deletedMemo") : resource.memoTitle || resource.memoExcerpt || resource.memoId;
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-white select-none outline-none">
+    <div className="relative flex h-full min-h-0 flex-col bg-card select-none outline-none">
 
       {/* Header */}
       <header className="flex h-[calc(4rem+env(safe-area-inset-top))] shrink-0 items-end justify-between border-b border-slate-200 px-6 pb-3 pt-[env(safe-area-inset-top)] lg:h-16 lg:items-center lg:pb-0 lg:pt-0">
@@ -226,7 +226,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
       </header>
 
       {/* Toolbar (Filters, Search, Layout mode) */}
-      <div className="shrink-0 border-b border-slate-100 bg-white p-4">
+      <div className="shrink-0 border-b border-slate-100 bg-card p-4">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {/* Category Filters */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
@@ -256,7 +256,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                 aria-label={t("assets.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-9 pr-8 text-xs text-slate-800 placeholder-slate-400 transition-colors focus:border-emerald-500/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500/20"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-9 pr-8 text-xs text-slate-800 placeholder-slate-400 transition-colors focus:border-emerald-500/50 focus:bg-card focus:outline-none focus:ring-1 focus:ring-emerald-500/20"
               />
               {searchQuery && (
                 <button
@@ -276,7 +276,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                   aria-label={t("assets.gridView")}
                   aria-pressed={layoutMode === "grid"}
                   className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
-                    layoutMode === "grid" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    layoutMode === "grid" ? "bg-card text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
                   }`}
                 >
                   <Grid className="h-4 w-4" />
@@ -288,7 +288,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                   aria-label={t("assets.listView")}
                   aria-pressed={layoutMode === "list"}
                   className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
-                    layoutMode === "list" ? "bg-white text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    layoutMode === "list" ? "bg-card text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
                   }`}
                 >
                   <List className="h-4 w-4" />
@@ -308,7 +308,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
               <span className="text-xs font-medium">{t("assets.loading")}</span>
             </div>
           ) : filteredResources.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white px-6 py-24 text-center">
+            <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-card px-6 py-24 text-center">
               <Archive className="h-10 w-10 text-slate-350 mb-3 stroke-[1.5]" />
               <p className="text-sm font-semibold text-slate-500">
                 {searchQuery || filterType !== "all" ? t("assets.noMatches") : t("assets.empty")}
@@ -325,7 +325,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
               {filteredResources.map((resource) => (
                 <div
                   key={resource.id}
-                  className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-emerald-500/40 hover:shadow-md"
+                  className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-card shadow-sm transition-all duration-200 hover:border-emerald-500/40 hover:shadow-md"
                 >
                   <ButtonTooltip title={t("assets.deleteAria", { filename: resource.filename || resource.id })}>
                     <Button
@@ -333,7 +333,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                       size="icon"
                       variant="ghost"
                       aria-label={t("assets.deleteAria", { filename: resource.filename || resource.id })}
-                      className="absolute right-2 top-2 z-10 h-8 w-8 bg-white/90 text-slate-500 opacity-0 shadow-sm transition-opacity hover:bg-rose-50 hover:text-rose-600 focus:opacity-100 group-hover:opacity-100"
+                      className="absolute right-2 top-2 z-10 h-8 w-8 bg-card/90 text-slate-500 opacity-0 shadow-sm transition-opacity hover:bg-rose-50 hover:text-rose-600 focus:opacity-100 group-hover:opacity-100"
                       onClick={() => requestResourceDelete(resource)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -377,7 +377,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                     )}
                     {/* Hover detail overlay */}
                     <div className="absolute inset-0 bg-slate-900/40 opacity-0 transition-opacity duration-200 group-hover:opacity-100 flex items-center justify-center">
-                      <span className="rounded bg-white/90 px-2.5 py-1.5 text-[11px] font-semibold text-slate-800 shadow flex items-center gap-1">
+                      <span className="rounded bg-card/90 px-2.5 py-1.5 text-[11px] font-semibold text-slate-800 shadow flex items-center gap-1">
                         {resource.kind === "image"
                           ? t("assets.previewImage")
                           : isPdfAttachment(resource.mimeType, resource.filename)
@@ -418,7 +418,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
               {filteredResources.map((resource) => (
                 <div
                   key={resource.id}
-                  className="group relative flex items-center gap-3.5 rounded-xl border border-slate-200/80 bg-white p-3.5 text-left transition-all duration-200 hover:border-emerald-500/35 hover:shadow-sm"
+                  className="group relative flex items-center gap-3.5 rounded-xl border border-slate-200/80 bg-card p-3.5 text-left transition-all duration-200 hover:border-emerald-500/35 hover:shadow-sm"
                 >
                   {/* Left Icon/Thumbnail */}
                   <div

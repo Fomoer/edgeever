@@ -1,12 +1,6 @@
 # Visual Diagram Notes Design
 
-This document summarizes the product and technical decisions made while extending EdgeEver from mind maps and flowcharts to architecture diagrams. It serves as a reference for future development, review, and cross-platform work.
-
-## Why architecture diagram notes exist
-
-Mind maps express topic hierarchies, and flowcharts express steps and decisions. Complex systems also need to express component responsibilities, system boundaries, dependency directions, and data flows. An architecture diagram is therefore a distinct note type, not a flowchart whose nodes merely have different names.
-
-A component should be recognizable from its appearance. EdgeEver currently distinguishes clients, frontends, services, databases, object storage, queues, security components, external services, and system boundaries with dedicated icons, outlines, and accent colors instead of one shared rectangle.
+This document records the technical choices and design decisions behind EdgeEver visual diagram notes (mind maps, flowcharts, and architecture diagrams). It is a reference for future development, review, and cross-platform work.
 
 ## What IR means
 
@@ -49,13 +43,15 @@ User-authored ` ```mermaid ` code blocks in ordinary rich-text notes are a separ
 
 IR parsing and validation live in [`packages/shared/src/diagram.ts`](../packages/shared/src/diagram.ts), so Web, Android, and iOS do not maintain competing interpretations of the format.
 
-## Why EdgeEver continues to use AntV X6
+## Why AntV X6
 
-EdgeEver already has selection, dragging, zooming, connections, undo and redo, keyboard controls, automatic layout, revision history, and PNG/SVG export built around AntV X6. Architecture diagrams need semantic modeling and custom visuals on top of that mature interaction layer, not another canvas core. Android and iOS now use the same X6 adapter for read-only viewing (`diagramDocumentToX6Cells` plus a non-interactive `Graph`), so first-party canvases no longer split between X6 on Web and Mermaid on mobile.
+Visual diagram notes need an editable canvas: selection, dragging, zooming, connections, undo and redo, keyboard controls, automatic layout, and PNG/SVG export. AntV X6 supplies that canvas kernel; it is not the product model for any one diagram type. Mind maps, flowcharts, and architecture diagrams share the same engine. Their differences live in IR semantics and EdgeEver's node and edge customization.
 
-The reference project is most valuable for its product modeling and Typed IR ideas. Copying another drawing engine would also import its state management, coordinate system, interaction conventions, and data format, leaving EdgeEver with two canvas engines to maintain. Reusing X6 lets all three diagram types share infrastructure while development focuses on EdgeEver's own semantics and experience.
+The IR answers “what does this diagram mean?”; the X6 adapter answers “how do we draw it and let the user edit it?” X6 internals, coordinate conventions, and view instances therefore stay out of the persisted format. Adopting a second engine for one diagram type would also import another state manager, coordinate system, interaction model, and data format, leaving two canvases to maintain.
 
-This does not mean rendering every component as the same X6 node. X6 is only the underlying engine; component icons, SVG markup, shapes, ports, colors, boundaries, and connection semantics are customized by EdgeEver.
+Android and iOS read-only viewers reuse the same X6 adapter (`diagramDocumentToX6Cells` plus a non-interactive `Graph`). First-party canvases no longer split between X6 on Web and Mermaid on mobile. Mermaid remains the portable envelope, the renderer for embedded rich-text diagrams, and the fallback when IR parsing fails.
+
+This does not mean rendering every node as the same X6 rectangle. X6 is only the underlying engine; icons, SVG markup, shapes, ports, colors, boundaries, and connection semantics are customized by EdgeEver per diagram type.
 
 ## Cross-platform rendering boundary
 

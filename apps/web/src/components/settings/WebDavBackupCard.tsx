@@ -122,7 +122,7 @@ export const WebDavBackupCard = () => {
           {WEBDAV_AUTO_BACKUP_ENABLED ? (
             <>
               <label className="grid gap-1.5 text-xs font-medium text-slate-700">{t("dataExport.webdavInterval")}
-                <select className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={schedule.intervalDays} disabled={busy} onChange={(event) => updateSchedule({ intervalDays: Number(event.target.value) as WebDavBackupSchedule["intervalDays"] })}>
+                <select className="h-10 rounded-md border border-slate-200 bg-card px-3 text-sm text-slate-950 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={schedule.intervalDays} disabled={busy} onChange={(event) => updateSchedule({ intervalDays: Number(event.target.value) as WebDavBackupSchedule["intervalDays"] })}>
                   <option value={1}>{t("dataExport.webdavIntervals.daily")}</option><option value={7}>{t("dataExport.webdavIntervals.weekly")}</option><option value={14}>{t("dataExport.webdavIntervals.biweekly")}</option><option value={30}>{t("dataExport.webdavIntervals.monthly")}</option>
                 </select>
               </label>

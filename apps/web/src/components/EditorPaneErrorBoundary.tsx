@@ -50,7 +50,7 @@ export class EditorPaneErrorBoundary extends React.Component<Props, State> {
 
     return (
       <main className="flex h-full min-h-0 items-center justify-center bg-slate-50 p-6 text-slate-900">
-        <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" role="alert">
+        <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-card p-6 shadow-sm" role="alert">
           <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-amber-50 text-xl text-amber-700">!</div>
           <h1 className="text-lg font-semibold">{zh ? "这条笔记暂时无法显示" : "This note cannot be displayed"}</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -67,7 +67,7 @@ export class EditorPaneErrorBoundary extends React.Component<Props, State> {
               {zh ? "返回笔记列表" : "Back to note list"}
             </button>
             <button
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+              className="rounded-lg border border-slate-300 bg-card px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               type="button"
               onClick={this.retry}
             >
@@ -84,7 +84,7 @@ export const EditorRecoveryPane = () => {
   const zh = isChineseInterface();
   return (
     <main className="flex h-full min-h-0 items-center justify-center bg-slate-50 p-6 text-slate-900">
-      <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" role="status">
+      <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-card p-6 shadow-sm" role="status">
         <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-xl text-emerald-700">✓</div>
         <h1 className="text-lg font-semibold">{zh ? "已进入安全启动模式" : "Safe startup mode is active"}</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">

@@ -169,7 +169,7 @@ export const AiPromptsPane = ({ onClose, onOpenExecutionCenter }: { onClose: () 
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-slate-50/60">
-      <header className="flex h-[calc(3.75rem+env(safe-area-inset-top))] shrink-0 items-end justify-between border-b border-slate-200/80 bg-white px-6 pb-3 pt-[env(safe-area-inset-top)] shadow-2xs lg:h-16 lg:items-center lg:pb-0 lg:pt-0">
+      <header className="flex h-[calc(3.75rem+env(safe-area-inset-top))] shrink-0 items-end justify-between border-b border-slate-200/80 bg-card px-6 pb-3 pt-[env(safe-area-inset-top)] shadow-2xs lg:h-16 lg:items-center lg:pb-0 lg:pt-0">
         <div className="flex min-w-0 items-center gap-3">
           <TooltipProvider delayDuration={0}>
             <Tooltip>
@@ -210,7 +210,7 @@ export const AiPromptsPane = ({ onClose, onOpenExecutionCenter }: { onClose: () 
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900"
+                  className="gap-1.5 border-slate-200 bg-card text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900"
                   onClick={() => {
                     setRestoreFeedback(null);
                     setRestoreConfirmOpen(true);
@@ -224,7 +224,7 @@ export const AiPromptsPane = ({ onClose, onOpenExecutionCenter }: { onClose: () 
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900"
+                  className="gap-1.5 border-slate-200 bg-card text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900"
                   onClick={startCreating}
                 >
                   <Plus className="h-3.5 w-3.5 text-emerald-600" />
@@ -241,7 +241,7 @@ export const AiPromptsPane = ({ onClose, onOpenExecutionCenter }: { onClose: () 
 
           {editorOpen ? (
             <form
-              className="rounded-xl border border-emerald-200 bg-white p-5 shadow-xs"
+              className="rounded-xl border border-emerald-200 bg-card p-5 shadow-xs"
               onSubmit={(event: FormEvent) => {
                 event.preventDefault();
                 if (canSubmit && hasChanges) saveMutation.mutate();
@@ -315,7 +315,7 @@ export const AiPromptsPane = ({ onClose, onOpenExecutionCenter }: { onClose: () 
                 <label className="grid gap-1.5 text-xs font-medium text-slate-700">
                   {t("aiPrompts.instruction")}
                   <textarea
-                    className="min-h-36 w-full resize-y rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900 outline-none focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/20"
+                    className="min-h-36 w-full resize-y rounded-lg border border-slate-200 bg-card p-3 text-sm text-slate-900 outline-none focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/20"
                     value={form.instruction}
                     onChange={(event) => setForm((current) => ({ ...current, instruction: event.target.value }))}
                     placeholder={t("aiPrompts.instructionPlaceholder")}
@@ -347,7 +347,7 @@ export const AiPromptsPane = ({ onClose, onOpenExecutionCenter }: { onClose: () 
               {prompts.map((prompt) => (
                 <article
                   key={prompt.id}
-                  className="group flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-emerald-300 hover:shadow-md"
+                  className="group flex flex-col justify-between rounded-xl border border-slate-200 bg-card p-4 transition-all duration-200 hover:border-emerald-300 hover:shadow-md"
                 >
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-2">
@@ -368,7 +368,7 @@ export const AiPromptsPane = ({ onClose, onOpenExecutionCenter }: { onClose: () 
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-8 gap-1 bg-white text-xs"
+                      className="h-8 gap-1 bg-card text-xs"
                       onClick={() => setPreview(prompt)}
                     >
                       <Eye className="h-3.5 w-3.5" />
@@ -378,7 +378,7 @@ export const AiPromptsPane = ({ onClose, onOpenExecutionCenter }: { onClose: () 
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-8 gap-1 bg-white text-xs"
+                      className="h-8 gap-1 bg-card text-xs"
                       onClick={() => startEditing(prompt)}
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -402,7 +402,7 @@ export const AiPromptsPane = ({ onClose, onOpenExecutionCenter }: { onClose: () 
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center">
+            <div className="rounded-xl border border-dashed border-slate-200 bg-card px-6 py-10 text-center">
               <p className="text-sm font-medium text-slate-700">{t("aiPrompts.empty")}</p>
               <p className="mt-1 text-xs text-slate-400">{t("aiPrompts.emptyHint")}</p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">

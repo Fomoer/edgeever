@@ -32,7 +32,7 @@ export const EditorNoteLinkPicker = ({
 
   return (
     <div
-      className="absolute left-3 right-3 top-14 z-30 h-[min(22rem,calc(100%-4rem))] max-w-xl rounded-lg border border-slate-200 bg-white shadow-xl sm:left-5 sm:right-auto sm:w-[28rem]"
+      className="absolute left-3 right-3 top-14 z-30 h-[min(22rem,calc(100%-4rem))] max-w-xl rounded-lg border border-slate-200 bg-card shadow-xl sm:left-5 sm:right-auto sm:w-[28rem]"
       role="dialog"
       aria-label={t("noteLinkPicker.title")}
     >

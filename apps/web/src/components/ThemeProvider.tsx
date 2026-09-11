@@ -183,7 +183,7 @@ export const getStoredMarkdownTheme = (): MarkdownThemePreference => {
   const stored = readLocalStorageItem(MARKDOWN_THEME_STORAGE_KEY);
   return MARKDOWN_THEME_PREFERENCES.includes(stored as MarkdownThemePreference)
     ? (stored as MarkdownThemePreference)
-    : "tokyo-night";
+    : "auto";
 };
 
 export const resolveMarkdownTheme = (

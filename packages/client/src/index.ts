@@ -1179,8 +1179,16 @@ export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
         method: "DELETE",
       }),
 
-    getMarkdownExportPage: (offset = 0, limit = 50) =>
-      request<MarkdownExportPage>(`/api/v1/exports/markdown?offset=${offset}&limit=${limit}`),
+    getMarkdownExportPage: (offset = 0, limit = 50, memoIds?: string[]) => {
+      const search = new URLSearchParams({
+        offset: String(offset),
+        limit: String(limit),
+      });
+      if (memoIds && memoIds.length > 0) {
+        search.set("ids", memoIds.join(","));
+      }
+      return request<MarkdownExportPage>(`/api/v1/exports/markdown?${search.toString()}`);
+    },
 
     getJsonBackupPage: (offset = 0, limit = 25) =>
       request<JsonBackupPage>(`/api/v1/backups/json?offset=${offset}&limit=${limit}`),

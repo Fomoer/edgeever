@@ -21,13 +21,13 @@ EdgeEver is a modern, open-source notes and knowledge base workspace. It revives
 Many long-time **Evernote** users simply want a **reliable, open, and fast** personal knowledge base. However, existing mainstream solutions all present tradeoffs:
 
 * **Evernote**: It has grown increasingly bloated with commercial ads and unnecessary features, degrading performance. Data export is cumbersome, free tiers are heavily restricted, and AI/MCP features require costly subscriptions.
-* **Obsidian**: Exceptionally powerful and open, yet feels a bit heavy for quick, friction-free captures on the go. Official sync is subscription-based, while third-party sync setups demand significant effort.
+* **Obsidian**: Open files, closed-source core. Official Sync is paid and third-party sync is tedious; storing images and attachments alongside notes quickly bloats vaults, making mobile sync sluggish and leaving orphaned files behind; and it is overly heavy for lightweight, capture-anywhere use.
 * **Memos & Stream Notes**: Clean and simple, but their social-timeline layouts differ fundamentally from the structured productivity of a classic three-pane workflow.
 
-**EdgeEver fills this gap**: It preserves the refined three-pane layout you know and love, while unlocking complete data ownership, native AI capabilities, and zero-cost self-hosted deployment.
+**EdgeEver fills this gap**: The entire stack is open source, including sync and self-hosting. It keeps the three-pane layout you know, with native AI agents and zero-cost deployment.
 
 > 💡 **Recommended Workflow:**
-> Use **EdgeEver** as your central inbox to quickly capture ideas and notes on any device. When it's time to curate and publish, leverage **MCP** to let your AI assistant distill, tag, and sync them into **Obsidian**, **Notion**, or **Feishu Bitable**, or copy beautifully styled posts directly into **Substack**, **Medium**, or newsletters with a single click.
+> Capture inspiration seamlessly across all devices and organize deeply in the classic three-pane view. Powered by native MCP, it not only lets AI agents retrieve and synthesize your knowledge, but also connects with your favorite productivity tools like Notion and Feishu. Publish anywhere with one-click formatting—100% self-hosted at zero cost, building an open and truly owned second brain.
 
 ## Online Demo
 
@@ -45,9 +45,7 @@ The public demo resets every day at 3:00 AM (China Standard Time) and restores s
   <a href="https://apps.apple.com/us/app/edgeever/id6792625631"><img src="assets/readme/platforms/app-store.svg" alt="Download EdgeEver for iOS from the App Store" width="40" height="40" /></a>
 </p>
 
-The iOS app requires an Apple ID from outside mainland China.
-The Linux x86_64 AppImage is a Preview with automatic updates; see the
-[Linux Preview guide](docs/linux-preview.md).
+> The iOS app requires an Apple ID from outside mainland China.
 
 ## Features
 
@@ -237,9 +235,10 @@ Repository file: [docs/openapi.json](docs/openapi.json).
 
 ## MCP
 
-Create an API token in **Profile** -> **MCP settings** and give it to your AI Agent. The Agent can then securely read, organize, and import notes, use `create_diagram_memo` to create editable mind map, flowchart, and architecture diagram notes from semantic graphs, and safely read or incrementally modify existing diagrams through `get_diagram` and `update_diagram`. EdgeEver manages node sizing and layout by default and only returns geometry when an explicit visual-layout task requests it. The Agent can also manage note templates and AI instructions and connect your notes with tools such as Notion databases and Feishu Bitable—all within your account permissions.
+Create an API token in **Profile** -> **MCP settings** and give it to your AI Agent. The Agent can then securely manage your knowledge base within your account permissions. It supports both text notes and diagram notes (including mind maps, flowcharts, and architecture diagrams) with full CRUD capabilities. The Agent can also manage note templates and AI instructions, and connect with tools such as Notion databases and Feishu Bitable.
 
-> Let your ideas run free: ask an AI Agent to organize fleeting thoughts, build a personal knowledge graph, create a profile from your notes, or tag them automatically.
+> 💡 **Inspiration:**
+> Make AI your true knowledge orchestrator and creative co-pilot—instantly turn concepts into interactive mind maps and architecture diagrams, while supplying private context to your AI Agents. Paired with EdgeEver’s powerful rich-text editing and elegant typography, AI-assisted content becomes beautifully structured, polished, and publication-ready knowledge assets.
 
 ## Image Compression
 

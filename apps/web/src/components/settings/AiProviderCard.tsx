@@ -260,7 +260,7 @@ export const AiProviderCard = ({ provider: saved, defaultDisplayName, defaultMod
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-4 w-4 shrink-0 text-slate-400 hover:bg-white hover:text-rose-600"
+                        className="h-4 w-4 shrink-0 text-slate-400 hover:bg-card hover:text-rose-600"
                         disabled={readOnly || deleteModelMutation.isPending}
                         onClick={() => deleteModel(model)}
                         aria-label={`${t("aiModel.removeModel")}: ${model.displayName}`}

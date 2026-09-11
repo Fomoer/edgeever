@@ -165,24 +165,24 @@ export const diagramDocumentToX6Cells = (
       ?? mindEdge?.stroke
       ?? flowchartSurface?.edge
       ?? palette.flowEdge;
-    const flowchartPorts = document.kind === "flowchart" && sourceNode && targetNode
+    const orthogonalPorts = (document.kind === "flowchart" || document.kind === "architecture") && sourceNode && targetNode
       ? flowchartEdgePorts(sourceNode, targetNode)
       : null;
-    const flowchartStraight = Boolean(flowchartPorts && sourceNode && targetNode && flowchartEdgeIsStraight(sourceNode, targetNode));
+    const orthogonalStraight = Boolean(orthogonalPorts && sourceNode && targetNode && flowchartEdgeIsStraight(sourceNode, targetNode));
     return {
       id: edge.id,
       source: document.kind === "mind-map"
         ? { cell: edge.source, ...(sourceTerminal ?? { anchor: { name: sides.source } }) }
-        : flowchartPorts
-          ? { cell: edge.source, port: flowchartPorts.source }
+        : orthogonalPorts
+          ? { cell: edge.source, port: orthogonalPorts.source }
           : { cell: edge.source },
       target: document.kind === "mind-map"
         ? { cell: edge.target, ...(targetTerminal ?? { anchor: { name: sides.target } }) }
-        : flowchartPorts
-          ? { cell: edge.target, port: flowchartPorts.target }
+        : orthogonalPorts
+          ? { cell: edge.target, port: orthogonalPorts.target }
           : { cell: edge.target },
-      router: document.kind === "flowchart"
-        ? (flowchartStraight ? { name: "normal" } : FLOWCHART_EDGE_ROUTER)
+      router: document.kind === "flowchart" || document.kind === "architecture"
+        ? (orthogonalStraight ? { name: "normal" } : FLOWCHART_EDGE_ROUTER)
         : undefined,
       connector: document.kind === "mind-map"
         ? {

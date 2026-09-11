@@ -5,6 +5,16 @@ export type DiagramFitBounds = {
   height: number;
 };
 
+export const DIAGRAM_CANVAS_READY_MIN_SIZE = 32;
+
+export const diagramCanvasIsReady = (
+  element: { clientWidth: number; clientHeight: number } | null | undefined,
+) => Boolean(
+  element
+  && element.clientWidth >= DIAGRAM_CANVAS_READY_MIN_SIZE
+  && element.clientHeight >= DIAGRAM_CANVAS_READY_MIN_SIZE,
+);
+
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 

@@ -365,7 +365,7 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
         <Button
           size="sm"
           variant="outline"
-          className="h-7 gap-1.5 bg-white px-2.5 text-xs text-slate-700 shadow-xs hover:bg-slate-50"
+          className="h-7 gap-1.5 bg-card px-2.5 text-xs text-slate-700 shadow-xs hover:bg-slate-50"
           type="button"
           onClick={() => void handleCopy()}
         >
@@ -398,7 +398,7 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 bg-white px-2.5 text-xs shadow-xs hover:bg-slate-50"
+                  className="h-7 bg-card px-2.5 text-xs shadow-xs hover:bg-slate-50"
                   type="button"
                   disabled={desktopUpdateBusy || desktopUpdateState === "available"}
                   onClick={handleDesktopUpdate}
@@ -421,7 +421,7 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
                   asChild
                   size="sm"
                   variant="outline"
-                  className="h-7 bg-white px-2.5 text-xs shadow-xs hover:bg-slate-50"
+                  className="h-7 bg-card px-2.5 text-xs shadow-xs hover:bg-slate-50"
                 >
                   <a href="https://github.com/tianma-if/edgeever/releases/latest" target="_blank" rel="noreferrer">
                     <ExternalLink className="h-3.5 w-3.5" />
@@ -455,7 +455,7 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
                 {desktopUpdateStatus}
               </p>
             ) : null}
-            <div className="rounded-lg border border-slate-200/80 bg-white p-3 sm:p-3.5">
+            <div className="rounded-lg border border-slate-200/80 bg-card p-3 sm:p-3.5">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-3 sm:gap-x-5">
                 {group.items.map((item) => (
                   <div

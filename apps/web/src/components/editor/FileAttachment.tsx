@@ -30,7 +30,7 @@ const FileAttachmentNodeView = ({ node }: NodeViewProps) => {
 
   return (
     <NodeViewWrapper as="span" className="edgeever-file-attachment-node" contentEditable={false}>
-      <span className={cn("edgeever-file-viewer flex min-h-12 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm", COMPACT_ATTACHMENT_WIDTH_CLASS)}>
+      <span className={cn("edgeever-file-viewer flex min-h-12 flex-col overflow-hidden rounded-xl border border-slate-200 bg-card shadow-sm", COMPACT_ATTACHMENT_WIDTH_CLASS)}>
         <span className="flex min-h-12 items-center gap-2 px-3">
           <a
             href={resolvedUrl}

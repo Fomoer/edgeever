@@ -35,6 +35,7 @@ export const DEMO_SEED_MEMOS_ZH = [
 
 | 核心维度 | 传统商业云笔记 (如 Evernote) | 本地离线知识库 (如 Obsidian) | EdgeEver 极客知识库 |
 | :--- | :--- | :--- | :--- |
+| **源代码** | 闭源 | 核心闭源，文件开放 | **整栈开源 (AGPL-3.0)** |
 | **云端托管成本** | 商业订阅高昂（$10+/月） | 官方云同步收费（$5+/月） | **100% 永久免费 (Cloudflare 免费额度 / Docker 自建)** |
 | **数据资产所有权** | 专有格式封闭，导出困难 | 本地 Markdown，移动端同步繁琐 | **完全自主掌控 (D1 SQLite 数据库 / R2 / 无损 ZIP 导出)** |
 | **写作与编辑体验** | 仅富文本，排版易错乱 | 纯 Markdown，缺乏沉浸所见即所得 | **双视图自由切换 (所见即所得富文本 ⇄ Markdown 源码)** |
@@ -253,6 +254,7 @@ export const DEMO_MEMO_ENGLISH = {
 
 | Dimension | Traditional Cloud Notes (e.g. Evernote) | Local Offline Notes (e.g. Obsidian) | EdgeEver Geek Knowledge Base |
 | :--- | :--- | :--- | :--- |
+| **Source Code** | Closed source | Closed-source core, open files | **Full-stack open source (AGPL-3.0)** |
 | **Hosting Cost** | Costly commercial subscriptions ($10+/mo) | Official cloud sync subscription ($5+/mo) | **100% Free Forever (Cloudflare Free Tier / Docker Self-Hosted)** |
 | **Data Ownership** | Proprietary lock-in, hard to export | Local Markdown, cumbersome mobile sync | **Full Ownership (D1 SQLite, R2 Storage, Lossless ZIP Archives)** |
 | **Editing Experience** | Rich text only, fragile formatting | Plain Markdown, lacks WYSIWYG flow | **Seamless Dual-View (WYSIWYG Rich Text ⇄ Markdown Source)** |

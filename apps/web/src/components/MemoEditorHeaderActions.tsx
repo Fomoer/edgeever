@@ -89,7 +89,7 @@ export const MemoEditorHeaderActions = ({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className={cn("border border-slate-200 bg-white py-1 shadow-md", moreMenuClassName)}
+          className={cn("border border-slate-200 bg-card py-1 shadow-md", moreMenuClassName)}
         >
           {textNoteMenuItems}
           <DropdownMenuItem

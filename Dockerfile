@@ -51,7 +51,10 @@ COPY --from=build /app/apps/web/dist ./apps/web/dist
 COPY migrations ./migrations
 COPY LICENSE ./LICENSE
 
-RUN mkdir -p /data && chown -R bun:bun /data
+# NAS/GUI upgrades often keep the v1.62 command bun scripts/self-hosted-server.mjs.
+RUN mkdir -p /data \
+  && ln -s self-hosted-server.js /app/scripts/self-hosted-server.mjs \
+  && chown -R bun:bun /data
 USER bun
 VOLUME ["/data"]
 EXPOSE 8787

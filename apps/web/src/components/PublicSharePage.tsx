@@ -174,7 +174,7 @@ export const PublicSharePage = () => {
   if (!share) {
     return (
       <main className="flex min-h-[100dvh] items-center justify-center bg-slate-50 px-5">
-        <section className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <section className="max-w-md rounded-2xl border border-slate-200 bg-card p-8 text-center shadow-sm">
           <FileText className="mx-auto h-9 w-9 text-slate-400" />
           <h1 className="mt-4 text-xl font-semibold text-slate-900">{t("sharing.publicUnavailable")}</h1>
           <p className="mt-2 text-sm leading-6 text-slate-500">{t("sharing.publicUnavailableHint")}</p>
@@ -185,7 +185,7 @@ export const PublicSharePage = () => {
 
   return (
     <main className="edgeever-public-share min-h-[100dvh] bg-slate-50 px-4 py-6 sm:px-8 sm:py-10">
-      <article className="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <article className="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-card shadow-sm">
         <header className="border-b border-slate-200 px-5 py-6 sm:px-10 sm:py-8">
           <div className="mb-5 flex items-center justify-between gap-4 text-xs text-slate-500">
             <span className="flex items-center gap-1.5 font-semibold text-emerald-700">

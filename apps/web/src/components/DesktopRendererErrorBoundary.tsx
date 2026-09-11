@@ -63,7 +63,7 @@ export class DesktopRendererErrorBoundary extends React.Component<{ children: Re
 
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6 text-slate-900">
-        <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" role="alert">
+        <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-card p-6 shadow-sm" role="alert">
           <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-rose-50 text-xl text-rose-700">!</div>
           <h1 className="text-lg font-semibold">{zh ? "EdgeEver 页面出现异常" : "EdgeEver encountered a page error"}</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -85,7 +85,7 @@ export class DesktopRendererErrorBoundary extends React.Component<{ children: Re
             </button>
             {desktop ? (
               <button
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                className="rounded-lg border border-slate-300 bg-card px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                 type="button"
                 disabled={this.state.reporting}
                 onClick={() => void this.report()}

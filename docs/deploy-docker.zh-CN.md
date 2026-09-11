@@ -159,6 +159,12 @@ docker compose ps
 回退应用镜像不会逆向撤销数据库 migration；需要回退数据时，应恢复升级前的
 卷备份。
 
+镜像默认命令是 `bun scripts/self-hosted-server.js`，同时保留
+`scripts/self-hosted-server.mjs` 作为别名，因为 NAS/GUI 面板常会沿用 v1.62
+及更早版本保存的启动命令。如果日志出现
+`Module not found "scripts/self-hosted-server.mjs"`，请拉取包含该别名的版本，
+或清空自定义命令以使用镜像默认入口。
+
 在 Cloudflare 与 Docker 之间迁移时，请使用 EdgeEver 的完整备份/导出与恢复
 流程。不要复制在线 D1 数据库文件，也不要改写 migration 历史。
 

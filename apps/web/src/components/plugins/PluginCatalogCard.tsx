@@ -1,4 +1,4 @@
-import { BadgeCheck, Download, PanelRightOpen, Play, Settings2, Trash2 } from "lucide-react";
+import { BadgeCheck, Download, Play, Settings2, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,9 @@ import {
   getPluginCatalogVersion,
   type PluginCatalogItem,
 } from "@/lib/plugins/plugin-catalog";
-import { getPluginDetailPath, hasPluginSettings } from "@/lib/plugins/plugin-navigation";
+import { getPluginDetailPath, hasPluginSettings, isPluginCardCommand } from "@/lib/plugins/plugin-navigation";
 import type { PluginUpdateInfo } from "@/lib/plugins/plugin-updates";
-import type { RegisteredPluginCommand, RegisteredPluginPanel } from "@/lib/plugins/plugin-host";
+import type { RegisteredPluginCommand } from "@/lib/plugins/plugin-host";
 
 const permissionLabel = (permission: string) => permission.replace(":", " · ");
 
@@ -28,27 +28,23 @@ export const PluginCatalogCard = ({
   item,
   update,
   commands,
-  panels,
   pendingId,
   onOpenPlugin,
   onToggle,
   onInstallMarketplace,
   onUpdate,
   onRunCommand,
-  onOpenPanel,
   onUninstall,
 }: {
   item: PluginCatalogItem;
   update?: PluginUpdateInfo;
   commands: RegisteredPluginCommand[];
-  panels: RegisteredPluginPanel[];
   pendingId: string | null;
   onOpenPlugin?: (pluginId: string) => void;
   onToggle: (enabled: boolean) => void;
   onInstallMarketplace: () => void;
   onUpdate: () => void;
   onRunCommand: (command: RegisteredPluginCommand) => void;
-  onOpenPanel: (panel: RegisteredPluginPanel) => void;
   onUninstall: () => void;
 }) => {
   const { t } = useTranslation();
@@ -66,7 +62,7 @@ export const PluginCatalogCard = ({
       role={extension ? "link" : undefined}
       tabIndex={extension ? 0 : undefined}
       aria-label={extension ? t("plugins.details.open", { name }) : undefined}
-      className={`flex min-w-0 flex-col rounded-lg border border-slate-200 bg-white p-3 ${
+      className={`flex min-w-0 flex-col rounded-lg border border-slate-200 bg-card p-3 ${
         extension
           ? "cursor-pointer transition-colors hover:border-emerald-300 hover:bg-emerald-50/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
           : ""
@@ -195,7 +191,7 @@ export const PluginCatalogCard = ({
             {pendingId === marketplaceActionId ? t("plugins.installing") : t("plugins.marketplace.installVerified")}
           </Button>
         ) : null}
-        {extension ? commands.map((command) => (
+        {extension ? commands.filter(isPluginCardCommand).map((command) => (
           <Button
             key={command.id}
             size="sm"
@@ -206,18 +202,6 @@ export const PluginCatalogCard = ({
           >
             <Play className="h-3.5 w-3.5" />
             {command.title}
-          </Button>
-        )) : null}
-        {extension ? panels.map((panel) => (
-          <Button
-            key={panel.id}
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => onOpenPanel(panel)}
-          >
-            <PanelRightOpen className="h-3.5 w-3.5" />
-            {panel.title}
           </Button>
         )) : null}
         {extension ? (

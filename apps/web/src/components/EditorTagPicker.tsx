@@ -160,7 +160,7 @@ export const EditorTagPicker = ({ contentMarkdown, disabled, loadTags, title, va
               {selectedTags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-sm border border-emerald-200/70 bg-emerald-50/70 px-1.5 py-0.5 text-[11px] font-medium text-emerald-800 transition-colors dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-300 sm:text-xs"
+                  className="rounded-sm border border-emerald-200/70 bg-emerald-50/70 px-1.5 py-0.5 text-[11px] font-medium text-emerald-800 transition-colors    sm:text-xs"
                 >
                   #{tag}
                 </span>

@@ -1,4 +1,4 @@
-import { AlignHorizontalJustifyCenter, ChartNoAxesCombined, FileCode2, Image, Keyboard, Languages, MousePointerClick, Palette, Sparkles } from "lucide-react";
+import { AlignHorizontalJustifyCenter, ChartNoAxesCombined, FileCode2, Image, Keyboard, Languages, MousePointerClick, Palette, Sparkles, SunMoon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { EditorContentAlignment, ShortcutSettings } from "@/lib/app-helpers";
@@ -42,12 +42,14 @@ import { CustomEditorThemeDialog } from "./CustomEditorThemeDialog";
 import {
   MARKDOWN_THEME_PREFERENCES,
   MERMAID_THEME_PREFERENCES,
+  useAppearanceTheme,
   useEditorTheme,
   useMarkdownTheme,
   useMermaidTheme,
   DEFAULT_CUSTOM_LIGHT_COLORS,
   DEFAULT_CUSTOM_DARK_COLORS,
   type CustomEditorTheme,
+  type ThemePreference,
 } from "../ThemeProvider";
 
 interface PreferenceCardProps {
@@ -74,6 +76,7 @@ export const PreferenceCard = ({
     setCustomEditorThemes,
     setEditorTheme,
   } = useEditorTheme();
+  const { preference: appearancePreference, setPreference: setAppearancePreference } = useAppearanceTheme();
   const { mermaidThemePreference, setMermaidTheme } = useMermaidTheme();
   const { markdownThemePreference, setMarkdownTheme } = useMarkdownTheme();
   const [customThemeDialogOpen, setCustomThemeDialogOpen] = useState(false);
@@ -211,7 +214,7 @@ export const PreferenceCard = ({
               value={activeLocalePreference}
               onValueChange={(preference) => handleLocalePreferenceChange(preference as AppLocalePreference)}
             >
-              <SelectTrigger aria-label={t("common.language")} className="h-9 bg-white">
+              <SelectTrigger aria-label={t("common.language")} className="h-9 bg-card">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -221,6 +224,31 @@ export const PreferenceCard = ({
                     {localeLabels[locale]}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex min-h-16 flex-col items-start gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <SunMoon className={SETTINGS_ITEM_ICON_CLASSNAME} />
+            <div className="min-w-0">
+              <div className={SETTINGS_ITEM_TITLE_CLASSNAME}>{t("settings.themeTitle")}</div>
+              <div className={SETTINGS_ITEM_DESCRIPTION_CLASSNAME}>{t("settings.themeDescription")}</div>
+            </div>
+          </div>
+          <div className="w-full shrink-0 sm:w-80">
+            <Select
+              value={appearancePreference}
+              onValueChange={(value) => setAppearancePreference(value as ThemePreference)}
+            >
+              <SelectTrigger aria-label={t("settings.themeTitle")} className="h-9 bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="system">{t("settings.themeSystem")}</SelectItem>
+                <SelectItem value="light">{t("settings.themeLight")}</SelectItem>
+                <SelectItem value="dark">{t("settings.themeDark")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -239,7 +267,7 @@ export const PreferenceCard = ({
               value={editorContentAlignment}
               onValueChange={(value) => onEditorContentAlignmentChange(value as EditorContentAlignment)}
             >
-              <SelectTrigger aria-label={t("settings.editorContentAlignmentTitle")} className="h-9 bg-white">
+              <SelectTrigger aria-label={t("settings.editorContentAlignmentTitle")} className="h-9 bg-card">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -276,7 +304,7 @@ export const PreferenceCard = ({
                 }
               }}
             >
-              <SelectTrigger aria-label={t("settings.editorThemeTitle")} className="h-9 w-full min-w-0 flex-1 bg-white">
+              <SelectTrigger aria-label={t("settings.editorThemeTitle")} className="h-9 w-full min-w-0 flex-1 bg-card">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -320,7 +348,7 @@ export const PreferenceCard = ({
           </div>
           <div className="w-full shrink-0 sm:w-80">
             <Select value={markdownThemePreference} onValueChange={(value) => setMarkdownTheme(value as typeof markdownThemePreference)}>
-              <SelectTrigger aria-label={t("settings.markdownThemeTitle")} className="h-9 bg-white">
+              <SelectTrigger aria-label={t("settings.markdownThemeTitle")} className="h-9 bg-card">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -344,7 +372,7 @@ export const PreferenceCard = ({
           </div>
           <div className="w-full shrink-0 sm:w-80">
             <Select value={mermaidThemePreference} onValueChange={(value) => setMermaidTheme(value as typeof mermaidThemePreference)}>
-              <SelectTrigger aria-label={t("settings.mermaidThemeTitle")} className="h-9 bg-white">
+              <SelectTrigger aria-label={t("settings.mermaidThemeTitle")} className="h-9 bg-card">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

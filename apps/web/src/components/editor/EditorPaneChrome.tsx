@@ -50,7 +50,7 @@ export const NoteLinkInteractionHint = ({
 }) => createPortal(
   <div
     role="tooltip"
-    className="pointer-events-none fixed z-[100] whitespace-nowrap rounded-md bg-slate-950 px-2.5 py-1.5 text-xs font-medium text-white shadow-md"
+    className="pointer-events-none fixed z-[100] whitespace-nowrap rounded-md bg-[var(--tooltip-bg)] px-2.5 py-1.5 text-xs font-medium text-[var(--tooltip-fg)] shadow-md"
     style={{
       left: position.left,
       top: position.top,
@@ -107,7 +107,7 @@ export const ResourceActionMenu = ({
       data-edgeever-resource-menu
       role="toolbar"
       aria-label={labels.download}
-      className="fixed z-[110] flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-lg"
+      className="fixed z-[110] flex items-center gap-1 rounded-lg border border-slate-200 bg-card p-1 shadow-lg"
       style={imageElement ? {
         ...floatingStyles,
         visibility: isPositioned ? "visible" : "hidden",

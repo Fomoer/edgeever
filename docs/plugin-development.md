@@ -153,6 +153,32 @@ export default definePlugin({
 
 Every registration returns a disposer. The host also disposes registered commands and events automatically when a plugin is disabled.
 
+Commands appear on the plugin marketplace card by default. Set `listed: false` for editor-context or secondary commands that belong in the plugin toolbar menu instead of the install card:
+
+```js
+context.commands.register({
+  id: "insert-task",
+  title: "Insert task at cursor",
+  listed: false,
+  async run() {
+    await context.editor.insertAtCursor("- [ ] ");
+  }
+});
+```
+
+Workflow and preview panels are also omitted from that card. Open them from a command, the toolbar menu, or another panel.
+
+The plugin toolbar menu lists editor commands and dashboard or onboarding panels. It omits workflow or preview dialogs, and omits a command that only opens a dashboard already in the menu. Set `menu: false` when a command should appear on the marketplace card but not next to its dashboard panel:
+
+```js
+context.commands.register({
+  id: "open-dashboard",
+  title: "Open task dashboard",
+  menu: false,
+  run: () => context.ui.panels.open("tasks"),
+});
+```
+
 ## Schedules API
 
 Desktop plugins can persistently schedule one of their own registered commands. Register the command first, then use a stable plugin-local key with `upsert()`:

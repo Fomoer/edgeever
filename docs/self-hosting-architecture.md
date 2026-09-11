@@ -66,6 +66,9 @@ ambiguous.
   AES-GCM ciphertext.
 - Make `/data` the only required persistent application path so NAS users can
   back up one volume.
+- Keep the production entry at `scripts/self-hosted-server.js`, and keep
+  `scripts/self-hosted-server.mjs` as an alias for NAS/GUI command overrides
+  saved from v1.62 and earlier.
 - Support `EDGE_EVER_AUTH_USERNAME`, `EDGE_EVER_AUTH_PASSWORD`, and session
   settings without Cloudflare-specific naming assumptions in the container
   entrypoint.

@@ -27,7 +27,7 @@ export const EvernoteImportGuideCard = () => {
             </CardDescription>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Button size="sm" variant="outline" className="h-8 gap-1.5 bg-white px-3 text-xs" type="button" asChild>
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 bg-card px-3 text-xs" type="button" asChild>
               <a
                 href={EVERNOTE_MIGRATION_BLOG_URL}
                 target="_blank"

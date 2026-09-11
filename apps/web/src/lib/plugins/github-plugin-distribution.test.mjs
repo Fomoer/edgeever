@@ -65,6 +65,30 @@ describe("GitHub plugin distribution", () => {
     expect(calls).not.toContain("https://api.github.com/assets/1");
   });
 
+  test("downloads public release assets when GitHub's REST API rate-limits the browser", async () => {
+    const request = async (input) => {
+      const url = String(input);
+      if (url.endsWith("/contents/manifest.json")) return Response.json(manifest);
+      if (url.includes("/releases/tags/")) return new Response("rate limited", { status: 403 });
+      throw new Error(`Unexpected request: ${url}`);
+    };
+    const calls = [];
+    const downloadAsset = async (_coordinates, releaseTag, asset) => {
+      calls.push([releaseTag, asset.name]);
+      if (releaseTag === "1.2.3") throw new Error(`GitHub asset ${asset.name} failed with HTTP 404.`);
+      return new TextEncoder().encode(
+        asset.name === "manifest.json" ? JSON.stringify(manifest) : "export default { activate() {} };",
+      ).buffer;
+    };
+
+    const downloaded = await downloadGithubExtension("https://github.com/example/edgeever-plugin", request, downloadAsset);
+
+    expect(downloaded.releaseTag).toBe("v1.2.3");
+    expect(downloaded.pluginPackage?.mainJs).toContain("activate");
+    expect(calls[0]).toEqual(["1.2.3", "manifest.json"]);
+    expect(calls).toContainEqual(["v1.2.3", "main.js"]);
+  });
+
   test("rejects a release without a bundled main.js asset", async () => {
     const request = async (input) => {
       const url = String(input);

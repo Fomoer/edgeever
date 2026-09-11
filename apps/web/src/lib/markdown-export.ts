@@ -13,7 +13,7 @@ export type MarkdownExportPage = {
   nextOffset: number | null;
 };
 
-type MarkdownExportSource = {
+export type MarkdownExportSource = {
   listNotebooks: () => Promise<{ notebooks: Notebook[] }>;
   getPage: (offset: number, limit: number) => Promise<MarkdownExportPage>;
   getResourceBlob: (resourceUrl: string) => Promise<Blob>;
@@ -21,7 +21,15 @@ type MarkdownExportSource = {
 
 const EXPORT_PAGE_SIZE = 50;
 const ZIP_MIME_TYPE = "application/zip";
+const MAX_BUFFERED_ZIP_BYTES = 128 * 1024 * 1024;
 const WINDOWS_RESERVED_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
+
+export class MarkdownExportMemoryLimitError extends Error {
+  constructor() {
+    super("This Markdown export is too large for an in-memory ZIP.");
+    this.name = "MarkdownExportMemoryLimitError";
+  }
+}
 
 export const sanitizeExportPathSegment = (value: string, fallback: string) => {
   const sanitized = value
@@ -142,9 +150,24 @@ export const createMarkdownExport = async (
   const memoNamesByNotebook = new Map<string, Set<string>>();
   const chunks: ArrayBuffer[] = [];
   const result = new Promise<Blob>((resolve, reject) => {
-    const zip = new Zip((error, data, final) => {
+    let totalBytes = 0;
+    let failed = false;
+    let zip!: Zip;
+    zip = new Zip((error, data, final) => {
+      if (failed) {
+        return;
+      }
       if (error) {
+        failed = true;
         reject(error);
+        return;
+      }
+
+      totalBytes += data.byteLength;
+      if (totalBytes > MAX_BUFFERED_ZIP_BYTES) {
+        failed = true;
+        zip.terminate();
+        reject(new MarkdownExportMemoryLimitError());
         return;
       }
 

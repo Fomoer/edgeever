@@ -580,7 +580,7 @@ export const AiAssistantDialog = ({
         <section
           ref={assignPanelRef}
           aria-label={t("aiAssistant.title")}
-          className="fixed z-[70] flex max-h-[70dvh] w-[min(36rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-2xl ring-1 ring-slate-950/5"
+          className="fixed z-[70] flex max-h-[70dvh] w-[min(36rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl border border-slate-200 bg-card p-4 shadow-2xl ring-1 ring-slate-950/5"
           role="dialog"
           style={panelStyle}
           onKeyDown={(event) => {
@@ -682,7 +682,7 @@ export const AiAssistantDialog = ({
                     <Button type="button" variant="solid" className="h-10 min-w-0 w-full gap-1.5 whitespace-nowrap px-3 text-sm font-semibold" disabled={generateDisabled} onClick={() => void generate()}>
                       <Sparkles className="h-4 w-4 shrink-0" />
                       {t("aiAssistant.generate")}
-                      <kbd aria-hidden="true" className="ml-0.5 rounded bg-white/10 px-1 py-0.5 text-[10px] font-medium leading-none text-white/65">
+                      <kbd aria-hidden="true" className="ml-0.5 rounded bg-card/10 px-1 py-0.5 text-[10px] font-medium leading-none text-white/65">
                         ↵
                       </kbd>
                     </Button>
@@ -739,7 +739,7 @@ export const AiAssistantDialog = ({
                 {t(isFreeformCustom ? "aiAssistant.customInstruction" : "aiAssistant.inputContent")}
                 <textarea
                   ref={instructionRef}
-                  className="min-h-24 resize-y rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15"
+                  className="min-h-24 resize-y rounded-md border border-slate-200 bg-card px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15"
                   value={customInstruction}
                   onChange={(event) => {
                     handleComposerChange(event.target.value);
@@ -861,11 +861,11 @@ export const AiAssistantDialog = ({
               </div>
             </div>
             {output && !isGenerating ? (
-              <div className="order-4 grid gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
+              <div className="order-4 grid gap-1.5 rounded-lg border border-slate-200 bg-card p-3">
                 <span className="text-sm font-medium text-slate-700">{t("aiAssistant.refine")}</span>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
-                    className="h-10 min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15"
+                    className="h-10 min-w-0 flex-1 rounded-md border border-slate-200 bg-card px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/15"
                     value={refinement}
                     onChange={(event) => setRefinement(event.target.value)}
                     aria-label={t("aiAssistant.refine")}

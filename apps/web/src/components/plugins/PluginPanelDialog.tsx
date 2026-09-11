@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import type { PluginPanelChrome, PluginPanelCloseDecision, PluginPanelOpenOptions } from "@edgeever/plugin-api";
+import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AppConfirmDialog } from "@/components/dialogs/ConfirmDialogs";
 import { PluginPanelEmpty, PluginPanelHeaderActions, PluginPanelToolbar } from "@/components/plugins/PluginPanelChrome";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { EdgeEverPluginHost, RegisteredPluginPanel } from "@/lib/plugins/plugin-host";
 import { cn } from "@/lib/utils";
 
@@ -75,17 +77,27 @@ export const PluginPanelDialog = ({ host, panel, options, onClose }: {
   return (
     <>
       <Dialog open={Boolean(panel)} onOpenChange={(open) => { if (!open) void requestClose(); }}>
-        <DialogContent className={cn(
-          panel?.presentation === "fullscreen"
-            ? "flex h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-none flex-col overflow-hidden p-5"
-            : "max-h-[85vh] max-w-3xl overflow-y-auto",
-        )}>
-          <DialogHeader className={cn(chromeEnabled && "flex flex-row items-start justify-between gap-3 space-y-0")}>
-            <div className="min-w-0 space-y-1.5">
+        <DialogContent
+          showCloseButton={false}
+          className={cn(
+            panel?.presentation === "fullscreen"
+              ? "flex h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-none flex-col overflow-hidden p-5"
+              : "max-h-[85vh] max-w-3xl overflow-y-auto",
+          )}
+        >
+          <DialogHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+            <div className="min-w-0 space-y-1.5 text-left">
               <DialogTitle>{title}</DialogTitle>
               <DialogDescription className={hideDescription ? "sr-only" : undefined}>{description}</DialogDescription>
             </div>
-            {chromeEnabled ? <PluginPanelHeaderActions chrome={chrome} /> : null}
+            <div className="flex shrink-0 items-center gap-2">
+              {chromeEnabled ? <PluginPanelHeaderActions chrome={chrome} /> : null}
+              <DialogClose asChild>
+                <Button type="button" size="icon" variant="ghost" aria-label={t("common.close")}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </DialogClose>
+            </div>
           </DialogHeader>
           {chromeEnabled ? <PluginPanelToolbar chrome={chrome} /> : null}
           {mountError ? <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{mountError}</div> : null}
@@ -93,7 +105,7 @@ export const PluginPanelDialog = ({ host, panel, options, onClose }: {
           <div ref={setContainer} hidden={Boolean(chrome.empty)} className={cn(
             chromeEnabled
               ? "min-h-40 text-sm text-slate-700"
-              : "min-h-40 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700",
+              : "min-h-40 rounded-lg border border-slate-200 bg-card p-4 text-sm text-slate-700",
             panel?.presentation === "fullscreen" && "min-h-0 flex-1 overflow-auto",
           )} />
         </DialogContent>

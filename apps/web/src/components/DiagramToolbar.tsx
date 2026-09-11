@@ -1,4 +1,4 @@
-import type { PointerEventHandler, ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEventHandler, type ReactNode } from "react";
 import {
   Boxes,
   BookOpen,
@@ -6,7 +6,6 @@ import {
   Download,
   FileCode2,
   FileImage,
-  Scan,
   Redo2,
   Trash2,
   Undo2,
@@ -37,6 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DiagramAppearance } from "@/lib/diagram-theme";
+import { parseDiagramZoomPercent } from "@/lib/diagram-zoom";
 import { cn } from "@/lib/utils";
 
 const structureGroupLabelKey = (id: typeof DIAGRAM_STRUCTURE_GROUPS[number]["id"]) => (
@@ -151,9 +151,8 @@ type DiagramToolbarProps = {
   structure?: DiagramStructure;
   onUndo: () => void;
   onRead?: () => void;
-  onFit: () => void;
-  onResetZoom: () => void;
   zoomPercent: number;
+  onZoomTo: (percent: number) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   readOnly: boolean;
@@ -178,6 +177,79 @@ export const DiagramToolbarAddTrigger = ({
   );
 };
 
+const DiagramZoomPercentField = ({
+  zoomPercent,
+  onZoomTo,
+}: {
+  zoomPercent: number;
+  onZoomTo: (percent: number) => void;
+}) => {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState(String(zoomPercent));
+  const [focused, setFocused] = useState(false);
+  const commitOnBlurRef = useRef(true);
+
+  useEffect(() => {
+    if (!focused) setDraft(String(zoomPercent));
+  }, [focused, zoomPercent]);
+
+  const commit = (raw = draft) => {
+    const next = parseDiagramZoomPercent(raw);
+    if (next == null) {
+      setDraft(String(zoomPercent));
+      return;
+    }
+    if (next !== zoomPercent) onZoomTo(next);
+    setDraft(String(next));
+  };
+
+  const keepCanvasShortcutsOut = (event: KeyboardEvent<HTMLInputElement>) => {
+    event.stopPropagation();
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitOnBlurRef.current = false;
+      commit();
+      event.currentTarget.blur();
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      commitOnBlurRef.current = false;
+      setDraft(String(zoomPercent));
+      event.currentTarget.blur();
+    }
+  };
+
+  return (
+    <label
+      className="inline-flex h-8 w-16 cursor-text items-center justify-center gap-0 rounded-md text-slate-600 hover:bg-slate-50 hover:text-slate-900 focus-within:bg-slate-50 focus-within:text-slate-900"
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <input
+        aria-label={t("diagram.zoomPercent")}
+        autoComplete="off"
+        className="h-8 w-7 bg-transparent pr-0 text-right text-xs tabular-nums outline-none"
+        inputMode="numeric"
+        spellCheck={false}
+        value={draft}
+        onBlur={() => {
+          if (commitOnBlurRef.current) commit();
+          else commitOnBlurRef.current = true;
+          setFocused(false);
+        }}
+        onChange={(event) => setDraft(event.target.value)}
+        onFocus={(event) => {
+          setFocused(true);
+          event.currentTarget.select();
+        }}
+        onKeyDown={keepCanvasShortcutsOut}
+        onKeyUp={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+      />
+      <span aria-hidden="true" className="text-xs">%</span>
+    </label>
+  );
+};
+
 export const DiagramToolbar = ({
   appearance,
   canRedo,
@@ -194,9 +266,8 @@ export const DiagramToolbar = ({
   onStructureChange,
   onUndo,
   onRead,
-  onFit,
-  onResetZoom,
   zoomPercent,
+  onZoomTo,
   onZoomIn,
   onZoomOut,
   readOnly,
@@ -208,7 +279,7 @@ export const DiagramToolbar = ({
   const resolvedTheme = themeCatalog === "flowchart" ? resolveFlowchartTheme(theme) : resolveDiagramTheme(theme);
   const themeLabel = t(`diagram.theme${resolvedTheme.charAt(0).toUpperCase()}${resolvedTheme.slice(1)}` as "diagram.themeBrand");
   return (
-    <MemoEditorToolbarRow className="shrink-0 border-b border-slate-200 bg-white" role="toolbar" aria-label={t("diagram.toolbar")}>
+    <MemoEditorToolbarRow className="shrink-0 border-b border-slate-200 bg-card" role="toolbar" aria-label={t("diagram.toolbar")}>
       {leading ? <>{leading}<MemoEditorToolbarDivider /></> : null}
       <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" aria-label={t("diagram.undo")} disabled={!canUndo || readOnly} onClick={onUndo}><Undo2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>{t("diagram.undo")}</TooltipContent></Tooltip>
       <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" aria-label={t("diagram.redo")} disabled={!canRedo || readOnly} onClick={onRedo}><Redo2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>{t("diagram.redo")}</TooltipContent></Tooltip>
@@ -226,9 +297,8 @@ export const DiagramToolbar = ({
       )}
       <MemoEditorToolbarDivider />
       <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" aria-label={t("diagram.zoomOut")} onClick={onZoomOut}><ZoomOut className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>{t("diagram.zoomOut")}</TooltipContent></Tooltip>
-      <Tooltip><TooltipTrigger asChild><Button size="sm" variant="ghost" className="w-16 tabular-nums" aria-label={t("diagram.resetZoom")} onClick={onResetZoom}>{zoomPercent}%</Button></TooltipTrigger><TooltipContent>{t("diagram.resetZoom")}</TooltipContent></Tooltip>
+      <DiagramZoomPercentField zoomPercent={zoomPercent} onZoomTo={onZoomTo} />
       <Tooltip><TooltipTrigger asChild><Button size="icon" variant="ghost" aria-label={t("diagram.zoomIn")} onClick={onZoomIn}><ZoomIn className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent>{t("diagram.zoomIn")}</TooltipContent></Tooltip>
-      <Tooltip><TooltipTrigger asChild><Button size="sm" variant="ghost" aria-label={t("diagram.fit")} onClick={onFit}><Scan className="h-4 w-4" /><span>{t("diagram.fit")}</span></Button></TooltipTrigger><TooltipContent>{t("diagram.fit")}</TooltipContent></Tooltip>
       {onRead ? <Tooltip><TooltipTrigger asChild><Button size="sm" variant="ghost" onClick={onRead}><BookOpen className="h-4 w-4" />{t("diagram.readFlow")}</Button></TooltipTrigger><TooltipContent>{t("diagram.readFlowHint")}</TooltipContent></Tooltip> : null}
       <MemoEditorToolbarDivider />
       {onStructureChange ? (

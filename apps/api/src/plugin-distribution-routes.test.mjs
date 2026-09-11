@@ -108,6 +108,28 @@ describe("GitHub plugin release asset proxy", () => {
     })).rejects.toThrow("Invalid GitHub release coordinates");
   });
 
+  test("lists a release from the public download URL when the GitHub REST API rate-limits the instance", async () => {
+    const calls = [];
+    const release = await readGithubReleaseByTag({
+      owner: "example",
+      repository: "edgeever-plugin",
+      releaseTag: "v1.2.3",
+      request: async (input) => {
+        const url = String(input);
+        calls.push(url);
+        if (url.includes("api.github.com")) return new Response("rate limited", { status: 403 });
+        if (url === "https://github.com/example/edgeever-plugin/releases/download/v1.2.3/manifest.json") {
+          return new Response("{\"version\":\"1.2.3\"}");
+        }
+        return new Response("missing", { status: 404 });
+      },
+    });
+    expect(release.tag_name).toBe("v1.2.3");
+    expect(release.assets.map((asset) => asset.name)).toEqual(["manifest.json", "main.js", "styles.css"]);
+    expect(calls[0]).toContain("/releases/tags/v1.2.3");
+    expect(calls).toContain("https://github.com/example/edgeever-plugin/releases/download/v1.2.3/manifest.json");
+  });
+
   test("falls back to raw.githubusercontent.com when the GitHub REST API rate-limits the instance", async () => {
     const calls = [];
     const text = await readGithubRepositoryManifestText({

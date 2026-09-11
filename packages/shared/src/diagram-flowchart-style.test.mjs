@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { flowchartNodePresentation } from "./diagram-node-presentation.ts";
 import {
-  FLOWCHART_READABLE_MIN_SCALE,
+  DIAGRAM_READABLE_MIN_SCALE,
   FLOWCHART_SELECTABLE_THEMES,
   FLOWCHART_SURFACES,
   FLOWCHART_THEME_GROUPS,
@@ -114,12 +114,17 @@ describe("flowchart edge geometry", () => {
 describe("flowchart readable viewport", () => {
   const viewport = { width: 960, height: 720 };
 
-  test("keeps compact flows inside the canvas", () => {
+  test("keeps compact flows inside the canvas at full size", () => {
     expect(flowchartFitsReadableViewport({ width: 180, height: 280 }, viewport)).toBe(true);
+    expect(flowchartFitsReadableViewport({ width: 176, height: 240 }, viewport)).toBe(true);
+    expect(flowchartFitsReadableViewport({ width: 460, height: 220 }, viewport)).toBe(true);
+    expect(flowchartFitsReadableViewport({ width: 738, height: 330 }, viewport)).toBe(true);
   });
 
-  test("refuses to shrink a tall flow below reading size", () => {
+  test("refuses to shrink a tall map into a postage stamp", () => {
     expect(flowchartFitsReadableViewport({ width: 220, height: 1680 }, viewport)).toBe(false);
-    expect(FLOWCHART_READABLE_MIN_SCALE).toBe(0.85);
+    expect(DIAGRAM_READABLE_MIN_SCALE).toBe(0.85);
   });
 });
+
+

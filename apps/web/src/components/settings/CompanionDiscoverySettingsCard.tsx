@@ -73,7 +73,7 @@ export function CompanionDiscoverySettingsCard({ scope, onOpenCompanion, onOpenA
                 <Sparkles className={SETTINGS_CARD_ICON_CLASSNAME} />
                 {t("companion.discovery.settingsTitle")}
               </CardTitle>
-              <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/50 dark:text-emerald-300">
+              <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700   ">
                 Beta
               </span>
             </div>
@@ -84,7 +84,7 @@ export function CompanionDiscoverySettingsCard({ scope, onOpenCompanion, onOpenA
           <div className="flex shrink-0 items-center justify-between gap-3 sm:pt-0.5">
             <label
               htmlFor="companion-discovery-enabled"
-              className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300"
+              className="cursor-pointer text-sm font-medium text-slate-700 "
             >
               {t("companion.discovery.enable")}
             </label>
@@ -97,9 +97,9 @@ export function CompanionDiscoverySettingsCard({ scope, onOpenCompanion, onOpenA
           </div>
         </div>
 
-        <div className="mt-2 flex items-center gap-2 rounded-md bg-emerald-50/80 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+        <div className="mt-2 flex items-center gap-2 rounded-md bg-emerald-50/80 px-3 py-2 text-xs text-emerald-800  ">
           <span className="text-sm leading-none" aria-hidden="true">🐾</span>
-          <p className="font-medium text-emerald-700 dark:text-emerald-300">{t("companion.discovery.tagline")}</p>
+          <p className="font-medium text-emerald-700 ">{t("companion.discovery.tagline")}</p>
         </div>
       </CardHeader>
 
@@ -110,10 +110,10 @@ export function CompanionDiscoverySettingsCard({ scope, onOpenCompanion, onOpenA
           </p>
         ) : null}
         {error === "model" || (aiSettings && !defaultModelReady) ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/30">
-            <p role="alert" className="text-sm text-amber-900 dark:text-amber-200">{t("companion.discovery.modelRequired")}</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3  ">
+            <p role="alert" className="text-sm text-amber-900 ">{t("companion.discovery.modelRequired")}</p>
             <button type="button" onClick={onOpenAiSettings}
-              className="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              className="rounded-md border border-amber-300 bg-card px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600   ">
               {t("companion.discovery.configureModel")}
             </button>
           </div>
@@ -128,26 +128,26 @@ export function CompanionDiscoverySettingsCard({ scope, onOpenCompanion, onOpenA
           </div>)}
         </div>
         <section
-          className="space-y-3 rounded-lg border border-slate-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+          className="space-y-3 rounded-lg border border-slate-200/80 bg-card p-4  "
           aria-labelledby="companion-discovery-status-title"
         >
-          <div className="flex items-center justify-between gap-3 border-b border-slate-200/60 pb-3 dark:border-slate-800/60">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200/60 pb-3 ">
             <h3
               id="companion-discovery-status-title"
-              className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-slate-100"
+              className="flex items-center gap-2 text-sm font-medium text-slate-900 "
             >
-              <Activity className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+              <Activity className="h-4 w-4 text-slate-500 " />
               {t("companion.discovery.transparency.title")}
             </h3>
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 enabled
                   ? settings?.lastStatus === "failed"
-                    ? "border border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/40 dark:text-rose-300"
+                    ? "border border-rose-200/80 bg-rose-50 text-rose-700   "
                     : settings?.lastStatus === "running"
-                    ? "border border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-300"
-                    : "border border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300"
-                  : "border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                    ? "border border-amber-200/80 bg-amber-50 text-amber-700   "
+                    : "border border-emerald-200/80 bg-emerald-50 text-emerald-700   "
+                  : "border border-slate-200 bg-slate-100 text-slate-600   "
               }`}
               role="status"
             >
@@ -168,28 +168,28 @@ export function CompanionDiscoverySettingsCard({ scope, onOpenCompanion, onOpenA
 
           <dl className="space-y-2.5 text-xs sm:text-sm">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <dt className="flex items-center gap-1.5 font-medium text-slate-500 dark:text-slate-400">
-                <Clock className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+              <dt className="flex items-center gap-1.5 font-medium text-slate-500 ">
+                <Clock className="h-3.5 w-3.5 text-slate-400 " />
                 {t("companion.discovery.transparency.lastCheck")}
               </dt>
-              <dd className="font-medium text-slate-800 dark:text-slate-200">
+              <dd className="font-medium text-slate-800 ">
                 {settings?.lastCheckAt ? formatTime(settings.lastCheckAt) : t("companion.discovery.transparency.neverChecked")}
               </dd>
             </div>
             <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-              <dt className="flex shrink-0 items-center gap-1.5 font-medium text-slate-500 dark:text-slate-400">
-                <Sparkles className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+              <dt className="flex shrink-0 items-center gap-1.5 font-medium text-slate-500 ">
+                <Sparkles className="h-3.5 w-3.5 text-slate-400 " />
                 {t("companion.discovery.transparency.nextCheck")}
               </dt>
-              <dd className="text-xs leading-relaxed text-slate-600 sm:max-w-md sm:text-right dark:text-slate-300">
+              <dd className="text-xs leading-relaxed text-slate-600 sm:max-w-md sm:text-right ">
                 {t(enabled ? "companion.discovery.transparency.nextCheckEnabled" : "companion.discovery.transparency.nextCheckDisabled")}
               </dd>
             </div>
           </dl>
 
-          <div className="flex items-start gap-2 border-t border-slate-200/60 pt-2.5 dark:border-slate-800/60">
-            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+          <div className="flex items-start gap-2 border-t border-slate-200/60 pt-2.5 ">
+            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 " />
+            <p className="text-xs leading-relaxed text-slate-500 ">
               {t("companion.discovery.transparency.scope")}
             </p>
           </div>
@@ -199,34 +199,34 @@ export function CompanionDiscoverySettingsCard({ scope, onOpenCompanion, onOpenA
           <section className="space-y-3" aria-labelledby="companion-latest-discovery-title">
             <h3
               id="companion-latest-discovery-title"
-              className="text-sm font-medium text-slate-900 dark:text-slate-100"
+              className="text-sm font-medium text-slate-900 "
             >
               {t("companion.discovery.transparency.latest")}
             </h3>
             {feed.isPending ? <p role="status" className="text-sm text-slate-500">{t("common.loading")}</p> : null}
             {feed.isError ? <p role="alert" className="text-sm text-destructive">{t("companion.discovery.loadFailed")}</p> : null}
             {!feed.isPending && !feed.isError && !latest ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-slate-200/80 bg-white px-4 py-6 text-center dark:border-slate-800 dark:bg-slate-900">
-                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+              <div className="flex flex-col items-center justify-center rounded-lg border border-slate-200/80 bg-card px-4 py-6 text-center  ">
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600  ">
                   <Sparkles className="h-4 w-4" />
                 </div>
-                <p className="max-w-md text-xs text-slate-500 sm:text-sm dark:text-slate-400">
+                <p className="max-w-md text-xs text-slate-500 sm:text-sm ">
                   {t("companion.discovery.transparency.noDiscovery")}
                 </p>
               </div>
             ) : null}
             {latest ? (
-              <article className="space-y-2.5 rounded-lg border border-slate-200/80 bg-white p-4 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2 dark:border-slate-800">
-                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+              <article className="space-y-2.5 rounded-lg border border-slate-200/80 bg-card p-4 shadow-sm transition-colors  ">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2 ">
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700  ">
                     {t(`companion.discovery.kind.${latest.kind}`)}
                   </span>
-                  <time className="text-xs text-slate-400 dark:text-slate-500" dateTime={latest.createdAt}>
+                  <time className="text-xs text-slate-400 " dateTime={latest.createdAt}>
                     {formatTime(latest.createdAt)}
                   </time>
                 </div>
-                <h4 className="break-words text-sm font-semibold text-slate-900 dark:text-slate-100">{latest.title}</h4>
-                <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-slate-600 sm:text-sm dark:text-slate-300">
+                <h4 className="break-words text-sm font-semibold text-slate-900 ">{latest.title}</h4>
+                <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-slate-600 sm:text-sm ">
                   {latest.body}
                 </p>
               </article>
@@ -238,22 +238,22 @@ export function CompanionDiscoverySettingsCard({ scope, onOpenCompanion, onOpenA
           <button
             type="button"
             onClick={onOpenCompanion}
-            className="group flex w-full items-center justify-between rounded-lg border border-slate-200/80 bg-white p-3.5 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-emerald-700/60 dark:hover:bg-emerald-950/20"
+            className="group flex w-full items-center justify-between rounded-lg border border-slate-200/80 bg-card p-3.5 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600    "
           >
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200/60 bg-slate-50 text-emerald-600 shadow-sm transition-colors group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700 dark:border-slate-800 dark:bg-slate-800 dark:text-emerald-400">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200/60 bg-slate-50 text-emerald-600 shadow-sm transition-colors group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700   ">
                 <MessageSquareText className="h-4.5 w-4.5" />
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-medium text-slate-900 transition-colors group-hover:text-emerald-800 dark:text-slate-100 dark:group-hover:text-emerald-300">
+                <div className="text-sm font-medium text-slate-900 transition-colors group-hover:text-emerald-800  ">
                   {t("companion.discovery.openCompanion")}
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">
+                <div className="text-xs text-slate-500 ">
                   {t("companion.discovery.openCompanionDesc")}
                 </div>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600 dark:text-slate-500 dark:group-hover:text-emerald-400" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600  " />
           </button>
         </div>
       </CardContent>

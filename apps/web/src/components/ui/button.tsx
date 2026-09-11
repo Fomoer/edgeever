@@ -15,7 +15,7 @@ const buttonVariants = cva(
         solid: "bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-500",
         soft: "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200",
         ghost: "bg-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent",
-        outline: "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200",
+        outline: "bg-card text-slate-700 hover:bg-slate-50 border border-slate-200",
         danger: "bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-100",
       },
       size: {

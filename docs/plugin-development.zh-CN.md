@@ -153,6 +153,32 @@ export default definePlugin({
 
 每次注册都会返回清理函数。插件停用时，宿主也会自动清理已注册的命令和事件。
 
+命令默认会出现在插件市场卡片上。编辑器上下文或次要命令应设 `listed: false`，只保留在插件工具栏菜单中，不要放在安装卡片上：
+
+```js
+context.commands.register({
+  id: "insert-task",
+  title: "在光标处插入待办任务",
+  listed: false,
+  async run() {
+    await context.editor.insertAtCursor("- [ ] ");
+  }
+});
+```
+
+工作流和预览面板也不会出现在该卡片上。请从命令、工具栏菜单或另一个面板打开它们。
+
+插件工具栏菜单列出编辑器命令以及 dashboard / onboarding 面板。工作流或预览对话框不会出现在菜单里；如果某条命令只是打开菜单中已有的 dashboard，也会被省略。卡片上的启动命令如果和 dashboard 面板重复，应设 `menu: false`：
+
+```js
+context.commands.register({
+  id: "open-dashboard",
+  title: "打开待办任务面板",
+  menu: false,
+  run: () => context.ui.panels.open("tasks"),
+});
+```
+
 ## 定时任务 API
 
 桌面插件可以持久化定时执行自己的已注册命令。先注册命令，再用稳定的插件内计划键调用 `upsert()`：

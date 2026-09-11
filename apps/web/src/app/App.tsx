@@ -172,7 +172,7 @@ const AuthenticatedWorkspace = () => {
     if (desktopScopeError) {
       return (
         <main className="flex h-[100dvh] items-center justify-center bg-slate-50 px-4 text-slate-900">
-          <section className="w-full max-w-md rounded-xl border border-rose-200 bg-white p-6 shadow-sm">
+          <section className="w-full max-w-md rounded-xl border border-rose-200 bg-card p-6 shadow-sm">
             <p className="text-sm leading-6 text-rose-800">{t("login.desktopScopeUnavailable")}</p>
             <Button className="mt-4" variant="outline" onClick={() => setDesktopScopeAttempt((value) => value + 1)}>
               {t("login.desktopScopeRetry")}

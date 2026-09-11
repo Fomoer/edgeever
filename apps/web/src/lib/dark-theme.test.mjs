@@ -42,14 +42,27 @@ describe("dark theme contracts", () => {
     const css = readFileSync(new URL("../styles/globals.css", import.meta.url), "utf8");
     const memoCard = readFileSync(new URL("../components/MemoCard.tsx", import.meta.url), "utf8");
     expect(css).toContain(":root.dark .edgeever-public-share .ProseMirror");
-    expect(css).toContain("color: #f8fafc;");
-    expect(css).toContain('[class~="divide-slate-100"]');
-    expect(css).toContain('[class~="text-emerald-700"]');
+    expect(css).toContain("color: hsl(var(--foreground));");
     expect(css).toContain("--workspace-memo-divider: #3b4540;");
     expect(css).toContain(":root.dark .edgeever-workspace-memo-list .edgeever-memo-divider");
     expect(memoCard).toContain("edgeever-memo-divider");
     expect(memoCard).not.toContain("dark:lg:border-slate-300");
     expect(memoCard).not.toContain("dark:lg:border-slate-300/70");
+  });
+
+  test("components do not add a second dark: color path on top of theme tokens", () => {
+    const css = readFileSync(new URL("../styles/globals.css", import.meta.url), "utf8");
+    const notebookPane = readFileSync(new URL("../components/NotebookPane.tsx", import.meta.url), "utf8");
+    const companion = readFileSync(new URL("../components/CompanionActionCard.tsx", import.meta.url), "utf8");
+    const badge = readFileSync(new URL("../components/ui/badge.tsx", import.meta.url), "utf8");
+
+    expect(css).not.toContain('[class~="bg-white"]');
+    expect(css).not.toContain('[class~="bg-slate-50"]');
+    expect(css).not.toContain('[class~="text-slate-700"]');
+    expect(css).not.toContain("--dark-utility-alpha");
+    expect(notebookPane).not.toContain("dark:bg-slate-");
+    expect(companion).not.toContain("dark:text-slate-");
+    expect(badge).not.toContain("dark:bg-slate-");
   });
 
   test("workspace dark surfaces stay neutral and bundled editor themes blend into the canvas", () => {
@@ -63,6 +76,22 @@ describe("dark theme contracts", () => {
     expect(css).toContain("--editor-theme-bg: var(--workspace-editor);");
     expect(contrastRatio("#cad4ce", "#191e1b")).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio("#9aa9a0", "#191e1b")).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("dark chrome uses workspace tokens instead of leftover blue-slate", () => {
+    const css = readFileSync(new URL("../styles/globals.css", import.meta.url), "utf8");
+
+    expect(css).toContain("html.dark[data-edgeever-environment=\"local\"] body::after");
+    expect(css).toContain("--tooltip-bg: #252c28;");
+    expect(css).toContain("--scrollbar-thumb: rgb(137 150 142 / 0.38);");
+    expect(css).toContain("--search-match: rgb(22 160 110 / 0.32);");
+    expect(css).toContain(":root.dark .ProseMirror .edgeever-mermaid-preview");
+    expect(css).toContain("background: var(--workspace-editor);");
+    expect(css).toContain("border-color: var(--workspace-divider);");
+    expect(css).not.toContain("background: #0f172a;");
+    expect(css).not.toContain("border-color: #334155;");
+    expect(css).toContain(":root.dark .edgeever-paper");
+    expect(css).toContain("--tw-ring-offset-color: var(--workspace-canvas);");
   });
 
   test("every bundled editor theme has a complete accessible dark palette", () => {

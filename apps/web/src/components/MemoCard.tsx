@@ -325,7 +325,7 @@ export const MemoCard = ({
       draggable={!isTrashView}
       onDragStart={handleDragStart}
       className={cn(
-        "edgeever-memo-divider group relative overflow-hidden border border-slate-100 bg-white transition lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-slate-200 lg:shadow-none lg:last:border-b-0 transition-all duration-200 select-none",
+        "edgeever-memo-divider group relative overflow-hidden border border-slate-100 bg-card transition lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-slate-200 lg:shadow-none lg:last:border-b-0 transition-all duration-200 select-none",
         listDensity === "compact" ? "rounded-md shadow-none" : "rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.045)]",
         !selectionMode && selected
           ? "edgeever-workspace-selection-desktop"
@@ -358,7 +358,7 @@ export const MemoCard = ({
                 "flex h-6 w-6 items-center justify-center rounded-full border transition-all duration-150 lg:h-4 lg:w-4",
                 checked
                   ? "border-slate-700 bg-slate-700 text-white shadow-[0_4px_10px_rgba(15,23,42,0.16)]"
-                  : "border-slate-300 bg-white text-transparent"
+                  : "border-slate-300 bg-card text-transparent"
               )}
               aria-hidden="true"
             >
@@ -366,7 +366,7 @@ export const MemoCard = ({
             </span>
           </button></TooltipTrigger><TooltipContent>{selectionControlLabel}</TooltipContent></Tooltip>
         )}
-        <Tooltip><TooltipTrigger asChild><button
+        <button
           className={cn(
             "min-w-0 flex-1 px-4 py-3.5 text-left touch-pan-y focus-visible:bg-slate-50 focus-visible:shadow-[inset_3px_0_0_rgb(148,163,184)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400/60 [-webkit-touch-callout:none] lg:py-3.5 transition-all duration-200",
             listDensity === "compact" && "py-2.5",
@@ -393,20 +393,20 @@ export const MemoCard = ({
           </div>
           {diagramLabel ? (
             <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 ">
                 <span className="inline-flex items-center gap-1 rounded border border-slate-200 px-1.5 py-0.5">
                   <DiagramIcon className="h-3 w-3" aria-hidden="true" />{diagramLabel}
                 </span>
                 {memo.diagramPreview ? <span>{t("diagram.listCounts", { nodes: memo.diagramPreview.nodeCount, edges: memo.diagramPreview.edgeCount })}</span> : null}
               </div>
               {listDensity !== "compact" && memo.diagramPreview?.labels.length ? (
-                <div className="line-clamp-2 text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">{memo.diagramPreview.labels.join(" · ")}</div>
+                <div className="line-clamp-2 text-[13px] leading-relaxed text-slate-600 ">{memo.diagramPreview.labels.join(" · ")}</div>
               ) : null}
             </div>
           ) : (
             <div
               className={cn(
-                "line-clamp-2 min-h-10 text-[13px] leading-relaxed text-slate-600 dark:text-slate-400",
+                "line-clamp-2 min-h-10 text-[13px] leading-relaxed text-slate-600 ",
                 listDensity === "compact" && "line-clamp-1 min-h-0 text-[12.5px]"
               )}
             >
@@ -414,7 +414,7 @@ export const MemoCard = ({
             </div>
           )}
           <div className={cn("mt-3.5 flex flex-wrap items-center gap-2", listDensity === "compact" && "mt-1.5")}>
-            <time className="text-xs font-normal text-slate-500 dark:text-slate-400" dateTime={listTimestamp.value}>
+            <time className="text-xs font-normal text-slate-500 " dateTime={listTimestamp.value}>
               {listTimestamp.field === "createdAt"
                 ? t("memoCard.createdAt", { time: listTimestampLabel })
                 : listTimestampLabel}
@@ -422,13 +422,13 @@ export const MemoCard = ({
             {memo.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-[3px] border border-emerald-200/60 bg-emerald-50/60 px-1.5 py-0.5 text-[11px] font-medium tracking-tight text-emerald-800 transition-colors dark:border-emerald-800/40 dark:bg-emerald-950/30 dark:text-emerald-300"
+                className="rounded-[3px] border border-emerald-200/60 bg-emerald-50/60 px-1.5 py-0.5 text-[11px] font-medium tracking-tight text-emerald-800 transition-colors   "
               >
                 #{tag}
               </span>
             ))}
           </div>
-        </button></TooltipTrigger><TooltipContent>{t("memoCard.interactionHint")}</TooltipContent></Tooltip>
+        </button>
         {!selectionMode && (
           <div
             className={cn(

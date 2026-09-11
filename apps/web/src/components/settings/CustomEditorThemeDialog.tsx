@@ -161,7 +161,7 @@ export const CustomEditorThemeDialog = ({
               onClick={() => setActiveMode("light")}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1 text-xs font-medium transition-all ${
                 activeMode === "light"
-                  ? "bg-white text-emerald-800 shadow-sm"
+                  ? "bg-card text-emerald-800 shadow-sm"
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
@@ -173,7 +173,7 @@ export const CustomEditorThemeDialog = ({
               onClick={() => setActiveMode("dark")}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1 text-xs font-medium transition-all ${
                 activeMode === "dark"
-                  ? "bg-white text-emerald-800 shadow-sm"
+                  ? "bg-card text-emerald-800 shadow-sm"
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
@@ -192,7 +192,7 @@ export const CustomEditorThemeDialog = ({
                     type="color"
                     value={/^#[0-9a-f]{6}$/i.test(activeColors[key]) ? activeColors[key] : defaultColors[key]}
                     onChange={(event) => updateColor(key as keyof ThemeColors, event.target.value)}
-                    className="h-7 w-7 cursor-pointer rounded border border-slate-200 bg-white p-0.5"
+                    className="h-7 w-7 cursor-pointer rounded border border-slate-200 bg-card p-0.5"
                     aria-label={t(labelKey)}
                   />
                   <Input
@@ -224,7 +224,7 @@ export const CustomEditorThemeDialog = ({
               value={draft.customCss || ""}
               onChange={(event) => setDraft((current) => ({ ...current, customCss: event.target.value }))}
               placeholder="e.g. h1 { font-style: italic; } blockquote { border-radius: 6px; }"
-              className="min-h-[72px] w-full rounded-md border border-slate-200 bg-white p-2 font-mono text-[11px] focus:border-emerald-500 focus:outline-none"
+              className="min-h-[72px] w-full rounded-md border border-slate-200 bg-card p-2 font-mono text-[11px] focus:border-emerald-500 focus:outline-none"
               maxLength={2000}
             />
           </label>

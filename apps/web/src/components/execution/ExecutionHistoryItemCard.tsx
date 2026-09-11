@@ -52,7 +52,7 @@ export const ExecutionHistoryItemCard = ({
     : t("executionHistory.device", { id: item.executorId.slice(-8) });
 
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-3">
+    <article className="rounded-lg border border-slate-200 bg-card p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           {item.title ? <p className="truncate text-sm font-semibold text-slate-900">{item.title}</p> : null}

@@ -82,7 +82,7 @@ export const RevisionHistoryDialog = ({
 
   return (
     <Dialog open={true} onOpenChange={(open) => { if (!open && !restoreRevisionConfirmationId) onClose(); }}>
-      <DialogContent className="grid max-h-[88dvh] max-w-[1120px] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-lg border border-slate-200 bg-white p-0 shadow-xl">
+      <DialogContent className="grid max-h-[88dvh] max-w-[1120px] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-lg border border-slate-200 bg-card p-0 shadow-xl">
         <DialogHeader className="border-b border-slate-200 px-5 py-4 pr-12 text-left">
           <div className="min-w-0">
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-slate-950">
@@ -95,8 +95,8 @@ export const RevisionHistoryDialog = ({
           </div>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-col bg-white">
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-3">
+        <div className="flex min-h-0 flex-col bg-card">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-card px-5 py-3">
             <div className="min-w-0 flex flex-wrap items-center gap-2">
               <div className="text-sm font-semibold text-slate-900">
                 {selectedRevision ? t("revisions.compareTitle", { revision: selectedRevision.revision }) : t("revisions.noRevisionSelected")}
@@ -147,7 +147,7 @@ export const RevisionHistoryDialog = ({
                         "group flex flex-col w-full rounded-lg border p-3 text-left transition-all duration-200",
                         selectedRevision?.id === revision.id
                           ? "border-emerald-200 bg-emerald-50/30 shadow-sm ring-1 ring-emerald-100/50"
-                          : "border-slate-100/80 bg-white/60 hover:border-slate-200 hover:bg-slate-50/80"
+                          : "border-slate-100/80 bg-card/60 hover:border-slate-200 hover:bg-slate-50/80"
                       )}
                       onClick={() => setSelectedRevisionId(revision.id)}
                     >

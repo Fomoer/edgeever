@@ -55,7 +55,7 @@ const PluginEmbedNodeView = ({ node, host }: NodeViewProps & { host: EdgeEverPlu
   const fallbackTitle = attributes?.title || attributes?.type || "Plugin embed";
   return (
     <NodeViewWrapper className="edgeever-plugin-embed-node" contentEditable={false}>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-card">
         {registered ? <div ref={containerRef} className="min-h-32" /> : (
           <div className="flex min-h-24 items-center justify-center bg-slate-50 px-4 text-sm font-medium text-slate-500">
             {fallbackTitle}

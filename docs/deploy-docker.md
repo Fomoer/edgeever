@@ -174,6 +174,12 @@ before it starts accepting traffic. Take a backup first. Application rollback
 does not reverse a database migration; restore the pre-upgrade volume backup
 when a data rollback is required.
 
+The image default command is `bun scripts/self-hosted-server.js`. It also keeps
+`scripts/self-hosted-server.mjs` as an alias, because NAS and GUI panels often
+reuse the command saved from v1.62 and earlier. If logs show
+`Module not found "scripts/self-hosted-server.mjs"`, pull a release that includes
+that alias, or clear the custom command so the image default is used.
+
 To move between Cloudflare and Docker, use EdgeEver's full backup/export and
 restore flow. Do not copy a live D1 database file or rewrite migration history.
 

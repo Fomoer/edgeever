@@ -245,7 +245,7 @@ export const ShareNoteImageDialog = ({
                         "group relative flex items-center gap-2.5 rounded-lg border p-2 text-left text-xs font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                         isSelected
                           ? "border-emerald-500 bg-emerald-50/40 text-emerald-950 ring-1 ring-emerald-500"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/70",
+                          : "border-slate-200 bg-card text-slate-700 hover:border-slate-300 hover:bg-slate-50/70",
                       )}
                       type="button"
                       onClick={() => setTheme(item.id)}
@@ -276,7 +276,7 @@ export const ShareNoteImageDialog = ({
                       "h-8 rounded-md border text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                       fontStyle === item.id
                         ? "border-emerald-500 bg-emerald-50 text-emerald-900 font-semibold"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                        : "border-slate-200 bg-card text-slate-600 hover:bg-slate-50",
                     )}
                     type="button"
                     onClick={() => setFontStyle(item.id)}
@@ -298,7 +298,7 @@ export const ShareNoteImageDialog = ({
                         "h-7 rounded border text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                         fontSize === item.id
                           ? "border-emerald-500 bg-emerald-50/80 text-emerald-900 font-semibold"
-                          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                          : "border-slate-200 bg-card text-slate-600 hover:bg-slate-50",
                       )}
                       type="button"
                       onClick={() => setFontSize(item.id)}
@@ -321,7 +321,7 @@ export const ShareNoteImageDialog = ({
                         "h-7 rounded border text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
                         cardWidth === item.id
                           ? "border-emerald-500 bg-emerald-50/80 text-emerald-900 font-semibold"
-                          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                          : "border-slate-200 bg-card text-slate-600 hover:bg-slate-50",
                       )}
                       type="button"
                       onClick={() => setCardWidth(item.id)}

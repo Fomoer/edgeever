@@ -1,6 +1,6 @@
 import { attachDiagramScroll } from "./diagram-scroll";
 import type { DiagramDocument, DiagramKind } from "./diagram";
-import { FLOWCHART_READABLE_MIN_SCALE } from "./diagram-flowchart-style";
+import { DIAGRAM_READABLE_MIN_SCALE } from "./diagram-flowchart-style";
 
 type ReaderBox = { x: number; y: number; width: number; height: number };
 type ReaderNode = {
@@ -20,7 +20,7 @@ type ReaderGraph = {
   enablePanning?: () => unknown;
 };
 
-export const DIAGRAM_READER_MIN_SCALE = FLOWCHART_READABLE_MIN_SCALE;
+export const DIAGRAM_READER_MIN_SCALE = DIAGRAM_READABLE_MIN_SCALE;
 export const DIAGRAM_READER_MAX_SCALE = 2.5;
 export const DIAGRAM_READER_FIT_PADDING = 28;
 

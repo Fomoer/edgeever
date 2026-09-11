@@ -23,7 +23,7 @@ export default function CompanionPane({ available, onBack, onOpenSettings, ...ac
   onOpenSettings: () => void;
 } & CompanionActionHandlers) {
   const { t } = useTranslation();
-  return <section className="flex h-full min-h-0 flex-col bg-white" aria-labelledby="companion-title">
+  return <section className="flex h-full min-h-0 flex-col bg-card" aria-labelledby="companion-title">
     <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>

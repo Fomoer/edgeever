@@ -12,6 +12,18 @@ describe("editor content alignment preference", () => {
   });
 });
 
+describe("appearance preference", () => {
+  test("exposes light, dark, and system as a first-class setting", () => {
+    const preferenceCard = readFileSync(new URL("./PreferenceCard.tsx", import.meta.url), "utf8");
+
+    expect(preferenceCard).toContain('t("settings.themeTitle")');
+    expect(preferenceCard).toContain('setAppearancePreference(value as ThemePreference)');
+    expect(preferenceCard).toContain('value="system"');
+    expect(preferenceCard).toContain('value="light"');
+    expect(preferenceCard).toContain('value="dark"');
+  });
+});
+
 describe("custom editor theme portability", () => {
   test("offers import and export while keeping contrast as a warning", () => {
     const dialog = readFileSync(new URL("./CustomEditorThemeDialog.tsx", import.meta.url), "utf8");

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  getStoredMarkdownTheme,
   MARKDOWN_THEME_NAMES,
   MARKDOWN_THEME_PREFERENCES,
   resolveMarkdownTheme,
@@ -13,6 +14,11 @@ describe("markdown theme contracts", () => {
     expect(resolveMarkdownTheme("dracula", "light")).toBe("dracula");
     expect(resolveMarkdownTheme("nord", "dark")).toBe("nord");
     expect(resolveMarkdownTheme("tokyo-night", "light")).toBe("tokyo-night");
+  });
+
+  test("unset Markdown theme preference follows appearance instead of a dark-only default", () => {
+    expect(getStoredMarkdownTheme()).toBe("auto");
+    expect(MARKDOWN_THEME_PREFERENCES[0]).toBe("auto");
   });
 
   test("all markdown theme preferences are correctly defined", () => {

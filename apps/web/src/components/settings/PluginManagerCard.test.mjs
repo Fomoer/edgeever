@@ -13,6 +13,12 @@ describe("plugin manager card layout", () => {
     expect(source).not.toContain("md:grid-cols-2");
   });
 
+  test("does not dump every plugin panel onto marketplace cards", () => {
+    expect(catalogCard).not.toContain("onOpenPanel");
+    expect(catalogCard).toContain("isPluginCardCommand");
+    expect(catalogCard).toContain("commands.filter(isPluginCardCommand)");
+  });
+
   test("uses GitHub icon links for marketplace and installed extension repositories", () => {
     expect(catalogCard.match(/<GitHubRepositoryLink/g)).toHaveLength(1);
     expect(catalogCard).toContain("showTooltip={false}");

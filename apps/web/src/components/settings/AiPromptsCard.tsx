@@ -42,7 +42,7 @@ export const AiPromptsCard = ({ onOpenLibrary }: { onOpenLibrary: () => void }) 
                 <p className="text-sm font-medium text-slate-800">{t("aiPrompts.listTitle")}</p>
                 <p className="mt-0.5 text-xs text-slate-500">{t("aiPrompts.count", { count })}</p>
               </div>
-              <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 bg-white text-xs" onClick={onOpenLibrary}>
+              <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 bg-card text-xs" onClick={onOpenLibrary}>
                 {t("aiPrompts.openLibrary")}
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>

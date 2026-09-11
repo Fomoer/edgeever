@@ -54,13 +54,13 @@ export const AdvancedPlayCard = () => {
               const prompt = t(`advancedPlay.prompts.${key}.prompt`);
 
               return (
-                <div key={key} className="rounded-lg border border-slate-200 bg-white p-3.5">
+                <div key={key} className="rounded-lg border border-slate-200 bg-card p-3.5">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="text-sm font-semibold text-slate-900">{title}</div>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 w-full gap-1.5 justify-center bg-white px-2.5 text-xs sm:w-auto"
+                      className="h-8 w-full gap-1.5 justify-center bg-card px-2.5 text-xs sm:w-auto"
                       type="button"
                       onClick={() => void handleCopyPrompt(title, prompt)}
                     >

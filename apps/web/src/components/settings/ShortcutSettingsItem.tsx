@@ -119,7 +119,7 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
         <Button
           size="sm"
           variant="outline"
-          className="h-8 w-full bg-white px-3 text-xs sm:w-auto"
+          className="h-8 w-full bg-card px-3 text-xs sm:w-auto"
           type="button"
           onClick={() => setShortcutsOpen(true)}
         >
@@ -154,7 +154,7 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
                     ref={recording ? captureButtonRef : null}
                     type="button"
                     variant={recording ? "solid" : "outline"}
-                    className={cn("h-9 min-w-32 px-3 font-mono text-xs", !recording && "bg-white")}
+                    className={cn("h-9 min-w-32 px-3 font-mono text-xs", !recording && "bg-card")}
                     onClick={() => {
                       setRecordingAction(item.value);
                       setCaptureMessage("");

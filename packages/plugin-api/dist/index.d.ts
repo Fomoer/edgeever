@@ -268,6 +268,17 @@ export type PluginEventMap = {
 export interface PluginCommand {
     id: string;
     title: string;
+    /**
+     * When false, the command stays in the plugin toolbar menu but is omitted from
+     * marketplace and plugin-manager cards. Defaults to true.
+     */
+    listed?: boolean;
+    /**
+     * When false, the command is omitted from the plugin toolbar menu.
+     * Use this for a card-only launcher that already has a dashboard panel in the menu.
+     * Defaults to true.
+     */
+    menu?: boolean;
     run: () => void | Promise<void>;
 }
 export type PluginScheduleMissedRunPolicy = "run-once" | "skip";

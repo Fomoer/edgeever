@@ -61,7 +61,7 @@ const McpExampleDialog = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="h-7 bg-white px-2.5 text-xs" type="button">
+        <Button size="sm" variant="outline" className="h-7 bg-card px-2.5 text-xs" type="button">
           {t("mcp.example")}
         </Button>
       </DialogTrigger>
@@ -117,7 +117,7 @@ const AccessLevelPicker = ({ value, onChange }: AccessLevelPickerProps) => {
                   className={cn(
                     "flex h-8 cursor-pointer select-none items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-medium transition-all focus-within:ring-2 focus-within:ring-emerald-500/40",
                     checked
-                      ? "bg-white font-semibold text-emerald-800 shadow-sm"
+                      ? "bg-card font-semibold text-emerald-800 shadow-sm"
                       : "text-slate-600 hover:text-slate-900"
                   )}
                 >
@@ -192,7 +192,7 @@ const TokenList = ({ tokens, availableScopes, newlyCreatedTokenId, isLoading, is
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 divide-y divide-slate-100 bg-white">
+    <div className="overflow-hidden rounded-lg border border-slate-200 divide-y divide-slate-100 bg-card">
       {tokens.map((token) => {
         const accessLevel = getStoredTokenAccessLevel(token.scopes, availableScopes);
         const accessLabel = accessLevel === "legacy-custom"
@@ -257,7 +257,7 @@ const TokenList = ({ tokens, availableScopes, newlyCreatedTokenId, isLoading, is
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 gap-1.5 border-slate-200 bg-white px-2.5 text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                      className="h-8 gap-1.5 border-slate-200 bg-card px-2.5 text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                       aria-label={token.token ? t("mcp.copyToken") : t("mcp.legacyTokenCannotCopy")}
                       disabled={token.isRevoked || !token.token}
                       onClick={() => void handleCopy(token, "token")}
@@ -283,7 +283,7 @@ const TokenList = ({ tokens, availableScopes, newlyCreatedTokenId, isLoading, is
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 gap-1.5 border-slate-200 bg-white px-2.5 text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                      className="h-8 gap-1.5 border-slate-200 bg-card px-2.5 text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                       aria-label={token.token ? t("mcp.copyConfig") : t("mcp.legacyConfigCannotCopy")}
                       disabled={token.isRevoked || !token.token}
                       onClick={() => void handleCopy(token, "config")}
@@ -391,7 +391,7 @@ export const McpConfigCard = () => {
           <div className="rounded-lg border border-slate-200/70 bg-slate-50/50 p-3 sm:p-3.5">
             <form className="flex flex-col gap-2.5 sm:flex-row sm:items-center" onSubmit={handleSubmit}>
               <Input
-                className="h-9 min-w-0 flex-1 bg-white text-xs"
+                className="h-9 min-w-0 flex-1 bg-card text-xs"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder={t("mcp.namePlaceholder")}

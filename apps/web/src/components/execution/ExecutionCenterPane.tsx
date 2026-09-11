@@ -45,7 +45,7 @@ export const ExecutionCenterPane = ({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-slate-50">
-      <header className="flex h-[calc(4rem+env(safe-area-inset-top))] shrink-0 items-end justify-between gap-3 border-b border-slate-200 bg-white px-4 pb-3 pt-[env(safe-area-inset-top)] lg:h-16 lg:items-center lg:px-6 lg:pb-0 lg:pt-0">
+      <header className="flex h-[calc(4rem+env(safe-area-inset-top))] shrink-0 items-end justify-between gap-3 border-b border-slate-200 bg-card px-4 pb-3 pt-[env(safe-area-inset-top)] lg:h-16 lg:items-center lg:px-6 lg:pb-0 lg:pt-0">
         <div className="flex min-w-0 items-center gap-3">
           <Button
             type="button"
@@ -87,7 +87,7 @@ export const ExecutionCenterPane = ({
               </Button>
             </div>
           ) : items.length === 0 ? (
-            <div className="flex min-h-56 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-white text-center text-slate-400">
+            <div className="flex min-h-56 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-card text-center text-slate-400">
               <Clock3 className="h-7 w-7" />
               <p className="text-sm">{t("executionHistory.empty")}</p>
             </div>
