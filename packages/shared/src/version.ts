@@ -1,14 +1,16 @@
-const parseVersion = (value) => {
-  const match = String(value ?? "").match(/^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/i);
-  return match
-    ? { core: match.slice(1, 4).map(Number), prerelease: match[4]?.split(".") ?? null }
-    : null;
+const parseVersion = (value: string) => {
+  const match = value.match(/^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/i);
+  return match ? {
+    core: match.slice(1, 4).map(Number),
+    prerelease: match[4]?.split(".") ?? null,
+  } : null;
 };
 
-const isVersionOutdated = (currentVersion, latestVersion) => {
+export const isVersionOutdated = (currentVersion: string, latestVersion: string) => {
   const current = parseVersion(currentVersion);
   const latest = parseVersion(latestVersion);
   if (!current || !latest) return false;
+
   for (let index = 0; index < 3; index += 1) {
     if (current.core[index] !== latest.core[index]) return current.core[index] < latest.core[index];
   }
@@ -31,12 +33,7 @@ const isVersionOutdated = (currentVersion, latestVersion) => {
   return false;
 };
 
-export const instanceReleaseVersionFromPayload = (payload) => (
-  payload && typeof payload.version === "string" && payload.version.trim()
-    ? payload.version.trim()
-    : null
-);
-
-export const shouldHoldAutoRestartUpdate = (updateVersion, instanceVersion) => (
-  Boolean(updateVersion && instanceVersion && isVersionOutdated(instanceVersion, updateVersion))
-);
+export const isClientAheadOfInstance = (
+  clientVersion: string | null | undefined,
+  instanceVersion: string | null | undefined,
+) => Boolean(clientVersion && instanceVersion && isVersionOutdated(instanceVersion, clientVersion));

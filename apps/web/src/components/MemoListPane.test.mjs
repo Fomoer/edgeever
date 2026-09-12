@@ -28,3 +28,17 @@ describe("empty memo list creation", () => {
     expect(source).not.toContain('onClick={onCreateMemo} disabled={isCreating}');
   });
 });
+
+describe("desktop bulk move", () => {
+  test("keeps a user-chosen notebook instead of snapping back to the current notebook", () => {
+    const memoListSource = readFileSync(new URL("./MemoListPane.tsx", import.meta.url), "utf8");
+    const workspaceSource = readFileSync(new URL("./WorkspaceApp.tsx", import.meta.url), "utf8");
+
+    expect(memoListSource).toContain("resolveSelectionMoveTargetNotebookId");
+    expect(memoListSource).toContain("disabled={selectedCount === 0 || !moveTargetNotebookId || isMoving || isTrashView || !canMove}");
+    expect(workspaceSource).toContain("resolveSelectionMoveTargetNotebookId");
+    expect(workspaceSource).toContain("canMove={canMoveSelectedMemos}");
+    expect(workspaceSource).not.toContain("setSelectionMoveTargetNotebookId(selectedNotebook.id)");
+    expect(memoListSource).not.toContain("setMoveTargetNotebookId(notebook.id)");
+  });
+});

@@ -177,6 +177,22 @@ struct AiGenerateInput: Encodable, Sendable {
     var instruction: String? = nil
 }
 
+struct AiGenerationResultBoundary: Decodable, Sendable {
+    var start: String
+    var end: String
+}
+
+struct AiPreparedGeneration: Decodable, Sendable {
+    var provider: String
+    var baseUrl: String
+    var apiKey: String
+    var modelId: String
+    var system: String
+    var prompt: String
+    var maxOutputTokens: Int
+    var resultBoundary: AiGenerationResultBoundary
+}
+
 struct AiTagSuggestionsInput: Encodable, Sendable {
     var title: String
     var contentMarkdown: String
@@ -205,6 +221,19 @@ enum AiPromptResultMode: String, Codable, Sendable {
     case append
     case replace
     case both
+}
+
+struct AiAssistantLastActionPreference: Codable, Equatable, Sendable {
+    var action: AiAction
+    var promptId: String?
+    var seedKey: String?
+    var targetLanguage: String?
+    var tone: String?
+}
+
+struct AiAssistantLastActionStore: Codable, Equatable, Sendable {
+    var selected: AiAssistantLastActionPreference? = nil
+    var wholeNote: AiAssistantLastActionPreference? = nil
 }
 
 struct AiPromptTemplate: Codable, Equatable, Sendable, Identifiable {

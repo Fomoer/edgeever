@@ -87,6 +87,14 @@ export const MARKDOWN_THEME_NAMES = [
 export type MarkdownThemeName = (typeof MARKDOWN_THEME_NAMES)[number];
 export const MARKDOWN_THEME_PREFERENCES = ["auto", ...MARKDOWN_THEME_NAMES] as const;
 export type MarkdownThemePreference = (typeof MARKDOWN_THEME_PREFERENCES)[number];
+export const MARKDOWN_LIGHT_THEME_NAMES = [
+  "github-light",
+  "solarized-light",
+  "xcode-light",
+  "duotone-light",
+] as const satisfies readonly MarkdownThemeName[];
+export const isMarkdownLightTheme = (theme: MarkdownThemeName): boolean =>
+  (MARKDOWN_LIGHT_THEME_NAMES as readonly MarkdownThemeName[]).includes(theme);
 
 export const EDITOR_THEME_NAMES = [
   "default",

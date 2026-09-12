@@ -27,6 +27,18 @@ interface EdgeEverDesktopBridge {
   clearSessionToken(): Promise<{ stored: false }>;
   publicNetworkFetch(requestId: string, input: import("@edgeever/shared").PluginPublicFetchRequest): Promise<import("@edgeever/shared").PluginPublicFetchResponse>;
   cancelPublicNetworkFetch(requestId: string): Promise<void>;
+  openAiProviderStream(requestId: string, input: {
+    url: string;
+    method?: string;
+    headers?: Record<string, string>;
+    body: string;
+  }): Promise<{ status: number; headers: Record<string, string> }>;
+  cancelAiProviderStream(requestId: string): void;
+  onAiProviderStreamChunk(callback: (requestId: string, chunk: {
+    type: "data" | "end" | "error";
+    bytes?: ArrayBuffer | Uint8Array;
+    message?: string;
+  }) => void): () => void;
   clearLocalData(): Promise<
     { scheduled: true }
     | { scheduled: false; errorCode: DesktopLocalDataResetErrorCode }

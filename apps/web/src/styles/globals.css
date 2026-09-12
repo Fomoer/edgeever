@@ -387,6 +387,7 @@ html[data-edgeever-extension-theme] .divide-slate-200 > :not([hidden]) ~ :not([h
   border-color: var(--edgeever-theme-border, #e2e8f0);
 }
 
+html[data-edgeever-extension-theme] .bg-emerald-500,
 html[data-edgeever-extension-theme] .bg-emerald-600,
 html[data-edgeever-extension-theme] .bg-emerald-700 {
   background-color: var(--edgeever-theme-accent, #16a06e);
@@ -1019,6 +1020,33 @@ textarea {
 .ProseMirror ul[data-type="taskList"] ul[data-type="taskList"] {
   margin: 0.25rem 0 0;
   padding-left: 1.5rem;
+}
+
+.ProseMirror .ee-inline-field-source {
+  font-size: 0;
+  color: transparent;
+}
+
+.ProseMirror .ee-inline-field {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0.15rem;
+  padding: 0 0.45rem;
+  border: 1px solid rgb(var(--slate-200-rgb, 226 232 240));
+  border-radius: 999px;
+  background: rgb(var(--slate-100-rgb, 241 245 249));
+  color: rgb(var(--slate-500-rgb, 100 116 139));
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.55;
+  vertical-align: 0.12em;
+  cursor: text;
+}
+
+:root.dark .ProseMirror .ee-inline-field {
+  border-color: rgb(51 65 85);
+  background: rgb(30 41 59);
+  color: rgb(148 163 184);
 }
 
 .ProseMirror blockquote {

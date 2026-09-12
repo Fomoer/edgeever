@@ -36,7 +36,7 @@ export const DesktopUpdateNotice = () => {
 
   return (
     <Button
-      className="h-8 shrink-0 animate-in rounded-full bg-emerald-600 px-4 text-xs font-semibold text-white shadow-sm fade-in slide-in-from-left-2 hover:bg-emerald-700 hover:text-white"
+      className="h-8 shrink-0 animate-in rounded-full px-4 text-xs font-semibold shadow-sm fade-in slide-in-from-left-2"
       size="sm"
       variant="solid"
       role="alert"

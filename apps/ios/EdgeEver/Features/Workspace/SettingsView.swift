@@ -462,7 +462,8 @@ struct SettingsView: View {
                 title: env.preferences.t("云端实例", en: "Cloud instance"),
                 description: env.preferences.t("当前连接实例的版本与部署环境。", en: "Version and deployment environment for the connected instance."),
                 icon: "cloud",
-                items: cloudSystemInfoItems
+                items: cloudSystemInfoItems,
+                notice: clientAheadOfInstanceNotice
             )
 
             systemInfoGroup(
@@ -514,6 +515,49 @@ struct SettingsView: View {
         case "en-US": return "English"
         default: return env.preferences.t("跟随系统", en: "System")
         }
+    }
+
+    private var clientAheadOfInstanceNotice: String? {
+        let clientVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        guard let clientVersion, let instanceVersion, Self.isClient(clientVersion, aheadOfInstance: instanceVersion) else {
+            return nil
+        }
+        switch instanceHealth?.runtime {
+        case "cloudflare-workers":
+            return env.preferences.t(
+                "当前客户端版本高于云端实例。可等待每天自动更新，或手动运行 Update deployed EdgeEver 工作流。",
+                en: "This client is newer than the connected cloud instance. You can wait for the daily automatic instance update, or run the Update deployed EdgeEver workflow."
+            )
+        case "self-hosted-bun":
+            return env.preferences.t(
+                "当前客户端版本高于云端实例。可等待每天自动更新，或在安装目录执行 ./update.sh（默认 ~/edgeever）。",
+                en: "This client is newer than the connected cloud instance. You can wait for the daily automatic instance update, or run ./update.sh in the install directory (default ~/edgeever)."
+            )
+        default:
+            return env.preferences.t(
+                "当前客户端版本高于云端实例。可等待每天自动更新，也可手动更新实例。",
+                en: "This client is newer than the connected cloud instance. You can wait for the daily automatic instance update, or update the instance manually."
+            )
+        }
+    }
+
+    private static func isClient(_ clientVersion: String, aheadOfInstance instanceVersion: String) -> Bool {
+        func core(_ value: String) -> [Int]? {
+            let pattern = #"^v?(\d+)\.(\d+)\.(\d+)"#
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
+            let range = NSRange(value.startIndex..., in: value)
+            guard let match = regex.firstMatch(in: value, range: range) else { return nil }
+            let numbers = (1...3).compactMap { index -> Int? in
+                guard let part = Range(match.range(at: index), in: value) else { return nil }
+                return Int(value[part])
+            }
+            return numbers.count == 3 ? numbers : nil
+        }
+        guard let client = core(clientVersion), let instance = core(instanceVersion) else { return false }
+        for index in 0..<3 where client[index] != instance[index] {
+            return client[index] > instance[index]
+        }
+        return false
     }
 
     private var clientSystemInfoItems: [(label: String, value: String)] {
@@ -720,7 +764,8 @@ struct SettingsView: View {
         title: String,
         description: String,
         icon: String,
-        items: [(label: String, value: String)]
+        items: [(label: String, value: String)],
+        notice: String? = nil
     ) -> some View {
         settingsGroup(title: title, icon: icon) {
             Text(description)
@@ -730,6 +775,20 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
+
+            if let notice {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(notice)
+                        .font(.system(size: 11))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .foregroundStyle(AppTheme.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+            }
 
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                 infoRow(item.label, item.value, showBorder: true)

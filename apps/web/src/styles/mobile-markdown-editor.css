@@ -607,6 +607,26 @@ html.dark .edgeever-mobile-tiptap-content a:hover {
   padding-left: 24px;
 }
 
+.edgeever-mobile-tiptap-content .ee-inline-field-source {
+  font-size: 0;
+  color: transparent;
+}
+
+.edgeever-mobile-tiptap-content .ee-inline-field {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0.15rem;
+  padding: 0 0.45rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.55;
+  vertical-align: 0.12em;
+}
+
 .edgeever-mobile-tiptap-content blockquote {
   border-left: 3px solid #16a06e;
   border-radius: 1px 4px 4px 1px;

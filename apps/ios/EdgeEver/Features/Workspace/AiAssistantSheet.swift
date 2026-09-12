@@ -198,8 +198,7 @@ struct AiAssistantSheet: View {
         .interactiveDismissDisabled(isApplying)
         .onAppear {
             guard !didSetLanguageDefault else { return }
-            targetLanguage = env.preferences.isEnglish ? .simplifiedChinese : .english
-            action = isSelection ? .improveWriting : .summarize
+            applyStoredOrDefaultAction(from: prompts, allowPromptMatch: false)
             didSetLanguageDefault = true
         }
         .onDisappear { streamTask?.cancel() }
@@ -231,6 +230,7 @@ struct AiAssistantSheet: View {
                         action = prompt.action
                         output = ""
                         error = nil
+                        persistLastAction()
                     } label: {
                         if selectedPromptID == prompt.id {
                             Label(prompt.name, systemImage: "checkmark")
@@ -259,6 +259,7 @@ struct AiAssistantSheet: View {
                     targetLanguage = item
                     output = ""
                     error = nil
+                    persistLastAction()
                 } label: {
                     if targetLanguage == item {
                         Label(languageTitle(item), systemImage: "checkmark")
@@ -277,6 +278,7 @@ struct AiAssistantSheet: View {
                     tone = item
                     output = ""
                     error = nil
+                    persistLastAction()
                 } label: {
                     if tone == item {
                         Label(toneTitle(item), systemImage: "checkmark")
@@ -523,6 +525,70 @@ struct AiAssistantSheet: View {
         action = nextAction
         output = ""
         error = nil
+        persistLastAction()
+    }
+
+    private func persistLastAction() {
+        env.preferences.setLastAiAssistantAction(
+            AiAssistantLastActionPreference(
+                action: action,
+                promptId: selectedPromptID,
+                seedKey: selectedPrompt?.seedKey,
+                targetLanguage: targetLanguage.rawValue,
+                tone: tone.rawValue
+            ),
+            isSelection: isSelection
+        )
+    }
+
+    private func applyStoredOrDefaultAction(from loaded: [AiPromptTemplate], allowPromptMatch: Bool) {
+        let stored = env.preferences.lastAiAssistantAction(isSelection: isSelection)
+        let fallback: AiAction = isSelection ? .improveWriting : .custom
+        if let stored {
+            if allowPromptMatch, let promptId = stored.promptId, let match = loaded.first(where: { $0.id == promptId }) {
+                selectedPromptID = match.id
+                action = match.action
+                applyStoredParameters(stored)
+                return
+            }
+            if allowPromptMatch, let seedKey = stored.seedKey, let match = loaded.first(where: { $0.seedKey == seedKey }) {
+                selectedPromptID = match.id
+                action = match.action
+                applyStoredParameters(stored)
+                return
+            }
+            if stored.action == .custom || loaded.isEmpty {
+                selectedPromptID = nil
+                action = stored.action
+                applyStoredParameters(stored)
+                return
+            }
+        }
+        if fallback == .custom {
+            selectedPromptID = nil
+            action = .custom
+            targetLanguage = env.preferences.isEnglish ? .simplifiedChinese : .english
+            return
+        }
+        if allowPromptMatch, let preferred = loaded.first(where: { $0.seedKey == fallback.rawValue }) ?? loaded.first {
+            selectedPromptID = preferred.id
+            action = preferred.action
+            return
+        }
+        selectedPromptID = nil
+        action = fallback
+        targetLanguage = env.preferences.isEnglish ? .simplifiedChinese : .english
+    }
+
+    private func applyStoredParameters(_ stored: AiAssistantLastActionPreference) {
+        if let language = stored.targetLanguage.flatMap(AssistantTargetLanguage.init(rawValue:)) {
+            targetLanguage = language
+        } else {
+            targetLanguage = env.preferences.isEnglish ? .simplifiedChinese : .english
+        }
+        if let storedTone = stored.tone.flatMap(AssistantTone.init(rawValue:)) {
+            tone = storedTone
+        }
     }
 
     @MainActor
@@ -531,11 +597,7 @@ struct AiAssistantSheet: View {
             let locale = env.preferences.isEnglish ? "en-US" : "zh-CN"
             let loaded = try await env.session.client.listAiPrompts(locale: locale)
             prompts = loaded
-            let preferredAction: AiAction = isSelection ? .improveWriting : .summarize
-            if let preferred = loaded.first(where: { $0.seedKey == preferredAction.rawValue }) ?? loaded.first {
-                selectedPromptID = preferred.id
-                action = preferred.action
-            }
+            applyStoredOrDefaultAction(from: loaded, allowPromptMatch: true)
         } catch {
             // Keep the built-in action list as an offline/older-server fallback.
         }

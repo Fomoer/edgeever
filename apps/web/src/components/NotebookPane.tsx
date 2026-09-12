@@ -581,7 +581,7 @@ export const NotebookPane = ({
             onClick={() => onCreateMemo()}
             disabled={!canCreateMemo || isCreatingMemo}
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-[0_5px_12px_rgb(var(--brand-green-rgb)/0.22)] transition-transform duration-150 group-hover:scale-[1.03] group-focus-visible:ring-2 group-focus-visible:ring-emerald-500/70 group-focus-visible:ring-offset-2">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_5px_12px_rgb(var(--brand-green-rgb)/0.22)] transition-transform duration-150 group-hover:scale-[1.03] group-focus-visible:ring-2 group-focus-visible:ring-emerald-500/70 group-focus-visible:ring-offset-2">
               <Plus className="h-5 w-5" />
             </span>
             <span className="min-w-0 truncate text-sm font-semibold text-slate-950">{t("notebookPane.newMemo")}</span>

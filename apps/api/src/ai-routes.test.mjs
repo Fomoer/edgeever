@@ -355,6 +355,65 @@ describe("AI route contracts", () => {
     expect(response.status).toBe(400);
   });
 
+  test("prepares a direct generation payload without calling the model provider", async () => {
+    const app = createApp();
+    const { environment: databaseEnvironment } = createDatabaseEnvironment();
+    const created = await app.request(
+      "/api/v1/ai/providers",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(validSettings),
+      },
+      databaseEnvironment,
+    );
+    expect(created.status).toBe(201);
+
+    const response = await app.request(
+      "/api/v1/ai/generate/prepare",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "summarize", title: "Note", contentMarkdown: "Body" }),
+      },
+      databaseEnvironment,
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.apiKey).toBe("secret");
+    expect(body.provider).toBe("openai-compatible");
+    expect(body.baseUrl).toBe("https://models.example.com/v1");
+    expect(body.modelId).toBe("model-a");
+    expect(body.prompt).toContain("Body");
+    expect(body.system).toContain(body.resultBoundary.start);
+    expect(body.system).toContain(body.resultBoundary.end);
+  });
+
+  test("returns the default model endpoint without the API key", async () => {
+    const app = createApp();
+    const { environment: databaseEnvironment } = createDatabaseEnvironment();
+    const created = await app.request(
+      "/api/v1/ai/providers",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(validSettings),
+      },
+      databaseEnvironment,
+    );
+    expect(created.status).toBe(201);
+
+    const response = await app.request("/api/v1/ai/direct-target", {}, databaseEnvironment);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({
+      provider: "openai-compatible",
+      baseUrl: "https://models.example.com/v1",
+      modelId: "model-a",
+    });
+    expect(body.apiKey).toBeUndefined();
+  });
+
   test("rejects actions outside the shared note-processing catalog", async () => {
     const app = createApp();
     const response = await app.request(

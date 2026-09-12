@@ -313,7 +313,8 @@ export const TemplatesPane = ({
                     <Button
                       type="button"
                       size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 font-semibold"
+                      variant="solid"
+                      className="gap-1.5 font-semibold"
                       onClick={() => void saveEditing()}
                       disabled={!draft.name.trim() || isCreating}
                     >
@@ -424,7 +425,7 @@ export const TemplatesPane = ({
 
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200/80 bg-emerald-50/70 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all duration-200 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200/80 bg-emerald-50/70 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all duration-200 disabled:opacity-50"
                         disabled={!canCreateMemo || isCreating}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -497,7 +498,8 @@ export const TemplatesPane = ({
               <Button
                 type="button"
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 font-semibold"
+                variant="solid"
+                className="gap-1.5 font-semibold"
                 disabled={!canCreateMemo || isCreating}
                 onClick={() => {
                   const onUse = previewTemplate.onUse;

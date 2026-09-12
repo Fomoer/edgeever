@@ -32,12 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api";
-import {
-  readAiStreamingPreference,
-  writeAiStreamingPreference,
-} from "@/lib/ai-generation-preference";
 import { cn } from "@/lib/utils";
 
 export const AiModelCard = () => {
@@ -55,7 +50,6 @@ export const AiModelCard = () => {
   const [baseUrl, setBaseUrl] = useState(providerDefaults["openai-compatible"].baseUrl);
   const [apiKey, setApiKey] = useState("");
   const [initialModelId, setInitialModelId] = useState(providerDefaults["openai-compatible"].modelId);
-  const [streamingEnabled, setStreamingEnabled] = useState(readAiStreamingPreference);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["ai-settings"] });
   const resetAddForm = (nextDisplayName = "") => {
@@ -183,21 +177,6 @@ export const AiModelCard = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-                      <div className="min-w-0">
-                        <div className={SETTINGS_ITEM_TITLE_CLASSNAME}>{t("settings.aiStreamingTitle")}</div>
-                        <div className={SETTINGS_ITEM_DESCRIPTION_CLASSNAME}>{t("settings.aiStreamingDescription")}</div>
-                      </div>
-                      <Switch
-                        className="shrink-0"
-                        checked={streamingEnabled}
-                        onCheckedChange={(enabled) => {
-                          writeAiStreamingPreference(enabled);
-                          setStreamingEnabled(enabled);
-                        }}
-                        aria-label={t("settings.aiStreamingAria")}
-                      />
                     </div>
                   </div>
                 </section>

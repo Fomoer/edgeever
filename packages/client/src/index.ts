@@ -1,4 +1,12 @@
+import {
+  isAiCorsFailure,
+  parseAiDirectTarget,
+  parsePreparedAiGeneration,
+  probeAiProviderCors,
+  streamDirectAiGeneration,
+} from "./ai-direct-stream";
 import { createPluginCapabilities } from './plugin-capabilities';
+import { aiDirectTargetKey } from "@edgeever/shared";
 import type {
   CompanionMemory,
   CompanionDiscoverySettings,
@@ -85,6 +93,15 @@ export type EdgeEverClientOptions = {
   baseUrl?: string | (() => string);
   token?: string | null | (() => string | null | undefined);
   fetch?: typeof fetch;
+  /** Native/desktop note AI calls the model API directly after a short prepare hop. */
+  directAiGeneration?: boolean;
+  /**
+   * Browser-only: probe whether the model host allows CORS, then direct-connect.
+   * Falls back to the instance proxy without using a prepared API key when CORS is blocked.
+   */
+  tryDirectAiGeneration?: boolean;
+  /** Used only for the model provider request; defaults to `fetch`. */
+  providerFetch?: typeof fetch;
   beforeRequest?: (context: EdgeEverClientRequestContext) => void | Promise<void>;
   shouldAttachToken?: (path: string) => boolean;
   onUnauthorized?: (context: EdgeEverClientRequestContext) => void | Promise<void>;
@@ -305,6 +322,8 @@ export type { SyncBootstrapResponse, SyncChangesResponse };
 
 export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
   const getFetch = () => options.fetch ?? globalThis.fetch;
+  const corsCapability = new Map<string, boolean>();
+  const providerFetch = () => options.providerFetch ?? getFetch();
   const getBaseUrl = () => normalizeBaseUrl(
     typeof options.baseUrl === "function" ? options.baseUrl() : options.baseUrl,
   );
@@ -800,17 +819,74 @@ export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
       payload: AiGenerateInput,
       streamOptions: { signal?: AbortSignal; onEvent: (event: AiStreamEvent) => void },
     ) => {
-      const path = "/api/v1/ai/generate";
-      const { context, response } = await send(path, {
-        method: "POST",
-        body: JSON.stringify(payload),
-        signal: streamOptions.signal,
-      });
-      if (!response.ok) {
-        await throwRequestError(context, response);
+      const proxyGenerate = async () => {
+        const path = "/api/v1/ai/generate";
+        const { context, response } = await send(path, {
+          method: "POST",
+          body: JSON.stringify(payload),
+          signal: streamOptions.signal,
+        });
+        if (!response.ok) {
+          await throwRequestError(context, response);
+        }
+        if (!response.body) throw new ApiRequestError("Streaming response is unavailable", 502, "ai_stream_unavailable");
+        await consumeEventStream(response.body, streamOptions.onEvent);
+      };
+
+      const prepareAndDirect = async () => {
+        const { context, response } = await send("/api/v1/ai/generate/prepare", {
+          method: "POST",
+          body: JSON.stringify(payload),
+          signal: streamOptions.signal,
+        });
+        if (response.ok) {
+          const prepared = parsePreparedAiGeneration(await response.json());
+          if (!prepared) {
+            throw new ApiRequestError("The AI prepare response is invalid", 502, "ai_generation_failed");
+          }
+          await streamDirectAiGeneration(prepared, payload.attachments, {
+            fetch: providerFetch(),
+            signal: streamOptions.signal,
+            onEvent: streamOptions.onEvent,
+          });
+          return true;
+        }
+        if (response.status !== 404) await throwRequestError(context, response);
+        return false;
+      };
+
+      if (options.directAiGeneration) {
+        if (await prepareAndDirect()) return;
+        await proxyGenerate();
+        return;
       }
-      if (!response.body) throw new ApiRequestError("Streaming response is unavailable", 502, "ai_stream_unavailable");
-      await consumeEventStream(response.body, streamOptions.onEvent);
+
+      if (options.tryDirectAiGeneration) {
+        const { context, response } = await send("/api/v1/ai/direct-target", {
+          signal: streamOptions.signal,
+        });
+        if (response.ok) {
+          const target = parseAiDirectTarget(await response.json());
+          const cacheKey = target ? aiDirectTargetKey(target) : "";
+          let allowed = cacheKey ? corsCapability.get(cacheKey) : false;
+          if (target && allowed === undefined) {
+            allowed = await probeAiProviderCors(target, providerFetch(), streamOptions.signal);
+            corsCapability.set(cacheKey, allowed);
+          }
+          if (target && allowed) {
+            try {
+              if (await prepareAndDirect()) return;
+            } catch (error) {
+              if (!isAiCorsFailure(error)) throw error;
+              corsCapability.set(cacheKey, false);
+            }
+          }
+        } else if (response.status !== 404 && response.status !== 409) {
+          await throwRequestError(context, response);
+        }
+      }
+
+      await proxyGenerate();
     },
 
     listUsers: () => request<ListUsersResponse>("/api/v1/users"),

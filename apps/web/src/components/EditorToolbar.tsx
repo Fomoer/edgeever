@@ -35,6 +35,7 @@ import {
 import { CODE_BLOCK_LANGUAGES, getCodeBlockLanguageValue } from "@/lib/code-block";
 import { EditorTableMenu } from "@/components/EditorTableMenu";
 import { wrapIndentedParagraphInList } from "@/lib/editor-shortcuts";
+import { MARKDOWN_THEME_PREFERENCES, useMarkdownTheme } from "@/components/ThemeProvider";
 
 const EditorToolbarButton = ({
   active = false,
@@ -159,6 +160,7 @@ export const EditorToolbar = ({
   externalLinkActive?: boolean;
 }) => {
   const { t } = useTranslation();
+  const { markdownThemePreference, setMarkdownTheme } = useMarkdownTheme();
   const controlsRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(readEditorToolbarExpandedPreference);
   const [hasOverflow, setHasOverflow] = useState(false);
@@ -366,7 +368,24 @@ export const EditorToolbar = ({
             </>
           )}
           {markdownMode ? (
-            <span className="shrink-0 text-xs text-slate-500">{t("editorToolbar.markdownSource")}</span>
+            <Select
+              value={markdownThemePreference}
+              onValueChange={(value) => setMarkdownTheme(value as typeof markdownThemePreference)}
+            >
+              <SelectTrigger
+                aria-label={t("editorToolbar.markdownTheme")}
+                className="h-8 w-[11.5rem] shrink-0 whitespace-nowrap border-slate-200 bg-card text-xs text-slate-800 [&>span]:truncate [&>span]:whitespace-nowrap"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border border-slate-200 rounded-md py-1 shadow-md">
+                {MARKDOWN_THEME_PREFERENCES.map((theme) => (
+                  <SelectItem key={theme} value={theme}>
+                    {t(`settings.markdownThemes.${theme}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : (
             <>
           <Select

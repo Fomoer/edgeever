@@ -6,7 +6,7 @@ import CodeMirror, {
 } from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import {
-  githubLight,
+  githubLightInit,
   githubDark,
   atomone,
   tokyoNight,
@@ -14,17 +14,18 @@ import {
   dracula,
   nord,
   monokai,
-  solarizedLight,
+  solarizedLightInit,
   solarizedDark,
   vscodeDark,
-  xcodeLight,
+  xcodeLightInit,
   sublime,
-  duotoneLight,
+  duotoneLightInit,
   duotoneDark,
   gruvboxDark,
 } from "@uiw/codemirror-themes-all";
 import type { MarkdownThemeName } from "../ThemeProvider";
 import { getAiSlashCommandStart } from "@/lib/editor-shortcuts";
+import { lightMarkdownHighlightStyles } from "@/lib/markdown-source-highlight";
 import { cn } from "@/lib/utils";
 
 export interface MarkdownSourceEditorRef {
@@ -49,7 +50,7 @@ export interface MarkdownSourceEditorProps {
 }
 
 export const CODE_MIRROR_THEME_MAP: Record<MarkdownThemeName, Extension> = {
-  "github-light": githubLight,
+  "github-light": githubLightInit({ styles: lightMarkdownHighlightStyles }),
   "github-dark": githubDark,
   "one-dark": atomone,
   "tokyo-night": tokyoNight,
@@ -57,12 +58,12 @@ export const CODE_MIRROR_THEME_MAP: Record<MarkdownThemeName, Extension> = {
   dracula,
   nord,
   monokai,
-  "solarized-light": solarizedLight,
+  "solarized-light": solarizedLightInit({ styles: lightMarkdownHighlightStyles }),
   "solarized-dark": solarizedDark,
   "vscode-dark": vscodeDark,
-  "xcode-light": xcodeLight,
+  "xcode-light": xcodeLightInit({ styles: lightMarkdownHighlightStyles }),
   sublime,
-  "duotone-light": duotoneLight,
+  "duotone-light": duotoneLightInit({ styles: lightMarkdownHighlightStyles }),
   "duotone-dark": duotoneDark,
   "gruvbox-dark": gruvboxDark,
 };

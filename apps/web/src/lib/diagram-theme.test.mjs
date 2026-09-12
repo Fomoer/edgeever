@@ -35,7 +35,7 @@ describe("diagram appearance palettes", () => {
 
   test("keeps the ten selectable color schemes distinct from forest green", () => {
     expect(Object.keys(DIAGRAM_THEME_PALETTES)).toEqual(expect.arrayContaining([
-      "brand", "mint", "wa", "island", "rose", "sun", "cosmos", "tea", "naive", "macaron",
+      "brand", "cosmos", "dune", "slate", "prism", "sunrise", "marine", "blossom", "mint", "macaron",
     ]));
     expect(resolveDiagramPalette("mint", "light").topicFill).not.toBe(resolveDiagramPalette("brand", "light").topicFill);
     expect(resolveDiagramPalette("ocean", "light")).toEqual(resolveDiagramPalette("brand", "light"));

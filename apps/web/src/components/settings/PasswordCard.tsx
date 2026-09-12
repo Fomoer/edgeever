@@ -122,7 +122,7 @@ export const PasswordCard = ({ authRequired, demoMode }: PasswordCardProps) => {
             >
               {feedback?.message}
             </p>
-            <Button className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto lg:h-9 lg:px-3" type="submit" disabled={isSubmitting}>
+            <Button className="w-full sm:w-auto lg:h-9 lg:px-3" variant="solid" type="submit" disabled={isSubmitting}>
               {isSubmitting ? t("password.changing") : t("password.change")}
             </Button>
           </div>

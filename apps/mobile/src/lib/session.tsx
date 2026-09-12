@@ -70,6 +70,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
       baseUrl: session.baseUrl,
       token: session.token,
       fetch: expoFetch as typeof fetch,
+      directAiGeneration: true,
       onUnauthorized: () => {
         queryClient.clear();
         setSession(null);

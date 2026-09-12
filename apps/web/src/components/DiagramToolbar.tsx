@@ -17,8 +17,8 @@ import { useTranslation } from "react-i18next";
 import {
   DIAGRAM_SELECTABLE_STRUCTURES,
   DIAGRAM_STRUCTURE_GROUPS,
-  DIAGRAM_THEME_GROUPS,
-  FLOWCHART_THEME_GROUPS,
+  DIAGRAM_SELECTABLE_THEMES,
+  FLOWCHART_SELECTABLE_THEMES,
   diagramThemeSwatches,
   flowchartThemeSwatches,
   resolveDiagramTheme,
@@ -356,33 +356,28 @@ export const DiagramToolbar = ({
             </TooltipTrigger>
             <TooltipContent>{t("diagram.theme")}</TooltipContent>
           </Tooltip>
-          <DropdownMenuContent align="start" className="max-h-[min(36rem,70vh)] w-[18.5rem] overflow-y-auto p-3">
-            {(["vivid", "classic"] as const).map((group) => (
-              <div key={group} className="mb-3 last:mb-0">
-                <div className="mb-1.5 text-xs font-medium text-slate-500">{t(group === "vivid" ? "diagram.themeGroupVivid" : "diagram.themeGroupClassic")}</div>
-                <div className="grid grid-cols-1 gap-1.5">
-                  {(themeCatalog === "flowchart" ? FLOWCHART_THEME_GROUPS[group] : DIAGRAM_THEME_GROUPS[group]).map((value) => (
-                    <DropdownMenuItem
-                      key={value}
-                      className={cn(
-                        "h-auto items-center gap-3 rounded-lg border px-2 py-1.5",
-                        (themeCatalog === "flowchart" ? resolveFlowchartTheme(theme) === value : theme === value)
-                          ? "border-slate-900 bg-slate-50"
-                          : "border-transparent",
-                      )}
-                      onSelect={() => onThemeChange(value)}
-                    >
-                      <span className="flex h-5 flex-1 overflow-hidden rounded-md border border-black/10">
-                        {(themeCatalog === "flowchart" ? flowchartThemeSwatches(value) : diagramThemeSwatches(value)).map((color) => (
-                          <span key={`${value}-${color}`} className="h-full flex-1" style={{ background: color }} />
-                        ))}
-                      </span>
-                      <span className="w-10 shrink-0 text-xs text-slate-600">{t(`diagram.theme${value.charAt(0).toUpperCase()}${value.slice(1)}` as "diagram.themeBrand")}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <DropdownMenuContent align="start" className="max-h-[min(36rem,70vh)] w-[18.5rem] overflow-y-auto p-2">
+            <div className="grid grid-cols-1 gap-1">
+              {(themeCatalog === "flowchart" ? FLOWCHART_SELECTABLE_THEMES : DIAGRAM_SELECTABLE_THEMES).map((value) => (
+                <DropdownMenuItem
+                  key={value}
+                  className={cn(
+                    "h-auto items-center gap-3 rounded-lg border px-2 py-1.5",
+                    (themeCatalog === "flowchart" ? resolveFlowchartTheme(theme) === value : theme === value)
+                      ? "border-slate-900 bg-slate-50"
+                      : "border-transparent",
+                  )}
+                  onSelect={() => onThemeChange(value)}
+                >
+                  <span className="flex h-5 flex-1 overflow-hidden rounded-md border border-black/10">
+                    {(themeCatalog === "flowchart" ? flowchartThemeSwatches(value) : diagramThemeSwatches(value)).map((color) => (
+                      <span key={`${value}-${color}`} className="h-full flex-1" style={{ background: color }} />
+                    ))}
+                  </span>
+                  <span className="w-10 shrink-0 text-xs text-slate-600">{t(`diagram.theme${value.charAt(0).toUpperCase()}${value.slice(1)}` as "diagram.themeBrand")}</span>
+                </DropdownMenuItem>
+              ))}
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}

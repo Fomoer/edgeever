@@ -1,19 +1,15 @@
 {
-  "version": "1.65.1",
+  "version": "1.68.0",
   "changes": {
     "en-US": [
-      "Keep plugin panel close buttons in the header action row so they no longer overlap Refresh, Cancel, or Save.",
-      "Install and update GitHub plugins from public Release assets when api.github.com returns 401, 403, or 429.",
-      "Show only launcher commands on plugin marketplace cards, and keep the plugin toolbar menu to unique editor commands and dashboard panels.",
-      "Stop the memo-card hover tip from covering the New Note button.",
-      "Make diagram zoom percent editable, drop the Fit button, and keep large notes readable."
+      "Render Dataview inline fields such as [due:: YYYY-MM-DD] as compact editor chips, and keep the raw field editable on click.",
+      "Highlight Markdown source and switch editor themes from the toolbar.",
+      "Remember the last AI assistant action and open the assistant from the current selection or the whole note."
     ],
     "zh-CN": [
-      "把插件面板关闭按钮放进标题操作行，避免压住刷新、取消或保存。",
-      "当 GitHub REST API 返回 401、403 或 429 时，改为下载公开 Release 资源来安装和更新插件。",
-      "插件市场卡片只保留启动命令，工具栏菜单只保留不重复的编辑器命令和仪表盘面板。",
-      "避免笔记卡片悬停提示挡住「新建笔记」按钮。",
-      "图文档缩放改为可输入百分比，去掉适应画布按钮，并让大笔记保持可读。"
+      "把 [due:: YYYY-MM-DD] 这类 Dataview 字段在编辑器里收成安静的小标签，点击后仍可编辑原文。",
+      "Markdown 源码高亮，并支持从工具栏切换编辑器主题。",
+      "记住上次的 AI 助手操作，并支持从当前选区或整篇笔记打开助手。"
     ]
   }
 }

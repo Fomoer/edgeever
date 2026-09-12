@@ -84,10 +84,205 @@ const NON_REPLACEABLE_AI_ACTIONS: readonly AiAction[] = [
 ];
 
 export const getDefaultAiAction = (hasSelection: boolean): AiAction =>
-  hasSelection ? "improve-writing" : "summarize";
+  hasSelection ? "improve-writing" : "custom";
 
 export const getDefaultAiTargetLanguage = (locale: string | undefined): AiTargetLanguage =>
   locale?.toLowerCase().startsWith("zh") ? "en" : "zh-CN";
+
+export const AI_ASSISTANT_LAST_ACTION_STORAGE_KEY = "edgeever.aiAssistant.lastAction";
+
+export type AiPromptSeedAction = Exclude<AiAction, "custom">;
+
+export type AiAssistantLastActionScope = "selected" | "wholeNote";
+
+export type AiAssistantLastActionPreference = {
+  action: AiAction;
+  promptId: string | null;
+  seedKey: AiPromptSeedAction | null;
+  targetLanguage?: AiTargetLanguage;
+  tone?: AiTone;
+};
+
+export type AiAssistantLastActionStore = {
+  selected?: AiAssistantLastActionPreference;
+  wholeNote?: AiAssistantLastActionPreference;
+};
+
+export const getAiAssistantLastActionScope = (hasSelection: boolean): AiAssistantLastActionScope =>
+  hasSelection ? "selected" : "wholeNote";
+
+export type AiAssistantPromptOption = {
+  id: string;
+  action: AiAction;
+  seedKey?: AiPromptSeedAction | null;
+};
+
+const isAiAction = (value: unknown): value is AiAction =>
+  typeof value === "string" && (AI_ACTIONS as readonly string[]).includes(value);
+
+const isAiPromptSeedAction = (value: unknown): value is AiPromptSeedAction =>
+  isAiAction(value) && value !== "custom";
+
+const isAiTargetLanguage = (value: unknown): value is AiTargetLanguage =>
+  typeof value === "string" && (AI_TARGET_LANGUAGES as readonly string[]).includes(value);
+
+const isAiTone = (value: unknown): value is AiTone =>
+  typeof value === "string" && (AI_TONES as readonly string[]).includes(value);
+
+const getLocalStorage = (): Storage | null => {
+  try {
+    return (globalThis as { localStorage?: Storage }).localStorage ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const parseAiAssistantLastActionPreferenceObject = (
+  value: unknown,
+): AiAssistantLastActionPreference | null => {
+  if (!value || typeof value !== "object") return null;
+  const parsed = value as Record<string, unknown>;
+  if (!isAiAction(parsed.action)) return null;
+  return {
+    action: parsed.action,
+    promptId: typeof parsed.promptId === "string" ? parsed.promptId : null,
+    seedKey: isAiPromptSeedAction(parsed.seedKey) ? parsed.seedKey : null,
+    ...(isAiTargetLanguage(parsed.targetLanguage) ? { targetLanguage: parsed.targetLanguage } : {}),
+    ...(isAiTone(parsed.tone) ? { tone: parsed.tone } : {}),
+  };
+};
+
+export const parseAiAssistantLastActionPreference = (
+  raw: string | null | undefined,
+): AiAssistantLastActionPreference | null => {
+  if (!raw) return null;
+  try {
+    return parseAiAssistantLastActionPreferenceObject(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+};
+
+export const parseAiAssistantLastActionStore = (
+  raw: string | null | undefined,
+): AiAssistantLastActionStore => {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const legacy = parseAiAssistantLastActionPreferenceObject(parsed);
+    if (legacy) return { wholeNote: legacy };
+    return {
+      ...(parseAiAssistantLastActionPreferenceObject(parsed.selected)
+        ? { selected: parseAiAssistantLastActionPreferenceObject(parsed.selected)! }
+        : {}),
+      ...(parseAiAssistantLastActionPreferenceObject(parsed.wholeNote)
+        ? { wholeNote: parseAiAssistantLastActionPreferenceObject(parsed.wholeNote)! }
+        : {}),
+    };
+  } catch {
+    return {};
+  }
+};
+
+export const serializeAiAssistantLastActionPreference = (
+  preference: AiAssistantLastActionPreference,
+) => JSON.stringify({
+  action: preference.action,
+  promptId: preference.promptId,
+  seedKey: preference.seedKey,
+  ...(preference.targetLanguage ? { targetLanguage: preference.targetLanguage } : {}),
+  ...(preference.tone ? { tone: preference.tone } : {}),
+});
+
+export const serializeAiAssistantLastActionStore = (store: AiAssistantLastActionStore) =>
+  JSON.stringify({
+    ...(store.selected ? { selected: JSON.parse(serializeAiAssistantLastActionPreference(store.selected)) } : {}),
+    ...(store.wholeNote ? { wholeNote: JSON.parse(serializeAiAssistantLastActionPreference(store.wholeNote)) } : {}),
+  });
+
+export const buildAiAssistantLastActionPreference = ({
+  action,
+  promptId,
+  seedKey,
+  targetLanguage,
+  tone,
+}: {
+  action: AiAction;
+  promptId?: string | null;
+  seedKey?: AiPromptSeedAction | null;
+  targetLanguage?: AiTargetLanguage;
+  tone?: AiTone;
+}): AiAssistantLastActionPreference => ({
+  action,
+  promptId: promptId ?? null,
+  seedKey: seedKey ?? null,
+  ...(targetLanguage ? { targetLanguage } : {}),
+  ...(tone ? { tone } : {}),
+});
+
+export const resolveAiAssistantLastAction = ({
+  fallbackAction,
+  preference,
+  prompts,
+}: {
+  fallbackAction: AiAction;
+  preference: AiAssistantLastActionPreference | null;
+  prompts: readonly AiAssistantPromptOption[];
+}): {
+  action: AiAction;
+  selectedPromptId: string | null;
+  targetLanguage?: AiTargetLanguage;
+  tone?: AiTone;
+} => {
+  const extras = {
+    ...(preference?.targetLanguage ? { targetLanguage: preference.targetLanguage } : {}),
+    ...(preference?.tone ? { tone: preference.tone } : {}),
+  };
+
+  if (preference) {
+    if (preference.promptId) {
+      const byId = prompts.find((prompt) => prompt.id === preference.promptId);
+      if (byId) return { action: byId.action, selectedPromptId: byId.id, ...extras };
+    }
+    if (preference.seedKey) {
+      const bySeed = prompts.find((prompt) => prompt.seedKey === preference.seedKey);
+      if (bySeed) return { action: bySeed.action, selectedPromptId: bySeed.id, ...extras };
+    }
+    if (preference.action === "custom" || prompts.length === 0) {
+      return { action: preference.action, selectedPromptId: null, ...extras };
+    }
+  }
+
+  if (fallbackAction === "custom") {
+    return { action: "custom", selectedPromptId: null };
+  }
+  const fallbackPrompt = prompts.find((prompt) => prompt.seedKey === fallbackAction) ?? prompts[0] ?? null;
+  if (fallbackPrompt) {
+    return { action: fallbackPrompt.action, selectedPromptId: fallbackPrompt.id };
+  }
+  return { action: fallbackAction, selectedPromptId: null };
+};
+
+export const readStoredAiAssistantLastActionPreference = (
+  scope: AiAssistantLastActionScope,
+): AiAssistantLastActionPreference | null =>
+  parseAiAssistantLastActionStore(getLocalStorage()?.getItem(AI_ASSISTANT_LAST_ACTION_STORAGE_KEY))[scope] ?? null;
+
+export const writeStoredAiAssistantLastActionPreference = (
+  scope: AiAssistantLastActionScope,
+  preference: AiAssistantLastActionPreference,
+) => {
+  try {
+    const storage = getLocalStorage();
+    const current = parseAiAssistantLastActionStore(storage?.getItem(AI_ASSISTANT_LAST_ACTION_STORAGE_KEY));
+    storage?.setItem(
+      AI_ASSISTANT_LAST_ACTION_STORAGE_KEY,
+      serializeAiAssistantLastActionStore({ ...current, [scope]: preference }),
+    );
+  } catch {
+    // Private mode / blocked storage — keep the in-session selection only.
+  }
+};
 
 export const canReplaceAiSource = (action: AiAction) => !NON_REPLACEABLE_AI_ACTIONS.includes(action);
 

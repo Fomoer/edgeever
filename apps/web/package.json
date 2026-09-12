@@ -6,6 +6,7 @@
   "dependencies": {
     "@antv/x6": "3.1.8",
     "@codemirror/lang-markdown": "^6.5.2",
+    "@lezer/highlight": "^1.2.3",
     "@edgeever/client": "workspace:*",
     "@floating-ui/react-dom": "^2.1.8",
     "@fontsource-variable/noto-sans-sc": "^5.2.8",

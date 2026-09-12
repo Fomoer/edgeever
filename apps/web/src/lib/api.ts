@@ -5,7 +5,6 @@ import {
 } from "@edgeever/client";
 import type { AuthSession } from "@edgeever/shared";
 import { resolveInstanceUrlInput } from "@edgeever/shared";
-import { readAiStreamingPreference } from "./ai-generation-preference";
 import { createClientUuid } from "./client-id";
 
 export { ApiRequestError };
@@ -231,12 +230,85 @@ const handleUnauthorized = ({ path, token }: EdgeEverClientRequestContext) => {
   void notifyUnauthorized(isDesktop, token);
 };
 
+const toUint8Array = (bytes: ArrayBuffer | Uint8Array | undefined) => {
+  if (!bytes) return new Uint8Array();
+  return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+};
+
+const desktopProviderFetch: typeof fetch = async (input, init) => {
+  const bridge = window.edgeeverDesktop;
+  if (!bridge?.openAiProviderStream || !bridge.onAiProviderStreamChunk) {
+    throw new TypeError("Desktop AI transport is unavailable.");
+  }
+  const url = typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.href
+      : input.url;
+  const headers: Record<string, string> = {};
+  new Headers(init?.headers).forEach((value, key) => {
+    headers[key] = value;
+  });
+  const requestId = crypto.randomUUID();
+  const pending: Array<{ type: "data" | "end" | "error"; bytes?: ArrayBuffer | Uint8Array; message?: string }> = [];
+  let streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
+  const stop = bridge.onAiProviderStreamChunk((id, chunk) => {
+    if (id !== requestId) return;
+    if (!streamController) {
+      pending.push(chunk);
+      return;
+    }
+    if (chunk.type === "data") streamController.enqueue(toUint8Array(chunk.bytes));
+    else if (chunk.type === "end") streamController.close();
+    else streamController.error(new Error(chunk.message || "AI provider request failed."));
+  });
+  const abort = () => {
+    bridge.cancelAiProviderStream(requestId);
+    stop();
+  };
+  init?.signal?.addEventListener("abort", abort, { once: true });
+  try {
+    const opened = await bridge.openAiProviderStream(requestId, {
+      url,
+      method: init?.method,
+      headers,
+      body: typeof init?.body === "string" ? init.body : "",
+    });
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        streamController = controller;
+        for (const chunk of pending) {
+          if (chunk.type === "data") controller.enqueue(toUint8Array(chunk.bytes));
+          else if (chunk.type === "end") controller.close();
+          else controller.error(new Error(chunk.message || "AI provider request failed."));
+        }
+        pending.length = 0;
+      },
+      cancel() {
+        abort();
+      },
+    });
+    return new Response(body, { status: opened.status, headers: opened.headers });
+  } catch (error) {
+    stop();
+    throw error;
+  }
+};
+
+const desktopAiDirectEnabled = Boolean(
+  (typeof __EDGEEVER_DESKTOP_BUILD__ !== "undefined" && __EDGEEVER_DESKTOP_BUILD__)
+  || (typeof window !== "undefined" && window.edgeeverDesktop?.openAiProviderStream),
+);
+
 const client = createEdgeEverClient({
   baseUrl: getConfiguredDesktopApiBaseUrl,
   token: getDesktopSessionToken,
   beforeRequest,
   shouldAttachToken: (path) => path !== "/api/v1/auth/login",
   onUnauthorized: handleUnauthorized,
+  directAiGeneration: desktopAiDirectEnabled,
+  tryDirectAiGeneration: !desktopAiDirectEnabled,
+  providerFetch: desktopAiDirectEnabled ? desktopProviderFetch : undefined,
 });
 
 export const api = {
@@ -262,12 +334,4 @@ export const api = {
     desktopSessionRejected = false;
     return session;
   },
-
-  streamAiGeneration: (
-    payload: Parameters<typeof client.streamAiGeneration>[0],
-    options: Parameters<typeof client.streamAiGeneration>[1],
-  ) => client.streamAiGeneration(
-    { ...payload, stream: payload.stream ?? readAiStreamingPreference() },
-    options,
-  ),
 };

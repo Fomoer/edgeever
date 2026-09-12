@@ -84,6 +84,7 @@ import {
   parseDiagramDocument,
   resolveDiagramStructure,
   resolveDiagramTheme,
+  resolveFlowchartTheme,
   serializeDiagramDocument,
   architectureEdgeVisual,
   architectureIconOffset,
@@ -381,7 +382,7 @@ const ArchitectureComponentLibrary = ({
           if (draggingRef.current) event.preventDefault();
         }}
       >
-        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-2.5">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-card p-2.5">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -1356,7 +1357,9 @@ export const DiagramEditorPane = ({
   const editSessionRef = useRef<MemoEditSession | null>(null);
   const saveRef = useRef<() => void>(() => undefined);
   const document = parseDiagramDocument(memo.contentMarkdown);
-  const documentTheme = resolveDiagramTheme(document?.theme);
+  const documentTheme = document?.kind === "flowchart"
+    ? resolveFlowchartTheme(document.theme)
+    : resolveDiagramTheme(document?.theme);
   const documentStructure = resolveDiagramStructure(document?.structure);
   const [title, setTitle] = useState(memo.title ?? "");
   const [tagsText, setTagsText] = useState(memo.tags.join(", "));
@@ -2475,20 +2478,23 @@ export const DiagramEditorPane = ({
 
   const applyTheme = (nextTheme: DiagramTheme) => {
     const graph = graphRef.current;
-    if (nextTheme === theme) return;
-    themeRef.current = nextTheme;
-    setTheme(nextTheme);
+    const nextResolvedTheme = document?.kind === "flowchart"
+      ? resolveFlowchartTheme(nextTheme)
+      : resolveDiagramTheme(nextTheme);
+    if (nextResolvedTheme === theme) return;
+    themeRef.current = nextResolvedTheme;
+    setTheme(nextResolvedTheme);
     if (!graph || readOnly) return;
     applyGraphPalette(
       graph,
-      nextTheme,
+      nextResolvedTheme,
       document?.kind ?? "flowchart",
       appearanceRef.current,
       structureRef.current,
     );
     setDirty(savedSnapshotRef.current !== diagramEditorSnapshot(
       titleRef.current,
-      graphToDocument(graph, document?.kind ?? "flowchart", nextTheme, structureRef.current),
+      graphToDocument(graph, document?.kind ?? "flowchart", nextResolvedTheme, structureRef.current),
     ));
   };
 
@@ -2709,8 +2715,8 @@ export const DiagramEditorPane = ({
 
   return (
     <TooltipProvider>
-      <div className="flex h-full min-h-0 flex-col bg-white">
-      <header className="shrink-0 border-b border-slate-200 bg-white">
+      <div className="flex h-full min-h-0 flex-col bg-card">
+      <header className="shrink-0 border-b border-slate-200 bg-card">
         <div className={MEMO_EDITOR_TOP_ROW_CLASS_NAME}>
           <MemoEditorTopRowLeading
             desktopFocusMode={desktopFocusMode}
@@ -3004,13 +3010,13 @@ export const DiagramEditorPane = ({
             </div>
           )}
           {pendingArchitectureItem ? (
-            <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-md border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm" role="status">
+            <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-md border border-slate-200 bg-card/95 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm" role="status">
               {t("diagram.placeShapeHint", { shape: t(pendingArchitectureItem.labelKey) })}
             </div>
           ) : null}
           {flowQuickCreate ? (
             <div
-              className="absolute z-30 w-[330px] max-w-[calc(100%-24px)] rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+              className="absolute z-30 w-[330px] max-w-[calc(100%-24px)] rounded-xl border border-slate-200 bg-card p-2 shadow-xl"
               style={{ left: flowQuickCreate.left, top: flowQuickCreate.top }}
               role="dialog"
               aria-label={t("diagram.quickCreateTitle")}

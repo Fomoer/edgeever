@@ -71,6 +71,20 @@ describe("flowchart semantic paint", () => {
     expect(resolveFlowchartSurface("light", "paper").canvas).toBe("#F6F1E8");
     expect(resolveFlowchartSurface("light", "mint").terminator.stroke).toBe("#1A7A70");
   });
+
+  test("keeps flowchart-only schemes instead of collapsing them onto mind-map brand", async () => {
+    const { resolveDiagramTheme } = await import("./diagram.ts");
+    for (const theme of ["ink", "paper", "island", "tea", "sun", "wa", "rose"]) {
+      expect(resolveFlowchartTheme(theme)).toBe(theme);
+    }
+    expect(resolveDiagramTheme("ink")).toBe("brand");
+    expect(resolveDiagramTheme("paper")).toBe("brand");
+    expect(resolveDiagramTheme("island")).toBe("dune");
+    expect(resolveDiagramTheme("tea")).toBe("slate");
+    expect(resolveDiagramTheme("sun")).toBe("sunrise");
+    expect(resolveDiagramTheme("wa")).toBe("marine");
+    expect(resolveDiagramTheme("rose")).toBe("blossom");
+  });
 });
 
 describe("flowchart node presentation", () => {

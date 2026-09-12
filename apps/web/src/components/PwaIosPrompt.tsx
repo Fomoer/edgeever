@@ -70,7 +70,7 @@ export const PwaIosPrompt = () => {
 
             <button
               onClick={dismissIOSPrompt}
-              className="mt-3.5 w-full rounded-lg bg-emerald-600 py-2 text-center text-xs font-semibold text-white shadow-sm shadow-emerald-600/10 transition-all hover:bg-emerald-700 active:scale-[0.98]"
+              className="mt-3.5 w-full rounded-lg bg-emerald-500 py-2 text-center text-xs font-semibold text-white shadow-sm shadow-emerald-500/10 transition-all hover:bg-emerald-600 active:scale-[0.98]"
             >
               {t("pwa.iosPrompt.dismiss") || "我知道了"}
             </button>

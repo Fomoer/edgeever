@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ComponentRef, type ReactNode } from "
 import * as Clipboard from "expo-clipboard";
 import Constants from "expo-constants";
 import type { InstanceHealth } from "@edgeever/client";
-import { buildGitHubFeedbackUrl, type AuthUser } from "@edgeever/shared";
+import { buildGitHubFeedbackUrl, isClientAheadOfInstance, type AuthUser } from "@edgeever/shared";
 import { useQuery } from "@tanstack/react-query";
 import { BackHandler, Linking, Modal, Platform, ScrollView, Switch, View } from "react-native";
 import { Activity, ActivityIndicator, Check, ChevronDown, ChevronLeft, ChevronRight, Cloud, Copy, ExternalLink, Image as ImageIcon, Info, LogOut, MessageSquare, MonitorSmartphone, Moon, RefreshCw, ShieldCheck, SlidersHorizontal, Sun, UserRound } from "../components/icons";
@@ -53,6 +53,7 @@ type MobileSystemInfoGroup = {
   description: string;
   id: "cloud" | "client" | "connection";
   items: Array<{ label: string; value: string }>;
+  notice?: string;
   title: string;
 };
 
@@ -448,6 +449,12 @@ const MobileSystemInfoSection = ({ group }: { group: MobileSystemInfoGroup }) =>
         <Text style={styles.systemInfoSectionDescription}>{group.description}</Text>
       </View>
     </View>
+    {group.notice ? (
+      <View accessibilityLiveRegion="polite" style={styles.systemInfoNotice}>
+        <Info color="#94a3b8" size={14} />
+        <Text style={styles.systemInfoNoticeText}>{group.notice}</Text>
+      </View>
+    ) : null}
     <View style={styles.systemInfoRows}>
       {Array.from({ length: Math.ceil(group.items.length / 3) }, (_, rowIndex) => {
         const rowItems = group.items.slice(rowIndex * 3, rowIndex * 3 + 3);
@@ -479,6 +486,9 @@ const getMobileSystemInfoText = (localePreference: MobileLocaleMode) =>
     ? {
         build: "Build",
         client: "Client",
+        clientAheadOfInstanceCloudflare: "This client is newer than the connected cloud instance. You can wait for the daily automatic instance update, or run the Update deployed EdgeEver workflow.",
+        clientAheadOfInstanceDocker: "This client is newer than the connected cloud instance. You can wait for the daily automatic instance update, or run ./update.sh in the install directory (default ~/edgeever).",
+        clientAheadOfInstanceUnknown: "This client is newer than the connected cloud instance. You can wait for the daily automatic instance update, or update the instance manually.",
         clientDescription: "The EdgeEver app and runtime environment on this device.",
         clientSection: "Current client",
         cloudDescription: "Version and deployment environment for the connected instance.",
@@ -519,6 +529,9 @@ const getMobileSystemInfoText = (localePreference: MobileLocaleMode) =>
     : {
         build: "构建",
         client: "客户端",
+        clientAheadOfInstanceCloudflare: "当前客户端版本高于云端实例。可等待每天自动更新，或手动运行 Update deployed EdgeEver 工作流。",
+        clientAheadOfInstanceDocker: "当前客户端版本高于云端实例。可等待每天自动更新，或在安装目录执行 ./update.sh（默认 ~/edgeever）。",
+        clientAheadOfInstanceUnknown: "当前客户端版本高于云端实例。可等待每天自动更新，也可手动更新实例。",
         clientDescription: "这台设备上的 EdgeEver 应用与运行环境。",
         clientSection: "当前客户端",
         cloudDescription: "当前连接实例的版本与部署环境。",
@@ -556,6 +569,17 @@ const getMobileSystemInfoText = (localePreference: MobileLocaleMode) =>
         updateAvailableTitle: "发现新版本",
         version: "版本",
       };
+
+const getMobileClientAheadNotice = (
+  copy: ReturnType<typeof getMobileSystemInfoText>,
+  instanceVersion: string | null | undefined,
+  runtime: string | null | undefined,
+) => {
+  if (!isClientAheadOfInstance(MOBILE_APP_VERSION, instanceVersion)) return undefined;
+  if (runtime === "cloudflare-workers") return copy.clientAheadOfInstanceCloudflare;
+  if (runtime === "self-hosted-bun") return copy.clientAheadOfInstanceDocker;
+  return copy.clientAheadOfInstanceUnknown;
+};
 
 const getMobileDeploymentPlatform = (runtime: string | null | undefined, english: boolean) => {
   if (runtime === "cloudflare-workers") return "Cloudflare";
@@ -628,6 +652,7 @@ const getMobileSystemInfoGroups = (
     {
       description: copy.cloudDescription,
       id: "cloud",
+      notice: getMobileClientAheadNotice(copy, instance?.version, instance?.health.runtime),
       items: [
         { label: copy.instanceVersion, value: instance?.version ? `v${instance.version.replace(/^v/, "")}` : copy.unknown },
         { label: copy.instanceBuild, value: instance?.health.build || copy.unknown },

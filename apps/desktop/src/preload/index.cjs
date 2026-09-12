@@ -16,6 +16,13 @@ contextBridge.exposeInMainWorld("edgeeverDesktop", Object.freeze({
   clearSessionToken: () => ipcRenderer.invoke("desktop:clear-session-token"),
   publicNetworkFetch: (requestId, input) => ipcRenderer.invoke("desktop:public-network-fetch", requestId, input),
   cancelPublicNetworkFetch: async (requestId) => { ipcRenderer.send("desktop:cancel-public-network-fetch", requestId); },
+  openAiProviderStream: (requestId, input) => ipcRenderer.invoke("desktop:ai-direct-open", requestId, input),
+  cancelAiProviderStream: (requestId) => { ipcRenderer.send("desktop:ai-direct-cancel", requestId); },
+  onAiProviderStreamChunk: (callback) => {
+    const listener = (_event, requestId, chunk) => callback(requestId, chunk);
+    ipcRenderer.on("desktop:ai-direct-chunk", listener);
+    return () => ipcRenderer.removeListener("desktop:ai-direct-chunk", listener);
+  },
   clearLocalData: () => ipcRenderer.invoke("desktop:clear-local-data"),
   recordRendererError: (details) => ipcRenderer.invoke("desktop:record-renderer-error", details),
   openRendererIssue: (details) => ipcRenderer.invoke("desktop:open-renderer-issue", details),

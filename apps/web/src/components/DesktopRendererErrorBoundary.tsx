@@ -77,7 +77,7 @@ export class DesktopRendererErrorBoundary extends React.Component<{ children: Re
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <button
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               type="button"
               onClick={() => window.location.reload()}
             >

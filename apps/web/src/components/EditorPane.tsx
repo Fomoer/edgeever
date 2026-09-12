@@ -217,6 +217,7 @@ import { EditableImageGallery } from "./editor/ImageGallery";
 import { ImageViewer } from "./editor/ImageViewer";
 import { PdfAttachment } from "./editor/PdfAttachment";
 import { FileAttachment } from "./editor/FileAttachment";
+import { createInlineFieldExtension } from "./editor/InlineField";
 import { createPluginEmbedExtension } from "./editor/PluginEmbed";
 import { getEditorScrollProgress, restoreEditorScrollProgress } from "./editor/editor-mode-scroll";
 import { useEditorSaveStatus } from "./editor/useEditorSaveStatus";
@@ -1181,6 +1182,7 @@ const RichEditorPane = ({
   }, [queryClient, repository, resourceInsertionLimit, t]);
 
   const pluginEmbedExtension = useMemo(() => createPluginEmbedExtension(pluginHost), [pluginHost]);
+  const inlineFieldExtension = useMemo(() => createInlineFieldExtension(i18n.language), [i18n.language]);
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -1190,6 +1192,7 @@ const RichEditorPane = ({
       EdgeEverLink.configure({ openOnClick: false }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      inlineFieldExtension,
       EdgeEverCodeBlock.configure({ lowlight: codeBlockLowlight, defaultLanguage: "plaintext" }),
       MergeDivider,
       pluginEmbedExtension,

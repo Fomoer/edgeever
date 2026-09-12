@@ -211,6 +211,95 @@
         }
       }
     },
+    "/api/v1/ai/direct-target": {
+      "get": {
+        "summary": "Return the default model endpoint without credentials",
+        "description": "Used by the web app to probe whether the model host allows CORS before requesting a decrypted API key.",
+        "responses": {
+          "200": {
+            "description": "Provider, base URL, and model ID for the workspace default model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "provider": { "type": "string", "enum": ["openai-compatible", "anthropic", "google"] },
+                    "baseUrl": { "type": "string" },
+                    "modelId": { "type": "string" }
+                  },
+                  "required": ["provider", "baseUrl", "modelId"]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/ai/generate/prepare": {
+      "post": {
+        "summary": "Resolve a note AI action into a provider request for native, desktop, or CORS-capable web clients",
+        "description": "Returns the decrypted workspace model credentials and the resolved prompt. Native and desktop clients always use this, then call the model API directly. The web app uses it only after a CORS probe succeeds; otherwise it keeps using /api/v1/ai/generate so the API key stays off the page.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": { "type": "string", "enum": ["summarize", "extract-key-points", "extract-todos", "rewrite-proofread", "translate", "improve-writing", "fix-spelling-grammar", "make-shorter", "make-longer", "simplify-language", "change-tone", "continue-writing", "custom"] },
+                  "promptId": { "type": "string", "minLength": 1, "maxLength": 200 },
+                  "locale": { "type": "string", "maxLength": 35 },
+                  "title": { "type": "string", "maxLength": 160 },
+                  "contentMarkdown": { "type": "string", "maxLength": 300000 },
+                  "stream": { "type": "boolean", "default": false },
+                  "targetLanguage": { "type": "string", "enum": ["en", "zh-CN", "zh-TW", "ja", "ko", "es", "fr", "de", "pt"] },
+                  "tone": { "type": "string", "enum": ["professional", "friendly", "casual", "direct"] },
+                  "instruction": { "type": "string", "minLength": 1, "maxLength": 2000 }
+                },
+                "required": ["action", "title", "contentMarkdown"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prepared provider request, including the decrypted API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "provider": { "type": "string", "enum": ["openai-compatible", "anthropic", "google"] },
+                    "baseUrl": { "type": "string" },
+                    "apiKey": { "type": "string" },
+                    "modelId": { "type": "string" },
+                    "system": { "type": "string" },
+                    "prompt": { "type": "string" },
+                    "maxOutputTokens": { "type": "integer" },
+                    "resultBoundary": {
+                      "type": "object",
+                      "properties": {
+                        "start": { "type": "string" },
+                        "end": { "type": "string" }
+                      },
+                      "required": ["start", "end"]
+                    }
+                  },
+                  "required": ["provider", "baseUrl", "apiKey", "modelId", "system", "prompt", "maxOutputTokens", "resultBoundary"]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/api/v1/ai/generate": {
       "post": {
         "summary": "Run a note AI action using the current workspace model",

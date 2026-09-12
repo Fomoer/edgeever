@@ -26,11 +26,12 @@ export type DiagramNodeShape =
   | "boundary";
 export type DiagramEdgeKind = "dependency" | "request" | "async" | "data";
 export const DIAGRAM_SELECTABLE_THEMES = [
-  "brand", "sun", "wa", "island", "rose", "mint", "cosmos", "tea", "naive", "macaron",
+  "brand", "cosmos", "dune", "slate", "prism", "sunrise", "marine", "blossom", "mint", "macaron",
 ] as const;
 export const DIAGRAM_THEMES = [
   "brand", "ocean", "ink", "classic", "sky", "sunset", "violet", "rose", "sand", "slate", "aurora", "mono",
   "sun", "wa", "island", "mint", "cosmos", "tea", "naive", "macaron", "paper",
+  "dune", "prism", "sunrise", "marine", "blossom",
 ] as const;
 export type DiagramTheme = (typeof DIAGRAM_THEMES)[number];
 export const DIAGRAM_SELECTABLE_STRUCTURES = [
@@ -57,15 +58,24 @@ export type DiagramStructure = (typeof DIAGRAM_STRUCTURES)[number];
 const THEME_ALIASES: Partial<Record<DiagramTheme, typeof DIAGRAM_SELECTABLE_THEMES[number]>> = {
   ocean: "brand",
   ink: "brand",
-  classic: "sun",
-  sky: "cosmos",
-  sunset: "sun",
-  violet: "rose",
-  sand: "island",
-  slate: "cosmos",
-  aurora: "mint",
-  mono: "cosmos",
   paper: "brand",
+  classic: "sunrise",
+  sunset: "sunrise",
+  sun: "sunrise",
+  wa: "marine",
+  island: "dune",
+  sand: "dune",
+  tea: "slate",
+  mono: "slate",
+  slate: "slate",
+  sky: "cosmos",
+  cosmos: "cosmos",
+  rose: "blossom",
+  violet: "blossom",
+  aurora: "mint",
+  naive: "prism",
+  mint: "mint",
+  macaron: "macaron",
 };
 
 export const resolveDiagramTheme = (theme?: DiagramTheme): typeof DIAGRAM_SELECTABLE_THEMES[number] => {

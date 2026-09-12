@@ -9,25 +9,117 @@ export type DiagramColorStrip = {
   colors: readonly [string, string, string, string, string, string];
 };
 
-export const DIAGRAM_COLOR_STRIPS: Record<
-  "brand" | "mint" | "wa" | "island" | "rose" | "sun" | "cosmos" | "tea" | "macaron" | "naive",
-  DiagramColorStrip
-> = {
-  brand: { id: "brand", group: "classic", colors: ["#E7F6EF", "#9FDBC4", "#16A06E", "#12845B", "#0F5C42", "#173B2E"] },
-  sun: { id: "sun", group: "vivid", colors: ["#F7E27A", "#C6F07A", "#FFFFFF", "#C084FC", "#60A5FA", "#1F2937"] },
-  wa: { id: "wa", group: "vivid", colors: ["#FFFFFF", "#FFB4A2", "#FF8A4C", "#7DD3FC", "#3B82F6", "#1E3A8A"] },
-  island: { id: "island", group: "classic", colors: ["#F3D5C4", "#D4A276", "#B08968", "#A3A882", "#7D8B69", "#4A5D4E"] },
-  rose: { id: "rose", group: "vivid", colors: ["#FDE8EF", "#F8C1D4", "#F48FB1", "#EC407A", "#C2185B", "#7A1040"] },
-  mint: { id: "mint", group: "vivid", colors: ["#FFFFFF", "#A5F3FC", "#5EEAD4", "#2DD4BF", "#0F9B8E", "#115E59"] },
-  cosmos: { id: "cosmos", group: "classic", colors: ["#D6DCE5", "#8BBAD4", "#4D86B0", "#1E4E7A", "#163A5F", "#0B1F33"] },
-  tea: { id: "tea", group: "classic", colors: ["#D8E2C8", "#B4C49A", "#7A9A58", "#4F7A3C", "#2F5D32", "#1A3C24"] },
-  naive: { id: "naive", group: "vivid", colors: ["#F8C8D4", "#E45A7C", "#8BB4F0", "#4F6FCF", "#F5EED8", "#2D2A32"] },
-  macaron: { id: "macaron", group: "vivid", colors: ["#D4B896", "#F5B89A", "#B8D4C8", "#F0EDE4", "#F2E39A", "#4A4A4A"] },
+type DiagramThemeDefinition = {
+  id: Exclude<ReturnType<typeof resolveDiagramTheme>, never>;
+  group: "vivid" | "classic";
+  colors: readonly [string, string, string, string, string, string];
+  lightCanvas: string;
+  darkCanvas: string;
+  accent: string;
 };
 
+export const DIAGRAM_THEME_DEFINITIONS: Record<
+  "brand" | "cosmos" | "dune" | "slate" | "prism" | "sunrise" | "marine" | "blossom" | "mint" | "macaron",
+  DiagramThemeDefinition
+> = {
+  brand: {
+    id: "brand",
+    group: "classic",
+    colors: ["#16A06E", "#059669", "#0D9488", "#10B981", "#047857", "#065F46"],
+    lightCanvas: "#F8FAF9",
+    darkCanvas: "#101311",
+    accent: "#16A06E",
+  },
+  cosmos: {
+    id: "cosmos",
+    group: "classic",
+    colors: ["#2563EB", "#0284C7", "#4F46E5", "#0D9488", "#3B82F6", "#1D4ED8"],
+    lightCanvas: "#F8FAFC",
+    darkCanvas: "#0F1318",
+    accent: "#2563EB",
+  },
+  dune: {
+    id: "dune",
+    group: "classic",
+    colors: ["#C2410C", "#D97706", "#B45309", "#A16207", "#78350F", "#9A3412"],
+    lightCanvas: "#FAF8F5",
+    darkCanvas: "#151311",
+    accent: "#B45309",
+  },
+  slate: {
+    id: "slate",
+    group: "classic",
+    colors: ["#475569", "#52525B", "#4B5563", "#334155", "#64748B", "#1E293B"],
+    lightCanvas: "#F8F9FA",
+    darkCanvas: "#121416",
+    accent: "#475569",
+  },
+  prism: {
+    id: "prism",
+    group: "vivid",
+    colors: ["#E11D48", "#EA580C", "#D97706", "#059669", "#2563EB", "#7C3AED"],
+    lightCanvas: "#FAFAFA",
+    darkCanvas: "#111215",
+    accent: "#6366F1",
+  },
+  sunrise: {
+    id: "sunrise",
+    group: "vivid",
+    colors: ["#E11D48", "#F97316", "#F59E0B", "#D97706", "#DC2626", "#EA580C"],
+    lightCanvas: "#FFFDF7",
+    darkCanvas: "#16130E",
+    accent: "#EA580C",
+  },
+  marine: {
+    id: "marine",
+    group: "vivid",
+    colors: ["#0284C7", "#06B6D4", "#0D9488", "#2563EB", "#0891B2", "#1D4ED8"],
+    lightCanvas: "#F5FAFD",
+    darkCanvas: "#0C1318",
+    accent: "#0284C7",
+  },
+  blossom: {
+    id: "blossom",
+    group: "vivid",
+    colors: ["#DB2777", "#C026D3", "#9333EA", "#E11D48", "#BE185D", "#7C3AED"],
+    lightCanvas: "#FDF8FA",
+    darkCanvas: "#160F14",
+    accent: "#DB2777",
+  },
+  mint: {
+    id: "mint",
+    group: "vivid",
+    colors: ["#0D9488", "#059669", "#10B981", "#0891B2", "#16A34A", "#047857"],
+    lightCanvas: "#F5FAF8",
+    darkCanvas: "#0D1512",
+    accent: "#0D9488",
+  },
+  macaron: {
+    id: "macaron",
+    group: "vivid",
+    colors: ["#EC4899", "#FB923C", "#EAB308", "#10B981", "#38BDF8", "#8B5CF6"],
+    lightCanvas: "#FAF9F8",
+    darkCanvas: "#131316",
+    accent: "#EC4899",
+  },
+};
+
+export const DIAGRAM_COLOR_STRIPS: Record<
+  "brand" | "cosmos" | "dune" | "slate" | "prism" | "sunrise" | "marine" | "blossom" | "mint" | "macaron",
+  DiagramColorStrip
+> = Object.fromEntries(
+  Object.entries(DIAGRAM_THEME_DEFINITIONS).map(([id, def]) => [
+    id,
+    { id: def.id, group: def.group, colors: def.colors },
+  ]),
+) as Record<
+  "brand" | "cosmos" | "dune" | "slate" | "prism" | "sunrise" | "marine" | "blossom" | "mint" | "macaron",
+  DiagramColorStrip
+>;
+
 export const DIAGRAM_THEME_GROUPS = {
-  vivid: ["sun", "wa", "rose", "mint", "naive", "macaron"],
-  classic: ["brand", "island", "tea", "cosmos"],
+  vivid: ["prism", "sunrise", "marine", "blossom", "mint", "macaron"],
+  classic: ["brand", "cosmos", "dune", "slate"],
 } as const;
 
 const hexToRgb = (hex: string) => {
@@ -57,33 +149,39 @@ const luminance = (hex: string) => {
   return r * 0.2126 + g * 0.7152 + b * 0.0722;
 };
 
-const readableText = (fill: string) => (luminance(fill) > 0.32 ? "#1C1917" : "#FFFCF8");
+const readableText = (fill: string) => (luminance(fill) > 0.35 ? "#1C1917" : "#FFFCF8");
 
 export const diagramThemeSwatches = (theme?: DiagramTheme) =>
   DIAGRAM_COLOR_STRIPS[resolveDiagramTheme(theme)].colors;
 
 export const diagramThemeUsesBranchColors = (theme?: DiagramTheme) => resolveDiagramTheme(theme) !== "brand";
 
+const resolveBranchEdge = (color: string, appearance: DiagramAppearance) => {
+  const lum = luminance(color);
+  if (appearance === "dark") {
+    return lum < 0.22 ? mix(color, "#FFFFFF", Math.max(0.35, (0.30 - lum) * 1.6)) : color;
+  }
+  return lum > 0.26 ? mix(color, "#18181B", Math.max(0.24, (lum - 0.20) * 0.9)) : color;
+};
+
 export const buildDiagramBranchTints = (theme: DiagramTheme | undefined, appearance: DiagramAppearance) => {
   const colors = diagramThemeSwatches(theme);
   return colors.map((color) => {
-    const fill = appearance === "dark" ? mix(color, "#101418", 0.55) : mix(color, "#FFFFFF", luminance(color) > 0.82 ? 0.08 : 0.72);
+    const edge = resolveBranchEdge(color, appearance);
+    const fill = appearance === "dark" ? mix(color, "#121518", 0.72) : mix(color, "#FFFFFF", 0.84);
     return {
       fill,
-      stroke: appearance === "dark" ? mix(color, "#FFFFFF", 0.18) : mix(color, "#1C1917", 0.22),
+      stroke: appearance === "dark" ? mix(edge, "#FFFFFF", 0.15) : mix(edge, "#1C1917", 0.12),
       text: readableText(fill),
-      edge: color === "#FFFFFF" ? colors[2] : color,
+      edge,
     };
   });
 };
 
 export const buildDiagramPalette = (theme: DiagramTheme | undefined, appearance: DiagramAppearance) => {
   const resolved = resolveDiagramTheme(theme);
-  const strip = DIAGRAM_COLOR_STRIPS[resolved];
-  const colors = strip.colors;
-  const accent = colors.find((color) => luminance(color) < 0.55 && luminance(color) > 0.08) ?? colors[2];
-  const deepest = colors[colors.length - 1];
-  const lightest = colors[0];
+  const def = DIAGRAM_THEME_DEFINITIONS[resolved];
+  const accent = def.accent;
   if (resolved === "brand") {
     if (appearance === "dark") {
       return {
@@ -111,27 +209,29 @@ export const buildDiagramPalette = (theme: DiagramTheme | undefined, appearance:
     };
   }
   if (appearance === "dark") {
+    const edge = resolveBranchEdge(accent, "dark");
     return {
-      topicFill: mix(deepest, "#0B0D0C", 0.2),
-      topicText: "#F8FAFC",
-      nodeFill: mix(deepest, "#101418", 0.45),
+      topicFill: accent,
+      topicText: readableText(accent),
+      nodeFill: mix(accent, "#101418", 0.78),
       nodeText: "#E8EEF2",
-      nodeStroke: mix(accent, "#101418", 0.55),
-      topicStroke: mix(accent, "#FFFFFF", 0.28),
-      mindMapEdge: accent,
-      flowEdge: mix(accent, "#FFFFFF", 0.12),
-      canvas: "#101311",
+      nodeStroke: mix(edge, "#FFFFFF", 0.15),
+      topicStroke: mix(accent, "#FFFFFF", 0.25),
+      mindMapEdge: edge,
+      flowEdge: mix(accent, "#FFFFFF", 0.15),
+      canvas: def.darkCanvas,
     };
   }
+  const edge = resolveBranchEdge(accent, "light");
   return {
     topicFill: accent,
     topicText: readableText(accent),
-    nodeFill: mix(lightest, "#FFFFFF", luminance(lightest) > 0.9 ? 0.2 : 0.55),
-    nodeText: mix(deepest, "#1C1917", 0.15),
-    nodeStroke: mix(accent, "#FFFFFF", 0.62),
-    topicStroke: mix(accent, "#1C1917", 0.18),
-    mindMapEdge: accent,
-    flowEdge: mix(accent, "#1C1917", 0.12),
-    canvas: mix(lightest, "#FFFFFF", 0.72),
+    nodeFill: mix(accent, "#FFFFFF", 0.88),
+    nodeText: mix(def.colors[def.colors.length - 1], "#1C1917", 0.35),
+    nodeStroke: mix(edge, "#FFFFFF", 0.50),
+    topicStroke: mix(accent, "#1C1917", 0.15),
+    mindMapEdge: edge,
+    flowEdge: mix(accent, "#1C1917", 0.15),
+    canvas: def.lightCanvas,
   };
 };

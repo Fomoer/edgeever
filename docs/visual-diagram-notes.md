@@ -16,7 +16,9 @@ This abstraction provides three immediate benefits:
 - Visual, layout, or rendering-library changes do not require migrating the note's meaning.
 - Data can be validated before rendering, rejecting dangling edges, invalid containment, and unsupported node types.
 
-The original mind-map and flowchart notes already use IR v1. Architecture diagrams use IR v2, adding semantic components, system boundaries, connection types, and bidirectional relationships.
+The persisted document uses `schemaVersion` to distinguish formats: `1` for mind maps and flowcharts, `2` for architecture diagrams, which add semantic components, system boundaries, connection types, and bidirectional relationships. The Markdown envelope comment is always `edgeever-diagram-v1` and does not change with `schemaVersion`.
+
+MCP and the compile path use a separate semantic graph without coordinates. The server then generates sizes, coordinates, and edge identities into the persisted document. The agent protocol does not carry X6 or canvas state.
 
 ## IR and rendering-engine decoupling
 
@@ -35,13 +37,13 @@ The IR should contain stable business semantics and necessary layout facts, such
 
 ## Current data model
 
-A node contains `id`, `label`, `x`, `y`, `width`, `height`, and `shape`; a node inside a system boundary also has `parentId`. An edge contains `source` and `target`, with optional `label`, `kind`, and `bidirectional` fields.
+The persisted IR is a `DiagramDocument` with `schemaVersion`, `kind` (`mind-map` / `flowchart` / `architecture`), optional `theme`, and, for mind maps, optional `structure`. A node contains `id`, `label`, `x`, `y`, `width`, `height`, and `shape`; optional `parentId` (mind-map topic hierarchy, or containment inside an architecture boundary) and `resourceIcon` (architecture resource appearance). An edge has required `id`, `source`, and `target`, with optional `label`, `kind`, and `bidirectional` fields.
 
 A diagram is stored as portable Markdown. Its body contains a Mermaid fallback, while a trailing `edgeever-diagram-v1` comment carries the Base64URL-encoded JSON IR. The IR is the source of truth for lossless editing. The Mermaid fence is a projection, not the live canvas: first-party clients, including public share, parse the IR and draw with AntV X6. The fence remains so the note stays readable as ordinary Markdown outside EdgeEver, and when the IR comment fails to parse.
 
 User-authored ` ```mermaid ` code blocks in ordinary rich-text notes are a separate product feature. They do not use this IR and are not visual-diagram notes.
 
-IR parsing and validation live in [`packages/shared/src/diagram.ts`](../packages/shared/src/diagram.ts), so Web, Android, and iOS do not maintain competing interpretations of the format.
+Parsing and validation live in [`packages/shared/src/diagram.ts`](../packages/shared/src/diagram.ts). Semantic-graph compilation and automatic layout live in [`packages/shared/src/diagram-layout.ts`](../packages/shared/src/diagram-layout.ts). The read-only X6 adapter is [`packages/shared/src/diagram-view.ts`](../packages/shared/src/diagram-view.ts) (`diagramDocumentToX6Cells`), reused by Android, iOS, and public share. The Web / desktop editor consumes the same IR but has its own interactive node mapping.
 
 ## Why AntV X6
 
@@ -49,7 +51,7 @@ Visual diagram notes need an editable canvas: selection, dragging, zooming, conn
 
 The IR answers “what does this diagram mean?”; the X6 adapter answers “how do we draw it and let the user edit it?” X6 internals, coordinate conventions, and view instances therefore stay out of the persisted format. Adopting a second engine for one diagram type would also import another state manager, coordinate system, interaction model, and data format, leaving two canvases to maintain.
 
-Android and iOS read-only viewers reuse the same X6 adapter (`diagramDocumentToX6Cells` plus a non-interactive `Graph`). First-party canvases no longer split between X6 on Web and Mermaid on mobile. Mermaid remains the portable envelope, the renderer for embedded rich-text diagrams, and the fallback when IR parsing fails.
+Android and iOS read-only viewers, and public share, reuse the same X6 adapter (`diagramDocumentToX6Cells` plus a non-interactive `Graph`). The Web / desktop editor uses the same IR and engine with an interactive mapping of its own. First-party canvases no longer split between X6 on Web and Mermaid on mobile. Mermaid remains the portable envelope, the renderer for embedded rich-text diagrams, and the fallback when IR parsing fails.
 
 This does not mean rendering every node as the same X6 rectangle. X6 is only the underlying engine; icons, SVG markup, shapes, ports, colors, boundaries, and connection semantics are customized by EdgeEver per diagram type.
 
@@ -73,32 +75,35 @@ An early mobile viewer used the Mermaid fence because AntV X6 was not yet wrappe
 - Diagram semantics belong to the IR; the rendering engine is not the data source.
 - First-party canvases render visual diagram notes from IR through X6. Embedded ` ```mermaid ` blocks in ordinary rich-text notes stay on Mermaid. The persisted Mermaid fence on a visual diagram note is only a portable envelope and a degraded fallback, not the live canvas.
 - Architecture components must communicate their purpose visually; names are supplementary.
-- A system boundary is a containment relationship, not a normal connectable business node.
+- `parentId` is containment: topic hierarchy on a mind map, a system boundary on an architecture diagram. A system boundary is not a normal connectable business node.
+- `theme` and a mind map's `structure` are presentation choices on the document, not engine-private state.
 - Web and native apps consume the same persisted data rather than platform-specific diagram copies.
-- New versions should keep old diagrams readable, with format evolution managed explicitly through `schemaVersion`.
+- New versions should keep old diagrams readable. Format evolution is managed through `schemaVersion`; the envelope comment stays `edgeever-diagram-v1`.
 - Native apps remain read-only until a touch editor can safely read and write the same IR.
 
 ## MCP and AI-generated diagrams
 
-For MCP and AI, the IR is a positive capability and the foundation of a stable tool protocol. An AI can work with semantic IR instead of producing X6 internals, SVG, or an entire Mermaid document. It can therefore perform a local request such as “add a Redis cache between the API and database” while preserving the user's other nodes and layout decisions.
+For MCP and AI, the semantic graph is the stable tool protocol. An AI can work with it instead of producing X6 internals, SVG, or an entire Mermaid document. It can therefore perform a local request such as “add a Redis cache between the API and database” while preserving the user's other nodes and layout decisions.
 
-The `create_diagram_memo` MCP tool accepts this semantic creation IR: node identities, labels, semantic types, containment, and connections. EdgeEver generates edge identities, node dimensions, coordinates, deterministic layout, and architecture boundary geometry before compiling the result into the persisted `DiagramDocument`. An optional layout direction is a hint rather than authored geometry. Tool results likewise return only the semantic graph instead of the encoded persistence payload.
+There are three diagram MCP tools:
 
-`get_diagram` returns only the semantic graph and memo revision by default, without coordinates or dimensions; node geometry is included only when `includeLayout` is explicitly set. `update_diagram` accepts incremental operations that add, update, or remove nodes and edges, uses `expectedRevision` to prevent concurrent overwrites, supports `dryRun` previews, and preserves unaffected authored layout by default. The generic `update_memo` tool cannot replace diagram content, preventing callers from bypassing diagram validation.
+- `create_diagram_memo` accepts a semantic graph: node identities, labels, types, containment, and connections, plus optional `theme`, `structure`, and `layout.direction`. The server generates edge identities, node dimensions, coordinates, deterministic layout, and architecture boundary geometry, then compiles a persisted `DiagramDocument`. Layout direction is a compile hint and is not stored on the document. Results return the semantic graph, not the encoded persistence payload.
+- `get_diagram` returns only the semantic graph and memo revision by default, without coordinates or dimensions; node geometry is included only when `includeLayout` is true.
+- `update_diagram` accepts incremental operations on that one tool: `add_node`, `update_node`, `remove_node`, `add_edge`, `update_edge`, and `remove_edge`. It uses `expectedRevision` to prevent concurrent overwrites and supports `dryRun` previews. The default `reflow=preserve` keeps unaffected authored layout; `reflow=all` is only for an explicit full relayout. Moving a node into a boundary or changing mind-map hierarchy is `update_node` with `parentId`, not a separate MCP tool.
 
-MCP exposes small, explicit operations for reading a diagram, adding or updating a node, connecting components, moving a node into a boundary, validating changes, and applying layout instead of a high-risk `replace_diagram_ir`. The recommended flow is:
+The generic `update_memo` tool cannot replace diagram content. There is no `replace_diagram_ir`, and no standalone validate or apply-layout tool: validation happens when the server applies operations, and layout is controlled by `reflow`.
+
+The recommended flow is:
 
 ```text
-Read IR
+get_diagram
   → AI produces incremental operations
-  → server validates types, references, and containment
-  → produce a change preview
-  → user confirms
-  → apply operations and deterministic layout
-  → save a new revision
+  → optional dryRun preview
+  → update_diagram (preserve layout by default)
+  → server validates types, references, and containment, then writes a new revision
 ```
 
-To reduce model context and accidental changes, the IR can evolve toward separate semantic, layout, and presentation concerns. AI should modify semantics by default, with deterministic layout algorithms handling coordinates. Layout or presentation should change only when the user explicitly requests it.
+AI should modify semantics by default, with deterministic layout handling coordinates. Use `reflow=all` or change `theme` / `structure` only when the user explicitly wants a full relayout or a presentation change.
 
 An IR can still become a liability if it mirrors X6 too closely, lacks useful semantics, changes versions frequently, or lets AI overwrite a whole diagram without validation. The schema should therefore remain small, stable, versioned, validated, and friendly to incremental operations.
 
@@ -106,4 +111,4 @@ An IR can still become a liability if it mirrors X6 too closely, lacks useful se
 
 Full native editing should continue to use the same IR and separately address touch selection, dragging, connections, zooming, keyboard avoidance, and large-diagram performance. Whether that editor uses X6 in a WebView or a native canvas should be decided through prototypes and performance testing without changing the persisted format.
 
-HTML / print / WeChat copy of a visual diagram note still go through the generic rich-text pipeline when that pipeline is used, because those actions currently snapshot TipTap HTML rather than the X6 canvas. Align those exports with a read-only X6 snapshot before considering any change to the Markdown envelope.
+HTML / print / WeChat copy of a visual diagram note still go through the generic rich-text pipeline when that pipeline is used, because those actions currently snapshot TipTap HTML rather than the X6 canvas. Native share-as-image has the same gap. Align those exports with a read-only X6 snapshot before considering any change to the Markdown envelope. PNG / SVG export from the diagram editor already comes from X6.

@@ -14,6 +14,7 @@ import { createExcerpt, docToMarkdown, docToText, emptyDoc, getImageReferrerPoli
 import { createEdgeEverMathematics } from "@edgeever/shared/mathematics";
 import { getMobileEditorInputAttributes, getMobileEditorPlaceholder } from "@edgeever/shared/mobile-editor";
 import { EdgeEverLink } from "@edgeever/shared/editor-link";
+import { createInlineFieldExtension } from "@/components/editor/InlineField";
 import {
   MobileEditorFallback,
   MobileEditorHeader,
@@ -195,6 +196,7 @@ export const MobileStandaloneTiptapEditor = ({
     };
   }, [memoId, readLocalDraft]);
 
+  const inlineFieldExtension = useMemo(() => createInlineFieldExtension(locale), [locale]);
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ link: false }),
@@ -203,6 +205,7 @@ export const MobileStandaloneTiptapEditor = ({
       FileAttachment,
       TaskList,
       TaskItem.configure({ nested: true }),
+      inlineFieldExtension,
       MergeDivider,
       PluginEmbed,
       ...createEdgeEverMathematics(),

@@ -166,7 +166,7 @@ describe("diagram editor canvas surface", () => {
   });
 
   test("uses restrained rounded edges and fits the complete diagram without clipping", () => {
-    expect(toolbarSource).toContain("DIAGRAM_THEME_GROUPS");
+    expect(toolbarSource).toContain("DIAGRAM_SELECTABLE_THEMES");
     expect(toolbarSource).toContain("DIAGRAM_STRUCTURE_GROUPS");
     expect(toolbarSource).toContain("diagramThemeSwatches");
     expect(toolbarSource).toContain("<StructureThumb");
@@ -176,7 +176,7 @@ describe("diagram editor canvas surface", () => {
     expect(toolbarSource).toContain('structure === "org"');
     expect(toolbarSource).toContain('structure === "timeline"');
     expect(toolbarSource).toContain('structure === "fishbone"');
-    expect(toolbarSource).toContain("diagram.themeGroupVivid");
+    expect(toolbarSource).not.toContain("diagram.themeGroupVivid");
     expect(toolbarSource).toContain('<TooltipContent>{t("diagram.theme")}</TooltipContent>');
     expect(toolbarSource).not.toContain('value="ocean"');
     expect(toolbarSource).not.toContain('value="ink"');
@@ -189,9 +189,13 @@ describe("diagram editor canvas surface", () => {
     expect(source).toContain("flowchartEdgeIsStraight");
     expect(source).toContain('showTheme={document.kind !== "architecture"}');
     expect(source).toContain('themeCatalog={document.kind === "flowchart" ? "flowchart" : "mind-map"}');
+    expect(source).toContain('document?.kind === "flowchart"');
+    expect(source).toContain("resolveFlowchartTheme(document.theme)");
+    expect(source).toContain("resolveDiagramTheme(document?.theme)");
+    expect(source).not.toContain("const documentTheme = resolveDiagramTheme(document?.theme)");
     expect(toolbarSource).toContain("showTheme = true");
     expect(toolbarSource).toContain("themeCatalog = \"mind-map\"");
-    expect(toolbarSource).toContain("FLOWCHART_THEME_GROUPS");
+    expect(toolbarSource).toContain("FLOWCHART_SELECTABLE_THEMES");
     expect(toolbarSource).toContain("flowchartThemeSwatches");
     expect(source).toContain("maxScale: policy.maxScale");
     expect(source).not.toContain("minScale: policy.minScale");
@@ -415,6 +419,13 @@ describe("diagram editor canvas surface", () => {
     expect(source).toContain("MEMO_EDITOR_TOP_ROW_CLASS_NAME");
     expect(source).toContain("MEMO_EDITOR_TITLE_REGION_CLASS_NAME");
     expect(toolbarSource).toContain("<MemoEditorToolbarRow");
+  });
+
+  test("paints diagram chrome from theme tokens instead of literal white", () => {
+    expect(source).toContain('className="flex h-full min-h-0 flex-col bg-card"');
+    expect(source).toContain('className="shrink-0 border-b border-slate-200 bg-card"');
+    expect(source).not.toContain("flex-col bg-white");
+    expect(source).not.toContain("border-slate-200 bg-white");
   });
 
   test("repaints the graph when the application appearance changes", () => {

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DeploymentMetadata } from "@edgeever/shared/deployment-metadata";
-import { Activity, CircleCheck, Cloud, Copy, ExternalLink, LoaderCircle, MonitorSmartphone, RefreshCw, RotateCcw } from "lucide-react";
+import { Activity, CircleCheck, Cloud, Copy, ExternalLink, Info, LoaderCircle, MonitorSmartphone, RefreshCw, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useDeployedUpdateNotice } from "@/hooks/useDeployedUpdateNotice";
@@ -16,7 +16,7 @@ import {
   type ClientSyncDiagnostics,
 } from "@/lib/system-diagnostics";
 import { cn } from "@/lib/utils";
-import { getReleaseTagForVersion } from "@/lib/version-check";
+import { getReleaseTagForVersion, isClientAheadOfInstance } from "@/lib/version-check";
 import { copyTextToClipboard } from "./settings-utils";
 
 export type SystemInfoItem = {
@@ -337,6 +337,13 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
     window.setTimeout(() => setCopied(false), 1600);
   };
 
+  const clientAheadOfInstance = isClientAheadOfInstance(
+    clientRuntimeQuery.data?.appVersion ?? __EDGEEVER_APP_VERSION__,
+    release?.version,
+  );
+  const clientAheadHint = t(
+    `systemInfo.clientAheadOfInstanceByPlatform.${resolveDeploymentPlatform(healthQuery.data?.health?.runtime)}`,
+  );
   const desktopUpdateState = desktopUpdateStatusQuery.data?.state ?? "idle";
   const desktopAutoUpdateSupported = clientRuntimeQuery.data?.autoUpdateSupported !== false;
   const desktopUpdateBusy = desktopUpdateCheckMutation.isPending || desktopUpdateInstallMutation.isPending;
@@ -430,7 +437,12 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
                 </Button>
               ) : null}
             </div>
-            {isCloud && active && release ? (
+            {isCloud && active && clientAheadOfInstance ? (
+              <p className="flex items-start gap-1.5 px-0.5 text-[11px] leading-4 text-slate-500" role="status">
+                <Info className="mt-0.5 h-3 w-3 shrink-0 text-slate-400" />
+                <span>{clientAheadHint}</span>
+              </p>
+            ) : isCloud && active && release ? (
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200/80 bg-emerald-50/70 px-3 py-1.5 text-slate-800" role="status">
                 <CircleCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                 <div className="min-w-0 flex-1 text-xs font-medium text-emerald-950">

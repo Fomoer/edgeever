@@ -95,7 +95,7 @@
     },
     "apps/desktop": {
       "name": "@edgeever/desktop",
-      "version": "1.59.0",
+      "version": "1.67.0",
       "dependencies": {
         "@edgeever/public-network": "workspace:*",
         "croner": "^10.0.1",
@@ -217,6 +217,7 @@
         "@edgeever/client": "workspace:*",
         "@floating-ui/react-dom": "^2.1.8",
         "@fontsource-variable/noto-sans-sc": "^5.2.8",
+        "@lezer/highlight": "^1.2.3",
         "@tiptap/extension-code-block-lowlight": "3.31.0",
         "@tiptap/pm": "3.31.0",
         "@uiw/codemirror-themes-all": "^4.25.11",

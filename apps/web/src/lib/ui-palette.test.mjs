@@ -7,10 +7,13 @@ const globals = readFileSync(new URL("../styles/globals.css", import.meta.url), 
 describe("application color system", () => {
   test("uses the same restrained brand green throughout the application", () => {
     const mobileEditor = readFileSync(new URL("../styles/mobile-markdown-editor.css", import.meta.url), "utf8");
+    const button = readFileSync(new URL("../components/ui/button.tsx", import.meta.url), "utf8");
 
     expect(globals).toContain("--brand-green: #16a06e;");
+    expect(globals).toContain("--brand-green-500-rgb: 22 160 110;");
     expect(globals).not.toContain("--brand-green: #00a82d;");
     expect(mobileEditor).toContain("color: #16a06e;");
+    expect(button).toContain('solid: "bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-500"');
     expect(contrastRatio("#11694a", "#f0f8f4")).toBeGreaterThanOrEqual(4.5);
   });
 

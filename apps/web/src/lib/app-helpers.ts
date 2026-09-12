@@ -669,6 +669,35 @@ export const getNotebookMoveOptions = (notebooks: Notebook[]) => {
   return options;
 };
 
+export const resolveSelectionMoveTargetNotebookId = (
+  currentTargetId: string,
+  optionIds: string[],
+  selectedNotebookId?: string | null
+) => {
+  if (optionIds.includes(currentTargetId)) {
+    return currentTargetId;
+  }
+
+  if (selectedNotebookId && optionIds.includes(selectedNotebookId)) {
+    return selectedNotebookId;
+  }
+
+  return optionIds[0] ?? "";
+};
+
+export const getMemoIdsNeedingMove = (
+  memos: Array<{ id: string; notebookId: string }>,
+  memoIds: string[],
+  targetNotebookId: string
+) => {
+  if (!targetNotebookId) {
+    return [];
+  }
+
+  const memoNotebookMap = new Map(memos.map((memo) => [memo.id, memo.notebookId]));
+  return Array.from(new Set(memoIds.filter(Boolean))).filter((memoId) => memoNotebookMap.get(memoId) !== targetNotebookId);
+};
+
 export const hasMemoDragData = (dataTransfer: DataTransfer) => Array.from(dataTransfer.types).includes(MEMO_DRAG_MIME);
 export const hasNotebookDragData = (dataTransfer: DataTransfer) => Array.from(dataTransfer.types).includes(NOTEBOOK_DRAG_MIME);
 export const hasEdgeEverDragData = (dataTransfer: DataTransfer) => hasMemoDragData(dataTransfer) || hasNotebookDragData(dataTransfer);

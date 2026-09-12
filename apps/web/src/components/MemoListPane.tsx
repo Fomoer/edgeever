@@ -84,6 +84,7 @@ import {
   getMemoFilterOptions,
   getMemoSortOptions,
   getNotebookMoveOptions,
+  resolveSelectionMoveTargetNotebookId,
   readMemoListDensityPreference,
   writeMemoListDensityPreference,
 } from "@/lib/app-helpers";
@@ -104,6 +105,7 @@ const getSelectionCountLabel = (count: number, t: ReturnType<typeof useTranslati
   count > 0 ? t("memoList.selectionCount", { count }) : t("memoList.selectMemo");
 
 export const MemoSelectionActionBar = ({
+  canMove,
   deleteTitle,
   exportTitle,
   isDeleting,
@@ -128,6 +130,7 @@ export const MemoSelectionActionBar = ({
   selectedCount,
   onMoveTargetChange,
 }: {
+  canMove: boolean;
   deleteTitle: string;
   exportTitle: string;
   isDeleting: boolean;
@@ -185,7 +188,7 @@ export const MemoSelectionActionBar = ({
                 variant="soft"
                 title={moveTitle}
                 onClick={onMove}
-                disabled={selectedCount === 0 || !moveTargetNotebookId || isMoving || isTrashView}
+                disabled={selectedCount === 0 || !moveTargetNotebookId || isMoving || isTrashView || !canMove}
               >
                 <Folder className="h-4 w-4" />
                 {t("memoList.move")}
@@ -630,13 +633,14 @@ export const MemoListPane = ({
   };
 
   useEffect(() => {
-    if (notebook?.id) {
-      setMoveTargetNotebookId(notebook.id);
-      return;
-    }
+    const nextTargetId = resolveSelectionMoveTargetNotebookId(
+      moveTargetNotebookId,
+      moveNotebookOptions.map((option) => option.id),
+      notebook?.id
+    );
 
-    if (!moveTargetNotebookId && moveNotebookOptions[0]?.id) {
-      setMoveTargetNotebookId(moveNotebookOptions[0].id);
+    if (nextTargetId !== moveTargetNotebookId) {
+      setMoveTargetNotebookId(nextTargetId);
     }
   }, [moveNotebookOptions, moveTargetNotebookId, notebook?.id]);
 
@@ -1412,7 +1416,7 @@ export const MemoListPane = ({
             {...contentEnterMotion}
           >
             {searchActive && (
-              <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-2 py-1 font-semibold text-white">
+              <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500 px-2 py-1 font-semibold text-white">
                 <Search className="h-3 w-3" />
                 {t("memoList.searchActive")}
               </span>

@@ -16,10 +16,15 @@ import {
   AI_TARGET_LANGUAGES,
   AI_TONES,
   AI_WHOLE_NOTE_ACTIONS,
+  buildAiAssistantLastActionPreference,
   canReplaceAiSource,
   createNativeUnsupportedContentExtensions,
   docToMarkdown,
+  getDefaultAiAction,
   getDefaultAiTargetLanguage,
+  readStoredAiAssistantLastActionPreference,
+  resolveAiAssistantLastAction,
+  writeStoredAiAssistantLastActionPreference,
   getAiDocumentFingerprint,
   getRichTextAiSelectionContext,
   getRichTextAiSelectionReplacement,
@@ -1085,11 +1090,15 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
       content: editor.state.doc.slice(from, to).content.toJSON(),
     } as EditorDoc, props.baseUrl)).trim();
     if (!markdown) return false;
-    const preferredAction = wholeNote ? "summarize" : "improve-writing";
-    const preferredPrompt = aiPrompts.find((prompt) => prompt.seedKey === preferredAction)
-      ?? aiPrompts[0]
-      ?? null;
-    const initialAction = preferredPrompt?.action ?? preferredAction;
+    const resolved = resolveAiAssistantLastAction({
+      fallbackAction: getDefaultAiAction(!wholeNote),
+      preference: readStoredAiAssistantLastActionPreference(wholeNote ? "wholeNote" : "selected"),
+      prompts: aiPrompts,
+    });
+    const preferredPrompt = resolved.selectedPromptId
+      ? aiPrompts.find((prompt) => prompt.id === resolved.selectedPromptId) ?? null
+      : null;
+    const initialAction = preferredPrompt?.action ?? resolved.action;
     setAiPanel({
       selection: {
         from,
@@ -1103,8 +1112,8 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
       promptId: preferredPrompt?.id ?? null,
       parameterKind: preferredPrompt?.parameterKind ?? fallbackPromptParameterKind(initialAction),
       resultMode: preferredPrompt?.resultMode ?? fallbackPromptResultMode(initialAction),
-      targetLanguage: getDefaultAiTargetLanguage(props.locale),
-      tone: "professional",
+      targetLanguage: resolved.targetLanguage ?? getDefaultAiTargetLanguage(props.locale),
+      tone: resolved.tone ?? "professional",
       customInstruction: "",
       refineInstruction: "",
       output: "",
@@ -1781,11 +1790,31 @@ const MobileSelectionAiPanel = ({
   const replaceDisabled = panel.generating || !panel.output || panel.resultMode === "append";
   const selectedPrompt = panel.promptId ? prompts.find((prompt) => prompt.id === panel.promptId) ?? null : null;
 
+  const persistLastAction = (
+    nextAction: AiAction,
+    nextPromptId: string | null,
+    nextTargetLanguage = panel.targetLanguage,
+    nextTone = panel.tone,
+  ) => {
+    const prompt = nextPromptId ? prompts.find((item) => item.id === nextPromptId) : null;
+    writeStoredAiAssistantLastActionPreference(
+      panel.selection.wholeNote ? "wholeNote" : "selected",
+      buildAiAssistantLastActionPreference({
+        action: nextAction,
+        promptId: nextPromptId,
+        seedKey: prompt?.seedKey ?? null,
+        targetLanguage: nextTargetLanguage,
+        tone: nextTone,
+      }),
+    );
+  };
+
   const selectPromptOrAction = (value: string) => {
     if (value.startsWith(AI_PROMPT_OPTION_PREFIX)) {
       const promptId = value.slice(AI_PROMPT_OPTION_PREFIX.length);
       const prompt = prompts.find((item) => item.id === promptId);
       if (!prompt) return;
+      persistLastAction(prompt.action, prompt.id);
       update({
         action: prompt.action,
         promptId: prompt.id,
@@ -1797,6 +1826,7 @@ const MobileSelectionAiPanel = ({
       return;
     }
     const action = value as AiAction;
+    persistLastAction(action, null);
     update({
       action,
       promptId: null,
@@ -1844,8 +1874,16 @@ const MobileSelectionAiPanel = ({
 
   const choosePickerOption = (value: string) => {
     if (picker === "action") selectPromptOrAction(value);
-    if (picker === "language") update({ targetLanguage: value as AiTargetLanguage, output: "", error: null });
-    if (picker === "tone") update({ tone: value as AiTone, output: "", error: null });
+    if (picker === "language") {
+      const targetLanguage = value as AiTargetLanguage;
+      persistLastAction(panel.action, panel.promptId, targetLanguage);
+      update({ targetLanguage, output: "", error: null });
+    }
+    if (picker === "tone") {
+      const tone = value as AiTone;
+      persistLastAction(panel.action, panel.promptId, panel.targetLanguage, tone);
+      update({ tone, output: "", error: null });
+    }
     setPicker(null);
   };
 

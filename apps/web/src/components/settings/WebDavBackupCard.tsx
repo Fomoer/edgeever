@@ -27,7 +27,7 @@ const Progress = ({ progress }: { progress: EdgeEverZipProgress }) => {
   const percentage = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
   return (
     <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
-      <div className="h-full rounded-full bg-emerald-600 transition-[width]" style={{ width: `${percentage}%` }} />
+      <div className="h-full rounded-full bg-emerald-500 transition-[width]" style={{ width: `${percentage}%` }} />
     </div>
   );
 };

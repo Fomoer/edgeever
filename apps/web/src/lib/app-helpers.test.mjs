@@ -24,6 +24,8 @@ import {
   writeDesktopReadingProtectionPreference,
   writeEditorOutlineCollapsedPreference,
   writeEditorToolbarExpandedPreference,
+  resolveSelectionMoveTargetNotebookId,
+  getMemoIdsNeedingMove,
 } from "./app-helpers.ts";
 
 const originalWindow = globalThis.window;
@@ -391,5 +393,29 @@ describe("workspace shortcut preferences", () => {
       keyboardEvent("!", { code: "Digit1", ctrlKey: true, shiftKey: true }),
       DEFAULT_SHORTCUT_SETTINGS,
     )).toBe("toggleOutline");
+  });
+});
+
+describe("selection move target", () => {
+  test("keeps a valid user-chosen notebook instead of snapping back to the current notebook", () => {
+    expect(resolveSelectionMoveTargetNotebookId("target-2", ["inbox", "target-2"], "inbox")).toBe("target-2");
+  });
+
+  test("falls back to the current notebook only when the stored target is missing or invalid", () => {
+    expect(resolveSelectionMoveTargetNotebookId("", ["inbox", "archive"], "inbox")).toBe("inbox");
+    expect(resolveSelectionMoveTargetNotebookId("deleted", ["inbox", "archive"], "inbox")).toBe("inbox");
+    expect(resolveSelectionMoveTargetNotebookId("", ["inbox", "archive"], null)).toBe("inbox");
+  });
+
+  test("moves only notes that are not already in the target notebook", () => {
+    const memos = [
+      { id: "memo-1", notebookId: "inbox" },
+      { id: "memo-2", notebookId: "archive" },
+      { id: "memo-3", notebookId: "inbox" },
+    ];
+
+    expect(getMemoIdsNeedingMove(memos, ["memo-1", "memo-2", "memo-3"], "archive")).toEqual(["memo-1", "memo-3"]);
+    expect(getMemoIdsNeedingMove(memos, ["memo-2"], "archive")).toEqual([]);
+    expect(getMemoIdsNeedingMove(memos, ["memo-1"], "")).toEqual([]);
   });
 });

@@ -88,7 +88,7 @@ export const TemplatesDialog = ({
                   />
                   <div className="flex justify-end gap-2">
                     <Button type="button" size="sm" variant="ghost" onClick={cancelEditing}><X className="mr-1 h-4 w-4" />{t("common.cancel")}</Button>
-                    <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => void saveEditing()} disabled={!draft.name.trim()}><Check className="mr-1 h-4 w-4" />{t("common.save")}</Button>
+                    <Button type="button" size="sm" variant="solid" onClick={() => void saveEditing()} disabled={!draft.name.trim()}><Check className="mr-1 h-4 w-4" />{t("common.save")}</Button>
                   </div>
                 </div>
               )}

@@ -12,7 +12,7 @@ import {
 describe("AI assistant interaction model", () => {
   test("chooses a useful default from the current scope and locale", () => {
     expect(getDefaultAiAction(true)).toBe("improve-writing");
-    expect(getDefaultAiAction(false)).toBe("summarize");
+    expect(getDefaultAiAction(false)).toBe("custom");
     expect(getDefaultTargetLanguage("zh-CN")).toBe("en");
     expect(getDefaultTargetLanguage("en-US")).toBe("zh-CN");
   });
@@ -99,17 +99,40 @@ describe("AI assistant interaction model", () => {
     });
   });
 
-  test("uses retained composer text as the source for a selected processing action", () => {
+  test("uses retained composer text as the source only when the note is empty", () => {
+    expect(resolveAiAssistantComposerInput({
+      composerText: "写一首诗",
+      isFreeformCustom: false,
+      noteContentMarkdown: "",
+      noteTitle: "",
+    })).toEqual({
+      contentMarkdown: "写一首诗",
+      customInstruction: "",
+      title: "",
+      usesComposerAsSource: true,
+    });
     expect(resolveAiAssistantComposerInput({
       composerText: "写一首诗",
       isFreeformCustom: false,
       noteContentMarkdown: "整篇笔记不应被翻译",
       noteTitle: "现有笔记",
     })).toEqual({
-      contentMarkdown: "写一首诗",
+      contentMarkdown: "整篇笔记不应被翻译",
       customInstruction: "",
-      title: "",
-      usesComposerAsSource: true,
+      title: "现有笔记",
+      usesComposerAsSource: false,
+    });
+    expect(resolveAiAssistantComposerInput({
+      composerText: "这段不应覆盖选区",
+      hasSelection: true,
+      isFreeformCustom: false,
+      noteContentMarkdown: "选中的句子",
+      noteTitle: "现有笔记",
+    })).toEqual({
+      contentMarkdown: "选中的句子",
+      customInstruction: "",
+      title: "现有笔记",
+      usesComposerAsSource: false,
     });
     expect(resolveAiAssistantComposerInput({
       composerText: "",
