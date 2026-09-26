@@ -425,7 +425,9 @@ export default function InfographicEditorPane({ memo, repository, readOnly, onBa
     } catch (caught) { setError(caught instanceof Error ? caught.message : t("infographic.renderError")); }
   };
 
-  return <div className="flex h-full min-h-0 flex-col bg-white">
+  const previewUsesLightSheet = Boolean(syntax.trim()) && syntax.split("\n")[1] !== "theme dark";
+
+  return <div className="flex h-full min-h-0 flex-col bg-card text-foreground">
     <header className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3">
       <Button variant="ghost" size="icon" className="lg:hidden" onClick={onBackToList} aria-label={t("common.back")}><ChevronLeft className="h-4 w-4" /></Button>
       <Presentation className="h-5 w-5 text-emerald-700" />
@@ -442,7 +444,7 @@ export default function InfographicEditorPane({ memo, repository, readOnly, onBa
           <ConversationContent className="gap-4 p-0 pb-5">
             {history.map((turn) => <div key={turn.id} className="space-y-2">
               <Message from="user"><MessageContent className="whitespace-pre-wrap break-words group-[.is-user]:rounded-xl group-[.is-user]:bg-emerald-50 group-[.is-user]:px-3 group-[.is-user]:py-2">{turn.prompt}</MessageContent></Message>
-              <Message from="assistant"><MessageContent className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700">
+              <Message from="assistant"><MessageContent className="w-full rounded-xl border border-slate-200 bg-card px-3 py-2 text-foreground">
                 <MessageResponse className="edgeever-infographic-chat-response break-words">{turn.response || (turn.kind === "clarified" ? t("infographic.historyClarified") : turn.kind === "failed" ? t("infographic.historyFailed") : t(turn.kind === "generated" ? "infographic.historyGenerated" : "infographic.historyRefined", { title: turn.resultTitle || t("infographic.name") }))}</MessageResponse>
                 {turn.decision && turn.decision !== turn.response && <p className="text-xs text-slate-600">{turn.decision}</p>}
                 {turn.template && <p className="text-xs text-slate-500">{turn.template}</p>}
@@ -453,7 +455,7 @@ export default function InfographicEditorPane({ memo, repository, readOnly, onBa
             </div>)}
             {activeTurn && <div className="space-y-2" aria-live="polite">
               <Message from="user"><MessageContent className="whitespace-pre-wrap break-words group-[.is-user]:rounded-xl group-[.is-user]:bg-emerald-50 group-[.is-user]:px-3 group-[.is-user]:py-2">{activeTurn.prompt}</MessageContent></Message>
-              <Message from="assistant"><MessageContent className="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-slate-700">
+              <Message from="assistant"><MessageContent className="w-full rounded-xl border border-emerald-200 bg-card px-3 py-2 text-foreground">
                 <MessageResponse className="edgeever-infographic-chat-response break-words" isAnimating={generating}>{activeTurn.response || activeTurn.question || t("infographic.generating")}</MessageResponse>
                 {activeTurn.decision && activeTurn.decision !== activeTurn.response && <p className="text-xs text-slate-600">{activeTurn.decision}</p>}
                 {activeTurn.template && <p className="text-xs text-slate-500">{activeTurn.template}</p>}
@@ -464,7 +466,7 @@ export default function InfographicEditorPane({ memo, repository, readOnly, onBa
         </Conversation>
         {!readOnly && <div className="shrink-0 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
           <label className="mb-2 block text-sm font-medium text-slate-800" htmlFor="infographic-prompt"><Sparkles className="mr-1 inline h-4 w-4 text-emerald-700" />{t(syntax.trim() ? "infographic.refine" : "infographic.describe")}</label>
-          <textarea id="infographic-prompt" maxLength={1000} disabled={generating} className="min-h-24 w-full rounded-md border border-slate-200 bg-white p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60" placeholder={t(syntax.trim() ? "infographic.refinePrompt" : "infographic.prompt")} value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => {
+          <textarea id="infographic-prompt" maxLength={1000} disabled={generating} className="min-h-24 w-full rounded-md border border-slate-200 bg-card p-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60" placeholder={t(syntax.trim() ? "infographic.refinePrompt" : "infographic.prompt")} value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => {
             if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.keyCode === 229) return;
             event.preventDefault();
             if (!event.repeat && prompt.trim() && !generating) void generate();
@@ -474,7 +476,7 @@ export default function InfographicEditorPane({ memo, repository, readOnly, onBa
           </div>
         </div>}
       </section>
-      <section className="min-h-0 overflow-auto bg-slate-50 p-4"><div className="min-h-[420px] rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><div ref={containerRef} className="edgeever-infographic-preview min-h-[380px] w-full" />{!syntax.trim() && <p className="pt-32 text-center text-sm text-slate-400">{t("infographic.noPreview")}</p>}{renderError && <p role="alert" className="text-sm text-red-600">{renderError}</p>}</div></section>
+      <section className="min-h-0 overflow-auto bg-slate-50 p-4"><div className={`min-h-[420px] rounded-xl border border-slate-200 p-4 shadow-sm ${previewUsesLightSheet ? "bg-white" : "bg-card"}`}><div ref={containerRef} className="edgeever-infographic-preview min-h-[380px] w-full" />{!syntax.trim() && <p className="pt-32 text-center text-sm text-muted-foreground">{t("infographic.noPreview")}</p>}{renderError && <p role="alert" className="text-sm text-destructive">{renderError}</p>}</div></section>
     </div>
   </div>;
 }

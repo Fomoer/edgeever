@@ -79,6 +79,10 @@
   border-color: var(--editor-theme-border);
 }
 
+.edgeever-editor[data-editor-theme]:not([data-editor-theme="default"]) .ProseMirror ul[data-type="taskList"] li[data-checked] > label input {
+  accent-color: var(--editor-theme-accent);
+}
+
 .edgeever-editor[data-editor-theme]:not([data-editor-theme="default"]) .ProseMirror code,
 .edgeever-editor[data-editor-theme]:not([data-editor-theme="default"]) .ProseMirror pre,
 .edgeever-editor[data-editor-theme]:not([data-editor-theme="default"]) .ProseMirror .edgeever-code-source {

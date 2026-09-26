@@ -61,7 +61,7 @@ export const TagsPane = ({
             </Button>
           </ButtonTooltip>
           <div className="min-w-0">
-            <h1 className={`flex items-center gap-2 ${WORKSPACE_PAGE_TITLE_CLASSNAME}`}><Tag className="h-4 w-4 text-emerald-700" />{t("tagsDialog.title")}</h1>
+            <h1 className={`flex items-center gap-2 ${WORKSPACE_PAGE_TITLE_CLASSNAME}`}><Tag className="h-4 w-4 text-slate-900" />{t("tagsDialog.title")}</h1>
             <p className="mt-0.5 text-xs text-slate-500">{t("tagsDialog.count", { count: tags.length })}</p>
           </div>
         </div>
@@ -80,12 +80,12 @@ export const TagsPane = ({
                 const isEditing = editingTagName === tag.name;
                 const nextName = editingTagValue.trim();
                 return (
-                  <div key={tag.name} className={cn("flex min-h-12 items-center gap-3 rounded-md border border-slate-200 bg-card px-3 py-2", isEditing && "border-emerald-200 bg-emerald-50/30")}>
+                  <div key={tag.name} className={cn("flex min-h-12 items-center gap-3 rounded-md border border-slate-200 bg-card px-3 py-2", isEditing && "border-slate-300 bg-slate-50")}>
                     {isEditing ? (
                       <div className="min-w-0 flex-1">
                         <form className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center" onSubmit={(event) => { event.preventDefault(); if (nextName && nextName !== tag.name && !renameMutation.isPending) renameMutation.mutate({ tag: tag.name, name: nextName }); }}>
                           <label className="sr-only" htmlFor={`tag-rename-${tag.name}`}>{t("tagsDialog.nameLabel")}</label>
-                          <Input id={`tag-rename-${tag.name}`} className="h-9 min-w-0 flex-1 focus-visible:border-emerald-300 focus-visible:ring-emerald-500/20" value={editingTagValue} autoFocus disabled={renameMutation.isPending} maxLength={80} onChange={(event) => setEditingTagValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelRename(); } }} />
+                          <Input id={`tag-rename-${tag.name}`} className="h-9 min-w-0 flex-1 focus-visible:border-slate-400 focus-visible:ring-slate-400/25" value={editingTagValue} autoFocus disabled={renameMutation.isPending} maxLength={80} onChange={(event) => setEditingTagValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelRename(); } }} />
                           <div className="flex shrink-0 gap-2">
                             <Button className="justify-center" size="sm" type="submit" variant="solid" disabled={!nextName || nextName === tag.name || renameMutation.isPending}>{t("common.save")}</Button>
                             <Button size="sm" type="button" variant="outline" onClick={cancelRename} disabled={renameMutation.isPending}>{t("common.cancel")}</Button>
@@ -94,7 +94,7 @@ export const TagsPane = ({
                       </div>
                     ) : (
                       <button
-                        className="min-w-0 flex-1 rounded-md px-1 py-1 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30"
+                        className="min-w-0 flex-1 rounded-md px-1 py-1 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40"
                         type="button"
                         onClick={() => onSelectTag(tag.name)}
                       >

@@ -17,8 +17,9 @@ describe("note sharing menu", () => {
     expect(editorActionsSource).not.toContain("if (!effectiveReadOnly) setShareOpen(true)");
     expect(editorSource).toContain("canShareMemo: Boolean(memo && !readOnly)");
     expect(editorSource).toContain("{!readOnly && (\n                  <DropdownMenuItem");
-    expect(editorSource).toContain('className="h-8 w-8 text-slate-500 sm:hidden"');
-    expect(editorSource).toContain('title={t(isLocalMemoId(memo.id) ? "sharing.afterSync" : "sharing.action")}');
+    expect(editorSource).toContain('{!readOnly && (!mobileEditingActive || isMemoShared) && (');
+    expect(editorSource).toContain('className={cn("h-8 w-8", isMemoShared ? "text-slate-700" : "text-slate-500")}');
+    expect(editorSource).toContain('aria-label={t(isLocalMemoId(memo.id) ? "sharing.afterSync" : isMemoShared ? "sharing.manage" : "sharing.action")}');
   });
 
   test("explains why sharing a newly created local note is disabled", () => {

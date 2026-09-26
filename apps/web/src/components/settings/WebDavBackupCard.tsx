@@ -110,7 +110,7 @@ export const WebDavBackupCard = () => {
   return (
     <Card className="w-full min-w-0 overflow-hidden shadow-none">
       <CardHeader className="p-4 pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm"><CloudUpload className="h-4 w-4 text-emerald-700" />{t("dataExport.webdavTitle")}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm"><CloudUpload className="h-4 w-4 text-slate-900" />{t("dataExport.webdavTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3 p-4 pt-0">
         <CardDescription className="text-xs leading-5">{t(WEBDAV_AUTO_BACKUP_ENABLED ? "dataExport.webdavDescription" : "dataExport.webdavManualDescription")}</CardDescription>

@@ -44,10 +44,10 @@ export const EditorTableMenu = ({ editor, readOnly }: EditorTableMenuProps) => {
           <DropdownMenuTrigger asChild>
             <button
               className={cn(
-                "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition disabled:pointer-events-none disabled:opacity-40",
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition disabled:pointer-events-none disabled:opacity-40",
                 inTable
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                  : "border-transparent bg-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50"
+                  ? "bg-slate-200/80 text-slate-900"
+                  : "bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800"
               )}
               type="button"
               aria-label={t("editorToolbar.table")}
@@ -58,7 +58,7 @@ export const EditorTableMenu = ({ editor, readOnly }: EditorTableMenuProps) => {
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>{t("editorToolbar.table")}</TooltipContent>
+        <TooltipContent side="bottom">{t("editorToolbar.table")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="start">
         <DropdownMenuItem

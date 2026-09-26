@@ -27,7 +27,7 @@ assert.deepEqual(
 );
 assert.doesNotMatch(serviceWorker, /edgeever-offline-shell/, "PWA must not retain a versioned offline HTML shell");
 const modulePreloads = indexHtml.match(/<link rel="modulepreload"[^>]+>/g)?.join("\n") ?? "";
-const initialOptionalPattern = /vendor-code-highlight|vendor-D3|beautiful-mermaid|vendor-(?:mermaid|tiptap|prosemirror|floating|codemirror|x6)|ui-primitives|mermaid\.core|[^"']*Diagram(?:EditorPane)?-/;
+const initialOptionalPattern = /vendor-code-highlight|vendor-D3|beautiful-mermaid|vendor-(?:mermaid|tiptap|prosemirror|floating|codemirror|x6)|vendor~(?:wasm|emacs-lisp)-|ui-primitives|mermaid\.core|[^"']*Diagram(?:EditorPane)?-/;
 assert.doesNotMatch(modulePreloads, initialOptionalPattern, "Optional editor and diagram chunks must remain out of the initial HTML modulepreload list");
 assert.doesNotMatch(modulePreloads, /ui-button-tooltip/, "Button tooltips must load only when a titled button is rendered");
 assert.doesNotMatch(modulePreloads, /vendor-radix(?!-slot)/, "Radix overlays must remain out of the initial HTML modulepreload list");
@@ -38,7 +38,10 @@ const INITIAL_MODULE_PRELOAD_BUDGET = 750 * 1024;
 assert.ok(initialModulePreloadBytes <= INITIAL_MODULE_PRELOAD_BUDGET, `Initial modulepreload budget exceeded: ${initialModulePreloadBytes} > ${INITIAL_MODULE_PRELOAD_BUDGET}`);
 
 const DEFAULT_CHUNK_WARNING_BYTES = 500 * 1024;
-const allowedLargeChunkPattern = /^(?:vendor-(?:code-highlight|beautiful-mermaid|mermaid-(?:layout|render)|codemirror|x6)|.*Diagram-).*\.js$/;
+// Shiki, loaded with the infographic conversation, keeps the Oniguruma wasm
+// engine and the Emacs Lisp grammar above 500 KiB. Both stay off the initial
+// modulepreload list.
+const allowedLargeChunkPattern = /^(?:vendor-(?:code-highlight|beautiful-mermaid|mermaid-(?:layout|render)|codemirror|x6)|vendor~(?:wasm|emacs-lisp)-|.*Diagram-).*\.js$/;
 const largeChunks = readdirSync(join(distDirectory, "assets"))
   .filter((name) => name.endsWith(".js"))
   .map((name) => ({ name, size: statSync(join(distDirectory, "assets", name)).size }))

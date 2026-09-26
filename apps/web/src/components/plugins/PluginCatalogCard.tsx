@@ -17,10 +17,7 @@ import { getPluginDetailPath, hasPluginSettings, isPluginCardCommand } from "@/l
 import type { PluginUpdateInfo } from "@/lib/plugins/plugin-updates";
 import type { RegisteredPluginCommand } from "@/lib/plugins/plugin-host";
 
-const sourceBadgeClassName = (sourceKey: ReturnType<typeof getPluginCatalogSourceKey>) =>
-  sourceKey === "github" || sourceKey === "manifest"
-    ? "bg-amber-50 text-amber-700"
-    : "bg-emerald-50 text-emerald-700";
+const sourceBadgeClassName = "bg-slate-100 text-slate-700";
 
 export const PluginCatalogCard = ({
   item,
@@ -63,7 +60,7 @@ export const PluginCatalogCard = ({
       aria-label={extension ? t("plugins.details.open", { name }) : undefined}
       className={`flex min-w-0 flex-col rounded-lg border border-slate-200 bg-card p-3 ${
         extension
-          ? "cursor-pointer transition-colors hover:border-emerald-300 hover:bg-emerald-50/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
+          ? "cursor-pointer transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40"
           : ""
       }`}
       onClick={extension ? (event) => {
@@ -86,19 +83,19 @@ export const PluginCatalogCard = ({
                 {extension.manifest.type}
               </span>
             ) : null}
-            {extension && version ? <span className="text-xs text-slate-400">v{version}</span> : null}
+            {extension && version ? <span className="text-xs text-slate-500">v{version}</span> : null}
             {sourceKey === "official" ? (
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
                 {t("plugins.marketplace.officialAutoUpdate")}
               </span>
             ) : sourceKey ? (
-              <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs ${sourceBadgeClassName(sourceKey)}`}>
+              <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs ${sourceBadgeClassName}`}>
                 {sourceKey === "verified" ? <BadgeCheck className="h-3 w-3" /> : sourceKey === "github" ? <GitHubMark className="h-3 w-3" /> : null}
                 {t(`plugins.sources.${sourceKey}`)}
               </span>
             ) : null}
             {update ? (
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+              <span className="rounded-full bg-slate-950 px-2 py-0.5 text-xs font-medium text-slate-50">
                 {t("plugins.updates.available", { version: update.latestVersion })}
               </span>
             ) : null}
@@ -116,7 +113,7 @@ export const PluginCatalogCard = ({
               href={repositoryUrl}
               label={t("plugins.marketplace.openRepository", { name })}
               showTooltip={false}
-              className="h-7 w-7 justify-center rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
+              className="h-7 w-7 justify-center rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40"
               iconClassName="h-3.5 w-3.5"
             />
           ) : null}

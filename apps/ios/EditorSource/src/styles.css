@@ -205,7 +205,7 @@ html[data-theme="dark"] body {
   width: 18px;
   height: 18px;
   margin: 0;
-  accent-color: #16a06e;
+  accent-color: #1a1d21;
 }
 
 .ProseMirror ul[data-type="taskList"] li[data-checked] > div {

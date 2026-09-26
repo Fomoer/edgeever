@@ -1,5 +1,7 @@
+export const MEMO_EDITOR_READING_GUTTER_CLASS_NAME = "px-4 sm:px-7 lg:px-24";
+
 export const MEMO_EDITOR_TOP_ROW_CLASS_NAME =
-  "flex min-h-12 items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 sm:min-h-9 sm:px-4 sm:py-0.5";
+  "relative flex min-h-12 items-center justify-between gap-2 border-b border-slate-100 py-2 sm:min-h-9 sm:py-0.5";
 
 export const MEMO_EDITOR_TOOLBAR_PADDING_CLASS_NAME =
   "px-3 py-2 sm:px-4 sm:py-0.5";
@@ -9,4 +11,15 @@ export const MEMO_EDITOR_TOOLBAR_COLLAPSED_CLASS_NAME =
   "max-h-12 overflow-hidden sm:max-h-9";
 
 export const MEMO_EDITOR_TITLE_REGION_CLASS_NAME =
-  "space-y-1.5 px-5 pb-2.5 pt-2.5 sm:space-y-3 sm:px-6 sm:pb-4 sm:pt-4 lg:space-y-0 lg:py-0";
+  `space-y-1 pb-2 pt-1 sm:pb-2 sm:pt-1 ${MEMO_EDITOR_READING_GUTTER_CLASS_NAME}`;
+
+/** Extra right inset so the title field stops before the header status cluster. */
+export const nextTitleStatusClearance = (
+  current: number,
+  inputRight: number,
+  statusLeft: number,
+  gap = 8,
+) => {
+  const next = Math.min(480, Math.max(0, Math.ceil(current + inputRight - (statusLeft - gap))));
+  return Math.abs(next - current) <= 1 ? current : next;
+};

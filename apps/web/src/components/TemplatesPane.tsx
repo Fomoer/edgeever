@@ -159,7 +159,7 @@ export const TemplatesPane = ({
 
   return (
     <TooltipProvider>
-      <div className="flex h-full min-h-0 min-w-0 flex-col bg-slate-50/60">
+      <div className="flex h-full min-h-0 min-w-0 flex-col bg-workspace-canvas">
       {/* Header */}
       <header className="flex h-[calc(3.75rem+env(safe-area-inset-top))] shrink-0 items-end justify-between border-b border-slate-200/80 bg-card px-6 pb-3 pt-[env(safe-area-inset-top)] lg:h-16 lg:items-center lg:pb-0 lg:pt-0 shadow-2xs">
         <div className="flex min-w-0 items-center gap-3">
@@ -173,7 +173,7 @@ export const TemplatesPane = ({
           </Tooltip>
           <div className="min-w-0">
             <h1 className={`flex items-center gap-2 text-slate-900 ${WORKSPACE_PAGE_TITLE_CLASSNAME}`}>
-              <LayoutList className="h-4.5 w-4.5 text-emerald-600" />
+              <LayoutList className="h-4 w-4 text-slate-900" />
               {t("templates.title")}
             </h1>
             <p className="mt-0.5 text-xs text-slate-500">{t("templates.description")}</p>
@@ -190,9 +190,9 @@ export const TemplatesPane = ({
           <section>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                   <span>{t("templates.myTemplates")}</span>
-                  <span className="rounded-full bg-emerald-100/70 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
                     {savedTemplates.length}
                   </span>
                 </h2>
@@ -207,7 +207,7 @@ export const TemplatesPane = ({
                   onClick={startCreating}
                   disabled={isCreating}
                 >
-                  <Plus className="h-3.5 w-3.5 text-emerald-600" />
+                  <Plus className="h-3.5 w-3.5 text-slate-700" />
                   {t("templates.create")}
                 </Button>
               )}
@@ -215,10 +215,10 @@ export const TemplatesPane = ({
 
             {/* Form for Creating / Editing Template */}
             {(editingTemplate || creatingTemplate) && (
-              <div className="mb-6 rounded-xl border border-emerald-200 bg-card p-5 shadow-xs transition-all">
+              <div className="mb-6 rounded-xl border border-slate-200 bg-card p-5 shadow-xs transition-all">
                 <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
-                  <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                    <Pencil className="h-4 w-4 text-emerald-600" />
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <Pencil className="h-4 w-4 text-slate-900" />
                     {creatingTemplate ? t("templates.createTemplateTitle") : t("templates.editTemplateTitle")}
                   </h3>
                   <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-slate-600" onClick={cancelEditing}>
@@ -230,7 +230,7 @@ export const TemplatesPane = ({
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-slate-700">{t("templates.name")}</label>
-                      <Input
+                      <Input className="focus-visible:border-slate-400 focus-visible:ring-slate-400/25"
                         value={draft.name}
                         onChange={(e) => setDraft((c) => ({ ...c, name: e.target.value }))}
                         placeholder={t("templates.namePlaceholder")}
@@ -238,7 +238,7 @@ export const TemplatesPane = ({
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-slate-700">{t("templates.noteTitle")}</label>
-                      <Input
+                      <Input className="focus-visible:border-slate-400 focus-visible:ring-slate-400/25"
                         value={draft.title}
                         onChange={(e) => setDraft((c) => ({ ...c, title: e.target.value }))}
                         placeholder={t("templates.noteTitlePlaceholder")}
@@ -249,7 +249,7 @@ export const TemplatesPane = ({
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-slate-700">{t("templates.descriptionField")}</label>
-                      <Input
+                      <Input className="focus-visible:border-slate-400 focus-visible:ring-slate-400/25"
                         value={draft.description}
                         onChange={(e) => setDraft((c) => ({ ...c, description: e.target.value }))}
                         placeholder={t("templates.descriptionPlaceholder")}
@@ -257,7 +257,7 @@ export const TemplatesPane = ({
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-slate-700">{t("templates.tags")}</label>
-                      <Input
+                      <Input className="focus-visible:border-slate-400 focus-visible:ring-slate-400/25"
                         value={draft.tags}
                         onChange={(e) => setDraft((c) => ({ ...c, tags: e.target.value }))}
                         placeholder={t("templates.tagsPlaceholder")}
@@ -289,7 +289,7 @@ export const TemplatesPane = ({
 
                     {editorTab === "raw" ? (
                       <textarea
-                        className="min-h-48 w-full resize-y rounded-lg border border-slate-200 bg-card p-3.5 font-mono text-xs text-slate-900 outline-none focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/20"
+                        className="min-h-48 w-full resize-y rounded-lg border border-slate-200 bg-card p-3.5 font-mono text-xs text-slate-900 outline-none focus-visible:border-slate-400 focus-visible:ring-2 focus-visible:ring-slate-400/25"
                         value={draft.contentMarkdown}
                         onChange={(e) => setDraft((c) => ({ ...c, contentMarkdown: e.target.value }))}
                         placeholder={t("templates.contentPlaceholder")}
@@ -332,7 +332,7 @@ export const TemplatesPane = ({
                 {savedTemplates.map((template) => (
                   <div
                     key={template.id}
-                    className="group relative flex flex-col justify-between rounded-xl border border-slate-200 bg-card p-4 transition-all duration-200 hover:border-emerald-300 hover:shadow-md cursor-pointer"
+                    className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-slate-200 bg-card p-4 transition-all duration-200 hover:border-slate-300 hover:shadow-md"
                     onClick={() =>
                       setPreviewTemplate({
                         title: template.name,
@@ -347,10 +347,10 @@ export const TemplatesPane = ({
                     <div>
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-800">
                             <FilePlus className="h-4 w-4" />
                           </span>
-                          <h3 className="truncate font-bold text-slate-900 text-sm">{template.name}</h3>
+                          <h3 className="truncate text-sm font-semibold text-slate-900">{template.name}</h3>
                         </div>
                       </div>
 
@@ -425,7 +425,7 @@ export const TemplatesPane = ({
 
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200/80 bg-emerald-50/70 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all duration-200 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-semibold text-slate-50 transition-colors hover:bg-slate-800 disabled:opacity-50"
                         disabled={!canCreateMemo || isCreating}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -441,13 +441,13 @@ export const TemplatesPane = ({
               </div>
             ) : !creatingTemplate && !editingTemplate ? (
               <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-card p-7 text-center shadow-2xs">
-                <div className="mb-2.5 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                <div className="mb-2.5 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700">
                   <Sparkles className="h-5 w-5" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">{t("templates.emptyMyTemplates")}</h3>
+                <h3 className="text-sm font-semibold text-slate-900">{t("templates.emptyMyTemplates")}</h3>
                 <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">{t("templates.emptyMyTemplatesHint")}</p>
                 <Button type="button" size="sm" variant="outline" className="mt-3.5 gap-1.5 border-slate-200 text-xs font-semibold" onClick={startCreating}>
-                  <Plus className="h-3.5 w-3.5 text-emerald-600" />
+                  <Plus className="h-3.5 w-3.5 text-slate-700" />
                   {t("templates.create")}
                 </Button>
               </div>
@@ -484,7 +484,7 @@ export const TemplatesPane = ({
               )}
 
               <div>
-                <h4 className="mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t("templates.previewTitle")}</h4>
+                <h4 className="mb-2 text-xs font-semibold text-slate-500">{t("templates.previewTitle")}</h4>
                 <div className="rounded-xl border border-slate-200 bg-card p-4 text-xs text-slate-800 shadow-2xs min-h-[120px]">
                   <div className="prose prose-xs max-w-none" dangerouslySetInnerHTML={{ __html: previewHtmlContent }} />
                 </div>

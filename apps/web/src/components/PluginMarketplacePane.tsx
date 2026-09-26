@@ -33,7 +33,7 @@ export const PluginMarketplacePane = ({
   };
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-slate-50">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-workspace-canvas">
       <header className="flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-end justify-between border-b border-slate-200 bg-card px-4 pb-3 pt-[env(safe-area-inset-top)] lg:h-16 lg:items-center lg:px-6 lg:pb-0 lg:pt-0">
         <div className="flex min-w-0 items-center gap-3">
           <Button
@@ -46,7 +46,7 @@ export const PluginMarketplacePane = ({
             <ChevronLeft className="h-5 w-5 text-slate-500" />
           </Button>
           <h1 className={`flex min-w-0 items-center gap-2 ${WORKSPACE_PAGE_TITLE_CLASSNAME}`}>
-            <Store className="h-4 w-4 shrink-0 text-emerald-700" />
+            <Store className="h-4 w-4 shrink-0 text-slate-900" />
             <span className="truncate text-slate-900">{t("plugins.marketplace.title")}</span>
           </h1>
         </div>

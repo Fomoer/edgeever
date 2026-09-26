@@ -131,7 +131,7 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
         <DialogContent className="max-h-[min(640px,calc(100vh-2rem))] max-w-xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Keyboard className="h-5 w-5 text-emerald-700" />
+              <Keyboard className="h-5 w-5 text-slate-900" />
               {t("shortcuts.title")}
             </DialogTitle>
             <DialogDescription>{t("shortcuts.description")}</DialogDescription>

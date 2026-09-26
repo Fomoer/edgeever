@@ -53,6 +53,12 @@
   --color-slate-800: rgb(var(--slate-800-rgb) / 1);
   --color-slate-900: rgb(var(--slate-900-rgb) / 1);
   --color-slate-950: rgb(var(--slate-950-rgb) / 1);
+  --color-workspace-canvas: var(--workspace-canvas);
+  --color-workspace-sidebar: var(--workspace-sidebar);
+  --color-workspace-memo-list: var(--workspace-memo-list);
+  --color-workspace-editor: var(--workspace-editor);
+  --color-workspace-selection: var(--workspace-selection);
+  --color-workspace-hover: var(--workspace-hover);
   --color-emerald-50: rgb(var(--brand-green-50-rgb) / 1);
   --color-emerald-100: rgb(var(--brand-green-100-rgb) / 1);
   --color-emerald-200: rgb(var(--brand-green-200-rgb) / 1);
@@ -285,15 +291,18 @@ html.dark[data-edgeever-environment="demo"] body::after {
     --brand-green-800-rgb: 17 83 60;
     --brand-green-900-rgb: 15 68 50;
     --brand-green-950-rgb: 7 37 28;
-    --workspace-canvas: #f8f9fa;
-    --workspace-sidebar: #f8f9fa;
-    --workspace-memo-list: #fafafa;
+    --workspace-canvas: #eef1f4;
+    --workspace-sidebar: #e7ebef;
+    --workspace-memo-list: #f4f6f8;
     --workspace-editor: #ffffff;
-    --workspace-divider: #e9ebed;
-    --workspace-memo-divider: #edf0f2;
-    --workspace-selection: #edf0f2;
-    --tooltip-bg: #1a1f1c;
-    --tooltip-fg: #f4f7f5;
+    --workspace-divider: #e1e5ea;
+    --workspace-memo-divider: #e6eaee;
+    --workspace-selection: #dde3e9;
+    --workspace-hover: color-mix(in srgb, var(--workspace-sidebar) 40%, white);
+    --tooltip-bg: #ffffff;
+    --tooltip-fg: #6b726e;
+    --tooltip-border: #e1e5ea;
+    --tooltip-shadow: 0 1px 2px rgb(16 24 20 / 0.04), 0 8px 20px rgb(16 24 20 / 0.08);
     --scrollbar-thumb: rgb(115 115 115 / 0.28);
     --scrollbar-thumb-hover: rgb(115 115 115 / 0.42);
     --search-match: rgb(254 240 138 / 0.8);
@@ -332,11 +341,11 @@ html.dark[data-edgeever-environment="demo"] body::after {
     --rose-950-rgb: 76 5 25;
     --blue-600-rgb: 37 99 235;
     --dark-surface-rgb: 255 255 255;
-    --editor-body-font-size: 0.9375rem;
+    --editor-body-font-size: 1rem;
     --edgeever-system-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", Inter, ui-sans-serif, system-ui, sans-serif;
-    --editor-body-line-height: 1.6;
+    --editor-body-line-height: 1.625;
     --editor-paragraph-spacing: 0.35rem;
-    --memo-content-divider-color: rgb(var(--brand-green-300-rgb));
+    --memo-content-divider-color: #1a1d21;
     --memo-content-divider-spacing: 1.5rem;
     --editor-outline-width: 300px;
     --editor-content-max-width: 880px;
@@ -406,8 +415,12 @@ html.dark[data-edgeever-environment="demo"] body::after {
   --workspace-divider: #2a312d;
   --workspace-memo-divider: #3b4540;
   --workspace-selection: #1d3028;
-  --tooltip-bg: #252c28;
-  --tooltip-fg: #e9efeb;
+  --workspace-hover: color-mix(in srgb, var(--workspace-sidebar) 82%, white);
+  --memo-content-divider-color: #e7ebe8;
+  --tooltip-bg: #2c3330;
+  --tooltip-fg: #d7dfda;
+  --tooltip-border: #3e4944;
+  --tooltip-shadow: 0 1px 2px rgb(0 0 0 / 0.28), 0 8px 20px rgb(0 0 0 / 0.32);
   --scrollbar-thumb: rgb(137 150 142 / 0.38);
   --scrollbar-thumb-hover: rgb(137 150 142 / 0.55);
   --search-match: rgb(22 160 110 / 0.32);
@@ -628,7 +641,7 @@ html[data-edgeever-extension-theme] kbd {
 }
 
 .edgeever-workspace-sidebar-footer {
-  background: color-mix(in srgb, var(--workspace-sidebar) 92%, transparent);
+  background: var(--workspace-sidebar);
 }
 
 .edgeever-workspace-selection {
@@ -717,7 +730,7 @@ html[data-edgeever-extension-theme] .edgeever-memo-divider {
 }
 
 :root.dark .edgeever-workspace-sidebar-footer {
-  background: color-mix(in srgb, var(--workspace-sidebar) 90%, transparent);
+  background: var(--workspace-sidebar);
 }
 
 :root.dark .edgeever-workspace-selection,
@@ -884,6 +897,7 @@ html[data-edgeever-extension-theme] .edgeever-memo-divider {
   margin: 0;
   color: #27272a;
   font-size: var(--editor-body-font-size);
+  letter-spacing: -0.005em;
   line-height: var(--editor-body-line-height);
   min-height: 100%;
   outline: none;
@@ -1253,21 +1267,21 @@ html[data-edgeever-extension-theme] .edgeever-memo-divider {
 }
 
 .ProseMirror h1 {
-  font-size: 1.875rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 650;
   line-height: 1.28;
-  letter-spacing: -0.022em;
+  letter-spacing: -0.02em;
   margin: 0 0 0.85rem;
-  color: #0f172a;
+  color: #1a1d21;
 }
 
 .ProseMirror h2 {
-  font-size: 1.375rem;
-  font-weight: 650;
+  font-size: 1.25rem;
+  font-weight: 600;
   line-height: 1.32;
   letter-spacing: -0.015em;
   margin: 1.4rem 0 0.6rem;
-  color: #0f172a;
+  color: #27272a;
 }
 
 .ProseMirror h3 {
@@ -1276,7 +1290,7 @@ html[data-edgeever-extension-theme] .edgeever-memo-divider {
   line-height: 1.38;
   letter-spacing: -0.01em;
   margin: 1.15rem 0 0.5rem;
-  color: #1e293b;
+  color: #27272a;
 }
 
 .ProseMirror h4 {
@@ -1568,8 +1582,12 @@ html[data-edgeever-extension-theme] .edgeever-memo-divider {
   height: 1rem;
   margin: 0;
   border-radius: 3px;
-  accent-color: var(--brand-green);
+  accent-color: #1a1d21;
   cursor: pointer;
+}
+
+:root.dark .ProseMirror ul[data-type="taskList"] li[data-checked] > label input {
+  accent-color: #e7ebe8;
 }
 
 .ProseMirror ul[data-type="taskList"] li[data-checked] > div {
@@ -1622,21 +1640,21 @@ html[data-edgeever-extension-theme] .edgeever-memo-divider {
 
 .ProseMirror blockquote {
   margin: 0 0 1rem;
-  border-left: 3px solid var(--brand-green);
-  border-radius: 1px 4px 4px 1px;
-  padding: 0.35rem 0.5rem 0.35rem 0.85rem;
-  color: #334155;
-  background: color-mix(in srgb, var(--brand-green) 4%, transparent);
+  border: 0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: #3d4450;
+  background: #f3f5f7;
 }
 
 .ProseMirror code {
-  border: 1px solid #d4ebdc;
+  border: 1px solid #e1e5ea;
   border-radius: 4px;
-  background: #f2f9f5;
+  background: #f3f5f7;
   padding: 0.12rem 0.38rem;
   font-size: 0.875em;
   font-weight: 550;
-  color: #0d5f3a;
+  color: #3d4450;
   font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -2590,14 +2608,14 @@ html[data-edgeever-extension-theme] .edgeever-memo-divider {
 
 :root.dark .ProseMirror blockquote {
   color: hsl(var(--foreground));
-  background: color-mix(in srgb, var(--brand-green) 7%, transparent);
+  background: rgb(255 255 255 / 0.05);
 }
 
 :root.dark .ProseMirror code,
 :root.dark .markdown-content code {
-  border-color: rgb(var(--brand-green-rgb) / 0.28);
-  background: rgb(var(--brand-green-rgb) / 0.1);
-  color: var(--brand-green-text);
+  border-color: rgb(255 255 255 / 0.12);
+  background: rgb(255 255 255 / 0.06);
+  color: hsl(var(--foreground));
 }
 
 :root.dark .ProseMirror pre,

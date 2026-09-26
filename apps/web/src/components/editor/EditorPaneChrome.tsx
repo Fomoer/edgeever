@@ -51,7 +51,7 @@ export const NoteLinkInteractionHint = ({
 }) => createPortal(
   <div
     role="tooltip"
-    className="pointer-events-none fixed z-[100] whitespace-nowrap rounded-md bg-[var(--tooltip-bg)] px-2.5 py-1.5 text-xs font-medium text-[var(--tooltip-fg)] shadow-md"
+    className="pointer-events-none fixed z-[100] whitespace-nowrap rounded-lg border border-[var(--tooltip-border)] bg-[var(--tooltip-bg)] px-2.5 py-1.5 text-xs font-medium leading-4 text-[var(--tooltip-fg)] shadow-[var(--tooltip-shadow)]"
     style={{
       left: position.left,
       top: position.top,

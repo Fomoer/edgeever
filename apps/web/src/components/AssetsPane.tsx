@@ -207,10 +207,10 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
           </ButtonTooltip>
           <div className="min-w-0">
             <h1 className={`flex items-center gap-2 ${WORKSPACE_PAGE_TITLE_CLASSNAME}`}>
-              <Paperclip className="h-4.5 w-4.5 text-emerald-700" />
+              <Paperclip className="h-4 w-4 text-slate-900" />
               {t("assets.title")}
             </h1>
-            <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-400 uppercase tracking-wider">
+            <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span className="inline-flex items-center gap-1">
                 <HardDrive className="h-3 w-3" />
                 {formatBytes(summary.totalBytes)}
@@ -234,10 +234,10 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
               <button
                 key={type}
                 onClick={() => setFilterType(type)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
+                className={`rounded-lg border border-transparent px-3 py-1.5 text-xs transition-colors ${
                   filterType === type
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/50 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                    : "text-slate-500 hover:bg-slate-50 border border-transparent"
+                    ? "bg-slate-950 font-semibold text-slate-50"
+                    : "font-medium text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 {t(`assets.filters.${type}`)}
@@ -256,7 +256,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                 aria-label={t("assets.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-9 pr-8 text-xs text-slate-800 placeholder-slate-400 transition-colors focus:border-emerald-500/50 focus:bg-card focus:outline-none focus:ring-1 focus:ring-emerald-500/20"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-8 text-xs text-slate-800 placeholder:text-slate-400 transition-colors focus:border-slate-400 focus:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-slate-400/30"
               />
               {searchQuery && (
                 <button
@@ -276,7 +276,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                   aria-label={t("assets.gridView")}
                   aria-pressed={layoutMode === "grid"}
                   className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
-                    layoutMode === "grid" ? "bg-card text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    layoutMode === "grid" ? "bg-card text-slate-950 shadow-sm" : "text-slate-400 hover:text-slate-700"
                   }`}
                 >
                   <Grid className="h-4 w-4" />
@@ -288,7 +288,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                   aria-label={t("assets.listView")}
                   aria-pressed={layoutMode === "list"}
                   className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
-                    layoutMode === "list" ? "bg-card text-emerald-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    layoutMode === "list" ? "bg-card text-slate-950 shadow-sm" : "text-slate-400 hover:text-slate-700"
                   }`}
                 >
                   <List className="h-4 w-4" />
@@ -300,11 +300,11 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto bg-slate-50/30 p-6">
+      <div className="flex-1 overflow-y-auto bg-workspace-canvas p-6">
         <div className="mx-auto max-w-4xl">
           {resourcesQuery.isLoading ? (
             <div className="flex flex-col items-center justify-center py-32 text-slate-400">
-              <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-2" />
+              <Loader2 className="mb-2 h-8 w-8 animate-spin text-slate-400" />
               <span className="text-xs font-medium">{t("assets.loading")}</span>
             </div>
           ) : filteredResources.length === 0 ? (
@@ -325,7 +325,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
               {filteredResources.map((resource) => (
                 <div
                   key={resource.id}
-                  className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-card shadow-sm transition-all duration-200 hover:border-emerald-500/40 hover:shadow-md"
+                  className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-card shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md"
                 >
                   <ButtonTooltip title={t("assets.deleteAria", { filename: resource.filename || resource.id })}>
                     <Button
@@ -369,8 +369,8 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                       />
                     ) : (
                       <div className="flex flex-col items-center gap-1.5 p-3 text-center">
-                        <AttachmentFileIcon mimeType={resource.mimeType} filename={resource.filename} />
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                        <AttachmentFileIcon mimeType={resource.mimeType} filename={resource.filename} className="text-slate-700" />
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-500">
                           {(resource.filename || "").split(".").pop() || "FILE"}
                         </span>
                       </div>
@@ -391,7 +391,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                   {/* Metadata area */}
                   <div className="flex flex-col p-3 min-w-0">
                     <ButtonTooltip title={resource.filename || resource.id}>
-                      <span className="truncate text-xs font-bold text-slate-800 leading-snug group-hover:text-emerald-700 transition-colors">
+                      <span className="truncate text-sm font-semibold leading-snug text-slate-950">
                         {resource.filename || resource.id}
                       </span>
                     </ButtonTooltip>
@@ -404,7 +404,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                         ? t("assets.deletedMemo")
                         : t("assets.fromMemo", { source: resource.memoTitle || resource.memoExcerpt || resource.memoId })
                     }>
-                      <span className="mt-1.5 truncate text-[9px] text-slate-400 border-t border-slate-50 pt-1">
+                      <span className="mt-1.5 truncate border-t border-slate-100 pt-1 text-xs text-slate-500">
                         📄 {resource.memoDeleted ? t("assets.deletedMemo") : resource.memoTitle || resource.memoExcerpt || t("assets.unnamedMemo")}
                       </span>
                     </ButtonTooltip>
@@ -418,7 +418,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
               {filteredResources.map((resource) => (
                 <div
                   key={resource.id}
-                  className="group relative flex items-center gap-3.5 rounded-xl border border-slate-200/80 bg-card p-3.5 text-left transition-all duration-200 hover:border-emerald-500/35 hover:shadow-sm"
+                  className="group relative flex items-center gap-3.5 rounded-xl border border-slate-200/80 bg-card p-3.5 text-left transition-all duration-200 hover:border-slate-300 hover:shadow-sm"
                 >
                   {/* Left Icon/Thumbnail */}
                   <div
@@ -449,13 +449,13 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                         className="p-1"
                       />
                     ) : (
-                      <AttachmentFileIcon mimeType={resource.mimeType} filename={resource.filename} />
+                      <AttachmentFileIcon mimeType={resource.mimeType} filename={resource.filename} className="text-slate-700" />
                     )}
                   </div>
 
                   {/* Mid Info */}
                   <div className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold text-slate-800 leading-snug group-hover:text-emerald-700 transition-colors">
+                    <span className="block truncate text-sm font-semibold leading-snug text-slate-950">
                       {resource.filename || resource.id}
                     </span>
                     <span className="mt-1 block truncate text-xs font-medium text-slate-400">
@@ -486,7 +486,7 @@ export const AssetsPane = ({ onClose, repository, onOpenExecutionCenter }: Asset
                       target="_blank"
                       rel="noreferrer"
                       aria-label={t("assets.openInNewWindow")}
-                      className="edgeever-reveal-on-touch flex h-8 w-8 items-center justify-center rounded-lg text-slate-350 hover:bg-slate-50 hover:text-emerald-600 opacity-0 group-hover:opacity-100 focus:opacity-100 focus-within:opacity-100 transition-all duration-150"
+                      className="edgeever-reveal-on-touch flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 opacity-0 transition-all duration-150 hover:bg-slate-50 hover:text-slate-800 focus:opacity-100 focus-within:opacity-100 group-hover:opacity-100"
                     >
                       <ExternalLink className="h-4 w-4" />
                     </a>

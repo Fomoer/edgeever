@@ -264,7 +264,7 @@ export const SettingsPane = ({
   };
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden bg-slate-50">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden bg-workspace-canvas">
       <header className="flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-end justify-between border-b border-slate-200 bg-card px-4 pb-3 pt-[env(safe-area-inset-top)] lg:h-16 lg:items-center lg:px-6 lg:pb-0 lg:pt-0">
         <div className="flex min-w-0 items-center gap-3">
           <Button
@@ -290,7 +290,7 @@ export const SettingsPane = ({
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0 min-w-0 bg-slate-50/50">
+      <div className="flex min-h-0 min-w-0 flex-1 bg-workspace-canvas">
         {/* 桌面端布局：双栏 */}
         <div className="hidden lg:flex flex-1 min-h-0 min-w-0 mx-auto max-w-5xl px-6 py-6 gap-6">
           {/* 左侧垂直 Tab 栏 */}
@@ -304,20 +304,20 @@ export const SettingsPane = ({
                   type="button"
                   onClick={() => setActiveTab(item.key)}
                   className={cn(
-                    "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-normal leading-5 transition-all duration-150 text-left w-full",
+                    "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs leading-5 transition-all duration-150 text-left w-full",
                     isSelected
-                      ? `${item.colorClass} ${item.bgColorClass}`
-                      : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
+                      ? "bg-workspace-selection font-semibold text-slate-950"
+                      : "font-normal text-slate-600 hover:bg-workspace-hover hover:text-slate-900"
                   )}
                 >
-                  <Icon className={cn("h-4 w-4 shrink-0 transition-colors", isSelected ? item.colorClass : "text-slate-400")} />
+                  <Icon className={cn("h-4 w-4 shrink-0 transition-colors", isSelected ? "text-slate-950" : "text-slate-400")} />
                   <span className="flex-1 truncate">{item.label}</span>
                   {item.badge ? (
                     <span
                       className={cn(
                         "rounded-full px-1.5 py-0.5 text-xs font-semibold leading-none",
                         isSelected
-                          ? "bg-emerald-600/15 text-emerald-800"
+                          ? "bg-slate-200 text-slate-950"
                           : "bg-slate-200/80 text-slate-600"
                       )}
                     >
@@ -386,7 +386,7 @@ export const SettingsPane = ({
                         </div>
                         <span className="text-xs font-normal leading-5 text-slate-800">{item.label}</span>
                         {item.badge ? (
-                          <span className="rounded-full border border-emerald-200/80 bg-emerald-50 px-1.5 py-0.5 text-xs font-semibold text-emerald-700">
+                          <span className="rounded-full border border-emerald-200/80 bg-emerald-50 px-1.5 text-xs font-normal leading-5 text-emerald-700">
                             {item.badge}
                           </span>
                         ) : null}

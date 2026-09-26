@@ -17,7 +17,7 @@ test("keeps the desktop create-note control compact with one neutral outline", (
   expect(source).toContain('className="group flex h-12 max-w-[calc(100%-2.25rem)]');
   expect(source).toContain('className="group relative flex h-12 min-w-9 flex-1');
   expect(source).toContain('before:inset-y-2.5');
-  expect(source).toContain('data-[state=open]:bg-emerald-50');
+  expect(source).toContain('data-[state=open]:bg-slate-100 data-[state=open]:text-slate-950');
   expect(source).toContain('t("diagram.moreTypes")');
   expect(source).toContain('group-data-[state=open]:rotate-180');
   expect(source).toContain("edgeever-create-memo-split__more-label");

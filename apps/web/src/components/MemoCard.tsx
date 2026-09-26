@@ -333,14 +333,14 @@ export const MemoCard = ({
       draggable={!isTrashView}
       onDragStart={handleDragStart}
       className={cn(
-        "edgeever-memo-divider group relative overflow-hidden border border-slate-100 bg-card transition lg:rounded-none lg:border-x-0 lg:border-t-0 lg:border-slate-200 lg:shadow-none transition-all duration-200 select-none",
-        isLast && "lg:border-b-0",
-        listDensity === "compact" ? "rounded-md shadow-none" : "rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.045)]",
+        "edgeever-memo-divider group relative overflow-hidden border border-slate-100 bg-card transition lg:my-0.5 lg:rounded-lg lg:border lg:border-transparent lg:bg-transparent lg:shadow-none transition-all duration-200 select-none",
+        isLast && "lg:border-b-transparent",
+        listDensity === "compact" ? "rounded-md shadow-none" : "rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.045)] lg:shadow-none",
         !selectionMode && selected
-          ? "edgeever-workspace-selection-desktop"
+          ? "edgeever-workspace-selection border-[var(--workspace-divider)] bg-workspace-selection lg:border-[var(--workspace-divider)] lg:bg-workspace-selection"
           : checked
-            ? "edgeever-workspace-selection-desktop bg-slate-50 ring-1 ring-slate-200 lg:ring-0"
-            : "active:bg-slate-50 lg:hover:bg-slate-50"
+            ? "bg-slate-50 ring-1 ring-slate-200 lg:border-[var(--workspace-divider)] lg:bg-[var(--workspace-selection)] lg:ring-0"
+            : "active:bg-slate-50 lg:hover:bg-white/70"
       )}
     >
       <div className={cn("flex min-h-[132px] items-center", listDensity === "compact" && "min-h-[84px] lg:min-h-[76px]")}>
@@ -422,7 +422,7 @@ export const MemoCard = ({
           ) : (
             <div
               className={cn(
-                "line-clamp-2 min-h-10 text-xs leading-relaxed text-slate-600",
+                "line-clamp-2 min-h-10 text-xs leading-relaxed text-slate-500",
                 listDensity === "compact" && "line-clamp-1 min-h-0"
               )}
             >
@@ -438,7 +438,7 @@ export const MemoCard = ({
             {memo.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-[3px] bg-slate-100 px-1.5 py-0.5 text-xs font-medium tracking-tight text-slate-600"
+                className="text-xs tracking-tight text-slate-400"
               >
                 #{tag}
               </span>
@@ -448,9 +448,8 @@ export const MemoCard = ({
         {!selectionMode && (
           <div
             className={cn(
-              "mr-3 mt-4 hidden shrink-0 flex-col gap-1 opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover:opacity-100 lg:flex",
-              selected && "opacity-100",
-              listDensity === "compact" && "lg:mt-3"
+              "mr-2 mt-3 hidden shrink-0 flex-col gap-1 opacity-0 transition-opacity duration-200 focus-within:opacity-100 group-hover:opacity-100 lg:flex",
+              listDensity === "compact" && "lg:mt-2"
             )}
           >
             <Tooltip><TooltipTrigger asChild><button

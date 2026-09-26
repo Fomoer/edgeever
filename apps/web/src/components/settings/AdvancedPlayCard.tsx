@@ -33,7 +33,7 @@ export const AdvancedPlayCard = () => {
             <button className="flex w-full min-w-0 items-start justify-between gap-3 text-left" type="button">
               <span className="min-w-0">
                 <CardTitle className="flex items-center gap-2 text-sm">
-                  <Sparkles className="h-4 w-4 text-emerald-700" />
+                  <Sparkles className="h-4 w-4 text-slate-900" />
                   {t("advancedPlay.title")}
                 </CardTitle>
                 <CardDescription className="mt-1 text-xs text-slate-500">{t("advancedPlay.description")}</CardDescription>

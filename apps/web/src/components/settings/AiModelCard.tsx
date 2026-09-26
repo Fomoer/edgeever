@@ -223,7 +223,7 @@ export const AiModelCard = () => {
                 </section>
 
                 <div className="flex items-start gap-2 border-t border-slate-200/60 pt-3 ">
-                  <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 " />
+                  <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-900" />
                   <p className="text-xs leading-relaxed text-slate-500 ">
                     {t("aiModel.privacyNotice")}
                   </p>

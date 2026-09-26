@@ -128,7 +128,7 @@ export const PdfThumbnail = memo(({ url, label, byteSize, className }: PdfThumbn
 
   return (
     <span ref={hostRef} className={cn("relative flex h-full w-full items-center justify-center overflow-hidden", className)}>
-      {!rendered ? <FileText className="h-8 w-8 text-rose-600" aria-hidden="true" /> : null}
+      {!rendered ? <FileText className="h-8 w-8 text-slate-600" aria-hidden="true" /> : null}
       <canvas
         ref={canvasRef}
         role={rendered ? "img" : undefined}

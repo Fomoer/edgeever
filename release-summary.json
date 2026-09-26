@@ -1,29 +1,26 @@
 {
-  "version": "1.86.0",
+  "version": "1.87.0",
   "changes": {
     "en-US": [
-      "WeChat chat imports now preserve quoted replies and render supported chat expressions and message types more clearly.",
-      "Newly uploaded note images use the small display size by default.",
-      "Markdown editing keeps empty links and pasted resources intact.",
-      "Desktop attachment imports stay together during sync and can be canceled cleanly before syncing.",
-      "Mobile navigation stays visible in settings, and the Android login form stays above the keyboard.",
-      "Cloudflare deployment instructions now clarify the manual setup and optional administrator username."
+      "Add beta infographic notes, created and edited on Web and desktop. Describe the content for AI to generate one, or start from a template, then keep revising it in the same conversation. Content edits keep the existing layout, and the editor follows dark mode. On mobile, edit them on Web or desktop.",
+      "Plugin AI calls no longer have an EdgeEver output-token ceiling. When a limit is omitted, the request still defaults to 3000 tokens. The model or provider may apply its own limit.",
+      "The workspace uses a cooler gray palette. Note titles line up with the toolbar and use the width beside the status controls. Menus, settings, and secondary pages use 14px and 12px type. Dividers and completed tasks use ink, tooltips use a light card, and the duplicate reading-mode icon is removed.",
+      "Desktop WeChat chat import no longer adds an extra summary card. Sandboxed share paths resolve correctly, and a link the system rejects is no longer reported as a failed import.",
+      "Notebooks that were missing an internal identifier can now be deleted. The inbox still cannot be deleted."
     ],
     "zh-CN": [
-      "导入微信聊天记录时，现在能更清晰地呈现引用回复、常见表情和消息类型。",
-      "新上传到笔记的图片默认以小图尺寸显示。",
-      "Markdown 编辑会保留空链接，并正确处理粘贴的资源。",
-      "桌面端导入的附件在同步时保持完整，尚未同步的导入也能干净地取消。",
-      "移动端在设置页仍可看到底部导航，Android 登录表单也会保持在键盘上方。",
-      "Cloudflare 部署说明进一步明确了手动部署流程及可选的管理员用户名。"
+      "新增 Beta 信息图笔记，可在 Web 和桌面端创建与编辑。用一句话描述即可让 AI 生成，也可以从模板开始，然后在同一段对话里继续修改。改内容时会尽量保持原来的版式，编辑区跟随深色模式。手机端请在 Web 或桌面端修改。",
+      "插件调用 AI 时，EdgeEver 不再设置输出长度上限。未指定时仍默认 3000 token。模型或服务商可以有自己的上限。",
+      "工作区改为更冷静的灰白界面。笔记标题与工具栏左对齐，并占用状态控件左侧的宽度。菜单、设置和次级页面统一为 14px 与 12px。分割线和已完成任务改为墨色，提示改为浅色卡片，并去掉重复的阅读模式图标。",
+      "桌面端导入微信聊天记录时不再多出一张摘要卡。沙盒中的分享路径可以正确解析，被系统拒绝的链接也不会再被当成导入失败。",
+      "缺少内部标识的笔记本现在可以删除。收件箱仍然不能删除。"
     ],
     "ja": [
-      "WeChatチャットのインポートで、引用返信や対応する表情・メッセージの種類をより分かりやすく表示します。",
-      "新しくノートにアップロードした画像は、既定で小さいサイズで表示されます。",
-      "Markdown編集で空のリンクを保持し、貼り付けたリソースを正しく扱います。",
-      "デスクトップで取り込んだ添付ファイルは同期中も一体として保持され、同期前の取り込みを正常に取り消せます。",
-      "モバイル版では設定画面でも下部ナビゲーションが表示され、Androidのログインフォームはキーボードの上に表示されます。",
-      "Cloudflareのデプロイ手順で、手動設定と任意の管理者ユーザー名について説明を明確にしました。"
+      "Web とデスクトップで作成・編集できるベータ版のインフォグラフィックノートを追加しました。内容を説明して AI に生成させるか、テンプレートから始め、同じ会話で修正を続けられます。内容の修正では既存のレイアウトを保ち、編集画面はダークモードに従います。モバイルでは Web またはデスクトップで編集してください。",
+      "プラグインの AI 呼び出しに、EdgeEver 独自の出力トークン上限はなくなりました。指定しない場合は従来どおり 3000 トークンが既定です。モデルやプロバイダが独自の上限を設けることがあります。",
+      "ワークスペースを落ち着いたグレーにしました。ノートのタイトルはツールバーと左端を揃え、状態表示の左側まで幅を使います。メニュー、設定、二次ページは 14px と 12px に統一します。区切り線と完了したタスクは墨色、ツールチップは明るいカードになり、重複していた閲覧モードのアイコンはなくなります。",
+      "デスクトップの WeChat チャット取り込みは、余分な要約カードを出さなくなりました。サンドボックス内の共有パスを正しく解決し、システムに拒否されたリンクを取り込み失敗として表示しません。",
+      "内部識別子のないノートブックも削除できるようになりました。受信箱は引き続き削除できません。"
     ]
   }
 }

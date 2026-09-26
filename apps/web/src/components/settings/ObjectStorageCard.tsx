@@ -112,7 +112,7 @@ export const ObjectStorageCard = ({ demoMode }: { demoMode: boolean }) => {
                     provider === item ? "border-emerald-500 bg-emerald-50/70" : "border-slate-200 hover:bg-slate-50",
                   )}
                 >
-                  {item === "builtin" ? <Database className="mt-0.5 h-4 w-4 text-emerald-700" /> : <Cloud className="mt-0.5 h-4 w-4 text-emerald-700" />}
+                  {item === "builtin" ? <Database className="mt-0.5 h-4 w-4 text-slate-900" /> : <Cloud className="mt-0.5 h-4 w-4 text-slate-900" />}
                   <span><span className={cn("block", SETTINGS_ITEM_TITLE_CLASSNAME)}>{t(`objectStorage.providers.${item}.title`)}</span><span className="mt-0.5 block text-xs leading-5 text-slate-500">{t(`objectStorage.providers.${item}.description`)}</span></span>
                 </button>
               ))}

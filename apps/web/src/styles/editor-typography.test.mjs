@@ -19,8 +19,8 @@ const declarationsForSelector = (source, selectorSuffix) =>
 
 describe("editor typography contract", () => {
   test("keeps the shared body rhythm compact", () => {
-    expect(MEMO_CONTENT_STYLE.body.lineHeight / MEMO_CONTENT_STYLE.body.fontSize).toBe(1.6);
-    expect(MEMO_CONTENT_STYLE.body.paragraphSpacing).toBe(6);
+    expect(MEMO_CONTENT_STYLE.body.lineHeight / MEMO_CONTENT_STYLE.body.fontSize).toBe(1.625);
+    expect(MEMO_CONTENT_STYLE.body.paragraphSpacing).toBe(8);
   });
 
   test("configures punctuation squeezing and overflow wrapping for body text", () => {
