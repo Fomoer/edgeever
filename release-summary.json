@@ -1,23 +1,23 @@
 {
-  "version": "1.98.0",
+  "version": "1.99.0",
   "changes": {
     "en-US": [
-      "System information now shows the instance deployment time across Web, Android, and iOS.",
-      "Selected-text translation now preserves paragraph breaks, and selection AI actions cannot edit notes.",
-      "Plugin settings are grouped and displayed in a clearer, flatter layout.",
-      "The AI and infographic sidebars have a clearer message composer and a simpler empty state."
+      "The AI assistant can apply requested note content edits directly, with more reliable translation follow-ups and clearer selection prompts. Note revisions remain available.",
+      "The browser clipper adds a Reddit post action to the context menu and improves the Xiaohongshu and Zhihu clipping menus. Update the extension to use these changes.",
+      "Editor changes prevent unsaved title and tag details from carrying over to another note, and preserve external links whose labels resemble file names.",
+      "Android and iOS sign-in screens now leave the username field blank for account selection."
     ],
     "zh-CN": [
-      "Web、Android 和 iOS 的系统信息现在会显示实例部署时间。",
-      "选中文本翻译现在会保留段落分隔，选区 AI 操作也不会修改笔记。",
-      "插件设置现在分组更清晰，布局也更简洁。",
-      "AI 与信息图侧栏的消息输入区更加清晰，空白状态也更简洁。"
+      "AI 助手可直接应用用户要求的笔记正文修改；翻译后续操作和选中文本提示更准确，笔记修订记录仍可使用。",
+      "网页剪藏插件新增右键保存 Reddit 帖子，并改进小红书和知乎的剪藏菜单；更新插件后即可使用。",
+      "编辑器修复了未保存标题和标签串到另一篇笔记的问题，并保留标签看起来像文件名的外部链接。",
+      "Android 和 iOS 登录页现在将用户名留空，方便选择自己的账户。"
     ],
     "ja": [
-      "Web、Android、iOS のシステム情報にインスタンスのデプロイ時刻を表示します。",
-      "選択したテキストの翻訳で段落区切りを保持し、選択範囲の AI 操作ではノートを変更できないようにしました。",
-      "プラグイン設定のグループ分けと表示を整理しました。",
-      "AI とインフォグラフィックのサイドバーで入力欄を見やすくし、空の状態の表示を簡潔にしました。"
+      "AI アシスタントが依頼されたノート本文の変更を直接反映できるようになりました。翻訳後の操作と選択テキストの案内も改善し、改訂履歴は引き続き利用できます。",
+      "Web クリッパーに Reddit 投稿を保存する右クリックメニューを追加し、小紅書と知乎のメニューを改善しました。利用するには拡張機能を更新してください。",
+      "未保存のタイトルやタグが別のノートへ引き継がれる問題を修正し、ファイル名のようなラベルを持つ外部リンクを保持します。",
+      "Android と iOS のログイン画面でユーザー名を空欄にし、使用するアカウントを選べるようにしました。"
     ]
   }
 }

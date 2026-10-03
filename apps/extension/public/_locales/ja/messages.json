@@ -11,8 +11,14 @@
   "webClipper": {
     "message": "Web Clipper"
   },
-  "popupDescription": {
-    "message": "表示中のページや選択した内容を取り込みます。選択した文字の右クリックでその文章を、画像の右クリックで画像を、X 上の投稿の右クリックでその投稿を、小紅書のノート本文の右クリックでそのノートを、GitHub のリポジトリページの右クリックでアドレスと紹介文を保存できます。"
+  "supportedPlatformsLabel": {
+    "message": "最適化された主要プラットフォーム："
+  },
+  "platformXiaohongshu": {
+    "message": "小紅書"
+  },
+  "platformZhihu": {
+    "message": "知乎"
   },
   "saveCurrentPage": {
     "message": "このページを取り込む"
@@ -34,6 +40,9 @@
   },
   "optionsTitle": {
     "message": "EdgeEver Web Clipper の設定"
+  },
+  "optionsSubtitle": {
+    "message": "EdgeEver インスタンスへの接続と既定のノートブックを設定します。"
   },
   "diagnosticsTitle": {
     "message": "情報と診断"
@@ -452,5 +461,29 @@
   },
   "zhihuSaveWindowTitle": {
     "message": "回答・記事を EdgeEver に保存"
+  },
+  "saveRedditToEdgeEver": {
+    "message": "Reddit の投稿を EdgeEver に保存"
+  },
+  "savingReddit": {
+    "message": "Reddit の投稿を保存しています…"
+  },
+  "redditSaved": {
+    "message": "Reddit の投稿をノートに保存しました。"
+  },
+  "redditNotFound": {
+    "message": "Reddit の投稿が見つかりません。投稿の上で右クリックしてください。"
+  },
+  "redditRightClickAgain": {
+    "message": "Reddit の投稿を認識できるようになりました。同じ投稿をもう一度右クリックしてください。"
+  },
+  "redditAuthorLabel": {
+    "message": "投稿者"
+  },
+  "redditCommunityLabel": {
+    "message": "コミュニティ"
+  },
+  "redditLinkLabel": {
+    "message": "外部リンク"
   }
 }

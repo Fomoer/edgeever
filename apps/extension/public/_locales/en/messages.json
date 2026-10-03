@@ -11,8 +11,14 @@
   "webClipper": {
     "message": "Web Clipper"
   },
-  "popupDescription": {
-    "message": "Clip the current page or selection. Right-click selected text to save that passage, right-click an image to save it, right-click a post on X to save that post, right-click a Xiaohongshu note to save that note, or right-click a GitHub repository page to save its address and description."
+  "supportedPlatformsLabel": {
+    "message": "Tailored clipping support:"
+  },
+  "platformXiaohongshu": {
+    "message": "Xiaohongshu"
+  },
+  "platformZhihu": {
+    "message": "Zhihu"
   },
   "saveCurrentPage": {
     "message": "Clip current page"
@@ -34,6 +40,9 @@
   },
   "optionsTitle": {
     "message": "EdgeEver Web Clipper settings"
+  },
+  "optionsSubtitle": {
+    "message": "Configure your self-hosted EdgeEver instance connection and default notebook."
   },
   "diagnosticsTitle": {
     "message": "About & diagnostics"
@@ -452,5 +461,29 @@
   },
   "zhihuSaveWindowTitle": {
     "message": "Save answer or article to EdgeEver"
+  },
+  "saveRedditToEdgeEver": {
+    "message": "Save Reddit post to EdgeEver"
+  },
+  "savingReddit": {
+    "message": "Saving this Reddit post…"
+  },
+  "redditSaved": {
+    "message": "Saved this Reddit post as a note."
+  },
+  "redditNotFound": {
+    "message": "Could not find that Reddit post. Right-click directly on a post."
+  },
+  "redditRightClickAgain": {
+    "message": "Reddit posts can be recognized now. Right-click that post again."
+  },
+  "redditAuthorLabel": {
+    "message": "Author"
+  },
+  "redditCommunityLabel": {
+    "message": "Community"
+  },
+  "redditLinkLabel": {
+    "message": "Linked page"
   }
 }

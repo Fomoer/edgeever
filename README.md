@@ -171,7 +171,7 @@ The instance administrator can create, disable, or reset member accounts in **Pr
 
 - **Smart Article Extraction**: Automatically extracts article content and converts it into clean Markdown, preserving the source URL and clipping timestamp.
 - **Selection & Context Menu Clipping**: Save selected text or right-clicked images directly as notes without capturing the entire page.
-- **X (Twitter) Post Clipping**: Right-click any post to automatically expand full text and archive the author, timestamp, and attached images together.
+- **Deep Social & Community Clipping**: Native support for X (Twitter), Xiaohongshu, Zhihu, Reddit, and GitHub with one-click sending.
 - **Private Self-Hosted Direct Connection**: Sends clipped content directly to your personal EdgeEver instance without third-party relays.
 
 ## Community and Feedback

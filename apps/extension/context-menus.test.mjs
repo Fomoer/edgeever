@@ -41,6 +41,8 @@ test("registers context menus on install, not on background startup", async () =
       "save-github-repo",
       "save-xhs",
       "save-zhihu",
+      "save-reddit",
+      "save-reddit-link",
     ]);
     expect(created.find((item) => item.id === "save-xhs")).toMatchObject({
       contexts: ["page", "video"],
@@ -53,6 +55,26 @@ test("registers context menus on install, not on background startup", async () =
         "https://zhihu.com/*",
         "https://zhuanlan.zhihu.com/*",
         "https://www.zhuanlan.zhihu.com/*",
+      ],
+    });
+    expect(created.find((item) => item.id === "save-reddit")).toMatchObject({
+      contexts: ["page", "video"],
+      documentUrlPatterns: [
+        "https://reddit.com/*",
+        "https://www.reddit.com/*",
+        "https://old.reddit.com/*",
+        "https://new.reddit.com/*",
+        "https://sh.reddit.com/*",
+      ],
+    });
+    expect(created.find((item) => item.id === "save-reddit-link")).toMatchObject({
+      contexts: ["link"],
+      targetUrlPatterns: [
+        "https://reddit.com/*/comments/*",
+        "https://www.reddit.com/*/comments/*",
+        "https://old.reddit.com/*/comments/*",
+        "https://new.reddit.com/*/comments/*",
+        "https://sh.reddit.com/*/comments/*",
       ],
     });
   } finally {

@@ -11,8 +11,14 @@
   "webClipper": {
     "message": "网页剪藏"
   },
-  "popupDescription": {
-    "message": "剪藏当前网页或选中内容。选中文字后右键可以保存这段文字；在图片上右键可以保存图片；在 X 上右键可以保存这条推文；在小红书笔记正文上右键可以保存这篇笔记；在 GitHub 仓库页上右键可以保存仓库地址和简介。"
+  "supportedPlatformsLabel": {
+    "message": "已深度适配主流平台："
+  },
+  "platformXiaohongshu": {
+    "message": "小红书"
+  },
+  "platformZhihu": {
+    "message": "知乎"
   },
   "saveCurrentPage": {
     "message": "剪藏当前网页"
@@ -34,6 +40,9 @@
   },
   "optionsTitle": {
     "message": "EdgeEver Web Clipper 设置"
+  },
+  "optionsSubtitle": {
+    "message": "配置自托管 EdgeEver 实例连接与默认剪藏笔记本。"
   },
   "diagnosticsTitle": {
     "message": "关于与诊断信息"
@@ -452,5 +461,29 @@
   },
   "zhihuSaveWindowTitle": {
     "message": "保存回答/文章到 EdgeEver"
+  },
+  "saveRedditToEdgeEver": {
+    "message": "保存 Reddit 帖子到 EdgeEver"
+  },
+  "savingReddit": {
+    "message": "正在保存这条 Reddit 帖子……"
+  },
+  "redditSaved": {
+    "message": "已把这条 Reddit 帖子存成笔记。"
+  },
+  "redditNotFound": {
+    "message": "没有定位到这条 Reddit 帖子。请直接在帖子上右键。"
+  },
+  "redditRightClickAgain": {
+    "message": "现在可以识别 Reddit 帖子了。请在同一条帖子上再次右键。"
+  },
+  "redditAuthorLabel": {
+    "message": "作者"
+  },
+  "redditCommunityLabel": {
+    "message": "社区"
+  },
+  "redditLinkLabel": {
+    "message": "外部链接"
   }
 }
