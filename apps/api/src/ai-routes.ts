@@ -1,6 +1,10 @@
 import {
   AiDefaultModelUpdateSchema,
   AiGenerateSchema,
+  AiTranscriptionDefaultModelUpdateSchema,
+  AiTranscriptionModelCreateSchema,
+  AiTranscriptionProviderCreateSchema,
+  AiTranscriptionProviderUpdateSchema,
   InfographicAgentRequestSchema,
   AiModelConfigCreateSchema,
   AiProviderConfigCreateSchema,
@@ -18,7 +22,7 @@ import {
   type AiTone,
 } from "@edgeever/shared";
 import { zValidator } from "@hono/zod-validator";
-import type { Hono } from "hono";
+import type { Context, Hono } from "hono";
 import type { AppContext, AppEnv, Bindings } from "./api-context";
 import { AppError } from "./app-error";
 import { auditStatement } from "./audit";
@@ -40,15 +44,31 @@ import {
   normalizeAiGenerationText,
   normalizeAiBaseUrl,
   prepareAiGeneration,
+  aiTranscriptionDefaultStatement,
+  getAiTranscriptionModel,
+  getAiTranscriptionProvider,
+  getAiTranscriptionSettings,
+  getDefaultAiTranscriptionModelId,
   resolvePrimaryAiCredentialEncryptionKey,
   streamAiGeneration,
   testAiModel,
 } from "./ai-service";
 import { createId, isoNow } from "./entity-utils";
 import { apiError, forbidden, notFound } from "./http-errors";
-import { getWorkspaceId, requireUser } from "./request-auth";
+import { getWorkspaceId, requireScopes, requireUser } from "./request-auth";
+import {
+  VIDEO_OUTLINE_MAX_CHARS,
+  VIDEO_OUTLINE_SYSTEM_PROMPT,
+  VideoOutlineRequestSchema,
+  buildVideoOutlineUserPrompt,
+  generateVideoOutlineText,
+  normalizeVideoOutline,
+  parseVideoOutlineModelText,
+  videoOutlineInputChars,
+} from "./video-outline";
 import { encryptSecret } from "./secret-encryption";
 import { listTagSummaries } from "./tag-service";
+import { prepareNoteResourceTranscription } from "./resource-transcription";
 
 type AiRouteDependencies = {
   isDemoMode: (environment: Bindings) => boolean;
@@ -60,6 +80,11 @@ type AiRouteDependencies = {
     existingTags: string[];
     locale?: string;
   }) => Promise<string[]>;
+  generateVideoOutline?: (input: {
+    system: string;
+    prompt: string;
+    abortSignal?: AbortSignal;
+  }) => Promise<string>;
 };
 
 const providerErrorMessage = (error: unknown) => {
@@ -93,6 +118,28 @@ const readSettings = (context: AppContext, dependencies: AiRouteDependencies) =>
   dependencies.isDemoMode(context.env),
   context.env,
 );
+
+const readTranscriptionSettings = (context: AppContext, dependencies: AiRouteDependencies) =>
+  getAiTranscriptionSettings(
+    context.env.storage.db,
+    getWorkspaceId(context),
+    encryptionConfigured(context),
+    dependencies.isDemoMode(context.env),
+    context.env,
+  );
+
+const invalidTranscriptionSettings = (
+  result: { success: boolean },
+  context: Context,
+) => {
+  if (result.success) return;
+  return apiError(
+    context,
+    "ai_transcription_request_invalid",
+    "The speech transcription settings are invalid.",
+    400,
+  );
+};
 
 const denyMutation = (context: AppContext, dependencies: AiRouteDependencies) => {
   const denied = requireUser(context);
@@ -198,6 +245,320 @@ export const registerAiRoutes = (app: Hono<AppEnv>, dependencies: AiRouteDepende
     if (denied) return denied;
     return context.json(await readSettings(context, dependencies));
   });
+
+  app.get("/api/v1/ai/transcription-settings", async (context) => {
+    const denied = requireUser(context);
+    if (denied) return denied;
+    return context.json(await readTranscriptionSettings(context, dependencies));
+  });
+
+  app.post("/api/v1/memos/:memoId/resources/:resourceId/transcription-target", async (context) => {
+    const denied = requireUser(context);
+    if (denied) return denied;
+    if (dependencies.isDemoMode(context.env)) {
+      return forbidden(context, "Speech transcription is unavailable in demo mode.");
+    }
+    try {
+      const target = await prepareNoteResourceTranscription(
+        context.env,
+        getWorkspaceId(context),
+        context.req.param("memoId"),
+        context.req.param("resourceId"),
+      );
+      context.header("Cache-Control", "no-store");
+      return context.json(target);
+    } catch (error) {
+      return withAiError(context, error, "ai_transcription_failed");
+    }
+  });
+
+  app.post("/api/v1/ai/transcription-providers/:providerId/direct-credential", async (context) => {
+    const denied = requireUser(context);
+    if (denied) return denied;
+    if (dependencies.isDemoMode(context.env)) {
+      return forbidden(context, "Speech transcription is unavailable in demo mode.");
+    }
+    try {
+      const provider = await getAiTranscriptionProvider(
+        context.env.storage.db,
+        getWorkspaceId(context),
+        context.req.param("providerId"),
+      );
+      if (!provider) return notFound(context, "Speech service not found.");
+      const apiKey = await decryptAiCredential(provider.api_key_encrypted, context.env);
+      context.header("Cache-Control", "no-store");
+      return context.json({ apiKey });
+    } catch (error) {
+      return withAiError(context, error, "ai_transcription_failed");
+    }
+  });
+
+  app.post(
+    "/api/v1/ai/transcription-providers",
+    zValidator("json", AiTranscriptionProviderCreateSchema, invalidTranscriptionSettings),
+    async (context) => {
+      const denied = denyMutation(context, dependencies);
+      if (denied) return denied;
+      try {
+        const input = context.req.valid("json");
+        const workspaceId = getWorkspaceId(context);
+        const providerId = createId("atp");
+        const modelConfigId = input.initialModelId ? createId("atm") : null;
+        const now = isoNow();
+        const statements = [
+          context.env.storage.db.prepare(
+            `INSERT INTO ai_transcription_providers (
+               id, workspace_id, provider, display_name, base_url, api_key_encrypted,
+               is_enabled, created_at, updated_at
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ).bind(
+            providerId,
+            workspaceId,
+            input.provider,
+            input.displayName,
+            normalizeAiBaseUrl(input.baseUrl),
+            await encryptSecret(input.apiKey, requireEncryptionKey(context)),
+            input.isEnabled ? 1 : 0,
+            now,
+            now,
+          ),
+        ];
+        if (modelConfigId && input.initialModelId) {
+          statements.push(context.env.storage.db.prepare(
+            `INSERT INTO ai_transcription_models (
+               id, provider_id, model_id, display_name, created_at, updated_at
+             ) VALUES (?, ?, ?, ?, ?, ?)`,
+          ).bind(
+            modelConfigId,
+            providerId,
+            input.initialModelId,
+            input.initialModelId.slice(0, 80),
+            now,
+            now,
+          ));
+          if (input.isEnabled && !(await getDefaultAiTranscriptionModelId(context.env.storage.db, workspaceId))) {
+            statements.push(aiTranscriptionDefaultStatement(
+              context.env.storage.db,
+              workspaceId,
+              modelConfigId,
+              now,
+            ));
+          }
+        }
+        statements.push(auditStatement(
+          context.env.storage.db,
+          "user",
+          context.get("auth").actorId,
+          "workspace.ai_transcription_provider.create",
+          "ai_transcription_provider",
+          providerId,
+          { isEnabled: input.isEnabled, provider: input.provider, modelId: input.initialModelId ?? null },
+        ));
+        await context.env.storage.db.batch(statements);
+        return context.json(await readTranscriptionSettings(context, dependencies), 201);
+      } catch (error) {
+        return withAiError(context, error, "ai_transcription_provider_create_failed");
+      }
+    },
+  );
+
+  app.put(
+    "/api/v1/ai/transcription-providers/:providerId",
+    zValidator("json", AiTranscriptionProviderUpdateSchema, invalidTranscriptionSettings),
+    async (context) => {
+      const denied = denyMutation(context, dependencies);
+      if (denied) return denied;
+      try {
+        const input = context.req.valid("json");
+        const providerId = context.req.param("providerId");
+        const workspaceId = getWorkspaceId(context);
+        const existing = await getAiTranscriptionProvider(context.env.storage.db, workspaceId, providerId);
+        if (!existing) return notFound(context, "Speech service not found.");
+        const now = isoNow();
+        const apiKeyEncrypted = input.apiKey
+          ? await encryptSecret(input.apiKey, requireEncryptionKey(context))
+          : existing.api_key_encrypted;
+        await context.env.storage.db.batch([
+          context.env.storage.db.prepare(
+            `UPDATE ai_transcription_providers SET
+               provider = ?, display_name = ?, base_url = ?, api_key_encrypted = ?,
+               is_enabled = ?, updated_at = ?
+             WHERE id = ? AND workspace_id = ?`,
+          ).bind(
+            input.provider,
+            input.displayName,
+            normalizeAiBaseUrl(input.baseUrl),
+            apiKeyEncrypted,
+            input.isEnabled ? 1 : 0,
+            now,
+            providerId,
+            workspaceId,
+          ),
+          auditStatement(
+            context.env.storage.db,
+            "user",
+            context.get("auth").actorId,
+            "workspace.ai_transcription_provider.update",
+            "ai_transcription_provider",
+            providerId,
+            { isEnabled: input.isEnabled, provider: input.provider, apiKeyUpdated: Boolean(input.apiKey) },
+          ),
+        ]);
+        return context.json(await readTranscriptionSettings(context, dependencies));
+      } catch (error) {
+        return withAiError(context, error, "ai_transcription_provider_update_failed");
+      }
+    },
+  );
+
+  app.delete("/api/v1/ai/transcription-providers/:providerId", async (context) => {
+    const denied = denyMutation(context, dependencies);
+    if (denied) return denied;
+    const providerId = context.req.param("providerId");
+    const workspaceId = getWorkspaceId(context);
+    const existing = await getAiTranscriptionProvider(context.env.storage.db, workspaceId, providerId);
+    if (!existing) return notFound(context, "Speech service not found.");
+    await context.env.storage.db.batch([
+      context.env.storage.db.prepare(
+        `DELETE FROM ai_transcription_providers WHERE id = ? AND workspace_id = ?`,
+      ).bind(providerId, workspaceId),
+      auditStatement(
+        context.env.storage.db,
+        "user",
+        context.get("auth").actorId,
+        "workspace.ai_transcription_provider.delete",
+        "ai_transcription_provider",
+        providerId,
+        {},
+      ),
+    ]);
+    return context.json(await readTranscriptionSettings(context, dependencies));
+  });
+
+  app.post(
+    "/api/v1/ai/transcription-providers/:providerId/models",
+    zValidator("json", AiTranscriptionModelCreateSchema, invalidTranscriptionSettings),
+    async (context) => {
+      const denied = denyMutation(context, dependencies);
+      if (denied) return denied;
+      const providerId = context.req.param("providerId");
+      const workspaceId = getWorkspaceId(context);
+      const provider = await getAiTranscriptionProvider(context.env.storage.db, workspaceId, providerId);
+      if (!provider) return notFound(context, "Speech service not found.");
+      const input = context.req.valid("json");
+      const modelConfigId = createId("atm");
+      const now = isoNow();
+      const statements = [
+        context.env.storage.db.prepare(
+          `INSERT INTO ai_transcription_models (
+             id, provider_id, model_id, display_name, created_at, updated_at
+           ) VALUES (?, ?, ?, ?, ?, ?)`,
+        ).bind(
+          modelConfigId,
+          providerId,
+          input.modelId,
+          input.displayName ?? input.modelId.slice(0, 80),
+          now,
+          now,
+        ),
+      ];
+      if (provider.is_enabled && !(await getDefaultAiTranscriptionModelId(context.env.storage.db, workspaceId))) {
+        statements.push(aiTranscriptionDefaultStatement(
+          context.env.storage.db,
+          workspaceId,
+          modelConfigId,
+          now,
+        ));
+      }
+      statements.push(auditStatement(
+        context.env.storage.db,
+        "user",
+        context.get("auth").actorId,
+        "workspace.ai_transcription_model.create",
+        "ai_transcription_model",
+        modelConfigId,
+        { providerId, modelId: input.modelId },
+      ));
+      try {
+        await context.env.storage.db.batch(statements);
+        return context.json(await readTranscriptionSettings(context, dependencies), 201);
+      } catch (error) {
+        return withAiError(context, error, "ai_transcription_model_create_failed");
+      }
+    },
+  );
+
+  app.delete(
+    "/api/v1/ai/transcription-providers/:providerId/models/:modelConfigId",
+    async (context) => {
+      const denied = denyMutation(context, dependencies);
+      if (denied) return denied;
+      const workspaceId = getWorkspaceId(context);
+      const providerId = context.req.param("providerId");
+      const modelConfigId = context.req.param("modelConfigId");
+      const model = await getAiTranscriptionModel(context.env.storage.db, workspaceId, modelConfigId);
+      if (!model || model.provider_id !== providerId) {
+        return notFound(context, "Speech model not found.");
+      }
+      await context.env.storage.db.batch([
+        context.env.storage.db.prepare(
+          `DELETE FROM ai_transcription_models WHERE id = ? AND provider_id = ?`,
+        ).bind(modelConfigId, providerId),
+        auditStatement(
+          context.env.storage.db,
+          "user",
+          context.get("auth").actorId,
+          "workspace.ai_transcription_model.delete",
+          "ai_transcription_model",
+          modelConfigId,
+          { providerId, modelId: model.model_id },
+        ),
+      ]);
+      return context.json(await readTranscriptionSettings(context, dependencies));
+    },
+  );
+
+  app.put(
+    "/api/v1/ai/transcription-default-model",
+    zValidator("json", AiTranscriptionDefaultModelUpdateSchema, invalidTranscriptionSettings),
+    async (context) => {
+      const denied = denyMutation(context, dependencies);
+      if (denied) return denied;
+      const input = context.req.valid("json");
+      const workspaceId = getWorkspaceId(context);
+      if (input.modelConfigId) {
+        const model = await context.env.storage.db.prepare(
+          `SELECT models.id
+           FROM ai_transcription_models AS models
+           JOIN ai_transcription_providers AS providers ON providers.id = models.provider_id
+           WHERE models.id = ? AND providers.workspace_id = ? AND providers.is_enabled = 1
+           LIMIT 1`,
+        ).bind(input.modelConfigId, workspaceId).first<{ id: string }>();
+        if (!model) {
+          return apiError(
+            context,
+            "ai_transcription_default_unavailable",
+            "The selected speech model belongs to a disabled or missing service.",
+            400,
+          );
+        }
+      }
+      const now = isoNow();
+      await context.env.storage.db.batch([
+        aiTranscriptionDefaultStatement(context.env.storage.db, workspaceId, input.modelConfigId, now),
+        auditStatement(
+          context.env.storage.db,
+          "user",
+          context.get("auth").actorId,
+          "workspace.ai_transcription_default.update",
+          "workspace",
+          workspaceId,
+          { modelConfigId: input.modelConfigId },
+        ),
+      ]);
+      return context.json(await readTranscriptionSettings(context, dependencies));
+    },
+  );
 
   app.post(
     "/api/v1/ai/providers",
@@ -772,6 +1133,39 @@ export const registerAiRoutes = (app: Hono<AppEnv>, dependencies: AiRouteDepende
         });
       } catch (error) {
         return withAiError(context, error, "ai_generation_failed");
+      }
+    },
+  );
+
+  app.post(
+    "/api/v1/ai/video-outline",
+    zValidator("json", VideoOutlineRequestSchema),
+    async (context) => {
+      const denied = requireScopes(context, "ai:generate");
+      if (denied) return denied;
+      const input = context.req.valid("json");
+      if (videoOutlineInputChars(input) > VIDEO_OUTLINE_MAX_CHARS) {
+        return apiError(
+          context,
+          "video_outline_too_long",
+          "This transcript is too long to summarize.",
+          413,
+        );
+      }
+      try {
+        const system = VIDEO_OUTLINE_SYSTEM_PROMPT;
+        const prompt = buildVideoOutlineUserPrompt(input);
+        const text = dependencies.generateVideoOutline
+          ? await dependencies.generateVideoOutline({ system, prompt, abortSignal: context.req.raw.signal })
+          : await generateVideoOutlineText({
+            model: await loadDefaultAiModel(context.env.storage.db, getWorkspaceId(context), context.env),
+            system,
+            prompt,
+            abortSignal: context.req.raw.signal,
+          });
+        return context.json(normalizeVideoOutline(parseVideoOutlineModelText(text), input));
+      } catch (error) {
+        return withAiError(context, error, "video_outline_invalid");
       }
     },
   );

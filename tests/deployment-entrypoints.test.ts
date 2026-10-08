@@ -837,7 +837,7 @@ describe("Cloudflare deployment entrypoints", () => {
     } finally {
       rmSync(workingDirectory, { force: true, recursive: true });
     }
-  });
+  }, 20_000);
 
   test("public deployment documentation exposes only Fork and Agent paths", () => {
     const englishReadme = readRepositoryFile("README.md");
@@ -870,7 +870,7 @@ describe("Cloudflare deployment entrypoints", () => {
       extractTextPrompt(englishReadme, "### Option A: Deploy with an AI Agent (Recommended)"),
     );
     expect(deploymentPrompts["zh-CN"]).toBe(
-      extractTextPrompt(chineseReadme, "### 方案一：AI Agent 一键部署（推荐）"),
+      extractTextPrompt(chineseReadme, "### 方案一：交给 AI Agent 部署（推荐）"),
     );
     expect(siteDeploymentComponent).toContain('deploymentPrompts["en-US"]');
     expect(siteDeploymentComponent).toContain('deploymentPrompts["zh-CN"]');

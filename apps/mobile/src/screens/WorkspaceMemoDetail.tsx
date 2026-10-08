@@ -131,13 +131,13 @@ const loadAuthenticatedImageDataUrl = (
 };
 
 const alertProtectedImageLoadFailure = (
-  locale: "zh-CN" | "en-US" | "ja",
+  locale: "zh-CN" | "en-US" | "ja" | "pl",
   failure: ProtectedResourceLoadFailure
 ) => {
   const statusLabel = failure.status != null ? String(failure.status) : locale !== "zh-CN" ? "network error" : "网络错误";
   Alert.alert(
     locale !== "zh-CN" ? "Image failed to load" : "图片加载失败",
-    locale === "en-US"
+    locale !== "zh-CN"
       ? `Could not load a note image (${statusLabel}). Check the network and try again.`
       : `笔记中的图片未能加载（${statusLabel}）。请检查网络后重试。`
   );
@@ -1519,14 +1519,14 @@ export const MemoDetailModal = ({
                   />
                   {preparedNoteImage.failedImages > 0 ? (
                     <Text style={imageShareStyles.previewWarning}>
-                      {resolvedLocale === "en-US"
+                      {resolvedLocale !== "zh-CN"
                         ? `${preparedNoteImage.failedImages} of ${preparedNoteImage.totalImages} note image(s) could not be included.`
                         : `笔记中的 ${preparedNoteImage.totalImages} 张图片有 ${preparedNoteImage.failedImages} 张未能包含。`}
                     </Text>
                   ) : null}
                   {preparedNoteImage.height > 12_000 ? (
                     <Text style={imageShareStyles.previewWarning}>
-                      {resolvedLocale === "en-US"
+                      {resolvedLocale !== "zh-CN"
                         ? "This is a long image. Some social apps may reduce its quality; keep the saved original."
                         : "图片较长，部分社交平台可能会压缩画质；建议保留保存的原图。"}
                     </Text>

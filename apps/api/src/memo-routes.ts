@@ -19,7 +19,6 @@ import type { ListMemosInput, ListMemosResult } from "./memo-list-service";
 import { getActorLabel, getAuditActor, getWorkspaceId, requireScopes } from "./request-auth";
 import { deleteReleasedResourceObjects } from "./resource-service";
 import type { DatabaseAdapter } from "./storage-contract";
-
 type MemoRouteDependencies = {
   clampNumber: (value: number, min: number, max: number) => number;
   createImageResource: (context: AppContext, input: {
@@ -151,10 +150,11 @@ export const registerMemoRoutes = (
     if (denied) return denied;
 
     try {
+      const input = context.req.valid("json");
       const memo = await dependencies.createMemo(
         context.env.storage.db,
         getWorkspaceId(context),
-        context.req.valid("json"),
+        input,
         getAuditActor(context),
         getActorLabel(context),
       );
@@ -189,7 +189,6 @@ export const registerMemoRoutes = (
     if (!(file instanceof File) || !notebookId || !contentMarkdown.includes("EDGEVERRESOURCEID")) {
       return badRequest(context, "notebookId, contentMarkdown, and an image file are required.");
     }
-
     const resourceId = createId("res");
     const markdown = contentMarkdown.replaceAll("EDGEVERRESOURCEID", resourceId);
     const actor = getAuditActor(context);

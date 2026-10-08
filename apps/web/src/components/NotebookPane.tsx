@@ -248,14 +248,17 @@ const SidebarCollapseButton = ({
   onToggle,
   className,
   tooltipSide = "bottom",
+  shortcutLabel,
 }: {
   collapsed: boolean;
   onToggle: () => void;
   className?: string;
   tooltipSide?: "top" | "right" | "bottom" | "left";
+  shortcutLabel?: string;
 }) => {
   const { t } = useTranslation();
   const label = t(collapsed ? "notebookPane.expandSidebar" : "notebookPane.collapseSidebar");
+  const tooltipLabel = shortcutLabel ? `${label} (${shortcutLabel})` : label;
 
   return (
     <TooltipProvider delayDuration={0} skipDelayDuration={0}>
@@ -275,7 +278,7 @@ const SidebarCollapseButton = ({
             {collapsed ? <ChevronsRight className="h-4 w-4" aria-hidden="true" /> : <ChevronsLeft className="h-4 w-4" aria-hidden="true" />}
           </button>
         </TooltipTrigger>
-        <TooltipContent side={tooltipSide}>{label}</TooltipContent>
+        <TooltipContent side={tooltipSide}>{tooltipLabel}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
@@ -512,6 +515,7 @@ export const NotebookPane = ({
   isResettingDemo = false,
   collapsed = false,
   onToggleCollapsed,
+  collapseShortcutLabel,
 }: {
   repository: EdgeEverRepository;
   user: AuthUser | null;
@@ -550,6 +554,7 @@ export const NotebookPane = ({
   isResettingDemo?: boolean;
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
+  collapseShortcutLabel?: string;
 }) => {
   const { t } = useTranslation();
   const showDescendantNotes = useShowDescendantNotesPreference();
@@ -946,7 +951,7 @@ export const NotebookPane = ({
                   notice={deployedUpdateUnseen}
                   onClick={onOpenSettings}
                 />
-                <SidebarCollapseButton collapsed onToggle={onToggleCollapsed} className="h-9 w-9" tooltipSide="right" />
+                <SidebarCollapseButton collapsed onToggle={onToggleCollapsed} className="h-9 w-9" tooltipSide="right" shortcutLabel={collapseShortcutLabel} />
               </div>
             </nav>
           </div>
@@ -1176,7 +1181,7 @@ export const NotebookPane = ({
             </button>
             <DesktopUpdateNotice />
             {onToggleCollapsed ? (
-              <SidebarCollapseButton collapsed={collapsed} onToggle={onToggleCollapsed} className="hidden lg:inline-flex" />
+              <SidebarCollapseButton collapsed={collapsed} onToggle={onToggleCollapsed} className="hidden lg:inline-flex" shortcutLabel={collapseShortcutLabel} />
             ) : null}
           </div>
         </div>

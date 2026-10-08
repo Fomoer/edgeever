@@ -5,9 +5,9 @@ globalThis.indexedDB = indexedDB;
 globalThis.IDBKeyRange = IDBKeyRange;
 
 const { localDb } = await import("./local-db.ts");
-const { api } = await import("./api.ts");
+const { api, ApiRequestError } = await import("./api.ts");
 const { createLocalDataScope, createLocalMemo, getLocalMemo, putLocalMemo, replaceLocalMemoId, createLocalResource, listLocalResources } = await import("./local-mirror.ts");
-const { discardWebConflicts, getMemoUpdateQueueId, queueLocalAction, queueMemoCreate, queueMemoUpdate, syncQueuedChanges } = await import("./sync-queue.ts");
+const { discardWebConflicts, getMemoUpdateQueueId, queueLocalAction, queueMemoCreate, queueMemoDelete, queueMemoUpdate, syncQueuedChanges } = await import("./sync-queue.ts");
 
 afterEach(async () => {
   await localDb.transaction(
@@ -30,6 +30,60 @@ afterEach(async () => {
 });
 
 describe("web sync conflict recovery", () => {
+  test("confirmed note deletions clear only their older local conflicts", async () => {
+    const previousOnline = globalThis.navigator?.onLine;
+    if (globalThis.navigator) Object.defineProperty(globalThis.navigator, "onLine", { configurable: true, value: true });
+    const scope = createLocalDataScope("https://demo.edgeever.org", "user-1");
+    const old = "2026-01-01T00:00:00.000Z";
+    for (const memoId of ["memo-single", "memo-batch", "memo-trash", "memo-unrelated"]) {
+      await localDb.syncQueue.put({
+        id: getMemoUpdateQueueId(memoId), kind: "memo.update", scope, memoId,
+        status: "conflict", payload: { memoId }, attemptCount: 1,
+        lastError: "conflict", nextAttemptAt: null, claimId: null,
+        createdAt: old, updatedAt: old,
+      });
+    }
+    await queueMemoDelete(scope, { memoId: "memo-single", permanent: false });
+    await queueLocalAction(scope, "memo.deleteBatch", "batch", { memoIds: ["memo-batch"], permanent: true });
+    await queueLocalAction(scope, "memo.emptyTrash", "trash", { memoIds: ["memo-trash"] });
+    const original = { deleteMemo: api.deleteMemo, deleteMemos: api.deleteMemos, emptyTrash: api.emptyTrash };
+    api.deleteMemo = async () => ({ ok: true });
+    api.deleteMemos = async () => ({ ok: true, deleted: 1 });
+    api.emptyTrash = async () => ({ ok: true, deleted: 1 });
+    try {
+      expect(await syncQueuedChanges({ scope })).toMatchObject({ synced: 3, conflicted: 0 });
+      for (const memoId of ["memo-single", "memo-batch", "memo-trash"]) {
+        expect(await localDb.syncQueue.get(getMemoUpdateQueueId(memoId))).toBeUndefined();
+      }
+      expect(await localDb.syncQueue.get(getMemoUpdateQueueId("memo-unrelated"))).toBeDefined();
+    } finally {
+      Object.assign(api, original);
+      if (globalThis.navigator) Object.defineProperty(globalThis.navigator, "onLine", { configurable: true, value: previousOnline });
+    }
+  });
+
+  test("failed note deletion preserves the local conflict", async () => {
+    const previousOnline = globalThis.navigator?.onLine;
+    if (globalThis.navigator) Object.defineProperty(globalThis.navigator, "onLine", { configurable: true, value: true });
+    const scope = createLocalDataScope("https://demo.edgeever.org", "user-1");
+    await localDb.syncQueue.put({
+      id: getMemoUpdateQueueId("memo-failed"), kind: "memo.update", scope, memoId: "memo-failed",
+      status: "conflict", payload: { memoId: "memo-failed" }, attemptCount: 1,
+      lastError: "conflict", nextAttemptAt: null, claimId: null,
+      createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    await queueMemoDelete(scope, { memoId: "memo-failed", permanent: false });
+    const original = api.deleteMemo;
+    api.deleteMemo = async () => { throw new Error("offline"); };
+    try {
+      expect(await syncQueuedChanges({ scope })).toMatchObject({ failed: 1 });
+      expect(await localDb.syncQueue.get(getMemoUpdateQueueId("memo-failed"))).toMatchObject({ status: "conflict" });
+    } finally {
+      api.deleteMemo = original;
+      if (globalThis.navigator) Object.defineProperty(globalThis.navigator, "onLine", { configurable: true, value: previousOnline });
+    }
+  });
+
   test("preserves a newer draft written while a memo update is in flight", async () => {
     const previousOnline = globalThis.navigator?.onLine;
     if (globalThis.navigator) Object.defineProperty(globalThis.navigator, "onLine", { configurable: true, value: true });
@@ -261,6 +315,26 @@ describe("web sync conflict recovery", () => {
     expect((await getLocalMemo(scope, memo.id))?.title).toBe("Remote version");
     expect(await localDb.syncQueue.get("memo.update:conflict")).toBeUndefined();
     api.getMemo = originalGetMemo;
+  });
+
+  test("explicitly discards an old conflict when its cloud note is gone", async () => {
+    const scope = createLocalDataScope("https://demo.edgeever.org", "user-1");
+    const memo = await createLocalMemo(scope, { notebookId: "inbox", title: "Deleted cloud note" });
+    await localDb.syncQueue.put({
+      id: getMemoUpdateQueueId(memo.id), kind: "memo.update", scope, memoId: memo.id,
+      status: "conflict", payload: { memoId: memo.id }, attemptCount: 1,
+      lastError: "conflict", nextAttemptAt: null, claimId: null,
+      createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    const original = api.getMemo;
+    api.getMemo = async () => { throw new ApiRequestError("Not found", 404, "not_found"); };
+    try {
+      expect(await discardWebConflicts(scope)).toBe(1);
+      expect(await localDb.syncQueue.get(getMemoUpdateQueueId(memo.id))).toBeUndefined();
+      expect(await getLocalMemo(scope, memo.id)).toBeNull();
+    } finally {
+      api.getMemo = original;
+    }
   });
 
   test("uploads an offline resource and rewrites its memo reference", async () => {

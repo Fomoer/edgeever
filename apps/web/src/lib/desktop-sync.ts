@@ -959,9 +959,19 @@ export const discardDesktopConflicts = async () => {
   for (const item of conflicts) {
     if (item.kind === "memo.update") {
       // Replace the local conflicted draft with the authoritative remote memo
-      // before removing the queue item. If the remote read fails, keep the
-      // conflict so the user's local changes remain recoverable.
-      const remote = await api.getMemo(item.entityId, { includeDeleted: true });
+      // before removing the queue item. Keep the conflict on read failures
+      // unless the server confirms that the note no longer exists.
+      let remote: Awaited<ReturnType<typeof api.getMemo>>;
+      try {
+        remote = await api.getMemo(item.entityId, { includeDeleted: true });
+      } catch (error) {
+        if (!(error instanceof ApiRequestError) || error.status !== 404) throw error;
+        // Explicit discard can resolve a conflict left behind after the note
+        // was permanently deleted and no cloud version exists to adopt.
+        await request("sync.outbox.discard", { id: item.id, version: item.version });
+        discarded += 1;
+        continue;
+      }
       await request("sync.apply", {
         changes: [{ entityType: "memo", operation: "upsert", entityId: remote.memo.id, memo: remote.memo, notebook: null }],
       });

@@ -1,8 +1,10 @@
 const menuCopy = {
   en: {
     about: "About EdgeEver",
+    addToDictionary: "Add to Dictionary",
     close: "Close Window",
     copy: "Copy",
+    copyLinkAddress: "Copy Link Address",
     cut: "Cut",
     edit: "Edit",
     file: "File",
@@ -13,6 +15,7 @@ const menuCopy = {
     newMemo: "New Note",
     newNotebook: "New Notebook",
     paste: "Paste",
+    pasteAsPlainText: "Paste as Plain Text",
     quit: "Quit EdgeEver",
     resetZoom: "Reset Zoom",
     restartToUpdate: "Restart to update",
@@ -32,8 +35,10 @@ const menuCopy = {
   },
   zh: {
     about: "关于 EdgeEver",
+    addToDictionary: "添加到词典",
     close: "关闭窗口",
     copy: "复制",
+    copyLinkAddress: "复制链接地址",
     cut: "剪切",
     edit: "编辑",
     file: "文件",
@@ -44,6 +49,7 @@ const menuCopy = {
     newMemo: "新建笔记",
     newNotebook: "新建笔记本",
     paste: "粘贴",
+    pasteAsPlainText: "粘贴为纯文本",
     quit: "退出 EdgeEver",
     resetZoom: "重置缩放",
     restartToUpdate: "重启以更新",
@@ -61,10 +67,45 @@ const menuCopy = {
     zoomIn: "放大",
     zoomOut: "缩小",
   },
+  pl: {
+    about: "EdgeEver – informacje",
+    addToDictionary: "Dodaj do słownika",
+    close: "Zamknij okno",
+    copy: "Kopiuj",
+    copyLinkAddress: "Kopiuj adres linku",
+    cut: "Wytnij",
+    edit: "Edycja",
+    file: "Plik",
+    focusSearch: "Przejdź do wyszukiwania",
+    front: "Wszystko na wierzch",
+    hide: "Ukryj EdgeEver",
+    minimize: "Minimalizuj",
+    newMemo: "Nowa notatka",
+    newNotebook: "Nowy notatnik",
+    paste: "Wklej",
+    pasteAsPlainText: "Wklej jako zwykły tekst",
+    quit: "Zakończ EdgeEver",
+    resetZoom: "Resetuj powiększenie",
+    restartToUpdate: "Uruchom ponownie, aby zaktualizować",
+    screenshotFailed: "Nie udało się wykonać zrzutu ekranu. Jeśli robisz to pierwszy raz, zezwól EdgeEver na nagrywanie ekranu w Ustawieniach systemowych.",
+    screenshotToNote: "Zrzut ekranu do notatki",
+    selectAll: "Zaznacz wszystko",
+    show: "Pokaż EdgeEver",
+    toggleFocusMode: "Przełącz tryb skupienia",
+    toggleFullScreen: "Przełącz pełny ekran",
+    undo: "Cofnij",
+    redo: "Ponów",
+    view: "Widok",
+    window: "Okno",
+    zoom: "Powiększ okno",
+    zoomIn: "Powiększ",
+    zoomOut: "Pomniejsz",
+  },
 };
 
-export const desktopMenuCopy = (locale) => (
-  typeof locale === "string" && locale.toLowerCase().startsWith("zh")
-    ? menuCopy.zh
-    : menuCopy.en
-);
+export const desktopMenuCopy = (locale) => {
+  const normalized = typeof locale === "string" ? locale.toLowerCase() : "";
+  if (normalized.startsWith("zh")) return menuCopy.zh;
+  if (normalized === "pl" || normalized.startsWith("pl-")) return menuCopy.pl;
+  return menuCopy.en;
+};

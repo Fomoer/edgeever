@@ -20,6 +20,7 @@ export const localeLabels: Record<SupportedLocale, string> = {
   "zh-CN": "简体中文",
   "en-US": "English",
   ja: "日本語",
+  pl: "Polski",
 };
 
 export const normalizeLocale = (locale: string | null | undefined): SupportedLocale | null =>

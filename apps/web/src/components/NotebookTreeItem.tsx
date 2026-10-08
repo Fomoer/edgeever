@@ -175,7 +175,7 @@ export const NotebookTreeItem = ({
           <div
             data-notebook-id={node.id}
             className={cn(
-              "group relative flex h-9 items-center gap-1 rounded-md px-2 text-xs transition-all duration-200 select-none",
+              "group relative flex h-9 cursor-pointer items-center gap-1 rounded-md px-2 text-xs transition-all duration-200 select-none",
               selected
                 ? "edgeever-workspace-selection font-medium text-slate-950"
                 : hasSelectedDescendant
@@ -185,6 +185,13 @@ export const NotebookTreeItem = ({
               dropPosition === "inside" && hasChildren && !open && "bg-slate-100"
             )}
             draggable
+            onClick={(event) => {
+              if ((event.target as Element).closest("button")) {
+                return;
+              }
+
+              onSelect(node.id);
+            }}
             onDragStart={(event) => {
               event.dataTransfer.effectAllowed = "move";
               event.dataTransfer.setData(NOTEBOOK_DRAG_MIME, node.id);

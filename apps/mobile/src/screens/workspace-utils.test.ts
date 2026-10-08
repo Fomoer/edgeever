@@ -63,11 +63,12 @@ describe("mobile workspace utilities", () => {
   test("treats explicit locale preferences as the resolved UI locale", () => {
     expect(getResolvedMobileLocale("zh-CN")).toBe("zh-CN");
     expect(getResolvedMobileLocale("en-US")).toBe("en-US");
+    expect(getResolvedMobileLocale("pl")).toBe("pl");
     expect(isEnglishMobileLocale("zh-CN")).toBe(false);
     expect(isEnglishMobileLocale("en-US")).toBe(true);
   });
 
-  test("resolves Japanese system languages to Japanese and unmatched languages to English", () => {
+  test("resolves Japanese and Polish system languages to themselves and unmatched languages to English", () => {
     const original = Intl.DateTimeFormat.prototype.resolvedOptions;
     const withLocale = (locale: string) => {
       Intl.DateTimeFormat.prototype.resolvedOptions = function resolvedOptions() {
@@ -78,6 +79,11 @@ describe("mobile workspace utilities", () => {
       withLocale("ja-JP");
       expect(getResolvedMobileLocale("system")).toBe("ja");
       expect(isEnglishMobileLocale("system")).toBe(true);
+      withLocale("pl-PL");
+      expect(getResolvedMobileLocale("system")).toBe("pl");
+      expect(isEnglishMobileLocale("system")).toBe(true);
+      withLocale("pl");
+      expect(getResolvedMobileLocale("system")).toBe("pl");
       withLocale("fr-FR");
       expect(getResolvedMobileLocale("system")).toBe("en-US");
       expect(isEnglishMobileLocale("system")).toBe(true);

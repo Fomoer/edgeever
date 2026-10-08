@@ -47,7 +47,7 @@ struct RevisionsView: View {
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(AppTheme.accent)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(env.preferences.t("版本历史", en: "Version history"))
+                            Text(env.preferences.t("版本历史", en: "Version history", pl: "Historia wersji"))
                                 .font(.system(size: 16, weight: .heavy))
                                 .foregroundStyle(AppTheme.title)
                             Text(displayTitle)
@@ -69,32 +69,33 @@ struct RevisionsView: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(env.preferences.t("关闭", en: "Close"))
+                    .accessibilityLabel(env.preferences.t("关闭", en: "Close", pl: "Zamknij"))
                 }
             }
             .task { await load() }
             .refreshable { await load() }
             .confirmationDialog(
-                env.preferences.t("恢复到这个历史版本", en: "Restore this version"),
+                env.preferences.t("恢复到这个历史版本", en: "Restore this version", pl: "Przywróć tę wersję"),
                 isPresented: Binding(
                     get: { confirmRestore != nil },
                     set: { if !$0 { confirmRestore = nil } }
                 ),
                 titleVisibility: .visible
             ) {
-                Button(env.preferences.t("恢复", en: "Restore")) {
+                Button(env.preferences.t("恢复", en: "Restore", pl: "Przywróć")) {
                     if let rev = confirmRestore {
                         Task { await restore(rev) }
                     }
                 }
-                Button(env.preferences.t("取消", en: "Cancel"), role: .cancel) {
+                Button(env.preferences.t("取消", en: "Cancel", pl: "Anuluj"), role: .cancel) {
                     confirmRestore = nil
                 }
             } message: {
                 Text(
                     env.preferences.t(
                         "当前内容会被这个历史版本替换，恢复后仍会产生新的历史记录。",
-                        en: "Current content will be replaced. Restoring creates a new history entry."
+                        en: "Current content will be replaced. Restoring creates a new history entry.",
+                        pl: "Bieżąca treść zostanie zastąpiona. Przywrócenie utworzy nowy wpis w historii."
                     )
                 )
             }
@@ -108,15 +109,16 @@ struct RevisionsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(
                     selected.map {
-                        env.preferences.t("版本 \($0.revision)", en: "Version \($0.revision)")
-                    } ?? env.preferences.t("未选择历史版本", en: "No version selected")
+                        env.preferences.t("版本 \($0.revision)", en: "Version \($0.revision)", pl: "Wersja \($0.revision)")
+                    } ?? env.preferences.t("未选择历史版本", en: "No version selected", pl: "Nie wybrano wersji")
                 )
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(AppTheme.title)
                 Text(
                     env.preferences.t(
                         "选择历史记录后可预览并恢复。",
-                        en: "Select a revision to preview and restore."
+                        en: "Select a revision to preview and restore.",
+                        pl: "Wybierz wersję, aby ją wyświetlić i przywrócić."
                     )
                 )
                 .font(.system(size: 13))
@@ -138,8 +140,8 @@ struct RevisionsView: View {
                         }
                         Text(
                             isRestoring
-                                ? env.preferences.t("恢复中", en: "Restoring")
-                                : env.preferences.t("恢复该版本", en: "Restore")
+                                ? env.preferences.t("恢复中", en: "Restoring", pl: "Przywracanie")
+                                : env.preferences.t("恢复该版本", en: "Restore", pl: "Przywróć")
                         )
                         .font(.system(size: 13, weight: .bold))
                     }
@@ -174,27 +176,27 @@ struct RevisionsView: View {
 
     private var timelineSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(env.preferences.t("历史记录", en: "History"))
+            Text(env.preferences.t("历史记录", en: "History", pl: "Historia"))
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(AppTheme.meta)
 
             if isLoading {
                 timelineState {
                     ProgressView()
-                    Text(env.preferences.t("加载中", en: "Loading"))
+                    Text(env.preferences.t("加载中", en: "Loading", pl: "Wczytywanie"))
                         .font(.system(size: 13))
                         .foregroundStyle(AppTheme.secondary)
                 }
             } else if let error {
                 timelineState {
-                    Text(env.preferences.t("加载失败", en: "Failed to load"))
+                    Text(env.preferences.t("加载失败", en: "Failed to load", pl: "Nie udało się wczytać"))
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(AppTheme.danger)
                     Text(error)
                         .font(.system(size: 12))
                         .foregroundStyle(AppTheme.secondary)
                         .multilineTextAlignment(.center)
-                    Button(env.preferences.t("重试", en: "Retry")) {
+                    Button(env.preferences.t("重试", en: "Retry", pl: "Spróbuj ponownie")) {
                         Task { await load() }
                     }
                     .font(.system(size: 13, weight: .bold))
@@ -202,7 +204,7 @@ struct RevisionsView: View {
                 }
             } else if revisions.isEmpty {
                 timelineState {
-                    Text(env.preferences.t("暂无历史版本", en: "No revisions yet"))
+                    Text(env.preferences.t("暂无历史版本", en: "No revisions yet", pl: "Brak wersji"))
                         .font(.system(size: 13))
                         .foregroundStyle(AppTheme.secondary)
                 }
@@ -225,7 +227,7 @@ struct RevisionsView: View {
             restoreError = nil
         } label: {
             VStack(alignment: .leading, spacing: 4) {
-                Text(env.preferences.t("版本 \(rev.revision)", en: "Version \(rev.revision)"))
+                Text(env.preferences.t("版本 \(rev.revision)", en: "Version \(rev.revision)", pl: "Wersja \(rev.revision)"))
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(active ? .white : AppTheme.title)
                 Text("\(MemoPreviewDate.format(rev.createdAt, locale: env.preferences.resolvedLocale, isEnglish: env.preferences.isEnglish, language: env.preferences.uiLanguage)) · \(Self.formatActor(rev.createdBy))")
@@ -266,10 +268,10 @@ struct RevisionsView: View {
     private var previewSection: some View {
         if let selected {
             VStack(alignment: .leading, spacing: 8) {
-                Text(env.preferences.t("预览", en: "Preview"))
+                Text(env.preferences.t("预览", en: "Preview", pl: "Podgląd"))
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(AppTheme.meta)
-                Text(selected.contentMarkdown.isEmpty ? env.preferences.t("空笔记", en: "Empty note") : selected.contentMarkdown)
+                Text(selected.contentMarkdown.isEmpty ? env.preferences.t("空笔记", en: "Empty note", pl: "Pusta notatka") : selected.contentMarkdown)
                     .font(.system(size: 14))
                     .foregroundStyle(AppTheme.body)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -287,7 +289,7 @@ struct RevisionsView: View {
 
     private var displayTitle: String {
         let t = memoTitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return t.isEmpty ? env.preferences.t("无标题笔记", en: "Untitled note") : t
+        return t.isEmpty ? env.preferences.t("无标题笔记", en: "Untitled note", pl: "Notatka bez tytułu") : t
     }
 
     /// Android `formatRevisionActor`.

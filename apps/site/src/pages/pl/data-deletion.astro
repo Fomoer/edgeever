@@ -1,0 +1,32 @@
+---
+import Container from "@/components/container.astro";
+import Layout from "@/layouts/Layout.astro";
+---
+
+<Layout title="Usuwanie danych EdgeEver" description="Jak użytkownicy EdgeEver mogą usunąć notatki, załączniki, dane lokalne i konta w samodzielnie hostowanych instancjach.">
+  <Container>
+    <main class="mx-auto max-w-3xl py-12 text-slate-700 md:py-20">
+      <article class="rounded-lg border border-slate-200 bg-white p-8 shadow-sm md:p-10">
+        <h1 class="text-3xl font-bold text-slate-950">Usuwanie danych EdgeEver</h1>
+        <div class="mt-8 space-y-8 leading-7">
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Usuwanie notatek i załączników</h2>
+            <p class="mt-3">W aplikacji EdgeEver przenieś notatkę do kosza, otwórz kosz i usuń ją trwale lub opróżnij kosz. Trwałe usunięcie notatki usuwa również powiązane z nią załączniki z połączonej, samodzielnie hostowanej instancji.</p>
+          </section>
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Usuwanie lokalnych danych aplikacji</h2>
+            <p class="mt-3">Wyloguj się w aplikacji, a następnie w Ustawieniach iOS lub Androida usuń EdgeEver wraz z danymi aplikacji. Spowoduje to usunięcie z urządzenia lokalnej sesji, kopii SQLite, szkiców, kolejki synchronizacji i preferencji. Nie usuwa to danych przechowywanych w samodzielnie hostowanej instancji.</p>
+          </section>
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Usuwanie konta</h2>
+            <p class="mt-3">Konta EdgeEver są tworzone i zarządzane przez administratora samodzielnie hostowanej instancji, a nie przez twórcę aplikacji mobilnej. Poproś tego administratora o usunięcie konta oraz wszelkich danych po stronie serwera, które również mają zostać usunięte. Jeśli sam obsługujesz instancję, skorzystaj z jej funkcji zarządzania użytkownikami lub usuń powiązane dane w Cloudflare D1 i R2.</p>
+          </section>
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Pomoc</h2>
+            <p class="mt-3">W razie pytań dotyczących procesu usuwania utwórz zgłoszenie w <a class="text-teal-700 underline" href="https://github.com/tianma-if/edgeever/issues" target="_blank" rel="noopener noreferrer">repozytorium EdgeEver na GitHubie</a>. Nie podawaj haseł, tokenów API ani treści prywatnych notatek.</p>
+          </section>
+        </div>
+      </article>
+    </main>
+  </Container>
+</Layout>

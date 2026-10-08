@@ -7,7 +7,7 @@ import { bodyLimit } from "hono/body-limit";
 import type { AppContext, AppEnv, Bindings } from "./api-context";
 import { AppError } from "./app-error";
 import { loadDefaultAiModel, loadDefaultAiModelCredentials } from "./ai-service";
-import { apiError, forbidden, notFound } from "./http-errors";
+import { apiError, forbidden, httpExceptionError, notFound } from "./http-errors";
 import { requireUser, getWorkspaceId } from "./request-auth";
 import { beginCompanionTurn, checkpointCompanionTurn, clearCompanionHistory, companionRevision,
   forgetCompanionMemory, getCompanionTurn, listCompanionMemories, listCompanionTurns, mapCompanionTurn,
@@ -23,6 +23,8 @@ import { acknowledgeDiscovery, rememberDiscoveryFeedback, checkDiscoveries, comp
 const scopeFor = (c: AppContext): CompanionScope => ({ workspaceId: getWorkspaceId(c), ownerId: c.get("auth").actorId! });
 const fail = (c: AppContext, error: unknown) => {
   if (error instanceof AppError) return apiError(c, error.code, error.message, error.status);
+  const requestError = httpExceptionError(c, error);
+  if (requestError) return requestError;
   console.error("companion_failed", error instanceof Error ? error.name : "unknown");
   return apiError(c, "companion_failed", "The companion is unavailable. Please retry later.", 503);
 };

@@ -1,0 +1,49 @@
+---
+import Container from "@/components/container.astro";
+import Features from "@/components/features.astro";
+import Guides from "@/components/guides.astro";
+import Hero from "@/components/hero.astro";
+import Logos from "@/components/logos.astro";
+import MarqueeShowcase from "@/components/marquee-showcase.astro";
+import Layout from "@/layouts/Layout.astro";
+
+const siteUrl = new URL(Astro.url.pathname, Astro.site).toString();
+
+const homeJsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "EdgeEver",
+    alternateName: "EdgeEver Evernote Alternative",
+    url: siteUrl,
+    inLanguage: "pl",
+    description:
+      "EdgeEver to otwartoźródłowa, natywnie wspierająca AI, samodzielnie hostowana alternatywa dla Evernote na macOS, Windows, Linux, iOS, Android i w Web Clipper, z wdrożeniem w Cloudflare i Dockerze.",
+    keywords: ["alternatywa dla Evernote", "otwartoźródłowa aplikacja do notatek", "samodzielnie hostowane notatki", "notatki z AI"],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "EdgeEver",
+    alternateName: "EdgeEver Evernote Alternative",
+    url: siteUrl,
+    codeRepository: "https://github.com/tianma-if/edgeever",
+    applicationCategory: "ProductivityApplication",
+    operatingSystem: "macOS, Windows, Linux, iOS, Android, Web, Chrome, Edge, Firefox",
+    isAccessibleForFree: true,
+    description:
+      "EdgeEver to otwartoźródłowa, natywnie wspierająca AI, samodzielnie hostowana alternatywa dla Evernote z klasycznym układem trzech paneli, aplikacjami na macOS, Windows, Linux, iOS, Android i przeglądarki oraz REST API, MCP i ACP dla lokalnych i zdalnych agentów AI.",
+    keywords: ["alternatywa dla Evernote", "otwartoźródłowa aplikacja do notatek", "samodzielnie hostowane notatki", "notatki z AI"],
+  },
+];
+---
+
+<Layout title="" jsonLd={homeJsonLd}>
+  <Container>
+    <Hero />
+    <MarqueeShowcase />
+    <Features />
+    <Guides />
+    <Logos />
+  </Container>
+</Layout>

@@ -470,6 +470,16 @@ describe("AI prompt template routes", () => {
       description: "テーマ、結論、実行できる結果に圧縮する",
       instruction: "Only this instruction was customized before the metadata migration.",
     });
+
+    const polish = await app.request("/api/v1/ai/prompts?locale=pl", {}, environment);
+    const polishSummary = (await polish.json()).prompts.find(
+      (prompt) => prompt.seedKey === "summarize",
+    );
+    expect(polishSummary).toMatchObject({
+      name: "Podsumuj",
+      description: "Streść notatkę do tematu, wniosków i działań do podjęcia",
+      instruction: "Only this instruction was customized before the metadata migration.",
+    });
   });
 
   test("restores prompt behavior from backup without overwriting factory identity", async () => {

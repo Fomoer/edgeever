@@ -1,5 +1,5 @@
 import type { Editor } from "@tiptap/core";
-import type { Mark, Node as PMNode } from "@tiptap/pm/model";
+import { Fragment, type Mark, type Node as PMNode } from "@tiptap/pm/model";
 import {
   FILE_ATTACHMENT_NODE_TYPE,
   PDF_ATTACHMENT_NODE_TYPE,
@@ -122,5 +122,46 @@ export const renameAttachmentAt = (
       editor.schema.text(label, [...range.marks]),
     ),
   );
+  return true;
+};
+
+export const insertTranscriptAfterAttachment = (
+  editor: Editor,
+  target: AttachmentRangeTarget,
+  text: string,
+  title: string,
+  anchorElement?: HTMLElement,
+) => {
+  const paragraphs = text.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  if (!paragraphs.length) return false;
+
+  let range = findAttachmentRange(editor, target);
+  const wrapper = anchorElement?.closest(".edgeever-file-attachment-node");
+  if (wrapper && editor.view.dom.contains(wrapper)) {
+    try {
+      const pos = editor.view.posAtDOM(wrapper, 0);
+      const node = editor.state.doc.nodeAt(pos);
+      if (node && ATTACHMENT_NODE_TYPES.has(node.type.name)
+        && attachmentCandidateMatches(String(node.attrs.url || ""), target)) {
+        range = { kind: "node", from: pos, to: pos + node.nodeSize, node };
+      }
+    } catch {
+      // A replaced node view can lose its DOM position while transcription runs.
+    }
+  }
+  if (!range) return false;
+
+  const $attachment = editor.state.doc.resolve(range.from);
+  let depth = $attachment.depth;
+  while (depth > 0 && !$attachment.node(depth).isTextblock) depth -= 1;
+  const insertionPos = depth > 0 ? $attachment.after(depth) : editor.state.doc.content.size;
+  const paragraphType = editor.schema.nodes.paragraph;
+  if (!paragraphType) return false;
+  const headingType = editor.schema.nodes.heading;
+  const heading = headingType
+    ? headingType.create({ level: 2 }, editor.schema.text(title))
+    : paragraphType.create(null, editor.schema.text(title));
+  const nodes = [heading, ...paragraphs.map((line) => paragraphType.create(null, editor.schema.text(line)))];
+  editor.view.dispatch(editor.state.tr.insert(insertionPos, Fragment.fromArray(nodes)));
   return true;
 };

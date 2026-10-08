@@ -1,5 +1,6 @@
 import type { Hono } from "hono";
 import type { AppEnv } from "./api-context";
+import { fetchCommunityRegistryRelease } from "./community-registry-proxy";
 import { apiError, badRequest, notFound } from "./http-errors";
 
 const GITHUB_API_VERSION = "2022-11-28";
@@ -358,6 +359,34 @@ const respondWithGithubManifestText = (
 });
 
 export const registerPluginDistributionRoutes = (app: Hono<AppEnv>) => {
+  app.get("/api/v1/plugins/community-registry", async (context) => {
+    const configured = context.env.EDGE_EVER_COMMUNITY_REGISTRY_URL;
+    if (!configured?.trim()) return notFound(context, "Community registry is not configured.");
+    try {
+      const transport = context.env.publicNetworkFetch;
+      const release = await fetchCommunityRegistryRelease({
+        registryUrl: configured,
+        request: (input, init) => {
+          if (!transport) return fetch(input, init);
+          const target = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+          return transport(target, init ?? {});
+        },
+      });
+      return context.body(release.registryBytes, 200, {
+        "Cache-Control": "private, max-age=60",
+        "Content-Type": "application/json; charset=utf-8",
+        "X-EdgeEver-Community-Registry-Signature": release.signatureBase64,
+      });
+    } catch (error) {
+      return apiError(
+        context,
+        "community_registry_unavailable",
+        error instanceof Error ? error.message : "Community registry is unavailable.",
+        502,
+      );
+    }
+  });
+
   app.get("/api/v1/plugins/github/:owner/:repository/latest-manifest", async (context) => {
     const owner = context.req.param("owner");
     const repository = context.req.param("repository");

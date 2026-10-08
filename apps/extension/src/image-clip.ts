@@ -266,6 +266,7 @@ export type ImageNoteClient = {
   uploadImage: (
     memoId: string,
     file: { bytes: Uint8Array; mimeType: string; filename: string },
+    signal?: AbortSignal,
   ) => Promise<{ id: string }>;
   createEditSession: (memoId: string) => Promise<{
     editSession: { id: string; baseRevision: number; baseContentHash: string };

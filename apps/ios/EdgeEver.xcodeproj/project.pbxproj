@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A1D1EC7F16E745A68CE9B6D1 /* AiDirectStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D1EC7F16E745A68CE9B6D2 /* AiDirectStream.swift */; };
 		039594C5BEE4844FBB131C7F /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6F510BF90B418266F363EBD /* APIClient.swift */; };
 		0614453E8E9EC13B212B5A2F /* NotebookPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3328D871910187ED827B6CE /* NotebookPickerSheet.swift */; };
 		06D2661CAB0ADED27F322649 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D87A8CED8498AE654EF8CD1F /* Localizable.xcstrings */; };
@@ -24,6 +23,7 @@
 		265DB48114144779A7C807F7 /* TipTapContentSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1D4EB4B51C66E9CD72FF7F /* TipTapContentSource.swift */; };
 		2A07555B54946A177E1ECFF2 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CB54673617E14F28B7608BD /* Typography.swift */; };
 		2E185C3C27DA3A729F2734B4 /* SyncOutboxRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B460B6BFE4CFB23073C7E1 /* SyncOutboxRepository.swift */; };
+		3224E63C6FD054554E82B8B6 /* AiDirectStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EF7E97C950002FA22EFB7C8 /* AiDirectStream.swift */; };
 		33330C89D977D3903F091165 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B812AD3502D649CE7B84DEBE /* LoginView.swift */; };
 		35AAF7A2B1B4D5EE38F8518C /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40C1F4BC7DB150AE8F85AA13 /* SyncEngine.swift */; };
 		35DF4BD1617191AB0B95CC4A /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0531FC6AA81DAF0A55B42362 /* AppDatabase.swift */; };
@@ -120,9 +120,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		A1D1EC7F16E745A68CE9B6D2 /* AiDirectStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiDirectStream.swift; sourceTree = "<group>"; };
 		033565CE2E96EC2D23105188 /* ListActionsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListActionsSheet.swift; sourceTree = "<group>"; };
 		0531FC6AA81DAF0A55B42362 /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabase.swift; sourceTree = "<group>"; };
+		0EF7E97C950002FA22EFB7C8 /* AiDirectStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiDirectStream.swift; sourceTree = "<group>"; };
 		12236E3A2F318CDEB17B80CB /* SyncProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncProtocol.swift; sourceTree = "<group>"; };
 		12DCA98C14CC6F28C22C41A1 /* TipTapWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TipTapWebView.swift; sourceTree = "<group>"; };
 		13105CFE9131425A1C7E4BF0 /* WebClipper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebClipper.swift; sourceTree = "<group>"; };
@@ -451,8 +451,8 @@
 		BB746E5BDC1029DD2ECF3850 /* Network */ = {
 			isa = PBXGroup;
 			children = (
+				0EF7E97C950002FA22EFB7C8 /* AiDirectStream.swift */,
 				D6F510BF90B418266F363EBD /* APIClient.swift */,
-				A1D1EC7F16E745A68CE9B6D2 /* AiDirectStream.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
@@ -589,6 +589,7 @@
 			knownRegions = (
 				Base,
 				en,
+				pl,
 				"zh-Hans",
 			);
 			mainGroup = A22DC90C50256855231B9F51;
@@ -656,9 +657,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				039594C5BEE4844FBB131C7F /* APIClient.swift in Sources */,
-				A1D1EC7F16E745A68CE9B6D1 /* AiDirectStream.swift in Sources */,
 				564B7A4D6CD3C8140286F881 /* AccountPasswordPanel.swift in Sources */,
 				F6AACA31885AB69C1CCCCB46 /* AiAssistantSheet.swift in Sources */,
+				3224E63C6FD054554E82B8B6 /* AiDirectStream.swift in Sources */,
 				12F0F0D1E937AA88C33222FF /* ApiTokensView.swift in Sources */,
 				35DF4BD1617191AB0B95CC4A /* AppDatabase.swift in Sources */,
 				FC6501567FDC2F9900E973A4 /* AppEnvironment.swift in Sources */,
@@ -799,7 +800,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.100.0;
+				MARKETING_VERSION = 1.101.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -889,7 +890,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.100.0;
+				MARKETING_VERSION = 1.101.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

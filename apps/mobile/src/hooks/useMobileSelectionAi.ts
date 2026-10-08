@@ -16,7 +16,7 @@ export const useMobileSelectionAi = ({
 }: {
   client: MobileAiClient | null | undefined;
   editorRef: RefObject<LocalTiptapEditorRef | null>;
-  resolvedLocale: "zh-CN" | "en-US" | "ja";
+  resolvedLocale: "zh-CN" | "en-US" | "ja" | "pl";
   titleRef: RefObject<string>;
 }) => {
   const activeRequestRef = useRef<{ requestId: string; controller: AbortController } | null>(null);
@@ -64,7 +64,7 @@ export const useMobileSelectionAi = ({
     }).catch((requestError) => {
       if (controller.signal.aborted) return;
       const message = requestError instanceof ApiRequestError && requestError.code === "ai_not_configured"
-        ? (resolvedLocale === "en-US"
+        ? (resolvedLocale !== "zh-CN"
             ? "Configure a model in Models and agents on the web or desktop app first."
             : "请先在 Web 或桌面端的“模型与代理”中配置模型。")
         : requestError instanceof Error

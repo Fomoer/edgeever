@@ -71,6 +71,8 @@ The official marketplace only lists free and open-source plugins. Complete human
 
 The marketplace is a verified Registry and does not take ownership of plugin files. For each version, the Registry pins the plugin ID, GitHub repository, version, and SHA-256 hashes for `manifest.json`, `main.js`, and optional `styles.css`. Installation still downloads from the developer's GitHub Release or registered public URL and verifies those hashes again. The optional `"publisher": "edgeever"` marker is reserved for Registry entries maintained by the EdgeEver project; it enables automatic updates and must not be used for community submissions.
 
+Official entries ship inside the app as `extensions/registry.json`. Community entries are appended from a separate signed catalog when the instance sets `EDGE_EVER_COMMUNITY_REGISTRY_URL`. That catalog cannot change an official repository URL or mark an entry as official. A community badge and license mean the listing passed the admission check. They do not mean EdgeEver guarantees the plugin is safe. Self-hosted instances leave the variable unset and show only the built-in official plugins. To submit a plugin, follow [tianma-if/edgeever-plugins](https://github.com/tianma-if/edgeever-plugins).
+
 Registry format:
 
 ```json
@@ -596,9 +598,18 @@ const result = await context.ai.generate({
   maxOutputTokens: 1000,
   signal: controller.signal,
 });
+const transcript = await context.ai.transcribeResource(noteId, resourceId);
+// { text, resourceId, filename }. The attachment must already belong to the note; online video URLs are not accepted.
+const ownMedia = new File([audioBytes], "recording.mp3", { type: "audio/mpeg" });
+const { text } = await context.ai.transcribeMedia(ownMedia, { signal: controller.signal });
+// A plugin can also pass a video File or Blob; the host extracts its audio locally.
 ```
 
 `system` is limited to 8,000 characters and `prompt` to 90,000. `maxOutputTokens` must be a positive integer and defaults to 3,000 when omitted; the host does not impose a maximum output-token value. Generation is limited to 120 seconds. The model or provider may impose its own limit or reject a request based on available credits. The backend requires an interactive user session, disables AI in public demo mode, and redacts provider errors. AI calls have a four-request per-workspace guard in each backend instance; this is not a distributed quota. Model charges follow the configured provider. Plugin deactivation aborts outstanding calls.
+
+`transcribeResource` accepts only audio or video attachments already uploaded to a note in the current workspace. The client reads the attachment in ranges through the existing resource API, extracts its audio track, and splits it into audio segments of at most 24 MB, then sends them directly to the user's configured speech model service. The instance validates attachment ownership and gives the signed-in client the model configuration; it does not extract or convert audio or relay provider requests. Browser calls require provider CORS support; the desktop main process calls the provider locally. The plugin receives text and decides how to display or save it. This API does not resolve URLs, download third-party media, or expose speech model credentials to plugins.
+
+`transcribeMedia` accepts a plugin-supplied audio or video `Blob`/`File` without uploading it to a note. The client obtains the configured default speech model and credential through the existing authenticated settings APIs, extracts and segments the media locally with the same 1 GiB source, 24 MB segment, and 64-segment limits, and calls the speech provider directly. The API returns only `{ text }`; it does not return the credential. Enabled plugins run as trusted client JavaScript, so this is not a credential isolation boundary. The method does not fetch a URL; a plugin is responsible for obtaining authorized media bytes. Provider charges and browser CORS requirements still apply. Aborting the supplied signal or disabling the plugin stops the call.
 
 The default `network.fetch(url, init)` transport is a trusted browser request. It accepts arbitrary HTTP/HTTPS destinations, methods, bodies, request headers such as `Authorization`, and the requested browser credential mode. It remains subject to the runtime browser's CORS and cookie policy. `networkHosts` is legacy descriptive metadata and is not a security boundary. To read a cross-origin public feed or API without credentials, explicitly select `transport: "public"`; listing `network` and `network:public` remains useful disclosure but is optional.
 

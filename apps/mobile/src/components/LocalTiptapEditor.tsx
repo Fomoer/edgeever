@@ -142,7 +142,7 @@ type LocalTiptapEditorSharedProps = {
   onSearchResult?: (count: number, index: number, query: string) => Promise<void>;
   onImageExportEvent?: (payloadJson: string) => Promise<void>;
   ref: Ref<LocalTiptapEditorRef>;
-  locale: "zh-CN" | "en-US" | "ja";
+  locale: "zh-CN" | "en-US" | "ja" | "pl";
   theme: "light" | "dark";
   /** Live-switchable. The same DomWebView stays mounted across viewer → editor. */
   mode?: "editor" | "viewer";
@@ -453,7 +453,7 @@ const ReadOnlyX6Diagram = ({
   theme,
 }: {
   diagram: DiagramDocument;
-  locale: "zh-CN" | "en-US" | "ja";
+  locale: "zh-CN" | "en-US" | "ja" | "pl";
   theme: "light" | "dark";
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -697,7 +697,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
             parameterKind: "none",
             resultMode: "both",
             output: "",
-            error: props.locale === "en-US"
+            error: props.locale !== "zh-CN"
               ? "The selected prompt no longer exists. Choose another prompt."
               : "所选指令已不存在，请重新选择。",
           };
@@ -1194,7 +1194,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
     if (!isAiSelectionSnapshotCurrent(aiPanel.selection, currentDocument, editor.state.doc.content.size)) {
       setAiPanel((current) => current ? {
         ...current,
-        error: props.locale === "en-US"
+        error: props.locale !== "zh-CN"
           ? "The selection expired because the note changed. Select the text again."
           : "笔记内容已变化，选区已失效，请重新选择文本。",
       } : current);
@@ -1752,7 +1752,7 @@ const MobileSelectionAiPanel = ({
   panel,
   prompts,
 }: {
-  locale: "zh-CN" | "en-US" | "ja";
+  locale: "zh-CN" | "en-US" | "ja" | "pl";
   onApply: (mode: "append" | "replace") => void;
   onChange: Dispatch<SetStateAction<MobileAiPanelState | null>>;
   onClose: () => void;
@@ -1789,6 +1789,7 @@ const MobileSelectionAiPanel = ({
     fr: english ? "French" : "法语",
     de: english ? "German" : "德语",
     pt: english ? "Portuguese" : "葡萄牙语",
+    pl: english ? "Polish" : "波兰语",
   };
   const toneLabels: Record<AiTone, string> = {
     professional: english ? "Professional" : "专业",
@@ -2263,7 +2264,7 @@ const loadMermaid = () => {
 };
 
 const createMobileCodeBlockExtension = (
-  locale: "zh-CN" | "en-US" | "ja",
+  locale: "zh-CN" | "en-US" | "ja" | "pl",
   theme: "light" | "dark",
   hideCopyForVisualDiagram = false,
 ) => CodeBlock.extend({
@@ -2431,7 +2432,7 @@ const createMobileCodeBlockExtension = (
 });
 
 const createMobileImageSizeControls = (
-  locale: "zh-CN" | "en-US" | "ja",
+  locale: "zh-CN" | "en-US" | "ja" | "pl",
   updateWidth: (width: number) => void
 ) => {
   const controls = document.createElement("div");
@@ -2483,7 +2484,7 @@ const createMobileImageSizeControls = (
 
 const createProtectedImageExtension = (
   baseUrl: string,
-  locale: "zh-CN" | "en-US" | "ja",
+  locale: "zh-CN" | "en-US" | "ja" | "pl",
   loadResource: (source: string) => Promise<string | null>,
   options?: {
     readOnly?: boolean | (() => boolean);

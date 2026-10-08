@@ -44,6 +44,8 @@ await context.ui.openNote(noteId, { search: "New task" }); // requires ui:naviga
 
 Bulk-indexing plugins can page through `context.notes.queryContent()`. The API also exposes workspace templates, full live-editor reads and range edits, template mutation events, and programmatic opening of a plugin's own registered panels.
 
+Speech plugins can transcribe a note attachment with `context.ai.transcribeResource(noteId, resourceId)`, or pass an audio/video `Blob` or `File` to `context.ai.transcribeMedia(media)`. EdgeEver extracts audio on the client and calls the user's configured speech provider directly. Neither method accepts a media URL or returns the provider credential.
+
 Dashboard and workflow panels can ask EdgeEver to render system chrome (header actions, search, tabs, selects, empty states) through `mount` context `shell.set()`, while the plugin keeps owning the body DOM.
 
 Canvas-style plugins can read and conflict-safely replace resource bytes, open full-screen guarded panels with JSON state, and register constrained block embed renderers:

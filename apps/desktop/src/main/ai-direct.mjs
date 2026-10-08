@@ -1,4 +1,5 @@
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
+const MAX_AUDIO_REQUEST_BYTES = 25_000_000;
 const MAX_CONCURRENT = 2;
 
 const blockedHost = (hostname) => {
@@ -28,7 +29,15 @@ export const createAiDirectRuntime = ({ fetchImpl = fetch, maxConcurrent = MAX_C
       }
       if (!input || typeof input !== "object") throw new Error("Invalid AI provider request.");
       if ((input.method ?? "POST") !== "POST") throw new Error("AI provider requests must use POST.");
-      if (typeof input.body !== "string" || Buffer.byteLength(input.body) > MAX_BODY_BYTES) {
+      const binaryBody = input.bodyBytes instanceof Uint8Array
+        ? input.bodyBytes
+        : input.bodyBytes instanceof ArrayBuffer ? new Uint8Array(input.bodyBytes) : null;
+      if (input.bodyBytes != null && !binaryBody) {
+        throw new Error("Invalid binary AI provider request body.");
+      }
+      if (binaryBody
+        ? binaryBody.byteLength > MAX_AUDIO_REQUEST_BYTES
+        : typeof input.body !== "string" || Buffer.byteLength(input.body) > MAX_BODY_BYTES) {
         throw new Error("AI provider request body is too large.");
       }
       const url = validateAiProviderUrl(input.url);
@@ -41,6 +50,12 @@ export const createAiDirectRuntime = ({ fetchImpl = fetch, maxConcurrent = MAX_C
           headers[key] = value;
         }
       }
+      if (binaryBody && (
+        !url.pathname.endsWith("/audio/transcriptions")
+        || !Object.entries(headers).some(([key, value]) => key.toLowerCase() === "content-type" && /^multipart\/form-data;\s*boundary=/i.test(value))
+      )) {
+        throw new Error("Binary AI requests must be multipart speech transcriptions.");
+      }
       if (active.size >= maxConcurrent || active.has(requestId)) throw new Error("Too many AI provider requests.");
       const controller = new AbortController();
       active.set(requestId, controller);
@@ -48,7 +63,7 @@ export const createAiDirectRuntime = ({ fetchImpl = fetch, maxConcurrent = MAX_C
         const response = await fetchImpl(url.href, {
           method: "POST",
           headers,
-          body: input.body,
+          body: binaryBody ?? input.body,
           redirect: "error",
           signal: controller.signal,
         });

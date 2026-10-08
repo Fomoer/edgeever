@@ -1,6 +1,9 @@
 import { ApiRequestError } from "@edgeever/client";
+import { translateMobileText } from "./mobile-locale";
 
-export type MobileLoginLocale = "zh-CN" | "en-US" | "ja";
+export type MobileLoginLocale = "zh-CN" | "en-US" | "ja" | "pl";
+
+export const MISSING_MOBILE_SESSION_MESSAGE = "登录成功但服务端没有返回移动端会话。请确认服务端已更新到支持 App 登录的版本。";
 
 const appendDiagnostics = (
   message: string,
@@ -95,6 +98,10 @@ export const formatMobileLoginError = (error: unknown, locale: MobileLoginLocale
       error.code || `http_${error.status}`,
       rayId,
     );
+  }
+
+  if (error instanceof Error && error.message === MISSING_MOBILE_SESSION_MESSAGE) {
+    return appendDiagnostics(translateMobileText(error.message, locale), "mobile_session_missing");
   }
 
   if (error instanceof TypeError) {

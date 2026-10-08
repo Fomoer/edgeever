@@ -34,7 +34,7 @@ struct LoginView: View {
                     .clipShape(Circle())
                     .overlay(Circle().stroke(AppTheme.border, lineWidth: 1))
             }
-            .accessibilityLabel(env.preferences.t("GitHub 仓库", en: "GitHub repository", ja: "GitHub リポジトリ"))
+            .accessibilityLabel(env.preferences.t("GitHub 仓库", en: "GitHub repository", ja: "GitHub リポジトリ", pl: "Repozytorium GitHub"))
             .padding(.trailing, 18)
             .padding(.top, 18)
             .zIndex(2)
@@ -57,7 +57,7 @@ struct LoginView: View {
                             Text("EdgeEver")
                                 .font(.system(size: 22, weight: .heavy))
                                 .foregroundStyle(AppTheme.title)
-                            Text(env.preferences.t("连接你的自托管笔记空间", en: "Connect your self-hosted notes", ja: "セルフホストのノート空間に接続"))
+                            Text(env.preferences.t("连接你的自托管笔记空间", en: "Connect your self-hosted notes", ja: "セルフホストのノート空間に接続", pl: "Połącz się ze swoimi samodzielnie hostowanymi notatkami"))
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(AppTheme.secondary)
                         }
@@ -65,7 +65,7 @@ struct LoginView: View {
                     .padding(.bottom, 28)
 
                     field(
-                        env.preferences.t("实例地址", en: "Instance URL", ja: "インスタンス URL"),
+                        env.preferences.t("实例地址", en: "Instance URL", ja: "インスタンス URL", pl: "Adres URL instancji"),
                         placeholder: EdgeEverPublicDemo.instanceURLString,
                         text: $baseUrl,
                         keyboard: .URL,
@@ -74,7 +74,7 @@ struct LoginView: View {
                     .padding(.bottom, 14)
 
                     field(
-                        env.preferences.t("用户名", en: "Username", ja: "ユーザー名"),
+                        env.preferences.t("用户名", en: "Username", ja: "ユーザー名", pl: "Nazwa użytkownika"),
                         placeholder: "",
                         text: $username,
                         keyboard: .default,
@@ -83,8 +83,8 @@ struct LoginView: View {
                     .padding(.bottom, 14)
 
                     field(
-                        env.preferences.t("密码", en: "Password", ja: "パスワード"),
-                        placeholder: env.preferences.t("首次登录密码", en: "Initial password", ja: "初回ログイン用パスワード"),
+                        env.preferences.t("密码", en: "Password", ja: "パスワード", pl: "Hasło"),
+                        placeholder: env.preferences.t("首次登录密码", en: "Initial password", ja: "初回ログイン用パスワード", pl: "Hasło początkowe"),
                         text: $password,
                         keyboard: .default,
                         secure: true
@@ -108,8 +108,8 @@ struct LoginView: View {
                                 ProgressView().tint(.white)
                             }
                             Text(submitting
-                                ? env.preferences.t("登录中…", en: "Signing in…", ja: "ログイン中…")
-                                : env.preferences.t("登录", en: "Sign in", ja: "ログイン"))
+                                ? env.preferences.t("登录中…", en: "Signing in…", ja: "ログイン中…", pl: "Logowanie…")
+                                : env.preferences.t("登录", en: "Sign in", ja: "ログイン", pl: "Zaloguj się"))
                                 .font(.system(size: 16, weight: .bold))
                         }
                         .frame(maxWidth: .infinity)
@@ -118,7 +118,7 @@ struct LoginView: View {
                         .background(canSubmit ? AppTheme.title : AppTheme.disabledFill)
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
-                    .buttonStyle(CreateButtonPressStyle())
+                    .buttonStyle(.plain)
                     .disabled(!canSubmit)
                     .changeEffect(.shake, value: loginShake)
                 }
@@ -126,17 +126,18 @@ struct LoginView: View {
                 .padding(.bottom, 40)
             }
         }
-        .alert(env.preferences.t("使用 HTTP 连接？", en: "Use HTTP?", ja: "HTTP で接続しますか？"), isPresented: $showHTTPWarning) {
-            Button(env.preferences.t("继续", en: "Continue", ja: "続行"), role: .destructive) {
+        .alert(env.preferences.t("使用 HTTP 连接？", en: "Use HTTP?", ja: "HTTP で接続しますか？", pl: "Użyć HTTP?"), isPresented: $showHTTPWarning) {
+            Button(env.preferences.t("继续", en: "Continue", ja: "続行", pl: "Kontynuuj"), role: .destructive) {
                 pendingHTTPLogin = true
                 Task { await submit(forceHTTP: true) }
             }
-            Button(env.preferences.t("取消", en: "Cancel", ja: "キャンセル"), role: .cancel) {}
+            Button(env.preferences.t("取消", en: "Cancel", ja: "キャンセル", pl: "Anuluj"), role: .cancel) {}
         } message: {
             Text(env.preferences.t(
                 "HTTP 不会加密传输凭证，仅建议用于可信局域网自托管实例。",
                 en: "HTTP does not encrypt credentials. Only use on trusted LAN instances.",
-                ja: "HTTP は資格情報を暗号化しません。信頼できる LAN 上の自前インスタンスにだけ使ってください。"
+                ja: "HTTP は資格情報を暗号化しません。信頼できる LAN 上の自前インスタンスにだけ使ってください。",
+                pl: "HTTP nie szyfruje danych logowania. Używaj go tylko z instancjami w zaufanej sieci lokalnej."
             ))
         }
         .preferredColorScheme(env.preferences.colorScheme)

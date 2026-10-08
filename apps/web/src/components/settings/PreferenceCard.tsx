@@ -1,9 +1,14 @@
-import { AlignHorizontalJustifyCenter, AlignVerticalSpaceAround, AppWindow, BookOpenText, ChartNoAxesCombined, Code2, Image, Keyboard, Languages, ListTree, MousePointerClick, Palette, Sparkles, SunMoon, Type } from "lucide-react";
+import { AlignHorizontalJustifyCenter, AlignVerticalSpaceAround, AppWindow, BookOpenText, ChartNoAxesCombined, Code2, Image, Keyboard, Languages, ListTree, MousePointerClick, Palette, Sparkles, SpellCheck, SunMoon, Type } from "lucide-react";
 import { useState, useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { EditorContentWidth } from "@/lib/editor-content-width";
 import type { NoteProsePatch, NoteProsePaletteChoice, ResolvedNoteProse } from "@edgeever/shared";
 import { DEFAULT_NOTE_PROSE_CSS, MAX_NOTE_PROSE_CSS_BYTES, NOTE_PROSE_FONT_SIZES, NOTE_PROSE_PALETTE_CHOICES, NOTE_PROSE_PALETTES, noteProseCssDropsDeclarations } from "@edgeever/shared";
+import {
+  EDITOR_SPELLCHECK_CHANGED_EVENT,
+  readEditorSpellcheckPreference,
+  writeEditorSpellcheckPreference,
+} from "@/lib/editor-spellcheck-preference";
 import {
   EDITOR_LINK_OPEN_MODE_CHANGED_EVENT,
   getStoredEditorLinkOpenMode,
@@ -221,6 +226,7 @@ export const PreferenceCard = ({
   const [linkOpenMode, setLinkOpenMode] = useState<EditorLinkOpenMode>(() => getStoredEditorLinkOpenMode());
   const [aiSelectionMenuEnabled, setAiSelectionMenuEnabled] = useState(readAiSelectionMenuPreference);
   const [aiSpaceShortcutEnabled, setAiSpaceShortcutEnabled] = useState(readAiSpaceShortcutPreference);
+  const [spellcheckEnabled, setSpellcheckEnabled] = useState(readEditorSpellcheckPreference);
   const [editorBodyFont, setEditorBodyFont] = useState(readEditorBodyFontPreference);
   const [uiFont, setUiFont] = useState(readUiFontPreference);
 
@@ -238,6 +244,24 @@ export const PreferenceCard = ({
     window.addEventListener("storage", syncPreference);
     return () => {
       window.removeEventListener(AI_SPACE_SHORTCUT_CHANGED_EVENT, onPreferenceChanged);
+      window.removeEventListener("storage", syncPreference);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncPreference = () => setSpellcheckEnabled(readEditorSpellcheckPreference());
+    const onPreferenceChanged = (event: Event) => {
+      const detail = (event as CustomEvent<boolean>).detail;
+      if (typeof detail === "boolean") {
+        setSpellcheckEnabled(detail);
+        return;
+      }
+      syncPreference();
+    };
+    window.addEventListener(EDITOR_SPELLCHECK_CHANGED_EVENT, onPreferenceChanged);
+    window.addEventListener("storage", syncPreference);
+    return () => {
+      window.removeEventListener(EDITOR_SPELLCHECK_CHANGED_EVENT, onPreferenceChanged);
       window.removeEventListener("storage", syncPreference);
     };
   }, []);
@@ -574,6 +598,25 @@ export const PreferenceCard = ({
               checked={imageCompressionEnabled}
               onCheckedChange={onImageCompressionChange}
               aria-label={t("settings.imageCompressionAria")}
+            />
+          </div>
+        </div>
+
+        <div className="flex min-h-16 flex-col items-start gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <SpellCheck className="h-4 w-4 shrink-0 text-slate-500" />
+            <div className="min-w-0">
+              <div className={SETTINGS_ITEM_TITLE_CLASSNAME}>{t("settings.spellcheckTitle")}</div>
+            </div>
+          </div>
+          <div className="flex w-full shrink-0 justify-start sm:w-44 sm:justify-end">
+            <Switch
+              checked={spellcheckEnabled}
+              onCheckedChange={(enabled) => {
+                writeEditorSpellcheckPreference(enabled);
+                setSpellcheckEnabled(enabled);
+              }}
+              aria-label={t("settings.spellcheckAria")}
             />
           </div>
         </div>

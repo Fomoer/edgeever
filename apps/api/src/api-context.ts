@@ -31,6 +31,8 @@ export type Bindings = {
   EDGE_EVER_DEMO_MODE?: string;
   EDGE_EVER_LOCAL_DEMO_SEED?: string;
   EDGE_EVER_ALLOW_UNAUTHENTICATED?: string;
+  /** HTTPS URL of the signed community registry. Unset disables the catalog. */
+  EDGE_EVER_COMMUNITY_REGISTRY_URL?: string;
 };
 
 export type WorkerBindings = Omit<Bindings, "storage" | "publicNetworkFetch" | "deploymentVersionCreatedAt"> & CloudflareStorageBindings & {

@@ -150,6 +150,36 @@ describe("plugin update checks", () => {
     expect(installedIds).toEqual([pluginManifest.id]);
     expect(result.updated.map((update) => update.pluginId)).toEqual([pluginManifest.id]);
   });
+
+  test("skips official auto-update for a revoked plugin id", async () => {
+    const extensions = [installed({ source: { kind: "marketplace", verified: true } })];
+    const entries = [{
+      id: pluginManifest.id,
+      name: pluginManifest.name,
+      description: "Official plugin",
+      author: "EdgeEver",
+      publisher: "edgeever",
+      category: "Productivity",
+      repositoryUrl: "https://github.com/example/official-plugin",
+      distribution: { type: "manifest", manifestUrl: "https://example.com/official/manifest.json" },
+      verification: { version: "1.2.0", checksums: { manifestJson: "a".repeat(64), mainJs: "b".repeat(64) } },
+    }];
+    const installedIds = [];
+    const host = {
+      getSnapshot: () => ({ extensions }),
+      installMarketplaceEntry: async (entry) => { installedIds.push(entry.id); },
+      installFromGithubRepository: async () => { throw new Error("unexpected GitHub install"); },
+      installFromManifestUrl: async () => { throw new Error("unexpected manifest install"); },
+    };
+    const request = async () => Response.json({ ...pluginManifest, version: "1.2.0" });
+
+    const result = await updateOfficialMarketplacePlugins(host, entries, request, {
+      revokedIds: new Set([pluginManifest.id]),
+    });
+
+    expect(installedIds).toEqual([]);
+    expect(result.updated).toEqual([]);
+  });
 });
 
 describe("official plugin auto-update workspace notice", () => {

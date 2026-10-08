@@ -478,7 +478,7 @@ export const WorkspaceScreen = ({
     if (hasDiagramDocumentMarker(memo.contentMarkdown)) {
       Alert.alert(
         resolvedLocale !== "zh-CN" ? "View-only diagram" : "图表暂为只读",
-        resolvedLocale === "en-US"
+        resolvedLocale !== "zh-CN"
           ? "Visual diagram editing is currently available on Web and desktop."
           : "可视化图表目前请在 Web 或桌面端编辑。"
       );

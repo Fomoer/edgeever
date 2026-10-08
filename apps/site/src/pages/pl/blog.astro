@@ -1,0 +1,139 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Container from "@/components/container.astro";
+import { getFormattedDate } from "@/utils/all";
+import { getLocalizedPath, getSiteLocale, siteCopy } from "@/i18n";
+
+const entries = (await getCollection("blog_en", ({ data }) => !data.draft)).sort(
+  (a, b) => Number(b.slug === "evernote-migration-guide") - Number(a.slug === "evernote-migration-guide")
+    || b.data.publishDate.getTime() - a.data.publishDate.getTime(),
+);
+
+const locale = getSiteLocale(Astro.url.pathname);
+const copy = siteCopy[locale].nav;
+
+const blogDescription =
+  "Artykuły o wdrożeniu, migracji z Evernote, aktualizacjach produktu i agentach AI. Treść artykułów jest po angielsku.";
+
+const blogUrl = new URL(Astro.url.pathname, Astro.site).toString();
+const blogJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: "Blog EdgeEver",
+  url: blogUrl,
+  inLanguage: "pl",
+  description: blogDescription,
+};
+---
+
+<Layout title="Blog" description={blogDescription} jsonLd={blogJsonLd}>
+  <Container>
+    <section class="py-16 md:py-24">
+      <p class="text-sm font-semibold text-brand-text">{copy.blog}</p>
+      <h1 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">Blog</h1>
+      <p class="mt-5 max-w-2xl text-lg leading-8 text-slate-600">{blogDescription}</p>
+
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a
+          href={getLocalizedPath(locale, "/blog")}
+          data-tag-btn="all"
+          class="rounded-full border border-brand-border/40 bg-brand/5 px-4 py-2 text-sm font-semibold text-brand shadow-sm"
+        >
+          {copy.tagAll}
+        </a>
+        <a
+          href={`${getLocalizedPath(locale, "/blog")}?tag=migration`}
+          data-tag-btn="migration"
+          class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        >
+          {copy.tagMigration}
+        </a>
+        <a
+          href={`${getLocalizedPath(locale, "/blog")}?tag=mcp`}
+          data-tag-btn="mcp"
+          class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        >
+          {copy.tagMcp}
+        </a>
+        <a
+          href={`${getLocalizedPath(locale, "/blog")}?tag=self-hosted`}
+          data-tag-btn="self-hosted"
+          class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        >
+          {copy.tagSelfHosted}
+        </a>
+      </div>
+
+      <div class="mt-12 grid gap-6">
+        {
+          entries.map((entry) => (
+            <a
+              href={`/en/blog/${entry.slug}`}
+              data-blog-card
+              data-tags={entry.data.tags ? entry.data.tags.join(",") : ""}
+              class="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-border hover:shadow-lg"
+            >
+              <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                <span>{entry.data.category}</span>
+                <span>·</span>
+                <time datetime={entry.data.publishDate.toISOString()}>
+                  {getFormattedDate(entry.data.publishDate)}
+                </time>
+                <span>·</span>
+                <span>English</span>
+              </div>
+              <h2 class="mt-3 text-2xl font-bold text-slate-900 transition group-hover:text-brand-text">
+                {entry.data.title}
+              </h2>
+              <p class="mt-3 text-base leading-7 text-slate-600">
+                {entry.data.snippet}
+              </p>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+  </Container>
+</Layout>
+
+<script is:inline>
+  (() => {
+    const updateFilters = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tag = urlParams.get("tag");
+      const buttons = document.querySelectorAll("[data-tag-btn]");
+      const activeClasses = ["text-brand", "bg-brand/5", "border-brand-border/40", "font-semibold", "shadow-sm"];
+      const inactiveClasses = ["text-slate-600", "bg-slate-50", "border-slate-200", "hover:bg-slate-100", "hover:text-slate-900"];
+
+      buttons.forEach((btn) => {
+        const btnTag = btn.getAttribute("data-tag-btn");
+        const isActive = (!tag && btnTag === "all") || (tag && btnTag === tag);
+        if (isActive) {
+          btn.classList.remove(...inactiveClasses);
+          btn.classList.add(...activeClasses);
+        } else {
+          btn.classList.remove(...activeClasses);
+          btn.classList.add(...inactiveClasses);
+        }
+      });
+
+      const cards = document.querySelectorAll("[data-blog-card]");
+      cards.forEach((card) => {
+        if (!tag) {
+          card.classList.remove("hidden");
+          return;
+        }
+        const cardTags = (card.getAttribute("data-tags") || "").split(",");
+        if (cardTags.includes(tag)) {
+          card.classList.remove("hidden");
+        } else {
+          card.classList.add("hidden");
+        }
+      });
+    };
+
+    updateFilters();
+    window.addEventListener("popstate", updateFilters);
+  })();
+</script>

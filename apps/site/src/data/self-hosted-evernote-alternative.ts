@@ -281,4 +281,98 @@ export const alternativePageCopy = {
       },
     ],
   },
+  pl: {
+    eyebrow: "Samodzielnie hostowane notatki",
+    title: "Samodzielnie hostowana alternatywa dla Evernote z Dockerem i Cloudflare",
+    description:
+      "EdgeEver to otwartoźródłowy, natywnie wspierający AI obszar roboczy do notatek z klasycznym trzypanelowym układem Evernote. Uruchom go w darmowym planie Cloudflare albo zainstaluj tę samą aplikację w Dockerze na VPS, NAS lub domowym serwerze.",
+    lead: [
+      "EdgeEver jest dla osób, które wciąż chcą niezawodnej, otwartej, samodzielnie hostowanej osobistej bazy wiedzy. Cały stos jest otwartoźródłowy. Notatki są przechowywane w kontrolowanej przez Ciebie bazie SQLite, z REST API, MCP i udokumentowaną ścieżką migracji ENEX z Evernote.",
+      "To nie jest społecznościowa oś czasu ani folder lokalnych plików Markdown. Obszar roboczy pozostaje bliski klasycznemu Evernote: drzewo notatników, lista notatek, edytor.",
+    ],
+    fitTitle: "Dla kogo",
+    fit: [
+      "Chcesz notatników w stylu Evernote, a nie osi czasu czy magazynu plików.",
+      "Chcesz hostować samodzielnie zamiast płacić za SaaS do notatek lub trafiać na limity urządzeń.",
+      "Chcesz korzystać z darmowego planu Cloudflare albo zainstalować Dockera jedną linią na VPS lub NAS.",
+      "Chcesz, by agenci programistyczni, tacy jak Claude Code, Codex czy WorkBuddy, czytali i porządkowali notatki przez natywne MCP i ACP.",
+    ],
+    notFitTitle: "Dla kogo nie",
+    notFit: [
+      "Jeśli potrzebujesz domyślnego szyfrowania end-to-end jak w Joplin – EdgeEver nie reklamuje E2EE. Granicą bezpieczeństwa jest to, że sam hostujesz instancję.",
+      "Jeśli potrzebujesz baz danych i bloków w stylu Notion, zostań przy Notion lub podobnej aplikacji. EdgeEver to obszar roboczy do notatek.",
+      "Jeśli chcesz tylko lokalnych plików bez serwera, lepiej sprawdzi się Obsidian lub folder z plikami Markdown.",
+    ],
+    compareTitle: "Czym różni się od popularnych opcji",
+    compareIntro:
+      "W anglojęzycznych wynikach wyszukiwania typową samodzielnie hostowaną alternatywą dla Evernote jest Joplin. EdgeEver jest bliższy klasycznej trzypanelowej aplikacji do notatek i oferuje zarówno hosting w darmowym planie Cloudflare, jak i Dockera. Tabela zawiera wyłącznie fakty, które można sprawdzić w tym repozytorium lub w publicznej dokumentacji tych produktów. Nie jest to ranking, które narzędzie jest ogólnie lepsze.",
+    compareHeaders: ["", "Hosting", "Układ", "Klienty", "Import z Evernote"],
+    compareRows: [
+      ["EdgeEver", "Darmowy plan Cloudflare lub Docker", "Notatniki w trzech panelach", "macOS / Windows / Linux / iOS / Android / Clipper", "Udokumentowany proces ENEX + MCP"],
+      ["Evernote", "Chmura dostawcy, bez samodzielnego hostingu", "Notatniki w trzech panelach", "Wszystkie główne platformy", "—"],
+      ["Joplin", "Joplin Server lub wybrany cel synchronizacji", "Notatniki", "Oficjalne aplikacje", "Obsługa ENEX"],
+      ["Obsidian", "Pliki lokalne; oficjalna synchronizacja jest płatna", "Magazyn plików", "Wszystkie główne platformy", "Narzędzia społeczności"],
+      ["Memos", "Możliwy samodzielny hosting", "Karty na osi czasu", "Głównie web", "Nie ta ścieżka migracji"],
+    ],
+    pathsTitle: "Co dalej",
+    paths: [
+      {
+        title: "Samodzielny hosting w Cloudflare",
+        summary: "Domyślny wybór do użytku osobistego, jeśli nie chcesz utrzymywać serwera. Osobista biblioteka zwykle mieści ok. 150 000 krótkich notatek i 50 000 obrazów.",
+        href: "/blog/ai-agent-deploy-cloudflare",
+        cta: "Otwórz poradnik Cloudflare",
+      },
+      {
+        title: "Samodzielny hosting z Dockerem",
+        summary: "Ta sama aplikacja instalowana jednym poleceniem na VPS, NAS lub domowym serwerze. Magazyn rośnie razem z dyskiem lub zasobnikiem zgodnym z S3.",
+        href: "/docker-deploy",
+        cta: "Otwórz poradnik Dockera",
+      },
+      {
+        title: "Migracja z Evernote",
+        summary: "Użyj ENEX, evernote-backup i EdgeEver MCP, aby zachować hierarchię notatników, załączniki i znaczniki czasu.",
+        href: "/blog/evernote-migration-guide",
+        cta: "Otwórz poradnik Evernote",
+      },
+      {
+        title: "Migracja z Notion",
+        summary: "Użyj Notion MCP razem z EdgeEver MCP i pozwól asystentowi AI skopiować strony.",
+        href: "/blog/notion-migration-guide",
+        cta: "Otwórz poradnik Notion",
+      },
+    ],
+    faqTitle: "Najczęstsze pytania",
+    faqs: [
+      {
+        question: "Czym jest samodzielnie hostowana alternatywa dla Evernote?",
+        answer:
+          "To aplikacja do notatek, którą wdrażasz samodzielnie, z danymi na Twoim koncie lub sprzęcie i sposobem pracy bliskim notatnikom i trzypanelowemu obszarowi roboczemu Evernote. EdgeEver powstał właśnie w tym celu, a do tego jest otwartoźródłowy, obsługuje MCP i hosting w Cloudflare lub Dockerze.",
+      },
+      {
+        question: "Czy mogę uruchomić go w Dockerze?",
+        answer:
+          "Tak. Dostępny jest instalator w jednej linii i pełny poradnik Dockera dla amd64 i arm64, z plikami lokalnymi lub magazynem obiektów zgodnym z S3. Cloudflare i Docker uruchamiają tę samą aplikację.",
+      },
+      {
+        question: "Czy mogę zaimportować notatki z Evernote?",
+        answer:
+          "Tak. Udokumentowany proces wykorzystuje ENEX, evernote-backup i skrypt importu MCP. Zachowuje daty utworzenia i aktualizacji oraz zagnieżdżone notatniki. Po imporcie wyrywkowo sprawdź notatki z obrazami.",
+      },
+      {
+        question: "Czy Cloudflare naprawdę jest darmowy do użytku osobistego?",
+        answer:
+          "Osobiste wdrożenie może działać w ramach darmowych limitów Cloudflare, bez wynajmowania dodatkowego serwera. Limity zależą od aktualnych zasad Cloudflare; jeśli przestaną wystarczać, przejdź na płatny plan lub Dockera.",
+      },
+      {
+        question: "Czy są aplikacje na iOS i Androida?",
+        answer:
+          "Tak. Aplikacja na Androida jest w Google Play, a na iOS w App Store. Aplikacja na iOS wymaga obecnie Apple ID spoza Chin kontynentalnych. Rozszerzenia Web Clipper są dostępne dla Chrome, Edge i Firefox.",
+      },
+      {
+        question: "Czy EdgeEver jest powiązany z Evernote?",
+        answer:
+          "Nie. EdgeEver to niezależna, otwartoźródłowa alternatywa. Poradniki migracji dotyczą wyłącznie danych, które już do Ciebie należą. Evernote jest znakiem towarowym swojego właściciela.",
+      },
+    ],
+  },
 } as const;

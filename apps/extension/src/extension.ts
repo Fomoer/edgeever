@@ -9,12 +9,23 @@ export type ExtensionSettings = {
 export type Notebook = {
   id: string;
   name: string;
+  slug?: string | null;
 };
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   instanceUrl: "",
   token: "",
   notebookId: "",
+};
+
+const isInboxNotebook = (notebook: { id: string; slug?: string | null }) =>
+  notebook.slug === "inbox" || notebook.id === "nb_inbox" || notebook.id.endsWith("_inbox");
+
+// An empty or stale choice means 等待分类. A notebook the user picked still wins.
+export const clipNotebookId = (savedId: string, notebooks: { id: string; slug?: string | null }[]) => {
+  const saved = savedId.trim();
+  if (saved && notebooks.some((notebook) => notebook.id === saved)) return saved;
+  return notebooks.find((notebook) => notebook.id.trim() && isInboxNotebook(notebook))?.id ?? "";
 };
 
 export const getSettings = async (): Promise<ExtensionSettings> => {
@@ -76,7 +87,12 @@ export const edgeEverRequest = async <T>(settings: ExtensionSettings, path: stri
   return response.json() as Promise<T>;
 };
 
-export const edgeEverFormRequest = async <T>(settings: ExtensionSettings, path: string, form: FormData): Promise<T> => {
+export const edgeEverFormRequest = async <T>(
+  settings: ExtensionSettings,
+  path: string,
+  form: FormData,
+  signal?: AbortSignal,
+): Promise<T> => {
   const instanceUrl = normalizeInstanceUrl(settings.instanceUrl);
   if (!instanceUrl || !settings.token) {
     throw new Error(t("missingSettingsDetails"));
@@ -86,6 +102,7 @@ export const edgeEverFormRequest = async <T>(settings: ExtensionSettings, path: 
     method: "POST",
     headers: { Authorization: `Bearer ${settings.token}` },
     body: form,
+    signal,
   });
 
   if (!response.ok) {
@@ -100,6 +117,7 @@ export const uploadMemoImage = async (
   settings: ExtensionSettings,
   memoId: string,
   file: { bytes: Uint8Array; mimeType: string; filename: string },
+  signal?: AbortSignal,
 ) => {
   const buffer = new ArrayBuffer(file.bytes.byteLength);
   new Uint8Array(buffer).set(file.bytes);
@@ -109,6 +127,7 @@ export const uploadMemoImage = async (
     settings,
     `/api/v1/memos/${encodeURIComponent(memoId)}/resources`,
     form,
+    signal,
   );
 };
 

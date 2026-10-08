@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { ApiRequestError } from "@edgeever/client";
-import { formatMobileLoginError } from "./login-error.ts";
+import { formatMobileLoginError, MISSING_MOBILE_SESSION_MESSAGE } from "./login-error.ts";
 
 describe("mobile login error messages", () => {
   test("explains a Cloudflare challenge and preserves its Ray ID", () => {
@@ -39,5 +39,19 @@ describe("mobile login error messages", () => {
       .toContain("Unable to reach the instance");
     expect(formatMobileLoginError(new ApiRequestError("Unavailable", 503), "zh-CN"))
       .toContain("实例服务异常（HTTP 503）");
+  });
+
+  test("keeps the missing mobile session guidance in each language", () => {
+    const error = new Error(MISSING_MOBILE_SESSION_MESSAGE);
+    expect(formatMobileLoginError(error, "zh-CN"))
+      .toBe(`${MISSING_MOBILE_SESSION_MESSAGE}\nmobile_session_missing`);
+    expect(formatMobileLoginError(error, "en-US"))
+      .toBe("Signed in, but the server did not return a mobile session. Make sure the server is updated to a version that supports app sign-in.\nmobile_session_missing");
+    expect(formatMobileLoginError(error, "ja"))
+      .toContain("サーバーがモバイルセッションを返しませんでした");
+    expect(formatMobileLoginError(error, "pl"))
+      .toContain("serwer nie zwrócił sesji mobilnej");
+    expect(formatMobileLoginError(new Error("Something else"), "en-US"))
+      .toBe("Sign-in failed. Try again later.\nunexpected_login_error");
   });
 });

@@ -1,0 +1,72 @@
+---
+import Container from "@/components/container.astro";
+import Layout from "@/layouts/Layout.astro";
+---
+
+<Layout
+  title="Polityka prywatności"
+  description="Polityka prywatności aplikacji mobilnej EdgeEver i rozszerzenia Web Clipper."
+>
+  <Container>
+    <main class="mx-auto max-w-3xl py-12 text-slate-700 md:py-20">
+      <article class="rounded-lg border border-slate-200 bg-white p-8 shadow-sm md:p-10">
+        <h1 class="text-3xl font-bold text-slate-950">Polityka prywatności EdgeEver</h1>
+        <p class="mt-3 text-sm text-slate-500">Obowiązuje od: 18 lipca 2026 r.</p>
+
+        <div class="mt-8 space-y-8 leading-7">
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Zakres</h2>
+            <p class="mt-3">Niniejsza polityka dotyczy aplikacji mobilnych EdgeEver na iOS i Androida oraz rozszerzenia EdgeEver Web Clipper. EdgeEver to otwartoźródłowa, samodzielnie hostowana aplikacja do notatek. Użytkownicy sami wybierają i obsługują instancję EdgeEver, z którą się łączą.</p>
+          </section>
+
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Przetwarzane dane</h2>
+            <ul class="mt-3 list-disc space-y-2 pl-6">
+              <li>Aplikacja mobilna przetwarza adres URL instancji EdgeEver, nazwę użytkownika i hasło podane przez użytkownika w celu zalogowania. Uzyskane dane uwierzytelniające sesji są przechowywane w bezpiecznym magazynie urządzenia.</li>
+              <li>Notatniki, notatki, tagi i załączniki są przesyłane między urządzeniem a samodzielnie hostowaną instancją użytkownika. Aplikacja mobilna przechowuje niezbędną lokalną kopię SQLite, szkice, kolejkę synchronizacji i preferencje, aby zapewnić szybki dostęp i edycję offline.</li>
+              <li>Web Clipper przetwarza tytuł bieżącej strony, jej adres URL, zaznaczoną treść lub wyodrębnioną treść artykułu wyłącznie wtedy, gdy użytkownik zdecyduje się ją zapisać. Adres URL instancji, token API i ustawienia domyślnego notatnika są przechowywane w lokalnym magazynie rozszerzenia w przeglądarce.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Wykorzystanie i przesyłanie</h2>
+            <p class="mt-3">Aplikacja mobilna i Web Clipper łączą się bezpośrednio z instancją EdgeEver wybraną przez użytkownika. Opiekunowie projektu nie prowadzą żadnego serwera pośredniczącego ani scentralizowanej usługi, która odbierałaby lub przechowywała notatki, dane uwierzytelniające lub przechwycone treści użytkowników.</p>
+            <p class="mt-3">Produkty nie zawierają reklam, analityki, śledzenia ani telemetrii. Dane nie są sprzedawane ani udostępniane platformom reklamowym, brokerom danych ani innym podmiotom trzecim.</p>
+          </section>
+
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Uprawnienia i dostęp do plików</h2>
+            <ul class="mt-3 list-disc space-y-2 pl-6">
+              <li><strong>Dostęp do sieci</strong>: logowanie do instancji EdgeEver wybranej przez użytkownika i synchronizacja z nią.</li>
+              <li><strong>Dostęp do plików</strong>: systemowy selektor plików jest używany wyłącznie wtedy, gdy użytkownik zdecyduje się zaimportować, wyeksportować lub przesłać załącznik.</li>
+              <li><strong>activeTab</strong>: dostęp do bieżącej karty wyłącznie po wywołaniu rozszerzenia przez użytkownika w celu jej zapisania.</li>
+              <li><strong>scripting</strong>: uruchamianie skryptu wyodrębniającego treść na bieżącej stronie.</li>
+              <li><strong>storage</strong>: lokalne przechowywanie adresu URL instancji, tokena API i ustawień domyślnego notatnika.</li>
+              <li><strong>Opcjonalne uprawnienia hosta</strong>: dostęp do sieci wyłącznie dla instancji EdgeEver skonfigurowanej przez użytkownika.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Bezpieczeństwo i przechowywanie</h2>
+            <p class="mt-3">Użytkownicy powinni korzystać z instancji EdgeEver dostępnej przez HTTPS oraz chronić swoje konto i token API. Lokalne dane aplikacji pozostają na urządzeniu do momentu wylogowania, wyczyszczenia danych aplikacji lub jej odinstalowania. Ustawienia rozszerzenia pozostają do momentu ich zmiany, wyczyszczenia danych rozszerzenia lub jego odinstalowania. Notatki i załączniki w chmurze są przechowywane przez własną instancję użytkownika i tam można je edytować lub usuwać.</p>
+          </section>
+
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Ograniczone wykorzystanie (Chrome Web Store Limited Use)</h2>
+            <p class="mt-3">Informacje otrzymane z interfejsów API Chrome są wykorzystywane wyłącznie do świadczenia opisanej powyżej, widocznej dla użytkownika funkcji przechwytywania stron. Ich wykorzystanie jest zgodne z Zasadami dotyczącymi danych użytkownika Chrome Web Store, w tym z wymogami ograniczonego wykorzystania (Limited Use).</p>
+          </section>
+
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Informacja o przesyłaniu danych w Firefoksie</h2>
+            <p class="mt-3">Pakiet dla Firefoksa deklaruje, zgodnie z taksonomią danych Mozilli, informacje uwierzytelniające, aktywność przeglądania i treść witryn. Obejmują one token API, adres URL bieżącej strony oraz wybraną przez użytkownika treść strony, przesyłane do instancji EdgeEver wybranej przez użytkownika. Opiekunowie projektu nie otrzymują ani nie przechowują tych danych.</p>
+          </section>
+
+          <section>
+            <h2 class="text-xl font-bold text-slate-900">Kontakt</h2>
+            <p class="mt-3">W sprawie pytań dotyczących niniejszej polityki lub praktyk EdgeEver w zakresie danych skontaktuj się z opiekunami projektu przez <a class="text-teal-700 underline" href="https://github.com/tianma-if/edgeever/issues" target="_blank" rel="noopener noreferrer">GitHub Issues</a>.</p>
+          </section>
+        </div>
+      </article>
+    </main>
+  </Container>
+</Layout>

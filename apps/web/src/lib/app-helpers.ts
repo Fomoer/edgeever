@@ -26,7 +26,8 @@ export type ShortcutAction =
   | "saveAndSync"
   | "toggleReadingProtection"
   | "toggleEditorMode"
-  | "toggleOutline";
+  | "toggleOutline"
+  | "toggleSidebar";
 export type ShortcutBinding = {
   key: string;
   ctrlOrMeta: boolean;
@@ -190,6 +191,7 @@ export const getShortcutActionOptions = (
   { value: "toggleReadingProtection", label: t("shortcuts.actions.toggleReadingProtection.label") },
   { value: "toggleEditorMode", label: t("shortcuts.actions.toggleEditorMode.label") },
   { value: "toggleOutline", label: t("shortcuts.actions.toggleOutline.label") },
+  { value: "toggleSidebar", label: t("shortcuts.actions.toggleSidebar.label") },
 ];
 
 export const DEFAULT_SHORTCUT_SETTINGS: ShortcutSettings = {
@@ -206,6 +208,7 @@ export const DEFAULT_SHORTCUT_SETTINGS: ShortcutSettings = {
   toggleReadingProtection: { key: "e", ctrlOrMeta: true, shift: false, alt: false },
   toggleEditorMode: { key: "/", ctrlOrMeta: true, shift: false, alt: false },
   toggleOutline: { key: "1", ctrlOrMeta: true, shift: true, alt: false },
+  toggleSidebar: { key: "\\", ctrlOrMeta: true, shift: false, alt: false },
 };
 
 const LEGACY_READING_PROTECTION_SHORTCUT: ShortcutBinding = {
@@ -233,6 +236,7 @@ const SHORTCUT_ACTION_VALUES: ShortcutAction[] = [
   "toggleReadingProtection",
   "toggleEditorMode",
   "toggleOutline",
+  "toggleSidebar",
 ];
 
 export const isDefaultMemoTitle = (title: string | null | undefined) => title?.trim() === DEFAULT_MEMO_TITLE;
@@ -582,6 +586,13 @@ export const shortcutBindingsEqual = (first: ShortcutBinding, second: ShortcutBi
   first.ctrlOrMeta === second.ctrlOrMeta &&
   first.shift === second.shift &&
   first.alt === second.alt;
+
+// The sidebar shortcut only acts when the sidebar can be seen: Focus Mode hides
+// it, so toggling there would change a persisted state without any feedback.
+export const canToggleNotebookSidebar = ({ isDesktop, focusModeActive }: {
+  isDesktop: boolean;
+  focusModeActive: boolean;
+}) => isDesktop && !focusModeActive;
 
 export const getShortcutActionForEvent = (event: KeyboardEvent, settings: ShortcutSettings): ShortcutAction | null => {
   const eventBinding = shortcutBindingFromKeyboardEvent(event);

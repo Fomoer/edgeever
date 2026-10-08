@@ -50,6 +50,17 @@ enum CreateSaveStatus: Equatable, Sendable {
         }
     }
 
+    var labelPL: String {
+        switch self {
+        case .starting: return "Uruchamianie"
+        case .saved: return "Zapisano"
+        case .saving: return "Zapisywanie"
+        case .creating: return "Tworzenie"
+        case .uploading: return "Przesyłanie"
+        case .error: return "Nie udało się zapisać"
+        }
+    }
+
     var isActive: Bool {
         switch self {
         case .saving, .creating, .uploading: return true
@@ -119,6 +130,16 @@ enum DetailSyncStatus: Equatable, Sendable {
         case .syncing: return "Saving"
         case .conflict: return "Conflict"
         case .error: return "Sync failed"
+        }
+    }
+
+    var labelPL: String {
+        switch self {
+        case .synced: return "Zsynchronizowano"
+        case .pending: return "Oczekuje"
+        case .syncing: return "Zapisywanie"
+        case .conflict: return "Konflikt"
+        case .error: return "Błąd synchronizacji"
         }
     }
 

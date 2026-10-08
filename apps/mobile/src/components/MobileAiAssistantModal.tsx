@@ -107,6 +107,7 @@ export const MobileAiAssistantModal = ({
     fr: tr("法语", "French"),
     de: tr("德语", "German"),
     pt: tr("葡萄牙语", "Portuguese"),
+    pl: tr("波兰语", "Polish"),
   };
 
   const toneLabels: Record<Tone, string> = {

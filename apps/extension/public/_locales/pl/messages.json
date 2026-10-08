@@ -1,0 +1,564 @@
+{
+  "extensionName": {
+    "message": "EdgeEver Web Clipper"
+  },
+  "extensionDescription": {
+    "message": "Zapisuj bieżącą stronę, zaznaczony fragment lub obraz z menu kontekstowego w swojej samodzielnie hostowanej instancji EdgeEver."
+  },
+  "actionTitle": {
+    "message": "Zapisz w EdgeEver"
+  },
+  "webClipper": {
+    "message": "Web Clipper"
+  },
+  "supportedPlatformsLabel": {
+    "message": "Dopasowane przechwytywanie dla:"
+  },
+  "platformXiaohongshu": {
+    "message": "Xiaohongshu"
+  },
+  "platformZhihu": {
+    "message": "Zhihu"
+  },
+  "saveCurrentPage": {
+    "message": "Przechwyć bieżącą stronę"
+  },
+  "pluginSettings": {
+    "message": "Ustawienia rozszerzenia"
+  },
+  "readingAndSaving": {
+    "message": "Odczytywanie i zapisywanie strony…"
+  },
+  "completePluginConfiguration": {
+    "message": "Dokończ konfigurację rozszerzenia"
+  },
+  "savedToEdgeEver": {
+    "message": "Zapisano w EdgeEver."
+  },
+  "saveFailed": {
+    "message": "Nie udało się zapisać."
+  },
+  "optionsTitle": {
+    "message": "Ustawienia EdgeEver Web Clipper"
+  },
+  "optionsSubtitle": {
+    "message": "Skonfiguruj połączenie z samodzielnie hostowaną instancją EdgeEver i domyślny notatnik."
+  },
+  "diagnosticsTitle": {
+    "message": "Informacje i diagnostyka"
+  },
+  "diagnosticsDescription": {
+    "message": "Wyświetl podstawowe informacje o rozszerzeniu, przeglądarce, systemie i połączeniu. Tokeny API nigdy nie są uwzględniane."
+  },
+  "extensionVersion": {
+    "message": "Wersja rozszerzenia"
+  },
+  "manifestVersion": {
+    "message": "Wersja manifestu"
+  },
+  "browserVersion": {
+    "message": "Przeglądarka"
+  },
+  "systemVersion": {
+    "message": "System"
+  },
+  "extensionId": {
+    "message": "Identyfikator rozszerzenia"
+  },
+  "instanceOrigin": {
+    "message": "Źródło instancji"
+  },
+  "instancePermission": {
+    "message": "Uprawnienie do instancji"
+  },
+  "copyDiagnostics": {
+    "message": "Kopiuj diagnostykę"
+  },
+  "diagnosticsCopied": {
+    "message": "Skopiowano diagnostykę."
+  },
+  "diagnosticsCopyFailed": {
+    "message": "Nie udało się skopiować. Sprawdź uprawnienie przeglądarki do schowka."
+  },
+  "permissionGranted": {
+    "message": "Przyznano"
+  },
+  "permissionNotGranted": {
+    "message": "Nie przyznano"
+  },
+  "permissionNotConfigured": {
+    "message": "Nie skonfigurowano instancji"
+  },
+  "notConfigured": {
+    "message": "Nie skonfigurowano"
+  },
+  "invalidInstanceAddress": {
+    "message": "Nieprawidłowy adres"
+  },
+  "unknownValue": {
+    "message": "Nieznane"
+  },
+  "instanceAddress": {
+    "message": "Adres URL instancji EdgeEver"
+  },
+  "tokenPlaceholder": {
+    "message": "Utwórz go w ustawieniach EdgeEver"
+  },
+  "defaultNotebook": {
+    "message": "Domyślny notatnik"
+  },
+  "autoFirstNotebook": {
+    "message": "Skrzynka"
+  },
+  "testConnection": {
+    "message": "Testuj połączenie"
+  },
+  "saveSettings": {
+    "message": "Zapisz ustawienia"
+  },
+  "projectAndSource": {
+    "message": "Projekt i kod źródłowy w GitHub"
+  },
+  "reportIssue": {
+    "message": "Zgłoś problem"
+  },
+  "privacyPolicy": {
+    "message": "Polityka prywatności"
+  },
+  "connecting": {
+    "message": "Łączenie…"
+  },
+  "connectionSuccessOne": {
+    "message": "Połączono. Znaleziono 1 notatnik."
+  },
+  "connectionSuccessMany": {
+    "message": "Połączono. Liczba znalezionych notatników: $COUNT$.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "connectionFailed": {
+    "message": "Nie udało się połączyć."
+  },
+  "settingsSaved": {
+    "message": "Zapisano ustawienia."
+  },
+  "settingsSaveFailed": {
+    "message": "Nie udało się zapisać ustawień."
+  },
+  "missingSettingsDetails": {
+    "message": "Najpierw wpisz adres URL instancji EdgeEver i token API w ustawieniach rozszerzenia."
+  },
+  "instancePermissionRequired": {
+    "message": "Zezwól rozszerzeniu na dostęp do Twojej instancji EdgeEver."
+  },
+  "requestFailed": {
+    "message": "Żądanie do EdgeEver nie powiodło się ($STATUS$).",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "sourceLabel": {
+    "message": "Źródło"
+  },
+  "capturedAtLabel": {
+    "message": "Przechwycono"
+  },
+  "googleSearchLabel": {
+    "message": "Wyszukiwarka Google"
+  },
+  "searchKeywordLabel": {
+    "message": "Słowo kluczowe"
+  },
+  "noAvailableNotebooks": {
+    "message": "Brak dostępnych notatników w EdgeEver."
+  },
+  "currentPageNotFound": {
+    "message": "Nie znaleziono bieżącej strony."
+  },
+  "captureTimeout": {
+    "message": "Odczyt strony nie zakończył się w ciągu 15 sekund. Strona może być duża lub nadal się wczytywać. Odśwież ją i spróbuj ponownie."
+  },
+  "pageAccessDenied": {
+    "message": "Rozszerzenie nie może odczytać tej strony. Nie można przechwytywać wewnętrznych stron przeglądarki, sklepów z rozszerzeniami ani stron objętych ograniczeniami."
+  },
+  "captureScriptFailed": {
+    "message": "Skrypt odczytu strony nie powiódł się: $DETAIL$",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  },
+  "captureUnknownError": {
+    "message": "Brak dodatkowych szczegółów"
+  },
+  "instanceNetworkFailed": {
+    "message": "Nie udało się połączyć z instancją EdgeEver. Sprawdź adres URL instancji, połączenie sieciowe i ustawienia CORS."
+  },
+  "saveFailedWithReason": {
+    "message": "Nie udało się zapisać w EdgeEver: $DETAIL$",
+    "placeholders": {
+      "detail": {
+        "content": "$1"
+      }
+    }
+  },
+  "emptyPageContent": {
+    "message": "(Na tej stronie nie znaleziono treści do odczytania)"
+  },
+  "saveSelectionToEdgeEver": {
+    "message": "Zapisz zaznaczenie w EdgeEver"
+  },
+  "selectionSaveHint": {
+    "message": "Zaznacz tekst na stronie, kliknij prawym przyciskiem i wybierz „Zapisz zaznaczenie w EdgeEver”. Zostanie zapisany jako nowa notatka w domyślnym notatniku wybranym poniżej."
+  },
+  "savingSelection": {
+    "message": "Zapisywanie zaznaczenia…"
+  },
+  "selectionSaved": {
+    "message": "Zapisano zaznaczenie jako notatkę."
+  },
+  "selectionEmpty": {
+    "message": "Nie zaznaczono tekstu, więc nic nie zapisano."
+  },
+  "selectionNoteFallbackTitle": {
+    "message": "Zaznaczenie"
+  },
+  "saveImageToEdgeEver": {
+    "message": "Zapisz obraz w EdgeEver"
+  },
+  "imageSaveHint": {
+    "message": "Kliknij prawym przyciskiem obraz na stronie i wybierz „Zapisz obraz w EdgeEver”. Zostanie zapisany jako nowa notatka w domyślnym notatniku wybranym poniżej."
+  },
+  "savingImage": {
+    "message": "Zapisywanie obrazu…"
+  },
+  "imageSaved": {
+    "message": "Zapisano jako nową notatkę."
+  },
+  "imageUnreadable": {
+    "message": "Nie udało się odczytać pliku obrazu, więc nic nie zapisano. Obraz może być rysowany przez stronę lub wymagać pobrania po zalogowaniu."
+  },
+  "imageTooLarge": {
+    "message": "Ten obraz jest większy niż 20 MB, więc nie został zapisany."
+  },
+  "imageUnsupportedType": {
+    "message": "Tego formatu obrazu nie można jeszcze zapisać w notatce. Obsługiwane formaty: PNG, JPEG, GIF, WebP i AVIF."
+  },
+  "imagePermissionIntro": {
+    "message": "Ta strona nie może odczytać pliku obrazu. Gdy zezwolisz na dostęp do witryny, która go udostępnia, EdgeEver zapisze go jako nową notatkę w domyślnym notatniku Web Clippera. Odczytywany jest tylko wybrany obraz."
+  },
+  "imagePermissionHost": {
+    "message": "Witryna: $HOST$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "imagePermissionToast": {
+    "message": "Zezwól na dostęp do witryny tego obrazu, aby go zapisać."
+  },
+  "allowAndSaveImage": {
+    "message": "Zezwól i zapisz"
+  },
+  "allowAllSitesAndSave": {
+    "message": "Zezwól na wszystkie witryny i zapisuj kolejne obrazy bezpośrednio"
+  },
+  "imagePermissionDenied": {
+    "message": "Nie zezwolono na dostęp do witryny, więc obraz nie został zapisany."
+  },
+  "imageResourceScopeRequired": {
+    "message": "Ten token API nie może zapisywać załączników. Utwórz token z pełnym dostępem w ustawieniach EdgeEver."
+  },
+  "imageNoteFallbackTitle": {
+    "message": "Obraz"
+  },
+  "imageAltFallback": {
+    "message": "Obraz"
+  },
+  "imageSaveWindowTitle": {
+    "message": "Zapisz obraz w EdgeEver"
+  },
+  "imageSaveExpired": {
+    "message": "Ten zapis wygasł. Kliknij obraz prawym przyciskiem i spróbuj ponownie."
+  },
+  "saveTweetToEdgeEver": {
+    "message": "Zapisz post w EdgeEver"
+  },
+  "tweetSaveHint": {
+    "message": "W serwisie X kliknij post prawym przyciskiem i wybierz „Zapisz post w EdgeEver”. Tekst posta, także ten ukryty pod „Pokaż więcej”, oraz zdjęcia trafią do jednej nowej notatki w tym samym domyślnym notatniku."
+  },
+  "savingTweet": {
+    "message": "Zapisywanie posta…"
+  },
+  "tweetSaved": {
+    "message": "Zapisano post jako notatkę."
+  },
+  "tweetNotFound": {
+    "message": "Nie znaleziono tego posta. Kliknij prawym przyciskiem bezpośrednio na poście."
+  },
+  "tweetPermissionIntro": {
+    "message": "Na osi czasu jest wiele postów. Zezwól na dostęp do X, aby Web Clipper mógł zapamiętać post pod kursorem. Następnie ponownie kliknij prawym przyciskiem ten sam post. Do domyślnego notatnika Web Clippera zapisywany jest tylko wybrany post."
+  },
+  "tweetPermissionToast": {
+    "message": "Zezwól na dostęp do X, aby wybrać post na osi czasu. Następnie ponownie kliknij ten post prawym przyciskiem."
+  },
+  "tweetRightClickAgain": {
+    "message": "Posty na osi czasu są już rozpoznawane. Ponownie kliknij ten post prawym przyciskiem."
+  },
+  "allowTweetAccess": {
+    "message": "Zezwól na dostęp do X"
+  },
+  "tweetPermissionDenied": {
+    "message": "Nie zezwolono na dostęp. Kliknij post ponownie prawym przyciskiem, aby spróbować jeszcze raz."
+  },
+  "tweetPermissionReady": {
+    "message": "Zezwolono na dostęp. Wróć i ponownie kliknij ten post prawym przyciskiem."
+  },
+  "tweetNoteFallbackTitle": {
+    "message": "Post"
+  },
+  "tweetSaveWindowTitle": {
+    "message": "Zapisz post w EdgeEver"
+  },
+  "tweetTimeLabel": {
+    "message": "Czas"
+  },
+  "saveGithubRepoToEdgeEver": {
+    "message": "Zapisz informacje o repozytorium w EdgeEver"
+  },
+  "githubRepoSaveHint": {
+    "message": "Na stronie repozytorium GitHub lub w drzewie kodu kliknij prawym przyciskiem tło strony, opis lub tekst README i wybierz „Zapisz informacje o repozytorium w EdgeEver”. Adres i opis zostaną zapisane jako nowa notatka w domyślnym notatniku wybranym powyżej. Strony zgłoszeń, dyskusji i pojedynczych plików nie są zapisywane."
+  },
+  "savingGithubRepo": {
+    "message": "Zapisywanie repozytorium…"
+  },
+  "githubRepoSaved": {
+    "message": "Zapisano repozytorium jako notatkę."
+  },
+  "githubRepoNotPage": {
+    "message": "To nie jest strona repozytorium GitHub ani drzewo kodu, więc nic nie zapisano."
+  },
+  "githubRepoUnreadable": {
+    "message": "Nie udało się odczytać szczegółów repozytorium, więc nic nie zapisano."
+  },
+  "githubRepoHomepageLabel": {
+    "message": "Strona główna"
+  },
+  "githubRepoLanguageLabel": {
+    "message": "Język"
+  },
+  "githubRepoLicenseLabel": {
+    "message": "Licencja"
+  },
+  "githubRepoTopicsLabel": {
+    "message": "Tematy"
+  },
+  "saveXhsToEdgeEver": {
+    "message": "Zapisz notatkę w EdgeEver"
+  },
+  "xhsSaveHint": {
+    "message": "W serwisie Xiaohongshu kliknij prawym przyciskiem tekst notatki i wybierz „Zapisz notatkę w EdgeEver”. Tytuł, tekst i zdjęcia trafią do jednej nowej notatki. Komentarze są pomijane. Kliknięcie prawym przyciskiem zdjęcia nadal zapisuje tylko ten obraz."
+  },
+  "savingXhs": {
+    "message": "Zapisywanie notatki…"
+  },
+  "xhsSaved": {
+    "message": "Zapisano notatkę."
+  },
+  "xhsNotFound": {
+    "message": "Nie znaleziono tej notatki. Otwórz ją, a następnie kliknij tekst prawym przyciskiem."
+  },
+  "xhsNeedsOpen": {
+    "message": "Otwórz notatkę, a następnie kliknij jej tekst prawym przyciskiem."
+  },
+  "xhsPermissionIntro": {
+    "message": "W kanale jest wiele notatek. Zezwól na dostęp do Xiaohongshu, aby Web Clipper mógł zapamiętać notatkę pod kursorem. Następnie ponownie kliknij prawym przyciskiem tę samą notatkę. Do domyślnego notatnika Web Clippera zapisywana jest tylko wybrana notatka."
+  },
+  "xhsPermissionToast": {
+    "message": "Zezwól na dostęp do Xiaohongshu, aby wybrać notatkę w kanale. Następnie ponownie kliknij tę notatkę prawym przyciskiem."
+  },
+  "xhsRightClickAgain": {
+    "message": "Notatki w kanale są już rozpoznawane. Ponownie kliknij tę notatkę prawym przyciskiem."
+  },
+  "allowXhsAccess": {
+    "message": "Zezwól na dostęp do Xiaohongshu"
+  },
+  "xhsPermissionDenied": {
+    "message": "Nie zezwolono na dostęp. Kliknij notatkę ponownie prawym przyciskiem, aby spróbować jeszcze raz."
+  },
+  "xhsPermissionReady": {
+    "message": "Zezwolono na dostęp. Wróć i ponownie kliknij tę notatkę prawym przyciskiem."
+  },
+  "xhsNoteFallbackTitle": {
+    "message": "Notatka z Xiaohongshu"
+  },
+  "xhsSaveWindowTitle": {
+    "message": "Zapisz notatkę w EdgeEver"
+  },
+  "xhsLocationLabel": {
+    "message": "Lokalizacja"
+  },
+  "saveZhihuToEdgeEver": {
+    "message": "Zapisz odpowiedź lub artykuł w EdgeEver"
+  },
+  "zhihuQuestionLabel": {
+    "message": "Pytanie"
+  },
+  "zhihuArticleLabel": {
+    "message": "Artykuł"
+  },
+  "zhihuAuthorLabel": {
+    "message": "Autor:"
+  },
+  "zhihuAnswerLabel": {
+    "message": "Odpowiedź"
+  },
+  "zhihuArticleBodyLabel": {
+    "message": "Treść"
+  },
+  "zhihuSaveHint": {
+    "message": "W serwisie Zhihu kliknij prawym przyciskiem tekst odpowiedzi lub artykułu i wybierz „Zapisz odpowiedź lub artykuł w EdgeEver”. Tytuł, autor, tekst i zdjęcia trafią do jednej nowej notatki. Komentarze są pomijane. Kliknięcie prawym przyciskiem zdjęcia nadal zapisuje tylko ten obraz."
+  },
+  "savingZhihu": {
+    "message": "Zapisywanie odpowiedzi lub artykułu z Zhihu…"
+  },
+  "zhihuSaved": {
+    "message": "Zapisano odpowiedź lub artykuł z Zhihu."
+  },
+  "zhihuNotFound": {
+    "message": "Nie znaleziono tej odpowiedzi ani artykułu. Kliknij prawym przyciskiem ich tekst."
+  },
+  "zhihuUnreadable": {
+    "message": "Nie udało się odczytać tej odpowiedzi ani artykułu, więc nic nie zapisano."
+  },
+  "zhihuPermissionIntro": {
+    "message": "Na tej stronie jest więcej niż jedna odpowiedź lub artykuł. Zezwól na dostęp do Zhihu, aby Web Clipper mógł zapamiętać element pod kursorem. Następnie ponownie kliknij prawym przyciskiem ten sam tekst. Do domyślnego notatnika Web Clippera zapisywany jest tylko wybrany element."
+  },
+  "zhihuPermissionToast": {
+    "message": "Zezwól na dostęp do Zhihu, aby wybrać odpowiedź lub artykuł z listy. Następnie ponownie kliknij ten tekst prawym przyciskiem."
+  },
+  "zhihuRightClickAgain": {
+    "message": "Odpowiedzi i artykuły na tej stronie są już rozpoznawane. Ponownie kliknij ten tekst prawym przyciskiem."
+  },
+  "allowZhihuAccess": {
+    "message": "Zezwól na dostęp do Zhihu"
+  },
+  "zhihuPermissionDenied": {
+    "message": "Nie zezwolono na dostęp. Kliknij tekst ponownie prawym przyciskiem, aby spróbować jeszcze raz."
+  },
+  "zhihuPermissionReady": {
+    "message": "Zezwolono na dostęp. Wróć i ponownie kliknij ten tekst prawym przyciskiem."
+  },
+  "zhihuNoteFallbackTitle": {
+    "message": "Odpowiedź lub artykuł z Zhihu"
+  },
+  "zhihuSaveWindowTitle": {
+    "message": "Zapisz odpowiedź lub artykuł w EdgeEver"
+  },
+  "saveRedditToEdgeEver": {
+    "message": "Zapisz post z Reddita w EdgeEver"
+  },
+  "savingReddit": {
+    "message": "Zapisywanie posta z Reddita…"
+  },
+  "redditSaved": {
+    "message": "Zapisano post z Reddita jako notatkę."
+  },
+  "redditNotFound": {
+    "message": "Nie znaleziono tego posta z Reddita. Kliknij prawym przyciskiem bezpośrednio na poście."
+  },
+  "redditRightClickAgain": {
+    "message": "Posty z Reddita są już rozpoznawane. Ponownie kliknij ten post prawym przyciskiem."
+  },
+  "redditAuthorLabel": {
+    "message": "Autor"
+  },
+  "redditCommunityLabel": {
+    "message": "Społeczność"
+  },
+  "redditLinkLabel": {
+    "message": "Strona z linku"
+  },
+  "saveVideoNoteToEdgeEver": {
+    "message": "Zapisz notatkę z wideo w EdgeEver"
+  },
+  "savingVideoNote": {
+    "message": "Zapisywanie notatki z wideo…"
+  },
+  "videoNoteSaved": {
+    "message": "Zapisano notatkę z wideo."
+  },
+  "videoTranscriptSaved": {
+    "message": "Zapisano napisy. Nie utworzono podsumowania."
+  },
+  "videoTranscriptNeedScope": {
+    "message": "Zapisano napisy. Nie utworzono podsumowania. W ustawieniach dodaj do tokena zakres ai:generate i wybierz domyślny model."
+  },
+  "videoTranscriptNeedModel": {
+    "message": "Zapisano napisy. Nie utworzono podsumowania. Najpierw wybierz domyślny model."
+  },
+  "videoTranscriptTooLong": {
+    "message": "Zapisano napisy. To wideo jest za długie, aby je podsumować."
+  },
+  "videoInfoSaved": {
+    "message": "Zapisano informacje o wideo."
+  },
+  "videoPageUnsupported": {
+    "message": "Ta strona nie jest jeszcze obsługiwana."
+  },
+  "videoNotRead": {
+    "message": "Nie udało się odczytać tego wideo."
+  },
+  "videoSourceLabel": {
+    "message": "Źródło"
+  },
+  "videoPlatformLabel": {
+    "message": "Platforma"
+  },
+  "videoCaptionsLabel": {
+    "message": "Napisy"
+  },
+  "videoCapturedAtLabel": {
+    "message": "Zapisano"
+  },
+  "videoSummaryHeading": {
+    "message": "Podsumowanie"
+  },
+  "videoOutlineHeading": {
+    "message": "Konspekt"
+  },
+  "videoTakeawaysHeading": {
+    "message": "Najważniejsze wnioski"
+  },
+  "videoTranscriptHeading": {
+    "message": "Transkrypcja"
+  },
+  "videoCoverAlt": {
+    "message": "Okładka"
+  },
+  "videoPlatformYouTube": {
+    "message": "YouTube"
+  },
+  "videoPlatformBilibili": {
+    "message": "Bilibili"
+  },
+  "videoCaptionsAuto": {
+    "message": "Napisy automatyczne"
+  },
+  "videoCaptionsCreator": {
+    "message": "Napisy autora"
+  },
+  "videoNoCaptions": {
+    "message": "To wideo nie ma napisów."
+  },
+  "videoNoteFallbackTitle": {
+    "message": "Notatka z wideo"
+  }
+}

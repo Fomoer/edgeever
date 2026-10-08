@@ -71,6 +71,8 @@ import {
   isTextEntryTarget,
   getSearchShortcutScope,
   getShortcutActionForEvent,
+  formatShortcutBinding,
+  canToggleNotebookSidebar,
   getNotebookDropSortOrder,
   getNotebookMoveOptions,
   getMemoIdsNeedingMove,
@@ -2810,6 +2812,19 @@ export const WorkspaceApp = ({
         return;
       }
 
+      if (action === "toggleSidebar") {
+        event.preventDefault();
+        if (
+          event.repeat
+          || event.isComposing
+          || !canToggleNotebookSidebar({ isDesktop, focusModeActive: desktopFocusModeActive })
+        ) {
+          return;
+        }
+        setNotebookSidebarCollapsed(!notebookSidebarCollapsed);
+        return;
+      }
+
       if (action === "focusSearch") {
         event.preventDefault();
         if (getSearchShortcutScope(selectedMemoId) === "memo-list") {
@@ -2868,6 +2883,10 @@ export const WorkspaceApp = ({
     handleGlobalSearch,
     handleMobileSearch,
     shortcutSettings,
+    isDesktop,
+    desktopFocusModeActive,
+    notebookSidebarCollapsed,
+    setNotebookSidebarCollapsed,
     emptyTrashConfirmationOpen,
     memoDeleteConfirmation,
     memoView,
@@ -3083,6 +3102,7 @@ export const WorkspaceApp = ({
                   isResettingDemo={resetDemoMutation.isPending}
                   collapsed={desktopNotebookSidebarCollapsed}
                   onToggleCollapsed={() => setNotebookSidebarCollapsed(!notebookSidebarCollapsed)}
+                  collapseShortcutLabel={formatShortcutBinding(shortcutSettings.toggleSidebar)}
                 />
               </Suspense>
             )}

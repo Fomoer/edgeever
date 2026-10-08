@@ -13,7 +13,7 @@ struct DevicesView: View {
                             Text(s.label ?? s.userAgent ?? s.id)
                                 .font(.system(size: 14, weight: .bold))
                                 .lineLimit(2)
-                            Text("\(s.isCurrent ? env.preferences.t("当前 · ", en: "Current · ") : "")\(s.lastSeenAt)")
+                            Text("\(s.isCurrent ? env.preferences.t("当前 · ", en: "Current · ", pl: "Bieżące · ") : "")\(s.lastSeenAt)")
                                 .font(.system(size: 11))
                                 .foregroundStyle(AppTheme.secondary)
                         }
@@ -31,7 +31,7 @@ struct DevicesView: View {
                                     sessions = (try? await env.session.client.listLoginDeviceSessions()) ?? []
                                 }
                             } label: {
-                                Text(env.preferences.t("注销", en: "Revoke"))
+                                Text(env.preferences.t("注销", en: "Revoke", pl: "Unieważnij"))
                             }
                         }
                     }
@@ -47,7 +47,7 @@ struct DevicesView: View {
                     sessions = (try? await env.session.client.listLoginDeviceSessions()) ?? []
                 }
             } label: {
-                Text(env.preferences.t("注销其他设备", en: "Sign out other devices"))
+                Text(env.preferences.t("注销其他设备", en: "Sign out other devices", pl: "Wyloguj inne urządzenia"))
                     .font(.system(size: 14, weight: .bold))
                     .frame(maxWidth: .infinity)
                     .frame(height: 44)

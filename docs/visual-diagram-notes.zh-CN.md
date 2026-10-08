@@ -8,6 +8,8 @@ EdgeEver 有两条图形笔记路径：思维导图、流程图和架构图使�
 
 Web 和桌面端用 AntV X6 编辑；Android、iOS 和公开分享用同一份 IR 只读绘制。持久化 Markdown 的 `edgeever-diagram-v1` 注释保存 Base64URL 编码的 IR，正文中的 Mermaid 图表用于外部阅读及 IR 解析失败时降级，不是编辑画布。普通笔记内的 Mermaid 代码块属于独立功能。
 
+Web 和桌面端的思维导图可在画布与 Markdown 大纲间切换。根主题使用 `#` 标题，分支使用嵌套的 `-` 列表，每级缩进两个空格。Enter 续写列表，Tab / Shift+Tab 调整层级，也兼容粘贴已有的纯缩进大纲。空列表项不会成为导图节点，非空子项会接到最近的非空上级；两种视图编辑同一份 `DiagramDocument`，不会把 Mermaid 正文当成可编辑源文件。大纲需要一个非空根主题；无效层级不会写回导图，一次删除大量主题须确认。已有节点和连线在往返切换时保留身份及元数据，层级变化会重新排版。
+
 解析与校验见 [`diagram.ts`](../packages/shared/src/diagram.ts)，语义图编译及布局见 [`diagram-layout.ts`](../packages/shared/src/diagram-layout.ts)，跨端只读绘制见 [`diagram-view.ts`](../packages/shared/src/diagram-view.ts)。原生 App 在能安全读写同一 IR 前保持只读。
 
 ## 信息图

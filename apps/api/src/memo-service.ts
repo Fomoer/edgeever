@@ -22,7 +22,7 @@ import {
 import { auditStatement } from "./audit";
 import type { AppContext, AuditActor, AuthContext, Bindings } from "./api-context";
 import { AppError } from "./app-error";
-import { createId, isoNow, parseJsonArray } from "./entity-utils";
+import { clampNumber, createId, isoNow, parseJsonArray } from "./entity-utils";
 import { workspaceInboxId } from "./notebook-service";
 import { sha256 } from "./hash-utils";
 import { getRequiredString } from "./mcp-json-rpc";
@@ -53,8 +53,6 @@ export type MemoMutationCommit = {
   after: (memoId: string) => PreparedStatementAdapter[];
 };
 
-const clampNumber = (value: number, min: number, max: number) =>
-  Number.isNaN(value) ? min : Math.min(Math.max(value, min), max);
 
 export type MemoDetailRow = MemoSummaryRow & {
   content_json: string;
@@ -948,6 +946,12 @@ export const createMemoRecord = async (
   actor: { actorType: "user" | "agent"; actorId: string | null },
   actorLabel: string
 ): Promise<MemoDetail> => {
+  // Reject a missing notebook before the batch. The memo insert is a SELECT
+  // from notebooks, so a bad id used to write orphan content and then fail
+  // the read-back as a generic 500.
+  if (!(await getNotebook(db, workspaceId, input.notebookId))) {
+    throw new AppError("not_found", "Notebook not found", 404);
+  }
   const tags = normalizeTags(input.tags);
   const contentMarkdown = input.contentMarkdown ?? "";
   const contentJson = input.contentJson && typeof input.contentJson === "object"

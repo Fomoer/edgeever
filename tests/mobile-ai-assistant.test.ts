@@ -82,7 +82,7 @@ describe("native mobile AI note assistant", () => {
     expect(androidDetailSource).toContain('label={resolvedLocale !== "zh-CN" ? "AI note assistant" : "AI 笔记助手"}');
     expect(androidDetailSource).toContain("setAiAssistantOpen(true)");
     expect(androidDetailSource).toContain("<MobileAiAssistantModal");
-    expect(iosDetailSource).toContain('env.preferences.t("AI 笔记助手", en: "AI note assistant")');
+    expect(iosDetailSource).toContain('env.preferences.t("AI 笔记助手", en: "AI note assistant"');
     expect(iosDetailSource).toContain("AiAssistantSheet(memo: memo)");
   });
 

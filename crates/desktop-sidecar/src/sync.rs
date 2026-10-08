@@ -160,11 +160,11 @@ pub(crate) fn sync_outbox_ack(database: &Connection, params: &Value) -> Result<V
         .get("id")
         .and_then(Value::as_i64)
         .ok_or_else(|| "Missing outbox id".to_owned())?;
-    let (kind, entity_id, current_version): (String, String, i64) = database
+    let (kind, entity_id, payload_json, current_version): (String, String, String, i64) = database
         .query_row(
-            "SELECT kind, entity_id, version FROM _edgeever_sidecar_outbox WHERE id = ?1",
+            "SELECT kind, entity_id, payload_json, version FROM _edgeever_sidecar_outbox WHERE id = ?1",
             [id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
         )
         .map_err(|e| e.to_string())?;
     let requested_version = params.get("version").and_then(Value::as_i64);
@@ -447,18 +447,45 @@ pub(crate) fn sync_outbox_ack(database: &Connection, params: &Value) -> Result<V
             }
         }
     }
+    let tx = database
+        .unchecked_transaction()
+        .map_err(|e| e.to_string())?;
     let deleted = if let Some(version) = requested_version {
-        database
-            .execute(
-                "DELETE FROM _edgeever_sidecar_outbox WHERE id = ?1 AND version = ?2",
-                rusqlite::params![id, version],
-            )
-            .map_err(|e| e.to_string())?
+        tx.execute(
+            "DELETE FROM _edgeever_sidecar_outbox WHERE id = ?1 AND version = ?2",
+            rusqlite::params![id, version],
+        )
+        .map_err(|e| e.to_string())?
     } else {
-        database
-            .execute("DELETE FROM _edgeever_sidecar_outbox WHERE id = ?1", [id])
+        tx.execute("DELETE FROM _edgeever_sidecar_outbox WHERE id = ?1", [id])
             .map_err(|e| e.to_string())?
     };
+    if deleted == 1
+        && matches!(
+            kind.as_str(),
+            "memo.delete" | "memo.deleteBatch" | "memo.emptyTrash"
+        )
+    {
+        let payload: Value = serde_json::from_str(&payload_json).unwrap_or_else(|_| json!({}));
+        let memo_ids: Vec<&str> = if kind == "memo.delete" {
+            vec![entity_id.as_str()]
+        } else {
+            payload
+                .get("memoIds")
+                .and_then(Value::as_array)
+                .map(|ids| ids.iter().filter_map(Value::as_str).collect())
+                .unwrap_or_default()
+        };
+        for memo_id in memo_ids {
+            // Delete only older conflicted edits after the server accepted the
+            // delete. A failed delete must leave its local draft recoverable.
+            tx.execute(
+                "DELETE FROM _edgeever_sidecar_outbox WHERE kind = 'memo.update' AND entity_id = ?1 AND status = 'conflict' AND id < ?2",
+                rusqlite::params![memo_id, id],
+            ).map_err(|e| e.to_string())?;
+        }
+    }
+    tx.commit().map_err(|e| e.to_string())?;
     Ok(
         json!({ "ok": true, "superseded": deleted == 0, "memo": remote_memo, "notebook": remote_notebook, "template": remote_template }),
     )

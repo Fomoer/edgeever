@@ -413,8 +413,11 @@ export const createWebRepository = (scope: string): EdgeEverRepository => {
     return { ok: true as const, deleted };
   },
   emptyTrash: async () => {
+    const memoIds = (await localDb.memos.where("scope").equals(scope).toArray())
+      .filter((memo) => memo.isDeleted)
+      .map((memo) => memo.id);
     const deleted = await applyLocalEmptyTrash(scope);
-    await queueLocalAction(scope, "memo.emptyTrash", "trash", {});
+    await queueLocalAction(scope, "memo.emptyTrash", "trash", { memoIds });
     window.dispatchEvent(new CustomEvent("edgeever:sync-queue-changed"));
     return { ok: true as const, deleted };
   },

@@ -18,7 +18,7 @@ Apple-ready iPhone screenshots. Keep English, Simplified Chinese, and Japanese
 metadata files aligned when changing listing content.
 
 The `play/` directory contains Google Play listing copy for English, Simplified
-Chinese, and Japanese.
+Chinese, Japanese, and Polish.
 
 ## Publish a Japanese listing
 
@@ -42,5 +42,15 @@ copy in this repository.
 1. Open Grow → Store presence → Main store listing → Manage translations.
 2. Add **Japanese (Japan)** if it is missing.
 3. Paste `play/metadata.ja-JP.md` into title, short description, and full
+   description.
+4. Publish the store listing. This does not upload a new AAB.
+
+## Publish a Polish Google Play listing
+
+The Android app ships a Polish in-app UI. Reuse the existing screenshots.
+
+1. Open Grow → Store presence → Main store listing → Manage translations.
+2. Add **Polish (Poland)** if it is missing.
+3. Paste `play/metadata.pl-PL.md` into title, short description, and full
    description.
 4. Publish the store listing. This does not upload a new AAB.

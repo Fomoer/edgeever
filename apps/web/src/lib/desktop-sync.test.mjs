@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 const {
   classifyDesktopSyncFailure,
+  discardDesktopConflicts,
   createDesktopSyncIssueDetails,
   createDesktopSyncDiagnosticText,
   createDesktopSyncSummary,
@@ -22,7 +23,33 @@ const {
   shouldAttemptDesktopRecoveryPull,
   shouldPullDesktopChanges,
 } = await import("./desktop-sync.ts");
-const { ApiRequestError } = await import("./api.ts");
+const { api, ApiRequestError } = await import("./api.ts");
+
+test("desktop explicit discard clears a conflict whose cloud note is gone", async () => {
+  const previousWindow = globalThis.window;
+  const originalGetMemo = api.getMemo;
+  const calls = [];
+  globalThis.window = {
+    edgeeverDesktop: {
+      isAvailable: true,
+      sidecarRequest: async (method, params) => {
+        calls.push({ method, params });
+        if (method === "sync.outbox.list") return { items: [{ id: 7, version: 2, kind: "memo.update", entityId: "memo-gone", status: "conflict" }] };
+        return { ok: true };
+      },
+    },
+  };
+  api.getMemo = async () => { throw new ApiRequestError("Not found", 404, "not_found"); };
+  try {
+    expect(await discardDesktopConflicts()).toBe(1);
+    expect(calls.map((call) => call.method)).toEqual(["sync.outbox.list", "sync.outbox.discard"]);
+    expect(calls[1].params).toEqual({ id: 7, version: 2 });
+  } finally {
+    api.getMemo = originalGetMemo;
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
 
 describe("desktop staged resource sync", () => {
   test("holds cloud sync until an imported screenshot is saved", async () => {

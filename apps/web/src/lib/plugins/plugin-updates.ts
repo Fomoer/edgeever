@@ -1,5 +1,6 @@
 import { parseExtensionManifest, type ExtensionManifest, type MarketplaceEntry, type PluginPermission } from "@edgeever/plugin-api";
 import type { InstalledExtension } from "@/lib/plugins/plugin-host";
+import { readRevokedPluginIds } from "@/lib/plugins/community-registry-store";
 import { loadGithubInstallableManifest } from "@/lib/plugins/github-plugin-distribution";
 import { isVersionOutdated } from "@/lib/version-check";
 
@@ -50,7 +51,9 @@ export const checkInstalledExtensionUpdate = async (
   extension: InstalledExtension,
   marketplaceEntries: MarketplaceEntry[],
   request: typeof fetch = window.fetch.bind(window),
+  revokedIds?: ReadonlySet<string>,
 ): Promise<PluginUpdateInfo | null> => {
+  if (revokedIds?.has(extension.manifest.id)) return null;
   const marketplaceEntry = extension.source.kind === "marketplace"
     ? marketplaceEntries.find((entry) => entry.id === extension.manifest.id)
     : undefined;
@@ -89,9 +92,10 @@ export const checkPluginUpdates = async (
   extensions: InstalledExtension[],
   marketplaceEntries: MarketplaceEntry[],
   request: typeof fetch = window.fetch.bind(window),
+  options?: { revokedIds?: ReadonlySet<string> },
 ): Promise<PluginUpdateCheckResult> => {
   const settled = await Promise.allSettled(
-    extensions.map((extension) => checkInstalledExtensionUpdate(extension, marketplaceEntries, request))
+    extensions.map((extension) => checkInstalledExtensionUpdate(extension, marketplaceEntries, request, options?.revokedIds))
   );
   const updates: PluginUpdateInfo[] = [];
   const errors: Record<string, string> = {};
@@ -130,9 +134,12 @@ export const updateOfficialMarketplacePlugins = async (
   host: PluginUpdateHost,
   marketplaceEntries: MarketplaceEntry[],
   request: typeof fetch = window.fetch.bind(window),
+  options?: { revokedIds?: ReadonlySet<string> },
 ): Promise<OfficialPluginUpdateResult> => {
-  const checked = await checkPluginUpdates(host.getSnapshot().extensions, marketplaceEntries, request);
+  const revokedIds = options?.revokedIds ?? await readRevokedPluginIds();
+  const checked = await checkPluginUpdates(host.getSnapshot().extensions, marketplaceEntries, request, { revokedIds });
   const officialUpdates = checked.updates.filter((update) => {
+    if (revokedIds.has(update.pluginId)) return false;
     if (update.marketplaceEntry?.publisher !== "edgeever") return false;
     if (!update.marketplaceEntry.verification.checksums?.manifestJson) return false;
     return update.latestManifest.type !== "plugin" || Boolean(update.marketplaceEntry.verification.checksums.mainJs);

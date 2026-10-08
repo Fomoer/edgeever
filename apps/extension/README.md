@@ -8,6 +8,7 @@ Chrome, Edge, and Firefox Manifest V3 extension for saving the current webpage, 
 - Test the connection and select a default notebook.
 - Click the extension action to capture the selected content, or extract the article body with Mozilla Readability when there is no selection.
 - Convert the extracted article HTML into Markdown with Turndown before uploading it.
+- Copy the images in a saved page or selection into the note itself, so the note still shows them if the source page removes or changes them. The note is saved first; up to 30 images (20 MB each, 60 MB in total) are then uploaded as note attachments and the note is pointed at them. An image the extension cannot read, such as one blocked by its site or in an unsupported format, keeps its original address. If the note is edited before the images finish copying, the edit is kept and the images keep their original addresses. No extra site access is requested for this.
 - Right-click an image and choose **Save image to EdgeEver**. The image file is uploaded into a new note in the default notebook, with the source page linked underneath. An image saved from Google Search records “Google Search” and the search keyword instead of the results URL.
 - Select text on a page, right-click, and choose **Save selection to EdgeEver**. That passage is saved as a new note in the default notebook, with the source page linked underneath. The rest of the page is not included.
 - On X, right-click the post text and choose **Save this post to EdgeEver**. The post text, author, time, and photos already shown in that post are saved into one note. Text folded behind Show more is expanded first, so a long post is saved in full. Right-clicking a photo saves that image instead, so the command stays on the top-level menu. A single-post page can be saved immediately. On a timeline, the extension asks once for access to X so it can remember the post under the pointer.
@@ -15,6 +16,7 @@ Chrome, Edge, and Firefox Manifest V3 extension for saving the current webpage, 
 - On Zhihu, right-click the answer or article text and choose **Save Zhihu content to EdgeEver**. The title, author, full text, and photos go into one note. Comments are left out. Right-clicking a photo saves that image instead. An open answer or article can be saved immediately. On the home feed or a question page, the extension remembers the item under the pointer; if that listener is not running yet, right-click the same text once more.
 - On Reddit, right-click a post or its title link and choose **Save Reddit post to EdgeEver**. The selected post becomes one note with its title, author, community, post text, source link, linked page, and available images. Comments are left out. The extension reads the selected post through Reddit's JSON response when available and falls back to its visible content. If the pointer listener is unavailable on a feed, right-click the same post once more.
 - On a GitHub repository page or code tree, right-click the page background, the description, or the README text and choose **Save this repository to EdgeEver**. The note keeps the repository address, the About text, and the homepage, language, license, and topics when the page shows them. An empty About falls back to the README's first paragraph. Issue, discussion, and single-file pages are left unsaved. The toolbar action uses the same card on those repository pages. Right-clicking a link or an image keeps the existing selection and image commands, so this one stays on the top-level menu.
+- On a YouTube or Bilibili watch page, right-click the page or the player and choose **Save video note to EdgeEver**. The note keeps the source and timestamped captions. A cover is uploaded only when the page provided the image bytes. A summary is added when the token includes `ai:generate` and the workspace has a default model. The command runs only after that click. Lives, premieres, bangumi, and other pages are left unsaved.
 - When the page cannot hand over the image bytes, the extension asks once for access to that image's site. After that, later images from the same site save directly.
 - Create a searchable EdgeEver memo with the source URL and a `web-clip` tag.
 
@@ -22,7 +24,7 @@ The extension does not use a central relay service. The page content is sent dir
 
 ## Localization
 
-The extension uses the cross-browser `chrome.i18n` compatibility namespace. English is the fallback locale, and Simplified Chinese is available for browsers whose UI language is Chinese.
+The extension uses the cross-browser `chrome.i18n` compatibility namespace. English is the fallback locale. Simplified Chinese, Japanese, and Polish are available for browsers whose UI language matches.
 
 User-visible strings live in `public/_locales/<locale>/messages.json`. Add or update every supported locale when changing interface copy. Chrome Web Store listing translations are maintained separately in the developer dashboard; ready-to-paste English and Simplified Chinese copy is available in `STORE_LISTING.md`.
 
@@ -67,7 +69,7 @@ The Firefox package declares the data types required by its user-triggered clipp
 
 - `authenticationInfo`: the API token sent directly to the user's EdgeEver instance.
 - `browsingActivity`: the URL of the page the user chooses to clip.
-- `websiteContent`: the selected text, extracted article content, or image the user chooses to clip.
+- `websiteContent`: the selected text, extracted article content, image, or video page the user chooses to clip. The extension sends that content only to the configured EdgeEver instance. When the token includes `ai:generate` and the workspace has a default model, the instance sends the caption text to that model provider. The extension does not send the page or its audio anywhere else.
 
 No data is sent to an EdgeEver-operated relay, analytics service, or advertising service.
 

@@ -20,7 +20,7 @@
     <a href="https://t.me/+wwUx1BYLrIdiZjY1"><img src="assets/readme/community/telegram.svg" alt="Telegram" width="16" height="16" align="absmiddle" /> Telegram グループ</a> &nbsp;|&nbsp;
     <a href="https://demo.edgeever.org">🌐 オンラインデモ</a> &nbsp;|&nbsp;
     <a href="#クライアントのダウンロード">📱 ダウンロード</a> &nbsp;|&nbsp;
-    <a href="docs/best-practices.md">✨ 活用シーンとショーケース</a>
+    <a href="#features">主な機能と活用シーン</a>
   </p>
 </div>
 
@@ -37,15 +37,12 @@ EdgeEver は、オープンソースのノートと知識ベースの作業領�
 
 長年 **Evernote** を使ってきた人が欲しいのは、**信頼でき、開かれていて、速い**個人知識ベースです。よくある代替には、それぞれ代償があります。
 
-* **Evernote**：広告と余分な機能で重くなり、書き出しが煩雑で、無料枠は狭く、AI / MCP は有料プランです。
+* **Evernote**：私自身が 10 年近く愛用し、最も愛着のあるノート製品です。しかし多機能な商業向けスイートへと進化するにつれ、広告や追加機能が増えてシステム負荷が高まりました。さらに無料枠の制限が厳格化され、高度な AI サブスクリプションも高額で、現代のセルフホストやプライベートな AI ワークフローとの柔軟な連携も難しくなっています。
 * **Obsidian**：ファイルは開いていますが、コアはクローズドです。公式同期は有料、第三者同期は手間がかかります。フラットなローカルファイル走査に依存するため、ノートが数千・数万件に増えたりプラグインを重ねると起動や検索がもたつきます。画像と添付をノートと一緒に置くと保管庫が膨らみ、モバイル同期が遅く、削除後に添付が残りやすいです。気軽な取り込みには重いことがあります。
 * **Memos などのタイムライン型**：簡潔ですが、三ペインの整理作業とはレイアウトが違います。
 * **思源ノート（SiYuan）などのブロック型知識ベース**：高機能でオープンソースのセルフホストに対応していますが、徹底した「ブロック（Block）」構造により日常的な気軽なメモや流れるような文章作成には心理的負荷がやや高くなります。また、サーバー費用ゼロの Serverless 運用形態がなく、マルチデバイス同期は公式の有料サブスクリプション、または S3/WebDAV 同期機能を有料でアンロックして自前ストレージを用意する必要があります。
 
 **EdgeEver はその隙間を埋めます。** 同期と自前運用を含めてスタック全体がオープンソースです。使い慣れた三ペインを残し、1万件のノートを抱えて常駐しても軽快でなめらか、ネイティブな AI Agent と無料で始められる導入もあります。
-
-> 💡 **おすすめの使い方：**
-> どの端末でも着想を取り込み、三ペインで深く整理します。ネイティブな MCP と ACP により、外部 Agent によるノートの検索・整理ができるほか、デスクトップ版ではマシン上のローカル AI Agent とも深く協調できます。体裁付きコピーでどこへでも出せます。データは自分のインスタンスに置き、本当に自分の第二の脳を持てます。
 
 ## オンラインデモ
 
@@ -65,34 +62,35 @@ EdgeEver は、オープンソースのノートと知識ベースの作業領�
 
 > iOS アプリは、中国本土以外の Apple ID が必要です。
 
-## 機能
+<a id="features"></a>
+## 主な機能と活用シーン
 
-- **導入方法を選べる**：Cloudflare の無料 Serverless、または VPS / NAS / 自宅サーバーの Docker。Cloudflare の無料保存の目安では、個人なら短いノート約 15 万、画像約 5 万。Docker の保存は必要に応じて伸ばせ、ノート数百万件と大きな画像庫にも足ります。
-- **開かれたデータ、囲い込みなし**：標準 SQLite、REST API、MCP、CLI。知識は透明に保存され、特定アプリに縛られません。
-- **欠損のない ZIP バックアップ**：Markdown、Front Matter、入れ子フォルダ、相対パスの添付、版履歴をまとめて書き出し、どこでも復元できます。
-- **ネイティブな AI Agent 連携**：内蔵の MCP（Model Context Protocol）により、外部 AI Agent がノートを直接読み、整理できます。同時にデスクトップ版は ACP（Agent Client Protocol）により、このマシンで動作する AI Agent（Codex、Antigravity、Claude Code、WorkBuddy など）を直接呼び出して協調執筆が可能です。
-- **自分の AI モデル**：OpenAI、Anthropic、Gemini 互換やサードパーティのリレーを接続して内蔵 Agent を駆動し、コンパニオンサイドバーやエディタ内で全文・選択範囲の要約、要点抽出、校正、翻訳、続きの執筆が行えます。
-- **プラグイン API**： [Plugin API](docs/plugin-development.md) で拡張できます。
-- **台数制限のない同期**：商用の端末数上限はありません。Web、PWA、ブラウザ経由で PC、タブレット、モバイルを同期します。
-- **クラシックな三ペインとフォーカスモード**：ノートブックツリー、ノート一覧、広い編集領域。デスクトップではフォーカスモードもあります。
-- **軽く、長く使えるデスクトップ**：ノートを切り替えても古い画像や本文をメモリに残さず、バックグラウンドに置いたあとも応答を保ちます。
-- **入れ子ノートブック**：階層の深さに上限はありません。
-- **ニュースレターとブログ向けの体裁付きコピー**：Markdown をインライン CSS のリッチテキストへ変換し、Substack、Medium、WordPress、ニュースレターへそのまま貼れます。
-- **双方向エディタ**：デスクトップではリッチテキストと Markdown ソースを切り替えられます。
-- **1 件のノート書き出し**：Markdown、HTML、PDF に書き出せます。
-- **Mermaid の描画**：フローチャート、シーケンス、マインドマップをノート内で描画し、Markdown とリッチテキストの両方で編集可能なソースを残します。
-- **視覚的な図のノート**：外部ツールを使わずに、ノート内でマインドマップ、フローチャート、アーキテクチャ図を直感的に作成・編集。構造化 IR により、内蔵アシスタントや外部 AI Agent が一言の指示で図を生成・編集でき、スマート自動レイアウト、マルチデバイス同期、ベクター書き出しにも対応。詳しくは [visual diagram notes design](docs/visual-diagram-notes.md) を参照。
-- **版履歴**：過去の版を見て、戻せます。
-- **公開共有**：ノートを公開し、いつでも止められます。必要なら共有リンクに自動生成のアクセスパスワードを付けられます。
-- **微信公式アカウント記事の取り込み**：スマホから微信公式アカウントの記事を EdgeEver に共有すると、本文を取り出して編集できるノートにします。
-- **微信チャット履歴の取り込み**：macOS 版では、微信でチャット履歴を「他のアプリへ転送 → EdgeEver」するだけで、会話全体を構造化ノートとして一括取り込めます。発言者、タイムライン、引用返信、絵文字を保持し、画像は自動で埋め込まれ、動画やファイルは添付ファイルに変換されます。[ベストプラクティスはこちら](docs/best-practices.md)。
-- **クライアント側の画像圧縮**：アップロード前に WebP 圧縮し、よくある画像で 50%〜90% 小さくします。サーバー追加料金はかかりません。
-- **汎用添付**：PDF、Office、zip、音声、動画をノートに付けてプレビューできます。分割アップロードとストリーミングで最大 1 GiB まで扱えます。
-- **一括操作と並び替え**：複数ノートの結合や移動、ノートブックのドラッグ並べ替え。
-- **オフライン下書きとキュー**：オフラインでも書け、復帰後に自動同期します。
-- **総当たりログイン対策**：サーバー側でアカウントと IP の失敗を数え、冷却します。
-- **複数アカウントの分離**：1 インスタンスで複数ユーザーをホストし、作業領域を分けます。
-- **必要な場所すべて**：Web、[Android](https://play.google.com/store/apps/details?id=org.edgeever.mobile&hl=ja)、[macOS](https://github.com/tianma-if/edgeever/releases)、[Windows](https://github.com/tianma-if/edgeever/releases/latest)、[Linux](https://github.com/tianma-if/edgeever/releases/latest)、[iOS](https://apps.apple.com/jp/app/edgeever/id6792625631)。Web Clipper は [Chrome](https://chromewebstore.google.com/detail/edgeever-web-clipper/gjadpfmanienmlofajibkfkkpfdkclgo)、[Edge](https://chromewebstore.google.com/detail/edgeever-web-clipper/gjadpfmanienmlofajibkfkkpfdkclgo)、[Firefox](https://addons.mozilla.org/ja/firefox/addon/edgeever-web-clipper/) に対応しています。
+マルチチャネルでの情報収集からビジュアル表現、チーム連携まで、EdgeEver は摩擦のないエンドツーエンドのワークフローを提供します：
+
+### 全方位のクリッピングとメディア蓄積
+- **クロスプラットフォームのワンクリック保存**：ブラウザ拡張による[小紅書ギャラリー](docs/best-practices.md#2-one-click-xiaohongshu-red-note-clipping)、[X (Twitter) 投稿と引用](docs/best-practices.md#3-one-click-x-twitter-post--quote-clipping)、[知乎の回答](docs/best-practices.md#4-one-click-zhihu-answer--column-article-clipping)、[Reddit ディスカッション](docs/best-practices.md#5-one-click-reddit-discussion-post-clipping)、[GitHub リポジトリ](docs/best-practices.md#8-one-click-github-repository-metadata-clipping) のワンクリック保存（より多くのプラットフォームへの深層対応も順次追加予定）；スマホのシステム共有による[画像](docs/best-practices.md#9-one-click-mobile-image-sharing-to-notes)や[微信記事](docs/best-practices.md#10-one-click-wechat-article-clipping-on-mobile)のワンクリック保存。
+- **微信チャット履歴の完全取り込み**：macOS 版の微信で「他のアプリへ転送 → EdgeEver」を選ぶだけで、発言者、タイムライン、引用返信、スタンプを保持したまま構造化ノートとして一括取り込み。画像は自動埋め込みされ、動画やファイルは添付ファイルに変換されます。詳細は[微信チャット履歴の一括取り込み](docs/best-practices.md#1-one-click-wechat-chat-history-archiving)。
+- **汎用ファイル添付とクライアント側画像圧縮**：PDF、Office 文書、圧縮ファイル、動画・音声など各種添付ファイルを最大 1 GiB までチャンク分割・ストリーミング処理で安全にアップロード；ブラウザ側で静かに画像を自動圧縮し、スクリーンショットや大判画像を 50%〜90% 軽量化。
+
+### インテリジェントなビジュアル表現と多次元データ協調
+- **ビジュアル図解ノートとプロフェッショナルインフォグラフィック**：外部描画ツール不要で、AI アシスタントへの自然言語指示だけで編集可能な[マインドマップ・フローチャート・アーキテクチャ図](docs/best-practices.md#11-ai-conversational-generation-of-mind-maps-flowcharts--architecture-diagrams) を生成（詳細は[ビジュアル図解ノート設計ガイド](docs/visual-diagram-notes.md)、Mermaid コードブロックのネイティブ描画に対応）；豊富なテンプレートから洗練された[多種多様なプロフェッショナルインフォグラフィック（タイムライン、比較図、象限マトリクスなど）](docs/best-practices.md#12-ai-powered-generation-of-professional-infographics) をその場で作成。
+- **AI 多次元テーブルと公開集計フォーム**：AI プロンプトから[あらゆる業務シーンに応じた多次元テーブル](docs/best-practices.md#13-instant-multi-dimensional-database-table-generation-via-ai-prompt)（プロジェクト管理、コンテンツ企画、人事・資産台仗など）を自動構築し、タグや日付などのフィールドとサンプルデータを自動生成；ログイン不要の[一般公開オンライン集計フォーム](docs/best-practices.md#14-one-click-public-online-form-collection-from-database-tables) をワンクリックで発行し、回答データをリアルタイムで収集・蓄積。
+- **デュアルビュー編集とノート空間整理**：リッチテキストと Markdown ソースビューを自在に切り替え可能；クラシックな 3 ペイン構成、集中モード、無制限階層のノートブック、ノートの一括結合・移動、ドラッグ＆ドロップ並べ替え；自動リビジョン履歴とパスワード保護付きのノート公開共有。
+
+### クリエイター向けワンクリック配信
+- **微信公式アカウント向け一括整形**：インライン CSS を保持した美化フォーマットに一発変換し、[微信公式アカウントへの直接コピー＆ペースト](docs/best-practices.md#6-one-click-note-copy-to-wechat-official-account--blogs) に対応。外部整形ツールは不要です。
+- **高解像度ポスター画像共有とマルチ形式書き出し**：任意のノートをワンクリックで[美しいポスター画像カードとして共有](docs/best-practices.md#7-ai-rss-daily-digest--elegant-image-poster-sharing) 可能。8 種類のテーマ、フォントやカードレイアウトをカスタマイズして SNS に発信でき、単一ノートの Markdown、HTML、PDF への書き出しにも対応。
+- **AI RSS 購読日報**：組み込みの公式 AI RSS 購読プラグインが、フィードやブログを自動巡回。AI がノイズを除去し、要点を整理した構造化日報ノートを定期生成します。
+
+### ネイティブ AI Agent とオープンなエコシステム
+- **ネイティブ Agent プロトコル連携（MCP & ACP）**：組み込みの Model Context Protocol (MCP) により外部 AI Agent がノートを直接閲覧・整理可能；デスクトップ版は Agent Client Protocol (ACP) を通じてローカルで動作する各種 Agent（Codex、Antigravity、Claude Code、WorkBuddy など）を直接呼び出して共同作成。
+- **独自モデル連携とオープンなプラグイン API**：複数の OpenAI、Anthropic、Gemini 互換プロバイダやカスタム中継サービスと接続し、要約、論点整理、翻訳、推敲を支援；充実した[プラグイン開発 API](docs/plugin-development.md) で機能を自由に拡張可能。
+
+### オープンアーキテクチャ・マルチプラットフォーム・強固なセキュリティ
+- **柔軟なデプロイとオープンなデータ構造**：Cloudflare Serverless（無料枠で約 15 万件の短文ノートと約 5 万枚の画像を収容）でのゼロコスト運用、または VPS/NAS/自宅サーバーへの Docker デプロイ（数百万件規模に対応）；標準 SQLite を採用し、REST API、CLI、完全な可逆 ZIP アーカイブ入出力によりデータロックインを排除。
+- **全プラットフォーム対応とエンタープライズ品質の安全性**：Web、[Android](https://play.google.com/store/apps/details?id=org.edgeever.mobile&hl=ja)、[macOS](https://github.com/tianma-if/edgeever/releases), [Windows](https://github.com/tianma-if/edgeever/releases/latest)、[Linux](https://github.com/tianma-if/edgeever/releases/latest)、[iOS](https://apps.apple.com/jp/app/edgeever/id6792625631) に公式対応（Web クリッパーは [Chrome](https://chromewebstore.google.com/detail/edgeever-web-clipper/gjadpfmanienmlofajibkfkkpfdkclgo)、[Edge](https://chromewebstore.google.com/detail/edgeever-web-clipper/gjadpfmanienmlofajibkfkkpfdkclgo)、[Firefox](https://addons.mozilla.org/ja/firefox/addon/edgeever-web-clipper/) をサポート）；セルフホストでデバイス台数制限なし、メモリ消費を抑えた軽量デスクトップ動作、オフライン下書きと同期キュー、ブルートフォース攻撃対策、複数アカウントの完全な空間分離。
+
+👉 全 14 の実機スクリーンショットと解説を見る：**[完全な活用シーンとショーケースガイド](docs/best-practices.md)**
 
 ## 導入
 
@@ -100,7 +98,7 @@ Cloudflare が、サーバーを持たない導入の推奨です。VPS、NAS、
 
 Cloudflare のオンライン導入は、次のいずれかです。
 
-### 方法 A: AI Agent で導入（推奨）
+### 方法 A: AI Agent に任せて導入（推奨）
 
 次のプロンプトを AI Agent（Codex、Claude、Cursor、WorkBuddy、Antigravity、OpenClaw、Hermes Agent など）へそのまま送ってください。実行中に GitHub や Cloudflare へのアクセスが求められたら、権限を確認して認可してください。
 

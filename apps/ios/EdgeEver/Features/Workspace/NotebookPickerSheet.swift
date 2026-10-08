@@ -28,7 +28,7 @@ struct NotebookPickerSheet: View {
         {
             return name
         }
-        return env.preferences.t("全部笔记", en: "All notes")
+        return env.preferences.t("全部笔记", en: "All notes", pl: "Wszystkie notatki")
     }
 
     private var visibleItems: [NotebookTreeItem] {
@@ -52,10 +52,10 @@ struct NotebookPickerSheet: View {
             // Header
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(env.preferences.t("切换笔记本", en: "Switch notebook"))
+                    Text(env.preferences.t("切换笔记本", en: "Switch notebook", pl: "Przełącz notatnik"))
                         .font(.system(size: 15, weight: .heavy))
                         .foregroundStyle(AppTheme.title)
-                    Text(env.preferences.t("当前：\(activeName)", en: "Current: \(activeName)"))
+                    Text(env.preferences.t("当前：\(activeName)", en: "Current: \(activeName)", pl: "Bieżący: \(activeName)"))
                         .font(.system(size: 12))
                         .foregroundStyle(AppTheme.secondary)
                 }
@@ -70,7 +70,7 @@ struct NotebookPickerSheet: View {
                         .frame(width: 36, height: 36)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(env.preferences.t("新建笔记本", en: "New notebook", ja: "新しいノートブック"))
+                .accessibilityLabel(env.preferences.t("新建笔记本", en: "New notebook", ja: "新しいノートブック", pl: "Nowy notatnik"))
                 Button {
                     dismiss()
                 } label: {
@@ -89,7 +89,7 @@ struct NotebookPickerSheet: View {
 
             if isCreating {
                 VStack(alignment: .leading, spacing: 8) {
-                    TextField(env.preferences.t("笔记本名称", en: "Notebook name", ja: "ノートブック名"), text: $newName)
+                    TextField(env.preferences.t("笔记本名称", en: "Notebook name", ja: "ノートブック名", pl: "Nazwa notatnika"), text: $newName)
                         .font(.system(size: 15))
                         .foregroundStyle(AppTheme.title)
                         .textInputAutocapitalization(.sentences)
@@ -97,9 +97,9 @@ struct NotebookPickerSheet: View {
                         .frame(height: 42)
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(AppTheme.border))
                     HStack(spacing: 8) {
-                        parentChoice(env.preferences.t("顶层笔记本", en: "Top level", ja: "最上位"), id: nil)
+                        parentChoice(env.preferences.t("顶层笔记本", en: "Top level", ja: "最上位", pl: "Najwyższy poziom"), id: nil)
                         if let selected = store.selectedNotebookId {
-                            parentChoice(env.preferences.t("位于「\(activeName)」下", en: "Under \(activeName)", ja: "「\(activeName)」の下"), id: selected)
+                            parentChoice(env.preferences.t("位于「\(activeName)」下", en: "Under \(activeName)", ja: "「\(activeName)」の下", pl: "W notatniku „\(activeName)”"), id: selected)
                         }
                     }
                     if let createError {
@@ -115,7 +115,7 @@ struct NotebookPickerSheet: View {
                             if isSaving {
                                 ProgressView().tint(.white)
                             } else {
-                                Text(env.preferences.t("创建笔记本", en: "Create notebook", ja: "ノートブックを作成"))
+                                Text(env.preferences.t("创建笔记本", en: "Create notebook", ja: "ノートブックを作成", pl: "Utwórz notatnik"))
                             }
                         }
                         .font(.system(size: 14, weight: .bold))
@@ -139,7 +139,7 @@ struct NotebookPickerSheet: View {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(AppTheme.secondary)
-                        TextField(env.preferences.t("搜索笔记本", en: "Search notebooks"), text: $query)
+                        TextField(env.preferences.t("搜索笔记本", en: "Search notebooks", pl: "Szukaj notatników"), text: $query)
                             .font(.system(size: 14))
                             .foregroundStyle(AppTheme.title)
                             .textInputAutocapitalization(.never)
@@ -165,7 +165,7 @@ struct NotebookPickerSheet: View {
 
                     // All notes
                     notebookRow(
-                        title: env.preferences.t("全部笔记", en: "All notes"),
+                        title: env.preferences.t("全部笔记", en: "All notes", pl: "Wszystkie notatki"),
                         selected: store.selectedNotebookId == nil,
                         depth: 0,
                         hasChildren: false,
@@ -180,8 +180,8 @@ struct NotebookPickerSheet: View {
                     HStack {
                         Text(
                             query.trimmingCharacters(in: .whitespaces).isEmpty
-                                ? env.preferences.t("笔记本", en: "Notebooks")
-                                : env.preferences.t("匹配的笔记本", en: "Matching notebooks")
+                                ? env.preferences.t("笔记本", en: "Notebooks", pl: "Notatniki")
+                                : env.preferences.t("匹配的笔记本", en: "Matching notebooks", pl: "Pasujące notatniki")
                         )
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AppTheme.secondary)
@@ -198,8 +198,8 @@ struct NotebookPickerSheet: View {
                             } label: {
                                 Text(
                                     allBranchesExpanded
-                                        ? env.preferences.t("收起全部", en: "Collapse all")
-                                        : env.preferences.t("展开全部", en: "Expand all")
+                                        ? env.preferences.t("收起全部", en: "Collapse all", pl: "Zwiń wszystko")
+                                        : env.preferences.t("展开全部", en: "Expand all", pl: "Rozwiń wszystko")
                                 )
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(AppTheme.secondary)
@@ -243,7 +243,7 @@ struct NotebookPickerSheet: View {
                             Image(systemName: "folder")
                                 .font(.system(size: 28))
                                 .foregroundStyle(AppTheme.muted)
-                            Text(env.preferences.t("没有匹配的笔记本", en: "No matching notebooks"))
+                            Text(env.preferences.t("没有匹配的笔记本", en: "No matching notebooks", pl: "Brak pasujących notatników"))
                                 .font(.system(size: 13))
                                 .foregroundStyle(AppTheme.secondary)
                         }

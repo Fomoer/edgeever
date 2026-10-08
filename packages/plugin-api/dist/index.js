@@ -469,6 +469,66 @@ var normalizeChecksum = (value, label) => {
   return value.toLocaleLowerCase();
 };
 var GITHUB_REPOSITORY_PATTERN = /^https:\/\/github\.com\/[^/]+\/[^/]+\/?$/i;
+var SPDX_PATTERN = /^[A-Za-z0-9][A-Za-z0-9.+-]{0,63}$/;
+var COMMIT_SHA_PATTERN = /^[0-9a-f]{40}$/;
+var API_VERSION_PATTERN = /^\d+(?:\.\d+){0,3}$/;
+var NETWORK_HOST_PATTERN = /^(?:\*\.)?[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i;
+var isReservedMarketplacePluginId = (id) => id === "org.edgeever" || id.startsWith("org.edgeever.");
+var readOptionalToken = (value, pattern, label, normalize) => {
+  if (value === undefined)
+    return;
+  if (typeof value !== "string" || !pattern.test(value))
+    throw new Error(label);
+  return normalize ? normalize(value) : value;
+};
+var readAdmittedSnapshot = (value, id) => {
+  if (value === undefined)
+    return;
+  if (!isRecord(value) || !Array.isArray(value.permissions) || !Array.isArray(value.networkHosts)) {
+    throw new Error(`Marketplace entry ${id} has an invalid admission snapshot.`);
+  }
+  const allowedPermissions = new Set(PLUGIN_PERMISSIONS);
+  const permissions = [...new Set(value.permissions.map(String))];
+  const unsupported = permissions.find((permission) => !allowedPermissions.has(permission));
+  if (unsupported)
+    throw new Error(`Marketplace entry ${id} has an unsupported admitted permission.`);
+  const networkHosts = [...new Set(value.networkHosts.map(String))];
+  if (networkHosts.some((host) => !NETWORK_HOST_PATTERN.test(host))) {
+    throw new Error(`Marketplace entry ${id} has an invalid admitted network host.`);
+  }
+  return { permissions, networkHosts };
+};
+var readRevocations = (value) => {
+  if (value === undefined)
+    return;
+  if (!Array.isArray(value))
+    throw new Error("Marketplace revocations must be an array.");
+  const ids = new Set;
+  return value.map((item) => {
+    if (!isRecord(item) || typeof item.id !== "string" || !ID_PATTERN.test(item.id)) {
+      throw new Error("Marketplace revocation id is invalid.");
+    }
+    if (ids.has(item.id))
+      throw new Error(`Duplicate marketplace revocation id: ${item.id}`);
+    ids.add(item.id);
+    if (typeof item.reason !== "string" || !item.reason.trim() || item.reason.trim().length > 500) {
+      throw new Error(`Marketplace revocation ${item.id} is missing a reason.`);
+    }
+    if (typeof item.revokedAt !== "string" || Number.isNaN(Date.parse(item.revokedAt))) {
+      throw new Error(`Marketplace revocation ${item.id} has an invalid revokedAt.`);
+    }
+    return { id: item.id, reason: item.reason.trim(), revokedAt: item.revokedAt };
+  });
+};
+var isInstallableCommunityEntry = (entry) => {
+  if (entry.apiVersion && entry.themeApiVersion)
+    return false;
+  if (entry.apiVersion)
+    return entry.apiVersion === PLUGIN_API_VERSION;
+  if (entry.themeApiVersion)
+    return entry.themeApiVersion === THEME_API_VERSION;
+  return false;
+};
 var parseMarketplaceRegistry = (value) => {
   if (!isRecord(value) || value.registryVersion !== MARKETPLACE_REGISTRY_VERSION || !Array.isArray(value.entries)) {
     throw new Error("Unsupported marketplace registry format.");
@@ -518,6 +578,11 @@ var parseMarketplaceRegistry = (value) => {
     })();
     if (!checksums?.manifestJson)
       throw new Error(`Marketplace entry ${item.id} must pin the manifest.json checksum.`);
+    const licenseSpdx = readOptionalToken(item.licenseSpdx, SPDX_PATTERN, `Marketplace entry ${item.id} has an invalid SPDX license.`);
+    const sourceRevision = readOptionalToken(item.sourceRevision, COMMIT_SHA_PATTERN, `Marketplace entry ${item.id} has an invalid source revision.`, (revision) => revision.toLocaleLowerCase());
+    const apiVersion = readOptionalToken(item.apiVersion, API_VERSION_PATTERN, `Marketplace entry ${item.id} has an invalid apiVersion.`);
+    const themeApiVersion = readOptionalToken(item.themeApiVersion, API_VERSION_PATTERN, `Marketplace entry ${item.id} has an invalid themeApiVersion.`);
+    const admitted = readAdmittedSnapshot(item.admitted, item.id);
     return {
       id: item.id,
       name: name.trim(),
@@ -528,15 +593,58 @@ var parseMarketplaceRegistry = (value) => {
       category: category.trim(),
       repositoryUrl: repositoryUrl.trim(),
       distribution,
-      verification: { version: item.verification.version, checksums }
+      verification: { version: item.verification.version, checksums },
+      ...licenseSpdx ? { licenseSpdx } : {},
+      ...sourceRevision ? { sourceRevision } : {},
+      ...apiVersion ? { apiVersion } : {},
+      ...themeApiVersion ? { themeApiVersion } : {},
+      ...admitted ? { admitted } : {}
     };
   });
-  return { registryVersion: MARKETPLACE_REGISTRY_VERSION, updatedAt: value.updatedAt, entries };
+  const revocations = readRevocations(value.revocations);
+  return {
+    registryVersion: MARKETPLACE_REGISTRY_VERSION,
+    updatedAt: value.updatedAt,
+    entries,
+    ...revocations ? { revocations } : {}
+  };
+};
+var mergeCommunityMarketplace = (bundled, community, revokedIds) => {
+  const bundledIds = new Set(bundled.entries.map((entry) => entry.id));
+  const entries = bundled.entries.filter((entry) => !revokedIds.has(entry.id));
+  for (const entry of community?.entries ?? []) {
+    if (entry.publisher)
+      continue;
+    if (isReservedMarketplacePluginId(entry.id) || bundledIds.has(entry.id) || revokedIds.has(entry.id))
+      continue;
+    if (entry.distribution.type !== "github" || !isInstallableCommunityEntry(entry))
+      continue;
+    const { publisher, listing, ...rest } = entry;
+    entries.push({ ...rest, listing: "community" });
+  }
+  return {
+    registryVersion: bundled.registryVersion,
+    updatedAt: bundled.updatedAt,
+    entries,
+    ...bundled.revocations ? { revocations: bundled.revocations } : {}
+  };
+};
+var rememberMarketplaceRevocations = (existing, incoming) => {
+  const byId = new Map(existing.map((item) => [item.id, item]));
+  for (const item of incoming) {
+    const current = byId.get(item.id);
+    if (!current || Date.parse(item.revokedAt) >= Date.parse(current.revokedAt))
+      byId.set(item.id, item);
+  }
+  return [...byId.values()].sort((left, right) => left.id.localeCompare(right.id));
 };
 export {
+  rememberMarketplaceRevocations,
   parseMarketplaceRegistry,
   parseExtensionManifest,
   normalizePluginPanelChrome,
+  mergeCommunityMarketplace,
+  isReservedMarketplacePluginId,
   defineTheme,
   definePlugin,
   THEME_TOKEN_NAMES,

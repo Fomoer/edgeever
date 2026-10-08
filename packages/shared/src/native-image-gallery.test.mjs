@@ -5,7 +5,7 @@ import Image from "@tiptap/extension-image";
 import { EditorState, NodeSelection } from "@tiptap/pm/state";
 import { closeHistory, history, redo, undo } from "@tiptap/pm/history";
 import { ImageGallery, IMAGE_GALLERY_NODE_TYPE } from "./image-gallery";
-import { createImageInsertTransaction, getImageInsertionRange, groupUploadedImages, NATIVE_IMAGE_GALLERY_CSS } from "./native-image-gallery";
+import { createImageInsertTransaction, getImageInsertionRange, groupUploadedImages, imageGalleryCopy, NATIVE_IMAGE_GALLERY_CSS } from "./native-image-gallery";
 
 const schema = getSchema([StarterKit, Image, ImageGallery]);
 const image = (src) => schema.nodes.image.create({ src, alt: src });
@@ -165,5 +165,15 @@ describe("native gallery editing", () => {
     expect(schema.nodeFromJSON(doc.toJSON()).toJSON()).toEqual(doc.toJSON());
     expect(NATIVE_IMAGE_GALLERY_CSS).toContain("min-height: 44px");
     expect(NATIVE_IMAGE_GALLERY_CSS).toContain(".edgeever-native-gallery-content .edgeever-image-size-controls { display: none !important; }");
+  });
+
+  test("labels the gallery layout controls in every app language", () => {
+    expect(imageGalleryCopy("pl")).toMatchObject({ label: "Układ galerii obrazów", auto: "Auto", single: "1 kolumna" });
+    expect(imageGalleryCopy("pl").columns("3")).toBe("3 kolumny");
+    expect(imageGalleryCopy("ja").columns("2")).toBe("2列");
+    expect(imageGalleryCopy("en-US").columns("2")).toBe("2 columns");
+    expect(imageGalleryCopy("zh-CN").columns("2")).toBe("2 栏");
+    // Unknown locales keep the previous Chinese copy.
+    expect(imageGalleryCopy("xx").label).toBe("图片画廊布局");
   });
 });

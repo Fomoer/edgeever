@@ -151,7 +151,8 @@ describe("diagram editor canvas surface", () => {
     expect(source).toContain("EDITOR_LOCAL_SAVE_DELAY_MS");
     expect(source).toContain("window.setTimeout(() => saveRef.current(), EDITOR_LOCAL_SAVE_DELAY_MS)");
     expect(source).toContain("nodeEditor !== null");
-    expect(source).toContain("[dirtyVersion, editSessionReady, editorDirty, nodeEditor, readOnly, saveFailed, saving]");
+    expect(source).toContain("outlineError || outlinePendingBulk || nodeEditor !== null");
+    expect(source).toContain("[dirtyVersion, editSessionReady, editorDirty, nodeEditor, outlineError, outlinePendingBulk, readOnly, saveFailed, saving]");
     expect(source).toContain("tags: nextTags");
     expect(source).toContain("setTagsDirty(hasNewTagChanges)");
     expect(source).toContain("!readOnly && saveFailed");

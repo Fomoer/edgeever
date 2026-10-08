@@ -58,6 +58,7 @@ import {
   apiError,
   authNotConfigured,
   databaseNotReady,
+  httpExceptionError,
   unauthorized,
 } from "./http-errors";
 import { audit } from "./audit";
@@ -477,6 +478,9 @@ app.onError((error, c) => {
   if (error instanceof AppError) {
     return apiError(c, error.code, error.message, error.status);
   }
+
+  const requestError = httpExceptionError(c, error);
+  if (requestError) return requestError;
 
   if (isDatabaseNotReadyError(error)) {
     console.error("EdgeEver database readiness check failed", error);

@@ -12,7 +12,9 @@ export const isNotebookNotEmptyError = (error: unknown) => {
   if (typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "notebook_not_empty") {
     return true;
   }
-  return error instanceof Error && error.message === "notebook_not_empty";
+  // Electron prefixes errors thrown by the sidecar IPC handler, for example:
+  // Error invoking remote method 'desktop:sidecar-request': Error: notebook_not_empty
+  return error instanceof Error && /(?:^|:\s*)notebook_not_empty$/.test(error.message.trim());
 };
 
 export const notebookDeleteIdsFromPayload = (

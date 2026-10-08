@@ -1,6 +1,7 @@
 import { jaSiteCopy, jaSiteTagline } from "./i18n-ja";
+import { plSiteCopy, plSiteTagline } from "./i18n-pl";
 
-export const siteLocales = ["zh-CN", "en-US", "ja"] as const;
+export const siteLocales = ["zh-CN", "en-US", "ja", "pl"] as const;
 export type SiteLocale = (typeof siteLocales)[number];
 
 export const defaultSiteLocale: SiteLocale = "zh-CN";
@@ -12,21 +13,24 @@ export const siteLocalePrefixes: Record<SiteLocale, string> = {
   "zh-CN": "",
   "en-US": "/en",
   ja: "/ja",
+  pl: "/pl",
 };
 
 export const siteLocaleLabels: Record<SiteLocale, string> = {
   "zh-CN": "简体中文",
   "en-US": "English",
   ja: "日本語",
+  pl: "Polski",
 };
 
 export const siteTaglines = {
   "zh-CN": "开源、原生支持 AI、自由部署（Cloudflare 免费额度 / Docker）的自托管「印象笔记」替代方案",
   "en-US": "Open-source, AI-native, self-hosted Evernote alternative with Cloudflare & Docker deployment.",
   ja: jaSiteTagline,
+  pl: plSiteTagline,
 } as const satisfies Record<SiteLocale, string>;
 
-const localePrefixPattern = /^\/(en|ja)(?=\/|$)/;
+const localePrefixPattern = /^\/(en|ja|pl)(?=\/|$)/;
 
 export const stripSiteLocalePrefix = (path: string) => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -52,6 +56,10 @@ export const matchSiteLocale = (locale: string | null | undefined): SiteLocale |
     return "ja";
   }
 
+  if (normalized === "pl" || normalized.startsWith("pl-")) {
+    return "pl";
+  }
+
   return null;
 };
 
@@ -62,6 +70,10 @@ export const getSiteLocale = (pathname: string): SiteLocale => {
 
   if (pathname === "/ja" || pathname.startsWith("/ja/")) {
     return "ja";
+  }
+
+  if (pathname === "/pl" || pathname.startsWith("/pl/")) {
+    return "pl";
   }
 
   return "zh-CN";
@@ -632,4 +644,5 @@ export const siteCopy = {
     },
   },
   ja: jaSiteCopy,
+  pl: plSiteCopy,
 } as const;

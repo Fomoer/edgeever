@@ -1,21 +1,33 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { BookOpen, CalendarClock, Download, ExternalLink, History, Play, Puzzle, RefreshCw, Settings2, Trash2 } from "lucide-react";
+import { BookOpen, CalendarClock, Download, ExternalLink, History, Play, Puzzle, RefreshCw, Settings2, Trash2, Upload } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { EdgeEverPluginHost, InstalledExtension, RegisteredPluginCommand } from "@/lib/plugins/plugin-host";
 import { PluginCatalogCard } from "@/components/plugins/PluginCatalogCard";
-import { loadResolvedPluginMarketplace } from "@/lib/plugins/plugin-marketplace";
+import { loadDisplayPluginMarketplace } from "@/lib/plugins/community-registry";
+import {
+  COMMUNITY_PLUGINS_REPOSITORY_URL,
+  COMMUNITY_PLUGINS_README_URL,
+  communityPluginSubmissionIssueUrl,
+  precheckCommunityPluginSubmission,
+} from "@/lib/plugins/community-plugin-submission";
 import { GitHubMark } from "@/components/GitHubRepositoryLink";
 import { applyPluginUpdate, checkPluginUpdates, type PluginUpdateInfo } from "@/lib/plugins/plugin-updates";
 import { PluginUpdateDialog } from "@/components/plugins/PluginUpdateDialog";
 import { PluginSettingsSection } from "@/components/plugins/PluginSettingsSection";
 import { buildPluginCatalogItems, getPluginCatalogDescription, getPluginCatalogName, getPluginCatalogSourceKey } from "@/lib/plugins/plugin-catalog";
-import type { MarketplaceEntry } from "@edgeever/plugin-api";
+import type { MarketplaceEntry, MarketplaceRevocation } from "@edgeever/plugin-api";
 import { getPluginDetailPage, getPluginDetailPath, hasPluginSettings, isPluginCardCommand, type PluginDetailPage } from "@/lib/plugins/plugin-navigation";
 import type { ScheduledTask } from "@edgeever/shared";
 import { api, getOrCreateClientDeviceId } from "@/lib/api";
@@ -147,6 +159,7 @@ const PluginDetailView = ({
   onToggle,
   onUninstall,
   onUpdate,
+  revocation,
 }: {
   page: PluginDetailPage;
   commands: RegisteredPluginCommand[];
@@ -159,6 +172,7 @@ const PluginDetailView = ({
   onToggle: (enabled: boolean) => void;
   onUninstall: () => void;
   onUpdate: () => void;
+  revocation?: MarketplaceRevocation;
 }) => {
   const { t, i18n } = useTranslation();
   const { manifest } = extension;
@@ -167,7 +181,7 @@ const PluginDetailView = ({
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const name = getPluginCatalogName(catalogItem, locale);
   const description = getPluginCatalogDescription(catalogItem, locale);
-  const sourceKey = extension.source.verified ? "verified" : extension.source.kind;
+  const sourceKey = getPluginCatalogSourceKey(catalogItem) ?? extension.source.kind;
 
   return (
     <div className="grid gap-5">
@@ -243,10 +257,15 @@ const PluginDetailView = ({
             </section>
           ) : null}
 
+          {revocation ? (
+            <div role="status" className="text-xs leading-5 text-rose-700">
+              {t("plugins.marketplace.revoked", { reason: revocation.reason })}
+            </div>
+          ) : null}
           {extension.error ? <div className="text-xs leading-5 text-rose-600">{extension.error}</div> : null}
 
           <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
-            {update ? (
+            {update && !revocation ? (
               <Button size="sm" className="gap-1.5" disabled={pendingId === `update:${id}`} onClick={onUpdate}>
                 <Download className="h-3.5 w-3.5" />
                 {t("plugins.updates.update")}
@@ -287,6 +306,9 @@ export const PluginManagerCard = ({
   const developerDocsUrl = i18n.resolvedLanguage?.startsWith("zh")
     ? "https://github.com/tianma-if/edgeever/blob/main/docs/plugin-development.zh-CN.md"
     : "https://github.com/tianma-if/edgeever/blob/main/docs/plugin-development.md";
+  const communityReadmeUrl = i18n.resolvedLanguage?.startsWith("zh")
+    ? `${COMMUNITY_PLUGINS_REPOSITORY_URL}/blob/main/README.zh-CN.md`
+    : COMMUNITY_PLUGINS_README_URL;
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
   const [manifestUrl, setManifestUrl] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -296,15 +318,41 @@ export const PluginManagerCard = ({
   const [error, setError] = useState<string | null>(null);
   const [pendingUpdate, setPendingUpdate] = useState<PluginUpdateInfo | null>(null);
   const [pendingTrustPluginId, setPendingTrustPluginId] = useState<string | null>(null);
-  const marketplaceQuery = useQuery({ queryKey: ["plugin-marketplace", "v1"], queryFn: () => loadResolvedPluginMarketplace(), staleTime: 5 * 60_000 });
+  const [submissionOpen, setSubmissionOpen] = useState(false);
+  const [submissionRepository, setSubmissionRepository] = useState("");
+  const [submissionResult, setSubmissionResult] = useState<{ id: string; repositoryUrl: string } | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [checkingSubmission, setCheckingSubmission] = useState(false);
+  const [refreshingMarketplace, setRefreshingMarketplace] = useState(false);
+  const marketplaceQuery = useQuery({
+    queryKey: ["plugin-marketplace", "v2"],
+    queryFn: () => loadDisplayPluginMarketplace({ refreshCommunity: false }),
+    staleTime: 5 * 60_000,
+  });
+  useEffect(() => {
+    let active = true;
+    void loadDisplayPluginMarketplace({ refreshCommunity: true }).then((next) => {
+      if (active) queryClient.setQueryData(["plugin-marketplace", "v2"], next);
+    }).catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [queryClient]);
   const extensionVersionKey = snapshot.extensions
     .map((extension) => `${extension.manifest.id}:${extension.manifest.version}:${extension.source.kind}`)
     .join("|");
   const marketplaceVersionKey = marketplaceQuery.data?.updatedAt ?? "unavailable";
-  const updateQueryKey = ["plugin-updates", extensionVersionKey, marketplaceVersionKey] as const;
+  const revocationKey = (marketplaceQuery.data?.revocations ?? []).map((item) => item.id).sort().join("|");
+  const revokedIds = new Set((marketplaceQuery.data?.revocations ?? []).map((item) => item.id));
+  const updateQueryKey = ["plugin-updates", extensionVersionKey, marketplaceVersionKey, revocationKey] as const;
   const updateQuery = useQuery({
     queryKey: updateQueryKey,
-    queryFn: () => checkPluginUpdates(snapshot.extensions, marketplaceQuery.data?.entries ?? []),
+    queryFn: () => checkPluginUpdates(
+      snapshot.extensions,
+      marketplaceQuery.data?.entries ?? [],
+      undefined,
+      { revokedIds },
+    ),
     enabled: snapshot.extensions.length > 0 && !marketplaceQuery.isLoading,
     staleTime: 5 * 60_000,
     refetchInterval: 30 * 60_000,
@@ -342,14 +390,30 @@ export const PluginManagerCard = ({
     }
   };
 
+  const refreshMarketplace = async () => {
+    const next = await loadDisplayPluginMarketplace({ refreshCommunity: true });
+    queryClient.setQueryData(["plugin-marketplace", "v2"], next);
+    return next;
+  };
+
   const checkForUpdates = async () => {
     setManuallyChecking(true);
     setError(null);
     try {
-      const refreshedMarketplace = await marketplaceQuery.refetch();
-      const result = await checkPluginUpdates(snapshot.extensions, refreshedMarketplace.data?.entries ?? []);
+      const refreshedMarketplace = await refreshMarketplace();
+      const result = await checkPluginUpdates(
+        snapshot.extensions,
+        refreshedMarketplace.entries,
+        undefined,
+        { revokedIds: new Set(refreshedMarketplace.revocations.map((item) => item.id)) },
+      );
       queryClient.setQueryData(
-        ["plugin-updates", extensionVersionKey, refreshedMarketplace.data?.updatedAt ?? "unavailable"],
+        [
+          "plugin-updates",
+          extensionVersionKey,
+          refreshedMarketplace.updatedAt ?? "unavailable",
+          refreshedMarketplace.revocations.map((item) => item.id).sort().join("|"),
+        ],
         result,
       );
       setLastManualCheckCount(result.updates.length);
@@ -397,13 +461,13 @@ export const PluginManagerCard = ({
   return (
     <Card className="w-full min-w-0 shadow-none">
       <CardHeader className="p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
             <Puzzle className="h-4 w-4 shrink-0 text-slate-900" />
             {selectedPluginId ? t("plugins.details.title") : t("plugins.title")}
             <span className={BETA_BADGE_CLASSNAME}>Beta</span>
           </CardTitle>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex flex-wrap items-center justify-end gap-1">
             {snapshot.extensions.length > 0 || (marketplaceQuery.data?.entries.length ?? 0) > 0 ? (
               <Button
                 variant="ghost"
@@ -426,6 +490,39 @@ export const PluginManagerCard = ({
                     {updateQuery.data?.updates.length}
                   </span>
                 ) : null}
+              </Button>
+            ) : null}
+            {!selectedPluginId ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 px-2 text-slate-600"
+                aria-label={t("plugins.marketplace.refresh")}
+                disabled={refreshingMarketplace}
+                onClick={() => {
+                  setRefreshingMarketplace(true);
+                  setError(null);
+                  void refreshMarketplace()
+                    .catch((refreshError) => {
+                      setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
+                    })
+                    .finally(() => setRefreshingMarketplace(false));
+                }}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${refreshingMarketplace ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">{t("plugins.marketplace.refresh")}</span>
+              </Button>
+            ) : null}
+            {!selectedPluginId ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 px-2 text-slate-600"
+                aria-label={t("plugins.marketplace.submissionTitle")}
+                onClick={() => setSubmissionOpen(true)}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{t("plugins.marketplace.submissionTitle")}</span>
               </Button>
             ) : null}
             <Button asChild variant="ghost" size="sm" className="h-8 shrink-0 gap-1.5 px-2 text-slate-600">
@@ -465,6 +562,7 @@ export const PluginManagerCard = ({
               marketplaceEntry={catalogItems.find((item) => item.id === selectedExtension.manifest.id)?.marketplaceEntry}
               host={host}
               update={updateQuery.data?.updates.find((update) => update.pluginId === selectedExtension.manifest.id)}
+              revocation={(marketplaceQuery.data?.revocations ?? []).find((item) => item.id === selectedExtension.manifest.id)}
               commands={snapshot.commands.filter((command) => command.pluginId === selectedExtension.manifest.id)}
               pendingId={pendingId}
               onToggle={(enabled) => toggleExtension(selectedExtension, enabled)}
@@ -535,6 +633,7 @@ export const PluginManagerCard = ({
                   () => host.runCommand(item.id, command.id),
                 )}
                 onUninstall={() => void run(`remove:${item.id}`, () => host.uninstall(item.id))}
+                revocation={(marketplaceQuery.data?.revocations ?? []).find((entry) => entry.id === item.id)}
               />
             ))}
           </div>
@@ -550,6 +649,69 @@ export const PluginManagerCard = ({
             onConfirm={() => void run(`update:${pendingUpdate.pluginId}`, () => applyUpdate(pendingUpdate))}
           />
         ) : null}
+        <Dialog open={submissionOpen} onOpenChange={setSubmissionOpen}>
+          <DialogContent className="max-w-lg" aria-describedby={undefined}>
+            <DialogHeader>
+              <DialogTitle>{t("plugins.marketplace.submissionTitle")}</DialogTitle>
+            </DialogHeader>
+            <a
+              href={communityReadmeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex w-fit items-center gap-1 text-xs text-slate-500 hover:text-slate-950"
+            >
+              {t("plugins.marketplace.submissionDocs")}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+            {submissionError ? (
+              <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{submissionError}</div>
+            ) : null}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                aria-label={t("plugins.marketplace.submissionRepository")}
+                value={submissionRepository}
+                onChange={(event) => {
+                  setSubmissionRepository(event.target.value);
+                  setSubmissionResult(null);
+                  setSubmissionError(null);
+                }}
+                placeholder={t("plugins.sourcePlaceholder")}
+                className="focus-visible:border-slate-400 focus-visible:ring-slate-400/25"
+              />
+              <Button
+                variant="outline"
+                className="gap-1.5 sm:shrink-0"
+                disabled={checkingSubmission || !submissionRepository.trim()}
+                onClick={() => {
+                  setCheckingSubmission(true);
+                  setSubmissionError(null);
+                  setSubmissionResult(null);
+                  void precheckCommunityPluginSubmission(submissionRepository.trim())
+                    .then((result) => setSubmissionResult({ id: result.id, repositoryUrl: result.repositoryUrl }))
+                    .catch((precheckError) => {
+                      setSubmissionError(precheckError instanceof Error ? precheckError.message : String(precheckError));
+                    })
+                    .finally(() => setCheckingSubmission(false));
+                }}
+              >
+                {checkingSubmission ? t("plugins.marketplace.precheckRunning") : t("plugins.marketplace.precheck")}
+              </Button>
+            </div>
+            {submissionResult ? (
+              <p className="text-xs leading-5 text-slate-600">
+                {t("plugins.marketplace.precheckPassed", { id: submissionResult.id })}{" "}
+                <a
+                  href={communityPluginSubmissionIssueUrl(submissionResult.id, submissionResult.repositoryUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900"
+                >
+                  {t("plugins.marketplace.openSubmission")}
+                </a>
+              </p>
+            ) : null}
+          </DialogContent>
+        </Dialog>
         {pendingTrustPluginId ? (
           <AppConfirmDialog
             title={t(PLUGIN_TRUST_WARNING_COPY.titleKey)}

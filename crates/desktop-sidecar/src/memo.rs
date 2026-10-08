@@ -224,6 +224,13 @@ pub(crate) fn empty_trash(database: &Connection) -> Result<Value, String> {
     let tx = database
         .unchecked_transaction()
         .map_err(|e| e.to_string())?;
+    let memo_ids: Vec<String> = tx
+        .prepare("SELECT id FROM memos WHERE is_deleted = 1")
+        .map_err(|e| e.to_string())?
+        .query_map([], |row| row.get(0))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<_, _>>()
+        .map_err(|e| e.to_string())?;
     tx.execute(
         "DELETE FROM resources WHERE memo_id IN (SELECT id FROM memos WHERE is_deleted = 1)",
         [],
@@ -233,7 +240,12 @@ pub(crate) fn empty_trash(database: &Connection) -> Result<Value, String> {
         .execute("DELETE FROM memos WHERE is_deleted = 1", [])
         .map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())?;
-    enqueue_change(database, "memo.emptyTrash", "trash", &json!({}))?;
+    enqueue_change(
+        database,
+        "memo.emptyTrash",
+        "trash",
+        &json!({ "memoIds": memo_ids }),
+    )?;
     Ok(json!({ "ok": true, "deleted": deleted }))
 }
 

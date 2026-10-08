@@ -21,11 +21,13 @@ const copy = siteCopy[locale].nav;
             ? "感谢独立博主缙哥哥在项目成长中提出的宝贵建议与教程分享"
             : locale === "ja"
               ? "独立ブロガー Dujin さんへの謝辞。製品への助言とチュートリアルに感謝します"
-              : "Thanks to independent blogger Dujin for product feedback and tutorials"
+              : locale === "pl"
+                ? "Podziękowania dla niezależnego blogera Dujina za uwagi do produktu i poradniki"
+                : "Thanks to independent blogger Dujin for product feedback and tutorials"
         }
         class="inline-flex min-h-11 sm:min-h-0 items-center hover:text-emerald-700 transition-colors"
       >
-        {locale === "zh-CN" ? "特别致谢" : locale === "ja" ? "謝辞" : "Thanks"}
+        {locale === "zh-CN" ? "特别致谢" : locale === "ja" ? "謝辞" : locale === "pl" ? "Podziękowania" : "Thanks"}
       </a>
       <span class="text-slate-300">•</span>
       <a href={getLocalizedPath(locale, "/self-hosted-evernote-alternative")} class="inline-flex min-h-11 sm:min-h-0 items-center hover:text-emerald-700 transition-colors">

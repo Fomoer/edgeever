@@ -8,10 +8,10 @@ struct ListActionsSheet: View {
 
     private var listTitle: String {
         if let selectedTag = store.selectedTag { return "#\(selectedTag)" }
-        return store.activeNotebook?.name ?? env.preferences.t("全部笔记", en: "All notes")
+        return store.activeNotebook?.name ?? env.preferences.t("全部笔记", en: "All notes", pl: "Wszystkie notatki")
     }
     private var listDescription: String {
-        env.preferences.t("\(store.totalCount) 条笔记", en: "\(store.totalCount) notes")
+        env.preferences.t("\(store.totalCount) 条笔记", en: "\(store.totalCount) notes", pl: "Notatki: \(store.totalCount)")
     }
 
     var body: some View {
@@ -24,7 +24,7 @@ struct ListActionsSheet: View {
 
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(env.preferences.t("列表选项", en: "List options"))
+                    Text(env.preferences.t("列表选项", en: "List options", pl: "Opcje listy"))
                         .font(.system(size: 15, weight: .heavy))
                         .foregroundStyle(AppTheme.title)
                     Text("\(listTitle) · \(listDescription)")
@@ -54,7 +54,7 @@ struct ListActionsSheet: View {
                     if !store.selectionMode {
                         sheetItem(
                             icon: "checkmark.square",
-                            label: env.preferences.t("选择笔记", en: "Select notes"),
+                            label: env.preferences.t("选择笔记", en: "Select notes", pl: "Wybierz notatki"),
                             disabled: store.memos.isEmpty
                         ) {
                             store.enterSelection()
@@ -62,7 +62,7 @@ struct ListActionsSheet: View {
                         }
                         sheetItem(
                             icon: "tag",
-                            label: env.preferences.t("按标签筛选", en: "Filter by tag"),
+                            label: env.preferences.t("按标签筛选", en: "Filter by tag", pl: "Filtruj według tagu"),
                             disabled: false
                         ) {
                             dismiss()
@@ -73,11 +73,11 @@ struct ListActionsSheet: View {
                         divider
                     }
 
-                    sectionTitle(env.preferences.t("显示方式", en: "Display"))
+                    sectionTitle(env.preferences.t("显示方式", en: "Display", pl: "Widok"))
                     optionRow(
                         active: env.preferences.listDensity == .preview,
                         icon: "doc.text",
-                        label: env.preferences.t("预览列表", en: "Preview list")
+                        label: env.preferences.t("预览列表", en: "Preview list", pl: "Lista z podglądem")
                     ) {
                         env.preferences.listDensity = .preview
                         dismiss()
@@ -85,18 +85,18 @@ struct ListActionsSheet: View {
                     optionRow(
                         active: env.preferences.listDensity == .compact,
                         icon: "list.bullet",
-                        label: env.preferences.t("紧凑列表", en: "Compact list")
+                        label: env.preferences.t("紧凑列表", en: "Compact list", pl: "Lista kompaktowa")
                     ) {
                         env.preferences.listDensity = .compact
                         dismiss()
                     }
 
                     divider
-                    sectionTitle(env.preferences.t("排序方式", en: "Sort by"))
+                    sectionTitle(env.preferences.t("排序方式", en: "Sort by", pl: "Sortuj według"))
                     optionRow(
                         active: store.sort == .updatedDesc,
                         icon: nil,
-                        label: env.preferences.t("最近更新", en: "Recently updated")
+                        label: env.preferences.t("最近更新", en: "Recently updated", pl: "Ostatnio zaktualizowane")
                     ) {
                         store.sort = .updatedDesc
                         store.reload(env: env)
@@ -105,7 +105,7 @@ struct ListActionsSheet: View {
                     optionRow(
                         active: store.sort == .createdDesc,
                         icon: nil,
-                        label: env.preferences.t("创建时间", en: "Created time")
+                        label: env.preferences.t("创建时间", en: "Created time", pl: "Data utworzenia")
                     ) {
                         store.sort = .createdDesc
                         store.reload(env: env)
@@ -114,7 +114,7 @@ struct ListActionsSheet: View {
                     optionRow(
                         active: store.sort == .titleAsc,
                         icon: nil,
-                        label: env.preferences.t("标题 A-Z", en: "Title A-Z")
+                        label: env.preferences.t("标题 A-Z", en: "Title A-Z", pl: "Tytuł A–Z")
                     ) {
                         store.sort = .titleAsc
                         store.reload(env: env)
@@ -124,7 +124,7 @@ struct ListActionsSheet: View {
                     divider
                     sheetItem(
                         icon: "arrow.clockwise",
-                        label: env.preferences.t("立即同步", en: "Sync now"),
+                        label: env.preferences.t("立即同步", en: "Sync now", pl: "Synchronizuj teraz"),
                         disabled: false
                     ) {
                         Task {

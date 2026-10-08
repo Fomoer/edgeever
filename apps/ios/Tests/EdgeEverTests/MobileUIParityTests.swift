@@ -8,6 +8,11 @@ final class MobileUIParityTests: XCTestCase {
         // Japanese is a first-class UI language, so a Japanese system no longer falls back to English.
         XCTAssertFalse(AppUILocale.usesEnglish(preferenceCode: "system", systemLanguageCode: "ja"))
         XCTAssertEqual(AppUILocale.language(preferenceCode: "system", systemLanguageCode: "ja"), .japanese)
+        // Polish is a first-class UI language as well.
+        XCTAssertFalse(AppUILocale.usesEnglish(preferenceCode: "system", systemLanguageCode: "pl"))
+        XCTAssertEqual(AppUILocale.language(preferenceCode: "system", systemLanguageCode: "pl"), .polish)
+        XCTAssertEqual(AppUILocale.language(preferenceCode: "pl", systemLanguageCode: "zh"), .polish)
+        XCTAssertEqual(AppUILocale.language(preferenceCode: "system", systemLanguageCode: "PL"), .polish)
         XCTAssertTrue(AppUILocale.usesEnglish(preferenceCode: "system", systemLanguageCode: "fr"))
         XCTAssertTrue(AppUILocale.usesEnglish(preferenceCode: "system", systemLanguageCode: "en"))
         XCTAssertTrue(AppUILocale.usesEnglish(preferenceCode: "system", systemLanguageCode: nil))

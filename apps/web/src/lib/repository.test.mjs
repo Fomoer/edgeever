@@ -7,7 +7,7 @@ globalThis.IDBKeyRange = IDBKeyRange;
 const { localDb } = await import("./local-db.ts");
 const { api } = await import("./api.ts");
 const { createWebRepository } = await import("./repository.ts");
-const { createLocalMemo } = await import("./local-mirror.ts");
+const { createLocalMemo, putLocalMemo } = await import("./local-mirror.ts");
 
 const installTestWindow = ({ hostname = "localhost" } = {}) => {
   const previousWindow = globalThis.window;
@@ -36,6 +36,24 @@ afterEach(async () => {
 });
 
 describe("web repository offline boundaries", () => {
+  test("empty trash records the removed memo ids for conflict cleanup after sync", async () => {
+    const restoreWindow = installTestWindow();
+    const scope = "https://demo.edgeever.org|user-1";
+    const trashed = await createLocalMemo(scope, { notebookId: "nb-1" });
+    const active = await createLocalMemo(scope, { notebookId: "nb-1" });
+    await putLocalMemo(scope, { ...trashed, isDeleted: true });
+    try {
+      expect(await createWebRepository(scope).emptyTrash()).toEqual({ ok: true, deleted: 1 });
+      await putLocalMemo(scope, { ...active, isDeleted: true });
+      expect(await createWebRepository(scope).emptyTrash()).toEqual({ ok: true, deleted: 1 });
+      const action = await localDb.syncQueue.get(`action:${scope}:memo.emptyTrash:trash`);
+      expect(action?.payload).toEqual({ memoIds: [trashed.id, active.id] });
+      expect(await localDb.memos.get([scope, active.id])).toBeUndefined();
+    } finally {
+      restoreWindow();
+    }
+  });
+
   test("reconciles stale template cache entries while preserving queued local edits", async () => {
     const previousOnline = globalThis.navigator?.onLine;
     if (globalThis.navigator) Object.defineProperty(globalThis.navigator, "onLine", { configurable: true, value: true });

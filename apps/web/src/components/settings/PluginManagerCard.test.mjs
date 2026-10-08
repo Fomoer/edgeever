@@ -33,7 +33,7 @@ describe("plugin manager card layout", () => {
 
   test("keeps marketplace description below the title row instead of beside header actions", () => {
     expect(source).toContain("{t(\"plugins.syncDescription\")}");
-    expect(source).toContain('<div className="flex items-center justify-between gap-3">');
+    expect(source).toContain('<div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">');
     expect(source).toContain('<p className="text-xs leading-5 text-slate-500">{t("plugins.syncDescription")}</p>');
     expect(source).not.toContain("flex items-start justify-between gap-3");
   });

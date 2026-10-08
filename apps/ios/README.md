@@ -23,15 +23,13 @@ Android remains Expo / React Native in `apps/mobile`. Store builds for iOS use t
 
 ## Motion / animations
 
-Motion stack: **SwiftUI Animation** (timing / springs) + **[Pow](https://github.com/EmergeTools/Pow)** (Emerge).
+Motion stack: **SwiftUI Animation** (short easing transitions) + **[Pow](https://github.com/EmergeTools/Pow)** (Emerge) for focused feedback.
 
 | Effect | Where |
 |--------|--------|
-| **Jump** (physics hop + squash) | First list open (whole list); create/edit return on that memo |
-| **Boing** (elastic drop-in) | Staggered first-paint cards |
-| **Ping** | Create button / returned memo highlight |
+| Static list cards and press targets | List entry, create/edit return, card / create / filter presses |
+| Short easing transitions | Search, filters, settings, loading states |
 | **Shine / Shake / Haptic** | Pin success, errors, selection |
-| SwiftUI scale press | Card / create / filter finger-down |
 
 Curves & wrappers: `EdgeEver/DesignSystem/Motion.swift`.
 

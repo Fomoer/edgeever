@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { fetch as expoFetch } from "expo/fetch";
 import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { MISSING_MOBILE_SESSION_MESSAGE } from "./login-error";
 
 const SESSION_KEY = "edgeever.mobile.session";
 const DEVICE_ID_KEY = "edgeever.mobile.device-id";
@@ -90,7 +91,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     });
 
     if (!authSession.authenticated || !authSession.sessionToken) {
-      throw new Error("登录成功但服务端没有返回移动端会话。请确认服务端已更新到支持 App 登录的版本。");
+      throw new Error(MISSING_MOBILE_SESSION_MESSAGE);
     }
 
     const nextSession: MobileSession = {

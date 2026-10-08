@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { normalizePluginPanelChrome, parseExtensionManifest, parseMarketplaceRegistry } from "./index.ts";
+import {
+  mergeCommunityMarketplace,
+  normalizePluginPanelChrome,
+  parseExtensionManifest,
+  parseMarketplaceRegistry,
+  rememberMarketplaceRevocations,
+} from "./index.ts";
 
 describe("extension manifests", () => {
   test("normalizes a plugin manifest", () => {
@@ -293,6 +299,114 @@ describe("marketplace registry", () => {
       verification: { version: "1.0.0", checksums: { manifestJson: "a".repeat(64) } },
     };
     expect(() => parseMarketplaceRegistry({ registryVersion: "1", updatedAt: "2026-08-16T00:00:00Z", entries: [entry, entry] })).toThrow("Duplicate");
+  });
+
+  test("keeps community admission fields and ignores a remote listing claim", () => {
+    const registry = parseMarketplaceRegistry({
+      registryVersion: "1",
+      updatedAt: "2026-10-05T00:00:00.000Z",
+      entries: [{
+        id: "com.example.readwise",
+        name: "Readwise",
+        description: "Imports highlights.",
+        author: "Example",
+        category: "Import",
+        repositoryUrl: "https://github.com/example/readwise",
+        distribution: { type: "github", repositoryUrl: "https://github.com/example/readwise" },
+        verification: { version: "1.2.0", checksums: { manifestJson: "a".repeat(64), mainJs: "b".repeat(64) } },
+        licenseSpdx: "MIT",
+        sourceRevision: "a".repeat(40),
+        apiVersion: "2",
+        admitted: { permissions: ["notes:write"], networkHosts: ["readwise.io"] },
+        listing: "community",
+        publisher: undefined,
+      }],
+      revocations: [{ id: "com.example.old", reason: "仓库已转为私有", revokedAt: "2026-10-05T00:00:00.000Z" }],
+    });
+
+    expect(registry.entries[0]).toMatchObject({
+      licenseSpdx: "MIT",
+      sourceRevision: "a".repeat(40),
+      apiVersion: "2",
+      admitted: { permissions: ["notes:write"], networkHosts: ["readwise.io"] },
+    });
+    expect(registry.entries[0]).not.toHaveProperty("listing");
+    expect(registry.entries[0]).not.toHaveProperty("publisher");
+    expect(registry.revocations).toEqual([
+      { id: "com.example.old", reason: "仓库已转为私有", revokedAt: "2026-10-05T00:00:00.000Z" },
+    ]);
+  });
+});
+
+describe("community marketplace merge", () => {
+  const bundledEntry = {
+    id: "org.edgeever.tasks",
+    name: "Tasks",
+    description: "Official tasks",
+    author: "EdgeEver",
+    publisher: "edgeever",
+    category: "Productivity",
+    repositoryUrl: "https://github.com/tianma-if/edgeever-tasks",
+    distribution: { type: "github", repositoryUrl: "https://github.com/tianma-if/edgeever-tasks" },
+    verification: { version: "0.6.4", checksums: { manifestJson: "a".repeat(64), mainJs: "b".repeat(64) } },
+  };
+  const communityEntry = {
+    id: "com.example.readwise",
+    name: "Readwise",
+    description: "Imports highlights.",
+    author: "Example",
+    category: "Import",
+    repositoryUrl: "https://github.com/example/readwise",
+    distribution: { type: "github", repositoryUrl: "https://github.com/example/readwise" },
+    verification: { version: "1.2.0", checksums: { manifestJson: "c".repeat(64), mainJs: "d".repeat(64) } },
+    apiVersion: "2",
+    licenseSpdx: "MIT",
+  };
+  const bundled = parseMarketplaceRegistry({
+    registryVersion: "1",
+    updatedAt: "2026-10-01T00:00:00.000Z",
+    entries: [bundledEntry],
+  });
+
+  test("keeps the bundled entry when a signed file repeats its id or claims the official publisher", () => {
+    const community = parseMarketplaceRegistry({
+      registryVersion: "1",
+      updatedAt: "2026-10-05T00:00:00.000Z",
+      entries: [
+        communityEntry,
+        { ...communityEntry, id: "org.edgeever.tasks", apiVersion: "2" },
+        { ...communityEntry, id: "com.example.official", publisher: "edgeever", apiVersion: "2" },
+        { ...communityEntry, id: "org.edgeever.plugins.extra", apiVersion: "2" },
+        { ...communityEntry, id: "com.example.future", apiVersion: "9" },
+        {
+          ...communityEntry,
+          id: "com.example.manifest",
+          distribution: { type: "manifest", manifestUrl: "https://example.com/manifest.json" },
+        },
+      ],
+    });
+
+    const merged = mergeCommunityMarketplace(bundled, community, new Set());
+
+    expect(merged.entries.map((entry) => entry.id)).toEqual(["org.edgeever.tasks", "com.example.readwise"]);
+    expect(merged.entries[0]).toMatchObject({ publisher: "edgeever", repositoryUrl: bundledEntry.repositoryUrl });
+    expect(merged.entries[1]).toMatchObject({ listing: "community", licenseSpdx: "MIT" });
+    expect(merged.entries[1]).not.toHaveProperty("publisher");
+  });
+
+  test("hides revoked ids and remembers them after a later file omits the revocation", () => {
+    const community = parseMarketplaceRegistry({
+      registryVersion: "1",
+      updatedAt: "2026-10-05T00:00:00.000Z",
+      entries: [communityEntry],
+      revocations: [{ id: "com.example.readwise", reason: "仓库已转为私有", revokedAt: "2026-10-05T00:00:00.000Z" }],
+    });
+    const remembered = rememberMarketplaceRevocations([], community.revocations);
+    const merged = mergeCommunityMarketplace(bundled, community, new Set(remembered.map((item) => item.id)));
+    const later = rememberMarketplaceRevocations(remembered, []);
+
+    expect(merged.entries.map((entry) => entry.id)).toEqual(["org.edgeever.tasks"]);
+    expect(later.map((item) => item.id)).toEqual(["com.example.readwise"]);
   });
 });
 

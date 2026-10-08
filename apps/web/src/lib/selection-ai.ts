@@ -1,6 +1,6 @@
 export const SELECTION_AI_SEND_LIMIT = 2000;
 
-export const SELECTION_AI_LANGUAGES = ["zh-CN", "en", "ja"] as const;
+export const SELECTION_AI_LANGUAGES = ["zh-CN", "en", "ja", "pl"] as const;
 
 export type SelectionAiLanguage = (typeof SELECTION_AI_LANGUAGES)[number];
 

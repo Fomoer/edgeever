@@ -1,4 +1,6 @@
 import { diagramEditorSnapshot } from "@/lib/diagram-editor-snapshot";
+import { formatMindMapOutline, projectMindMapOutline, updateMindMapOutlineDraft, type MindMapOutlineDraft, type MindMapOutlineError } from "@/lib/mind-map-outline";
+import { MindMapOutlineEditor } from "@/components/MindMapOutlineEditor";
 import { focusArchitectureRelations } from "@/lib/architecture-relations";
 import { MemoTitleInput } from "@/components/MemoTitleInput";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
@@ -1455,6 +1457,72 @@ const graphToDocument = (graph: Graph, kind: DiagramDocument["kind"], theme: Dia
   }),
 });
 
+const applyMindMapOutlineDocument = (
+  graph: Graph,
+  nextDocument: DiagramDocument,
+  structureChanged: boolean,
+  theme: DiagramTheme,
+  appearance: DiagramAppearance,
+  structure: DiagramStructure,
+) => {
+  const nextNodeIds = new Set(nextDocument.nodes.map((node) => node.id));
+  const nextEdgeIds = new Set(nextDocument.edges.map((edge) => edge.id));
+  const changedNodeIds = new Set<string>();
+  graph.cleanSelection();
+  graph.startBatch("outline");
+  try {
+    for (const edge of graph.getEdges()) {
+      if (!nextEdgeIds.has(edge.id)) edge.remove();
+    }
+    for (const node of graph.getNodes()) {
+      if (!nextNodeIds.has(node.id)) node.remove();
+    }
+    for (const nextNode of nextDocument.nodes) {
+      const current = graph.getCellById(nextNode.id);
+      if (!current?.isNode()) {
+        graph.addNode(nodeMetadata(nextNode, theme, "mind-map", appearance, structure));
+        changedNodeIds.add(nextNode.id);
+        continue;
+      }
+      const data = current.getData<NodeData>();
+      if (data?.label !== nextNode.label || data?.parentId !== nextNode.parentId) {
+        current.setData({ ...data, label: nextNode.label, parentId: nextNode.parentId });
+        changedNodeIds.add(nextNode.id);
+      }
+    }
+    for (const nextEdge of nextDocument.edges) {
+      const current = graph.getCellById(nextEdge.id);
+      if (!current?.isEdge()) {
+        graph.addEdge(edgeMetadata(nextEdge, "mind-map", theme, appearance, structure));
+        continue;
+      }
+      if (current.getSourceCellId() !== nextEdge.source) current.setSource({ cell: nextEdge.source });
+      if (current.getTargetCellId() !== nextEdge.target) current.setTarget({ cell: nextEdge.target });
+    }
+    for (const [index, nextNode] of nextDocument.nodes.entries()) {
+      const current = graph.getCellById(nextNode.id);
+      if (!current?.isNode()) continue;
+      if (structureChanged) current.position(current.getPosition().x, index * 80);
+      if (structureChanged || changedNodeIds.has(nextNode.id)) {
+        refreshNodeLabel(current, nextNode.label, structure);
+      }
+    }
+    if (structureChanged) {
+      const layout = computeDiagramLayoutResult(graphToDocument(graph, "mind-map", theme, structure));
+      for (const nodeId of layout.nodeOrder) {
+        const node = graph.getCellById(nodeId);
+        const geometry = layout.nodes[nodeId];
+        if (!node?.isNode() || !geometry) continue;
+        node.position(geometry.x, geometry.y);
+        node.resize(geometry.width, geometry.height);
+      }
+    }
+    if (structureChanged || changedNodeIds.size > 0) applyMindMapHierarchy(graph, theme, appearance, structure);
+  } finally {
+    graph.stopBatch("outline");
+  }
+};
+
 const removeGraphSelection = (graph: Graph) => {
   const selected = graph.getSelectedCells();
   if (selected.length === 0) return false;
@@ -1727,6 +1795,22 @@ export const DiagramEditorPane = ({
   const [tagsDirty, setTagsDirty] = useState(false);
   const [dirtyVersion, setDirtyVersion] = useState(0);
   const [graphReloadVersion, setGraphReloadVersion] = useState(0);
+  const [outlineMode, setOutlineMode] = useState(false);
+  const [outlineDraft, setOutlineDraft] = useState<MindMapOutlineDraft | null>(null);
+  const [outlineError, setOutlineError] = useState<MindMapOutlineError | null>(null);
+  const [outlinePendingBulk, setOutlinePendingBulk] = useState<{
+    document: DiagramDocument;
+    draft: MindMapOutlineDraft;
+    structureChanged: boolean;
+    removedCount: number;
+  } | null>(null);
+
+  useEffect(() => {
+    setOutlineMode(false);
+    setOutlineDraft(null);
+    setOutlineError(null);
+    setOutlinePendingBulk(null);
+  }, [memo.id]);
   const [saving, setSaving] = useState(false);
   const [editSessionReady, setEditSessionReady] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -1763,7 +1847,7 @@ export const DiagramEditorPane = ({
   const flowQuickCreateRef = useRef<FlowQuickCreateState | null>(null);
   const flowPointerDragRef = useRef<FlowPointerDragState | null>(null);
   const nodeEditorRef = useRef<NodeEditorState | null>(null);
-  const editorDirty = dirty || tagsDirty;
+  const editorDirty = dirty || tagsDirty || Boolean(outlineError) || Boolean(outlinePendingBulk);
 
   spacePanActiveRef.current = spacePanActive;
 
@@ -2906,6 +2990,11 @@ export const DiagramEditorPane = ({
     setSelectedEdgeLabel("");
     setHasSelection(false);
     setHistoryState({ undo: graph.canUndo(), redo: graph.canRedo() });
+    if (outlineMode && document?.kind === "mind-map") {
+      setOutlineDraft(formatMindMapOutline(graphToDocument(graph, "mind-map", themeRef.current, structureRef.current)));
+      setOutlineError(null);
+      setOutlinePendingBulk(null);
+    }
     if (document) {
       setDirty(savedSnapshotRef.current !== diagramEditorSnapshot(
         titleRef.current,
@@ -3006,11 +3095,105 @@ export const DiagramEditorPane = ({
     }
   };
 
+  const openMindMapOutline = () => {
+    const graph = graphRef.current;
+    if (!graph || document?.kind !== "mind-map") return;
+    const draft = formatMindMapOutline(graphToDocument(graph, "mind-map", themeRef.current, structureRef.current));
+    if (!draft) return;
+    setOutlineDraft(draft);
+    setOutlineError(null);
+    setOutlinePendingBulk(null);
+    setOutlineMode(true);
+  };
+
+  const commitMindMapOutline = (result: Extract<ReturnType<typeof projectMindMapOutline>, { ok: true }>) => {
+    const graph = graphRef.current;
+    if (!graph || document?.kind !== "mind-map" || readOnly) return;
+    const currentDocument = graphToDocument(graph, "mind-map", themeRef.current, structureRef.current);
+    const oldNodes = new Map(currentDocument.nodes.map((node) => [node.id, node]));
+    const oldEdges = new Map(currentDocument.edges.map((edge) => [edge.id, edge]));
+    const hasGraphChanges = result.structureChanged
+      || result.document.nodes.some((node) => node.label !== oldNodes.get(node.id)?.label)
+      || result.document.edges.length !== currentDocument.edges.length
+      || result.document.edges.some((edge) => {
+        const old = oldEdges.get(edge.id);
+        return !old || old.source !== edge.source || old.target !== edge.target;
+      });
+    if (hasGraphChanges) {
+      applyMindMapOutlineDocument(
+        graph,
+        result.document,
+        result.structureChanged,
+        themeRef.current,
+        appearanceRef.current,
+        structureRef.current,
+      );
+    }
+    setOutlineDraft(result.draft);
+    setOutlineError(null);
+    setOutlinePendingBulk(null);
+    setSelectedNodeId(null);
+    setSelectedNodeLabel("");
+    setSelectedEdgeId(null);
+    setSelectedEdgeLabel("");
+    setHasSelection(false);
+    setHistoryState({ undo: graph.canUndo(), redo: graph.canRedo() });
+    setDirty(savedSnapshotRef.current !== diagramEditorSnapshot(
+      titleRef.current,
+      graphToDocument(graph, "mind-map", themeRef.current, structureRef.current),
+    ));
+    if (hasGraphChanges) setDirtyVersion((current) => current + 1);
+  };
+
+  const updateMindMapOutline = (text: string) => {
+    const graph = graphRef.current;
+    if (!graph || !outlineDraft || document?.kind !== "mind-map" || readOnly) return;
+    const draft = updateMindMapOutlineDraft(outlineDraft, text);
+    const currentDocument = graphToDocument(graph, "mind-map", themeRef.current, structureRef.current);
+    const result = projectMindMapOutline(currentDocument, draft, () => createId("topic"));
+    if (!result.ok) {
+      setOutlineDraft(draft);
+      setOutlineError(result.error);
+      setOutlinePendingBulk(null);
+      return;
+    }
+    const nextIds = new Set(result.document.nodes.map((node) => node.id));
+    const removedCount = currentDocument.nodes.filter((node) => !nextIds.has(node.id)).length;
+    if (removedCount >= 3 && removedCount >= Math.ceil(currentDocument.nodes.length * 0.3)) {
+      setOutlineDraft({ ...result.draft, lastValidText: draft.lastValidText, lastValidLineIds: draft.lastValidLineIds });
+      setOutlineError(null);
+      setOutlinePendingBulk({ ...result, removedCount });
+      return;
+    }
+    commitMindMapOutline(result);
+  };
+
+  const restoreMindMapOutline = () => {
+    const graph = graphRef.current;
+    if (!graph || document?.kind !== "mind-map") return;
+    setOutlineDraft(formatMindMapOutline(graphToDocument(graph, "mind-map", themeRef.current, structureRef.current)));
+    setOutlineError(null);
+    setOutlinePendingBulk(null);
+  };
+
+  const closeMindMapOutline = () => {
+    if (outlineError || outlinePendingBulk) return;
+    setOutlineMode(false);
+    setOutlineDraft(null);
+    const graph = graphRef.current;
+    if (!graph) return;
+    requestAnimationFrame(() => {
+      if (graphRef.current !== graph) return;
+      ensureDiagramPaperContainsNodes(graph);
+      fitDiagramContent(graph, graphToDocument(graph, "mind-map", themeRef.current, structureRef.current), containerRef.current);
+    });
+  };
+
   const save = async () => {
     const graph = graphRef.current;
     const currentMemo = memoRef.current;
     const editSession = editSessionRef.current;
-    if (!graph || !document || !editSession || readOnly || saving) return false;
+    if (!graph || !document || !editSession || readOnly || saving || outlineError || outlinePendingBulk) return false;
     if (
       savedSnapshotRef.current === diagramEditorSnapshot(titleRef.current, graphToDocument(graph, document.kind, themeRef.current, structureRef.current))
       && !tagsDirty
@@ -3068,10 +3251,10 @@ export const DiagramEditorPane = ({
   saveRef.current = () => { void save(); };
 
   useEffect(() => {
-    if (readOnly || !editorDirty || nodeEditor !== null || saving || !editSessionReady || saveFailed) return;
+    if (readOnly || !editorDirty || outlineError || outlinePendingBulk || nodeEditor !== null || saving || !editSessionReady || saveFailed) return;
     const timer = window.setTimeout(() => saveRef.current(), EDITOR_LOCAL_SAVE_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [dirtyVersion, editSessionReady, editorDirty, nodeEditor, readOnly, saveFailed, saving]);
+  }, [dirtyVersion, editSessionReady, editorDirty, nodeEditor, outlineError, outlinePendingBulk, readOnly, saveFailed, saving]);
 
   const handleCopyMemoId = async () => {
     if (isLocalMemoId(memo.id)) return;
@@ -3446,6 +3629,13 @@ export const DiagramEditorPane = ({
             )
           ) : undefined}
           onAutoLayout={applyAutoLayout}
+          outlineView={document.kind === "mind-map" ? {
+            active: outlineMode,
+            available: outlineMode || Boolean(formatMindMapOutline(graphRef.current
+              ? graphToDocument(graphRef.current, "mind-map", themeRef.current, structureRef.current)
+              : document)),
+            onToggle: outlineMode ? closeMindMapOutline : openMindMapOutline,
+          } : undefined}
           onDeleteSelection={removeSelected}
           onExport={exportDiagram}
           onRedo={() => runHistoryAction("redo")}
@@ -3613,6 +3803,19 @@ export const DiagramEditorPane = ({
               </div>
               <div className="whitespace-nowrap px-1.5 pt-1 text-xs text-slate-400">{t("diagram.quickCreateShortcuts")}</div>
             </div>
+          ) : null}
+          {outlineMode && outlineDraft ? (
+            <MindMapOutlineEditor
+              value={outlineDraft.text}
+              error={outlineError}
+              readOnly={readOnly}
+              onChange={updateMindMapOutline}
+              onUndo={() => runHistoryAction("undo")}
+              onRedo={() => runHistoryAction("redo")}
+              pendingRemovalCount={outlinePendingBulk?.removedCount ?? 0}
+              onApplyRemoval={() => { if (outlinePendingBulk) commitMindMapOutline({ ...outlinePendingBulk, ok: true }); }}
+              onRestore={restoreMindMapOutline}
+            />
           ) : null}
           {nodeEditor ? (
             <input

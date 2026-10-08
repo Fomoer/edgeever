@@ -247,9 +247,16 @@ const desktopProviderFetch: typeof fetch = async (input, init) => {
   new Headers(init?.headers).forEach((value, key) => {
     headers[key] = value;
   });
+  let bodyBytes: Uint8Array | undefined;
+  if (init?.body instanceof FormData) {
+    const multipart = new Request(url, { method: init.method ?? "POST", headers, body: init.body });
+    multipart.headers.forEach((value, key) => { headers[key] = value; });
+    bodyBytes = new Uint8Array(await multipart.arrayBuffer());
+  }
   const requestId = crypto.randomUUID();
   const pending: Array<{ type: "data" | "end" | "error"; bytes?: ArrayBuffer | Uint8Array; message?: string }> = [];
   let streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
+  let cleanup = () => {};
   const stop = bridge.onAiProviderStreamChunk((id, chunk) => {
     if (id !== requestId) return;
     if (!streamController) {
@@ -257,12 +264,19 @@ const desktopProviderFetch: typeof fetch = async (input, init) => {
       return;
     }
     if (chunk.type === "data") streamController.enqueue(toUint8Array(chunk.bytes));
-    else if (chunk.type === "end") streamController.close();
-    else streamController.error(new Error(chunk.message || "AI provider request failed."));
+    else {
+      if (chunk.type === "end") streamController.close();
+      else streamController.error(new Error(chunk.message || "AI provider request failed."));
+      cleanup();
+    }
   });
   const abort = () => {
     bridge.cancelAiProviderStream(requestId);
+    cleanup();
+  };
+  cleanup = () => {
     stop();
+    init?.signal?.removeEventListener("abort", abort);
   };
   init?.signal?.addEventListener("abort", abort, { once: true });
   try {
@@ -271,14 +285,19 @@ const desktopProviderFetch: typeof fetch = async (input, init) => {
       method: init?.method,
       headers,
       body: typeof init?.body === "string" ? init.body : "",
+      ...(bodyBytes ? { bodyBytes } : {}),
     });
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
         streamController = controller;
         for (const chunk of pending) {
           if (chunk.type === "data") controller.enqueue(toUint8Array(chunk.bytes));
-          else if (chunk.type === "end") controller.close();
-          else controller.error(new Error(chunk.message || "AI provider request failed."));
+          else {
+            if (chunk.type === "end") controller.close();
+            else controller.error(new Error(chunk.message || "AI provider request failed."));
+            cleanup();
+            break;
+          }
         }
         pending.length = 0;
       },
@@ -288,7 +307,7 @@ const desktopProviderFetch: typeof fetch = async (input, init) => {
     });
     return new Response(body, { status: opened.status, headers: opened.headers });
   } catch (error) {
-    stop();
+    cleanup();
     throw error;
   }
 };
@@ -297,6 +316,10 @@ const desktopAiDirectEnabled = Boolean(
   (typeof __EDGEEVER_DESKTOP_BUILD__ !== "undefined" && __EDGEEVER_DESKTOP_BUILD__)
   || (typeof window !== "undefined" && window.edgeeverDesktop?.openAiProviderStream),
 );
+
+/** Direct client-to-provider transport. Browser CORS failures are surfaced to the caller. */
+export const directProviderFetch: typeof fetch = (input, init) =>
+  desktopAiDirectEnabled ? desktopProviderFetch(input, init) : fetch(input, init);
 
 const client = createEdgeEverClient({
   baseUrl: getConfiguredDesktopApiBaseUrl,

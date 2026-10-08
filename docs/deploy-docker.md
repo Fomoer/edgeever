@@ -95,6 +95,7 @@ Common environment variables:
 | `EDGE_EVER_SESSION_TTL_DAYS`           | `400`   | Login session lifetime                                      |
 | `EDGE_EVER_IDLE_TIMEOUT_SECONDS`       | `120`   | Bun streaming idle timeout, from 10 to 255 seconds          |
 | `EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY` | persisted on `/data` | Optional independent AI credential encryption key. If unset, Docker stores the authentication secret or a generated key in `/data/edgeever-secrets.json`. |
+| `EDGE_EVER_COMMUNITY_REGISTRY_URL` | unset | Optional HTTPS URL of the signed community plugin catalog. Leave it unset to show only the built-in official plugins. |
 
 For secrets, append `_FILE` to a supported variable and point it at a Docker
 secret, for example `EDGE_EVER_AUTH_PASSWORD_FILE=/run/secrets/auth_password`.

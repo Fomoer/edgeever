@@ -6,7 +6,7 @@ struct RootView: View {
     var body: some View {
         Group {
             if env.session.isLoading {
-                ProgressView("启动中…")
+                ProgressView(env.preferences.t("启动中…", en: "Starting…", ja: "起動しています…", pl: "Uruchamianie…"))
             } else if env.session.isSignedIn {
                 WorkspaceView()
             } else {

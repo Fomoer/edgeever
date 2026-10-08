@@ -71,6 +71,8 @@ https://github.com/owner/edgeever-plugin
 
 插件市场是一个经过校验的 Registry，不接管插件所有权。Registry 为每个版本固定插件 ID、GitHub 仓库、版本号及 `manifest.json`/`main.js`/`styles.css` 的 SHA-256；安装时仍从开发者的 GitHub Release 或登记的公开地址下载，并再次核对校验和。可选的 `"publisher": "edgeever"` 标记仅保留给 EdgeEver 项目维护的 Registry 条目；它会启用自动更新，社区投稿不得使用。
 
+官方条目随应用内置在 `extensions/registry.json`。实例设置 `EDGE_EVER_COMMUNITY_REGISTRY_URL` 后，客户端才会把另一份验签通过的社区目录追加进来。这份目录不能改官方插件的仓库地址，也不能把条目标成官方。社区标记和许可证只说明收录检查通过，不代表 EdgeEver 保证插件安全。自建实例不设置该变量时，市场只显示内置官方插件。提交插件请按 [tianma-if/edgeever-plugins](https://github.com/tianma-if/edgeever-plugins) 的说明操作。
+
 Registry 格式：
 
 ```json
@@ -596,9 +598,18 @@ const result = await context.ai.generate({
   maxOutputTokens: 1000,
   signal: controller.signal,
 });
+const transcript = await context.ai.transcribeResource(noteId, resourceId);
+// { text, resourceId, filename }。附件必须已属于该笔记；不接受在线视频 URL。
+const ownMedia = new File([audioBytes], "recording.mp3", { type: "audio/mpeg" });
+const { text } = await context.ai.transcribeMedia(ownMedia, { signal: controller.signal });
+// 也可传入视频 File 或 Blob；宿主会在客户端提取音轨。
 ```
 
 `system` 最多 8,000 字符，`prompt` 最多 90,000 字符。`maxOutputTokens` 必须是正整数，省略时默认 3,000；宿主不设置输出 token 的最大值。生成最长 120 秒。模型或供应商可能有自己的限制，也可能因可用额度不足拒绝请求。后端要求交互式用户会话，公开演示模式禁用 AI，供应商错误脱敏。每个后端实例对每工作区的 AI 调用设置四路并发保护，不是分布式配额。模型费用沿用已配置供应商的计费；停用插件会中止其调用。
+
+`transcribeResource` 仅识别当前工作区笔记中已上传的音视频附件；客户端经原有资源接口分段读取附件、提取音轨并切成不超过 24 MB 的音频片段，直接发送到用户配置的语音模型服务。实例校验附件归属并把模型配置交给已登录客户端，不提取或转换音轨，也不转发模型请求。浏览器直连要求模型服务支持跨域请求；桌面端从本机主进程直连。插件拿到文本后自行决定如何展示或写入笔记。它不解析 URL、不下载第三方媒体，也不向插件返回语音模型密钥。
+
+`transcribeMedia` 接受插件提供的音频或视频 `Blob`／`File`，无需先上传为笔记附件。客户端经现有的已认证设置接口获取默认语音模型及凭据，在本机提取和切分媒体，沿用 1 GiB 源文件、24 MB 单段和 64 段的限制，直接调用语音服务。API 只返回 `{ text }`，不把凭据作为返回值。已启用插件以受信任的客户端 JavaScript 运行，因此这不是凭据隔离边界。此方法不抓取 URL；插件须自行取得有权处理的媒体字节。模型费用与浏览器跨域要求仍适用。传入的取消信号或停用插件都会中止调用。
 
 默认的 `network.fetch(url, init)` 是受信任的浏览器请求，可以访问任意 HTTP／HTTPS 地址，使用任意方法、正文、`Authorization` 等请求头以及调用方指定的浏览器凭据模式；它仍受所在运行时的 CORS 与 Cookie 策略约束。`networkHosts` 仅为兼容旧版保留，不是安全边界。需要无凭据读取跨域公开订阅或 API 时，显式选择 `transport: "public"` 即可；列出 `network` 和 `network:public` 仍有助于披露用途，但不是必需条件：
 

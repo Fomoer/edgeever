@@ -25,6 +25,7 @@ private enum AssistantTargetLanguage: String, CaseIterable, Identifiable {
     case french = "fr"
     case german = "de"
     case portuguese = "pt"
+    case polish = "pl"
 
     var id: String { rawValue }
 }
@@ -77,7 +78,8 @@ struct AiAssistantSheet: View {
                 VStack(alignment: .leading, spacing: 18) {
                     Text(env.preferences.t(
                         "选择 AI 要做的事。输出只会作为草稿，确认后才会修改笔记。",
-                        en: "Choose what AI should do. Output remains a draft until you apply it."
+                        en: "Choose what AI should do. Output remains a draft until you apply it.",
+                        pl: "Wybierz, co ma zrobić AI. Wynik pozostaje szkicem, dopóki go nie zastosujesz."
                     ))
                     .font(.system(size: 13))
                     .foregroundStyle(AppTheme.muted)
@@ -94,12 +96,13 @@ struct AiAssistantSheet: View {
 
                     if selectedPrompt == nil, action == .custom {
                         VStack(alignment: .leading, spacing: 7) {
-                            Text(env.preferences.t("告诉 AI 你想怎么处理", en: "Tell AI what to do"))
+                            Text(env.preferences.t("告诉 AI 你想怎么处理", en: "Tell AI what to do", pl: "Powiedz AI, co ma zrobić"))
                                 .font(.system(size: 13, weight: .bold))
                             TextField(
                                 env.preferences.t(
                                     "例如：改成适合周报的结构，保留所有数据",
-                                    en: "For example: Restructure this for a weekly report and keep all data"
+                                    en: "For example: Restructure this for a weekly report and keep all data",
+                                    pl: "Na przykład: przebuduj to na raport tygodniowy i zachowaj wszystkie dane"
                                 ),
                                 text: $customInstruction,
                                 axis: .vertical
@@ -117,20 +120,20 @@ struct AiAssistantSheet: View {
                     }
 
                     HStack {
-                        Text(env.preferences.t("AI 草稿", en: "AI draft"))
+                        Text(env.preferences.t("AI 草稿", en: "AI draft", pl: "Szkic AI"))
                             .font(.system(size: 13, weight: .bold))
                         Spacer()
                         if isGenerating {
                             ProgressView()
                                 .controlSize(.small)
-                            Text(env.preferences.t("生成中…", en: "Generating…"))
+                            Text(env.preferences.t("生成中…", en: "Generating…", pl: "Generowanie…"))
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(AppTheme.accent)
                         }
                     }
 
                     Text(output.isEmpty
-                         ? env.preferences.t("生成的草稿会显示在这里。", en: "The generated draft will appear here.")
+                         ? env.preferences.t("生成的草稿会显示在这里。", en: "The generated draft will appear here.", pl: "Tutaj pojawi się wygenerowany szkic.")
                          : output)
                         .font(.system(size: 15))
                         .foregroundStyle(output.isEmpty ? AppTheme.muted : AppTheme.body)
@@ -146,11 +149,11 @@ struct AiAssistantSheet: View {
 
                     if !output.isEmpty, !isGenerating {
                         VStack(alignment: .leading, spacing: 7) {
-                            Text(env.preferences.t("继续调整", en: "Refine result"))
+                            Text(env.preferences.t("继续调整", en: "Refine result", pl: "Dopracuj wynik"))
                                 .font(.system(size: 13, weight: .bold))
                             HStack(spacing: 8) {
                                 TextField(
-                                    env.preferences.t("例如：再简洁一点", en: "For example: Make it more concise"),
+                                    env.preferences.t("例如：再简洁一点", en: "For example: Make it more concise", pl: "Na przykład: napisz to zwięźlej"),
                                     text: $refineInstruction
                                 )
                                 .submitLabel(.send)
@@ -164,7 +167,7 @@ struct AiAssistantSheet: View {
                                         .stroke(AppTheme.cardBorder, lineWidth: 1)
                                 }
 
-                                Button(env.preferences.t("调整", en: "Refine"), action: refine)
+                                Button(env.preferences.t("调整", en: "Refine", pl: "Dopracuj"), action: refine)
                                     .font(.system(size: 14, weight: .bold))
                                     .buttonStyle(.borderedProminent)
                                     .tint(AppTheme.accent)
@@ -183,11 +186,11 @@ struct AiAssistantSheet: View {
                 .padding(16)
             }
             .background(AppTheme.background)
-            .navigationTitle(env.preferences.t("AI 笔记助手", en: "AI note assistant"))
+            .navigationTitle(env.preferences.t("AI 笔记助手", en: "AI note assistant", pl: "Asystent AI notatek"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(env.preferences.t("关闭", en: "Close")) { dismiss() }
+                    Button(env.preferences.t("关闭", en: "Close", pl: "Zamknij")) { dismiss() }
                         .disabled(isApplying)
                 }
             }
@@ -207,7 +210,7 @@ struct AiAssistantSheet: View {
 
     private var actionPicker: some View {
         pickerField(
-            env.preferences.t("处理方式", en: "Action"),
+            env.preferences.t("处理方式", en: "Action", pl: "Działanie"),
             selection: selectedPrompt?.name ?? actionTitle(action)
         ) {
             if prompts.isEmpty {
@@ -253,7 +256,7 @@ struct AiAssistantSheet: View {
     }
 
     private var languagePicker: some View {
-        pickerField(env.preferences.t("目标语言", en: "Target language"), selection: languageTitle(targetLanguage)) {
+        pickerField(env.preferences.t("目标语言", en: "Target language", pl: "Język docelowy"), selection: languageTitle(targetLanguage)) {
             ForEach(AssistantTargetLanguage.allCases) { item in
                 Button {
                     targetLanguage = item
@@ -272,7 +275,7 @@ struct AiAssistantSheet: View {
     }
 
     private var tonePicker: some View {
-        pickerField(env.preferences.t("语气", en: "Tone"), selection: toneTitle(tone)) {
+        pickerField(env.preferences.t("语气", en: "Tone", pl: "Ton"), selection: toneTitle(tone)) {
             ForEach(AssistantTone.allCases) { item in
                 Button {
                     tone = item
@@ -324,14 +327,14 @@ struct AiAssistantSheet: View {
     private var footer: some View {
         VStack(spacing: 10) {
             HStack(spacing: 8) {
-                secondaryButton(env.preferences.t("复制", en: "Copy"), systemImage: "doc.on.doc") {
+                secondaryButton(env.preferences.t("复制", en: "Copy", pl: "Kopiuj"), systemImage: "doc.on.doc") {
                     UIPasteboard.general.string = output
                 }
                 if canAppendSource {
                     secondaryButton(
                         isSelection
-                            ? env.preferences.t("插入到选区后", en: "Insert after")
-                            : env.preferences.t("追加", en: "Append"),
+                            ? env.preferences.t("插入到选区后", en: "Insert after", pl: "Wstaw za")
+                            : env.preferences.t("追加", en: "Append", pl: "Dołącz"),
                         systemImage: "text.append"
                     ) {
                         apply(.append)
@@ -340,8 +343,8 @@ struct AiAssistantSheet: View {
                 if canReplaceSource {
                     secondaryButton(
                         isSelection
-                            ? env.preferences.t("替换选中内容", en: "Replace selection")
-                            : env.preferences.t("替换", en: "Replace"),
+                            ? env.preferences.t("替换选中内容", en: "Replace selection", pl: "Zastąp zaznaczenie")
+                            : env.preferences.t("替换", en: "Replace", pl: "Zastąp"),
                         systemImage: "arrow.triangle.2.circlepath"
                     ) {
                         apply(.replace)
@@ -352,7 +355,7 @@ struct AiAssistantSheet: View {
                 Button {
                     streamTask?.cancel()
                 } label: {
-                    Label(env.preferences.t("停止", en: "Stop"), systemImage: "stop.fill")
+                    Label(env.preferences.t("停止", en: "Stop", pl: "Zatrzymaj"), systemImage: "stop.fill")
                         .font(.system(size: 15, weight: .bold))
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
@@ -364,8 +367,8 @@ struct AiAssistantSheet: View {
                 } label: {
                     Label(
                         output.isEmpty
-                            ? env.preferences.t("生成", en: "Generate")
-                            : env.preferences.t("重新生成", en: "Regenerate"),
+                            ? env.preferences.t("生成", en: "Generate", pl: "Generuj")
+                            : env.preferences.t("重新生成", en: "Regenerate", pl: "Generuj ponownie"),
                         systemImage: output.isEmpty ? "sparkles" : "arrow.clockwise"
                     )
                     .font(.system(size: 15, weight: .bold))
@@ -401,42 +404,43 @@ struct AiAssistantSheet: View {
 
     private func actionTitle(_ action: AiAction) -> String {
         switch action {
-        case .improveWriting: env.preferences.t("润色表达", en: "Polish")
-        case .fixSpellingGrammar: env.preferences.t("修正拼写与语法", en: "Fix spelling & grammar")
-        case .summarize: env.preferences.t("精简总结", en: "Summarize")
-        case .extractKeyPoints: env.preferences.t("提炼要点", en: "Key points")
-        case .extractTodos: env.preferences.t("提取待办", en: "Extract tasks")
-        case .rewriteProofread: env.preferences.t("改写与校对", en: "Rewrite & proofread")
-        case .makeShorter: env.preferences.t("精炼表达", en: "Make concise")
-        case .makeLonger: env.preferences.t("扩写内容", en: "Make longer")
-        case .simplifyLanguage: env.preferences.t("简化表达", en: "Simplify language")
-        case .changeTone: env.preferences.t("调整语气", en: "Change tone")
-        case .translate: env.preferences.t("全文翻译", en: "Translate")
-        case .continueWriting: env.preferences.t("继续写作", en: "Continue writing")
-        case .custom: env.preferences.t("自定义指令", en: "Custom prompt")
+        case .improveWriting: env.preferences.t("润色表达", en: "Polish", pl: "Popraw styl")
+        case .fixSpellingGrammar: env.preferences.t("修正拼写与语法", en: "Fix spelling & grammar", pl: "Popraw pisownię i gramatykę")
+        case .summarize: env.preferences.t("精简总结", en: "Summarize", pl: "Podsumuj")
+        case .extractKeyPoints: env.preferences.t("提炼要点", en: "Key points", pl: "Najważniejsze punkty")
+        case .extractTodos: env.preferences.t("提取待办", en: "Extract tasks", pl: "Wyodrębnij zadania")
+        case .rewriteProofread: env.preferences.t("改写与校对", en: "Rewrite & proofread", pl: "Przeredaguj i sprawdź")
+        case .makeShorter: env.preferences.t("精炼表达", en: "Make concise", pl: "Skróć")
+        case .makeLonger: env.preferences.t("扩写内容", en: "Make longer", pl: "Rozwiń")
+        case .simplifyLanguage: env.preferences.t("简化表达", en: "Simplify language", pl: "Uprość język")
+        case .changeTone: env.preferences.t("调整语气", en: "Change tone", pl: "Zmień ton")
+        case .translate: env.preferences.t("全文翻译", en: "Translate", pl: "Przetłumacz")
+        case .continueWriting: env.preferences.t("继续写作", en: "Continue writing", pl: "Pisz dalej")
+        case .custom: env.preferences.t("自定义指令", en: "Custom prompt", pl: "Własny prompt")
         }
     }
 
     private func languageTitle(_ language: AssistantTargetLanguage) -> String {
         switch language {
-        case .english: env.preferences.t("英语", en: "English")
-        case .simplifiedChinese: env.preferences.t("简体中文", en: "Simplified Chinese")
-        case .traditionalChinese: env.preferences.t("繁体中文", en: "Traditional Chinese")
-        case .japanese: env.preferences.t("日语", en: "Japanese")
-        case .korean: env.preferences.t("韩语", en: "Korean")
-        case .spanish: env.preferences.t("西班牙语", en: "Spanish")
-        case .french: env.preferences.t("法语", en: "French")
-        case .german: env.preferences.t("德语", en: "German")
-        case .portuguese: env.preferences.t("葡萄牙语", en: "Portuguese")
+        case .english: env.preferences.t("英语", en: "English", pl: "Angielski")
+        case .simplifiedChinese: env.preferences.t("简体中文", en: "Simplified Chinese", pl: "Chiński uproszczony")
+        case .traditionalChinese: env.preferences.t("繁体中文", en: "Traditional Chinese", pl: "Chiński tradycyjny")
+        case .japanese: env.preferences.t("日语", en: "Japanese", pl: "Japoński")
+        case .korean: env.preferences.t("韩语", en: "Korean", pl: "Koreański")
+        case .spanish: env.preferences.t("西班牙语", en: "Spanish", pl: "Hiszpański")
+        case .french: env.preferences.t("法语", en: "French", pl: "Francuski")
+        case .german: env.preferences.t("德语", en: "German", pl: "Niemiecki")
+        case .portuguese: env.preferences.t("葡萄牙语", en: "Portuguese", pl: "Portugalski")
+        case .polish: env.preferences.t("波兰语", en: "Polish", ja: "ポーランド語", pl: "Polski")
         }
     }
 
     private func toneTitle(_ tone: AssistantTone) -> String {
         switch tone {
-        case .professional: env.preferences.t("专业", en: "Professional")
-        case .friendly: env.preferences.t("友好", en: "Friendly")
-        case .casual: env.preferences.t("轻松", en: "Casual")
-        case .direct: env.preferences.t("直接", en: "Direct")
+        case .professional: env.preferences.t("专业", en: "Professional", pl: "Profesjonalny")
+        case .friendly: env.preferences.t("友好", en: "Friendly", pl: "Przyjazny")
+        case .casual: env.preferences.t("轻松", en: "Casual", pl: "Swobodny")
+        case .direct: env.preferences.t("直接", en: "Direct", pl: "Bezpośredni")
         }
     }
 
@@ -489,6 +493,7 @@ struct AiAssistantSheet: View {
         switch env.preferences.uiLanguage {
         case .chinese: return .english
         case .japanese: return .japanese
+        case .polish: return .english
         case .english: return .simplifiedChinese
         }
     }
@@ -628,7 +633,7 @@ struct AiAssistantSheet: View {
                     try Task.checkCancellation()
                     switch event.type {
                     case "text-delta": output += event.text ?? ""
-                    case "error": error = event.message ?? env.preferences.t("AI 生成失败。", en: "AI generation failed.")
+                    case "error": error = event.message ?? env.preferences.t("AI 生成失败。", en: "AI generation failed.", pl: "Generowanie AI nie powiodło się.")
                     default: break
                     }
                 }
@@ -637,7 +642,8 @@ struct AiAssistantSheet: View {
             } catch let apiError as APIError where apiError.code == "ai_not_configured" {
                 error = env.preferences.t(
                     "请先在 Web 或桌面端的“模型与代理”中配置模型。",
-                    en: "Configure a model in Models and agents on the web or desktop app first."
+                    en: "Configure a model in Models and agents on the web or desktop app first.",
+                    pl: "Najpierw skonfiguruj model w sekcji „Modele i agenci” w aplikacji webowej lub desktopowej."
                 )
             } catch {
                 self.error = error.localizedDescription

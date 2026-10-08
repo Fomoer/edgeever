@@ -140,7 +140,7 @@ const SharedDocument = ({
   share,
   token,
 }: {
-  locale: "zh-CN" | "en-US" | "ja";
+  locale: "zh-CN" | "en-US" | "ja" | "pl";
   share: PublicMemoShare;
   token: string;
 }) => {

@@ -9,6 +9,12 @@
             "value" : "EdgeEver"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EdgeEver"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -25,6 +31,12 @@
             "value" : "Native iOS shell (SwiftUI)"
           }
         },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Natywna powłoka iOS (SwiftUI)"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -39,6 +51,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "RN iOS path abandoned — see docs/ios-swift-rewrite.md"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Porzucono ścieżkę RN dla iOS — zobacz docs/ios-swift-rewrite.md"
           }
         },
         "zh-Hans" : {

@@ -29,7 +29,7 @@ import {
   type TiptapDoc,
   type DiagramDocument,
 } from "@edgeever/shared";
-import { clearMobileEditorUndoHistory } from "@edgeever/shared/mobile-editor";
+import { clearMobileEditorUndoHistory, type MobileEditorLocale } from "@edgeever/shared/mobile-editor";
 import {
   type NoteImageTheme,
   type NoteImageFontStyle,
@@ -183,7 +183,7 @@ type ImageExportRequest = {
   branding?: boolean;
 };
 let mode: "viewer" | "editor" = "viewer";
-let locale: "zh-CN" | "en-US" = "zh-CN";
+let locale: MobileEditorLocale = "zh-CN";
 let currentPlaceholder = "开始输入…";
 let suppressChange = false;
 const resourceResolvers = new Map<string, (dataUrl: string | null) => void>();
@@ -1161,19 +1161,19 @@ function setToolbarVisible(visible: boolean) {
     btn.type = "button";
     btn.textContent = action.label;
     btn.dataset.action = action.id;
-    const labels: Record<string, [string, string]> = {
-      undo: ["撤销", "Undo"],
-      redo: ["重做", "Redo"],
-      image: ["插入图片", "Insert image"],
-      bold: ["粗体", "Bold"],
-      bullet: ["项目符号列表", "Bullet list"],
-      task: ["任务清单", "Task list"],
-      indent: ["增加列表缩进", "Increase list indent"],
-      outdent: ["减少列表缩进", "Decrease list indent"],
-      quote: ["引用", "Block quote"],
-      hr: ["分隔线", "Horizontal rule"],
+    const labels: Record<string, Record<MobileEditorLocale, string>> = {
+      undo: { "zh-CN": "撤销", "en-US": "Undo", ja: "元に戻す", pl: "Cofnij" },
+      redo: { "zh-CN": "重做", "en-US": "Redo", ja: "やり直す", pl: "Ponów" },
+      image: { "zh-CN": "插入图片", "en-US": "Insert image", ja: "画像を挿入", pl: "Wstaw obraz" },
+      bold: { "zh-CN": "粗体", "en-US": "Bold", ja: "太字", pl: "Pogrubienie" },
+      bullet: { "zh-CN": "项目符号列表", "en-US": "Bullet list", ja: "箇条書き", pl: "Lista punktowana" },
+      task: { "zh-CN": "任务清单", "en-US": "Task list", ja: "タスクリスト", pl: "Lista zadań" },
+      indent: { "zh-CN": "增加列表缩进", "en-US": "Increase list indent", ja: "リストのインデントを増やす", pl: "Zwiększ wcięcie listy" },
+      outdent: { "zh-CN": "减少列表缩进", "en-US": "Decrease list indent", ja: "リストのインデントを減らす", pl: "Zmniejsz wcięcie listy" },
+      quote: { "zh-CN": "引用", "en-US": "Block quote", ja: "引用", pl: "Cytat" },
+      hr: { "zh-CN": "分隔线", "en-US": "Horizontal rule", ja: "区切り線", pl: "Linia pozioma" },
     };
-    btn.setAttribute("aria-label", labels[action.id]?.[locale === "en-US" ? 1 : 0] ?? action.id);
+    btn.setAttribute("aria-label", labels[action.id]?.[locale] ?? action.id);
     btn.addEventListener("click", () => {
       action.run();
       if (action.id !== "image") emitChange(editor);
@@ -1355,7 +1355,7 @@ const api: EdgeEverEditorAPI = {
     const nextMode = opts.mode === "editor" ? "editor" : "viewer";
     const modeChanged = nextMode !== mode;
     mode = nextMode;
-    locale = opts.locale === "en-US" ? "en-US" : "zh-CN";
+    locale = opts.locale === "en-US" || opts.locale === "ja" || opts.locale === "pl" ? opts.locale : "zh-CN";
     editor.setEditable(mode === "editor");
     setToolbarVisible(mode === "editor");
     document.documentElement.dataset.theme = opts.theme || "light";

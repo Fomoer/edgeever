@@ -19,7 +19,7 @@ export type AiAction = (typeof AI_ACTIONS)[number];
 export const AI_TONES = ["professional", "friendly", "casual", "direct"] as const;
 export type AiTone = (typeof AI_TONES)[number];
 
-export const AI_TARGET_LANGUAGES = ["en", "zh-CN", "zh-TW", "ja", "ko", "es", "fr", "de", "pt"] as const;
+export const AI_TARGET_LANGUAGES = ["en", "zh-CN", "zh-TW", "ja", "ko", "es", "fr", "de", "pt", "pl"] as const;
 export type AiTargetLanguage = (typeof AI_TARGET_LANGUAGES)[number];
 
 export const AI_ATTACHMENT_MEDIA_TYPES = [
@@ -110,6 +110,7 @@ export const getDefaultAiTargetLanguage = (locale: string | undefined): AiTarget
   const normalized = locale?.toLowerCase() ?? "";
   if (normalized.startsWith("zh")) return "en";
   if (normalized.startsWith("ja")) return "ja";
+  if (normalized.startsWith("pl")) return "en";
   return "zh-CN";
 };
 

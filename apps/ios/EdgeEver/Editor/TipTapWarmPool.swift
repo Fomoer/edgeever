@@ -509,7 +509,7 @@ final class SharedTipTapRuntime: NSObject, WKScriptMessageHandler, WKNavigationD
     private func applyMode() {
         guard ready, let session else { return }
         let mode = session.mode.rawValue
-        let locale = session.locale == "en-US" ? "en-US" : "zh-CN"
+        let locale = ["en-US", "ja", "pl"].contains(session.locale) ? session.locale : "zh-CN"
         let theme = session.theme == "dark" ? "dark" : "light"
         let configuration = "\(mode)|\(locale)|\(theme)|\(session.placeholder)"
         if lastAppliedConfiguration == configuration { return }

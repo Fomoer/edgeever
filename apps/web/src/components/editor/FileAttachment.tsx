@@ -5,6 +5,7 @@ import {
   resolveAttachmentKind,
   resolveFileDisplayMode,
 } from "@edgeever/shared";
+import { useContext, useState } from "react";
 import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
 import { ChevronDown, ChevronUp, Download, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -16,9 +17,16 @@ import { ButtonTooltip } from "@/components/ui/button-tooltip";
 import { useAttachmentByteSize } from "@/hooks/useAttachmentByteSize";
 import { isDesktopResourceRuntime, toApiResourceUrl, toDesktopResourceDownloadUrl } from "@/lib/desktop-resources";
 import { cn } from "@/lib/utils";
+import { AttachmentTranscriptContext } from "./AttachmentTranscriptContext";
+import { AttachmentTranscriptInline } from "./AttachmentTranscriptInline";
 
 const FileAttachmentNodeView = ({ node, updateAttributes }: NodeViewProps) => {
   const { t } = useTranslation();
+  const [viewerElement, setViewerElement] = useState<HTMLSpanElement | null>(null);
+  const transcriptContext = useContext(AttachmentTranscriptContext);
+  const activeTranscript = transcriptContext?.transcript?.target.element
+    && viewerElement?.contains(transcriptContext.transcript.target.element)
+    ? transcriptContext.transcript : null;
   const url = typeof node.attrs.url === "string" ? node.attrs.url : "";
   const label = typeof node.attrs.label === "string" ? node.attrs.label : "Attachment";
   const filename = typeof node.attrs.filename === "string" && node.attrs.filename
@@ -55,7 +63,7 @@ const FileAttachmentNodeView = ({ node, updateAttributes }: NodeViewProps) => {
       data-file-url={url}
       contentEditable={false}
     >
-      <span className={cn("edgeever-file-viewer flex min-h-12 flex-col overflow-hidden rounded-xl border border-slate-200 bg-card shadow-sm", COMPACT_ATTACHMENT_WIDTH_CLASS)}>
+      <span ref={setViewerElement} className={cn("edgeever-file-viewer flex min-h-12 flex-col overflow-hidden rounded-xl border border-slate-200 bg-card shadow-sm", COMPACT_ATTACHMENT_WIDTH_CLASS)}>
         <span data-edgeever-resource-toolbar className="flex min-h-12 items-center gap-2 px-3">
           {isVideo ? (
             <button
@@ -121,6 +129,11 @@ const FileAttachmentNodeView = ({ node, updateAttributes }: NodeViewProps) => {
           </span>
         ) : null}
       </span>
+      {activeTranscript && transcriptContext ? (
+        <span className={cn("block", COMPACT_ATTACHMENT_WIDTH_CLASS)}>
+          <AttachmentTranscriptInline {...transcriptContext} transcript={activeTranscript} />
+        </span>
+      ) : null}
     </NodeViewWrapper>
   );
 };

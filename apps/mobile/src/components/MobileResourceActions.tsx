@@ -85,6 +85,26 @@ const copy = {
     save: "保存",
     syncedOnly: "リソースの同期が終わってから、名前の変更と削除ができます。",
   },
+  pl: {
+    attachmentActions: "Działania na załączniku",
+    imageActions: "Działania na obrazie",
+    cancel: "Anuluj",
+    delete: "Usuń",
+    attachmentDeleteConfirm: "Załącznik zostanie trwale usunięty z magazynu i z tej notatki. Tej operacji nie można cofnąć.",
+    attachmentDeleteTitle: "Usuń załącznik",
+    share: "Udostępnij",
+    download: "Pobierz",
+    downloadFailed: "Nie można pobrać",
+    failed: "Działanie na zasobie nie powiodło się. Spróbuj ponownie.",
+    filename: "Nazwa pliku",
+    rename: "Zmień nazwę",
+    attachmentRenameTitle: "Zmień nazwę załącznika",
+    imageDeleteConfirm: "Obraz zostanie trwale usunięty z magazynu i z tej notatki. Tej operacji nie można cofnąć.",
+    imageDeleteTitle: "Usuń obraz",
+    imageRenameTitle: "Zmień nazwę obrazu",
+    save: "Zapisz",
+    syncedOnly: "Zmiana nazwy i usuwanie będą dostępne po zsynchronizowaniu zasobu.",
+  },
 } as const;
 
 export const MobileAttachmentCard = ({

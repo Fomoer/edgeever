@@ -89,6 +89,7 @@ Compose 会创建一个命名卷。所有需要在容器替换后保留的数据
 | `EDGE_EVER_SESSION_TTL_DAYS`           | `400`    | 登录会话有效期                            |
 | `EDGE_EVER_IDLE_TIMEOUT_SECONDS`       | `120`    | Bun 流式响应空闲超时，可设为 10 到 255 秒 |
 | `EDGE_EVER_CREDENTIALS_ENCRYPTION_KEY` | 写入 `/data` | 可选的独立 AI 凭据加密密钥。未设置时，Docker 会把认证 Secret 或自动生成的密钥写入 `/data/edgeever-secrets.json`。 |
+| `EDGE_EVER_COMMUNITY_REGISTRY_URL` | 不设置 | 可选。签名社区插件目录的 HTTPS 地址。不设置时，市场只显示内置官方插件。 |
 
 Secret 可在受支持的变量名后追加 `_FILE`，并指向 Docker secret，例如
 `EDGE_EVER_AUTH_PASSWORD_FILE=/run/secrets/auth_password`。密码/hash 和 S3

@@ -30,6 +30,7 @@ export type SystemInfoItem = {
   colSpan?: "full" | "two" | "double-sm";
   status?: "connected" | "connecting" | "failed" | "warning" | "error" | "default";
   localOnly?: boolean;
+  breakAll?: boolean;
 };
 
 type InstanceSystemDiagnostics = Pick<InstanceHealth, "build" | "containerImageSource" | "deployment" | "deploymentVersionCreatedAt" | "migration" | "objectStorageProvider" | "storage"> & {
@@ -586,6 +587,7 @@ export const SystemInfoPanel = ({ active = true }: { active?: boolean }) => {
                         className={cn(
                           "break-words text-xs leading-5",
                           item.mono ? "font-mono font-medium" : "font-sans font-medium",
+                          item.breakAll && "break-all",
                           item.status === "failed" || item.status === "error"
                             ? "font-semibold text-rose-600"
                             : item.status === "warning"

@@ -1,0 +1,16 @@
+---
+import DockerDeployGuide from "../../../../../docs/deploy-docker.md";
+import GuideLayout from "@/layouts/GuideLayout.astro";
+---
+
+<GuideLayout
+  title="Samodzielny hosting EdgeEver w Dockerze na VPS lub NAS"
+  description="Zainstaluj otwartoźródłową, samodzielnie hostowaną aplikację do notatek jednym poleceniem na VPS, NAS lub domowym serwerze. Ta sama aplikacja co w Cloudflare, z SQLite oraz magazynem lokalnym lub zgodnym z S3."
+  backHref="/pl/blog/ai-agent-deploy-cloudflare"
+  backLabel="Wróć do opcji wdrożenia"
+>
+  <p class="mb-8 text-slate-600">
+    Instrukcje techniczne są po angielsku. Nawigacja i opis wdrożenia są po polsku.
+  </p>
+  <DockerDeployGuide />
+</GuideLayout>

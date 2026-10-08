@@ -130,11 +130,35 @@ export interface MarketplaceEntry {
             stylesCss?: string;
         };
     };
+    /** SPDX license identifier recorded when a community plugin was admitted. */
+    licenseSpdx?: string;
+    /** 40-character commit recorded for a community plugin release. */
+    sourceRevision?: string;
+    /** Plugin API version this community entry was admitted against. */
+    apiVersion?: string;
+    /** Theme API version this community entry was admitted against. */
+    themeApiVersion?: string;
+    /** Capability snapshot used to detect a later permission expansion. */
+    admitted?: {
+        permissions: string[];
+        networkHosts: string[];
+    };
+    /**
+     * Set only by the client after a signed community registry is merged.
+     * Remote files cannot claim this field.
+     */
+    listing?: "community";
+}
+export interface MarketplaceRevocation {
+    id: string;
+    reason: string;
+    revokedAt: string;
 }
 export interface MarketplaceRegistry {
     registryVersion: typeof MARKETPLACE_REGISTRY_VERSION;
     updatedAt: string;
     entries: MarketplaceEntry[];
+    revocations?: MarketplaceRevocation[];
 }
 export interface PluginNoteSummary {
     id: string;
@@ -457,6 +481,16 @@ export interface PluginContext {
         }): Promise<{
             text: string;
         }>;
+        transcribeResource(noteId: string, resourceId: string): Promise<{
+            text: string;
+            resourceId: string;
+            filename: string;
+        }>;
+        transcribeMedia(media: Blob, options?: {
+            signal?: AbortSignal;
+        }): Promise<{
+            text: string;
+        }>;
     };
     notes: {
         query(input?: PluginNoteQuery): Promise<PluginNoteQueryResult>;
@@ -587,5 +621,14 @@ export declare const defineTheme: <T extends ThemeManifest>(theme: T) => T;
 /** Strips unknown fields and clamps sizes so host chrome rendering stays bounded. */
 export declare const normalizePluginPanelChrome: (value: PluginPanelChrome | null | undefined) => PluginPanelChrome;
 export declare const parseExtensionManifest: (value: unknown) => ExtensionManifest;
+export declare const isReservedMarketplacePluginId: (id: string) => boolean;
 export declare const parseMarketplaceRegistry: (value: unknown) => MarketplaceRegistry;
+/**
+ * Overlay a signed community registry onto the bundled official list.
+ * Official entries, their repository URLs, and `publisher: "edgeever"` stay
+ * on the bundled list. A signature does not make a remote entry official.
+ */
+export declare const mergeCommunityMarketplace: (bundled: MarketplaceRegistry, community: MarketplaceRegistry | null, revokedIds: ReadonlySet<string>) => MarketplaceRegistry;
+/** Revocation ids only grow. A later record may replace the reason, never remove the id. */
+export declare const rememberMarketplaceRevocations: (existing: readonly MarketplaceRevocation[], incoming: readonly MarketplaceRevocation[]) => MarketplaceRevocation[];
 export {};

@@ -25,7 +25,7 @@ struct UsersManagementView: View {
                         }
                         Spacer()
                         if user.isDisabled {
-                            Text(env.preferences.t("已禁用", en: "Disabled"))
+                            Text(env.preferences.t("已禁用", en: "Disabled", pl: "Wyłączony"))
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(AppTheme.danger)
                         }
@@ -42,8 +42,8 @@ struct UsersManagementView: View {
                                 }
                             } label: {
                                 Text(user.isDisabled
-                                    ? env.preferences.t("启用", en: "Enable")
-                                    : env.preferences.t("禁用", en: "Disable"))
+                                    ? env.preferences.t("启用", en: "Enable", pl: "Włącz")
+                                    : env.preferences.t("禁用", en: "Disable", pl: "Wyłącz"))
                                 .font(.system(size: 13, weight: .bold))
                             }
                         }
@@ -59,15 +59,15 @@ struct UsersManagementView: View {
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border, lineWidth: 1))
 
             VStack(alignment: .leading, spacing: 10) {
-                Text(env.preferences.t("创建成员", en: "Create member"))
+                Text(env.preferences.t("创建成员", en: "Create member", pl: "Utwórz członka"))
                     .font(.system(size: 14, weight: .heavy))
-                TextField(env.preferences.t("用户名", en: "Username"), text: $username)
+                TextField(env.preferences.t("用户名", en: "Username", pl: "Nazwa użytkownika"), text: $username)
                     .textInputAutocapitalization(.never)
                     .padding(.horizontal, 12)
                     .frame(height: 44)
                     .background(AppTheme.searchFill)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
-                SecureField(env.preferences.t("密码", en: "Password"), text: $password)
+                SecureField(env.preferences.t("密码", en: "Password", pl: "Hasło"), text: $password)
                     .padding(.horizontal, 12)
                     .frame(height: 44)
                     .background(AppTheme.searchFill)
@@ -84,7 +84,7 @@ struct UsersManagementView: View {
                         } catch { self.error = error.localizedDescription }
                     }
                 } label: {
-                    Text(env.preferences.t("创建", en: "Create"))
+                    Text(env.preferences.t("创建", en: "Create", pl: "Utwórz"))
                         .font(.system(size: 14, weight: .heavy))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)

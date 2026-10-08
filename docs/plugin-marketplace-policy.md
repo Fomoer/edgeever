@@ -23,3 +23,7 @@ Code-free themes must publish their complete Manifest and use a license that per
 The repository, license, source revision, and build information must remain publicly available while a version is distributed through the official marketplace. EdgeEver may reject, suspend, or remove a listing when it no longer satisfies this policy, when its release assets cannot be traced to the declared source, or when its behavior creates a security, privacy, legal, or reliability risk.
 
 Marketplace verification means that a listing has passed the applicable admission and integrity checks at the time of review. It is not a guarantee that a plugin is secure, error-free, or suitable for every user.
+
+## Community catalog
+
+The community catalog uses the same admission meaning. It is published separately from the built-in official list, and a signed community file cannot take over official plugin updates. Direct installation from GitHub or a Manifest URL stays available and is not an admission check.

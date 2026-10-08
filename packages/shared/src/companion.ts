@@ -34,7 +34,7 @@ export const CompanionTurnInputSchema = z.object({
   useMemory: z.boolean().default(true),
   allowNotes: z.boolean().default(false),
   allowWrites: z.boolean().optional(),
-  locale: z.enum(["zh-CN", "en-US", "ja"]).default("en-US"),
+  locale: z.enum(["zh-CN", "en-US", "ja", "pl"]).default("en-US"),
   focus: CompanionTurnFocusSchema.optional(),
   mentions: z.array(CompanionMentionSchema).max(8).optional(),
   attachmentIds: z.array(z.string().uuid()).max(4).optional(),
@@ -43,26 +43,62 @@ export type CompanionTurnInput = z.infer<typeof CompanionTurnInputSchema>;
 
 type ConversationLanguage = CompanionTurnInput["locale"];
 
-const messageLanguage = (message: string): ConversationLanguage | null => {
+const requestText = (message: string) =>
   // The request normally precedes pasted or quoted source text.
-  const request = message.trim().split(/[\n:：]/, 1)[0].slice(0, 200);
+  message.trim().split(/[\n:：]/, 1)[0].slice(0, 200);
+
+const messageLanguage = (message: string): ConversationLanguage | "latin" | null => {
+  const request = requestText(message);
   // Sidebar translation actions generate localized prompts. Their wording is
   // interface text, not evidence of the user's conversation language.
-  if (/^(?:请翻译我正在看的内容|请翻译下面这段文字|Translate what I'm looking at|Translate the passage below|今見ている内容を翻訳|下の文章を)/iu.test(request)) return null;
+  if (/^(?:请翻译我正在看的内容|请翻译下面这段文字|Translate what I'm looking at|Translate the passage below|今見ている内容を翻訳|下の文章を|Przetłumacz to, na co patrzę|Przetłumacz poniższy fragment)/iu.test(request)) return null;
   if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(request)) return "ja";
   if (/\p{Script=Han}/u.test(request)) return "zh-CN";
-  if (/[A-Za-z]{2,}/u.test(request)) return "en-US";
+  if (/[ąćęłńśźżĄĆĘŁŃŚŹŻ]/u.test(request)) return "pl";
+  if (/[A-Za-z]{2,}/u.test(request)) return "latin";
+  return null;
+};
+
+// Common words that tell English from Polish typed without diacritics. Words
+// both languages use (such as "to", "do", "on", "a", "i", "my") are left out.
+const ENGLISH_WORDS = new Set([
+  "the", "and", "or", "is", "are", "was", "be", "of", "for", "with", "in", "this", "that", "these",
+  "what", "how", "why", "when", "please", "can", "could", "would", "you", "your", "me", "it",
+  "write", "make", "give", "summarize", "translate", "explain", "about", "from", "into", "tomorrow", "today",
+]);
+const POLISH_WORDS = new Set([
+  "w", "z", "na", "nie", "jest", "czy", "jak", "co", "sie", "mi", "mnie", "dla", "oraz", "albo", "jutro",
+  "dzis", "dzisiaj", "prosze", "napisz", "zrob", "podsumuj", "przetlumacz", "wyjasnij", "moje", "moja", "moj",
+  "tego", "ten", "ta", "te", "po", "od", "przez", "pomoz", "daj", "jaki", "jaka", "jakie", "dlaczego",
+  "ktory", "ktora", "ktore", "notatke", "notatki",
+]);
+
+// Latin text without diacritics only proves English when the interface is
+// not Polish; with a Polish interface it is resolved by its common words.
+const latinLanguage = (message: string, fallbackLocale: ConversationLanguage): ConversationLanguage | null => {
+  if (fallbackLocale !== "pl") return "en-US";
+  let english = 0;
+  let polish = 0;
+  for (const word of requestText(message).toLowerCase().match(/[a-z]+/g) ?? []) {
+    if (ENGLISH_WORDS.has(word)) english += 1;
+    if (POLISH_WORDS.has(word)) polish += 1;
+  }
+  if (english > polish) return "en-US";
+  if (polish > english) return "pl";
   return null;
 };
 
 export const conversationLanguage = (
   message: string, recentUserMessages: readonly string[], fallbackLocale: ConversationLanguage,
 ): { locale: ConversationLanguage; source: "current request" | "recent conversation" | "interface" } => {
-  const current = messageLanguage(message);
-  if (current) return { locale: current, source: "current request" };
-  for (const prior of recentUserMessages.slice(0, 6)) {
-    const language = messageLanguage(prior);
-    if (language) return { locale: language, source: "recent conversation" };
+  const candidates = [
+    { text: message, source: "current request" as const },
+    ...recentUserMessages.slice(0, 6).map((text) => ({ text, source: "recent conversation" as const })),
+  ];
+  for (const { text, source } of candidates) {
+    const detected = messageLanguage(text);
+    const locale = detected === "latin" ? latinLanguage(text, fallbackLocale) : detected;
+    if (locale) return { locale, source };
   }
   return { locale: fallbackLocale, source: "interface" };
 };
@@ -70,7 +106,7 @@ export const conversationLanguage = (
 export const translationTargetInstruction = (
   language: ReturnType<typeof conversationLanguage>,
 ): string => {
-  const name = language.locale === "zh-CN" ? "Simplified Chinese" : language.locale === "ja" ? "Japanese" : "English";
+  const name = language.locale === "zh-CN" ? "Simplified Chinese" : language.locale === "ja" ? "Japanese" : language.locale === "pl" ? "Polish" : "English";
   return `For a translation request without an explicit target language, use the language of the current user request, then recent user messages, and only then the interface language. The best available signal for this turn is ${name} (${language.source}). If the source text is mainly in another language, translate into ${name} without asking. If the source is already mainly in ${name}, use an explicit target from this same translation task; otherwise ask which other language the user wants. An explicit target for this text always takes precedence; an older request about different text does not.`;
 };
 

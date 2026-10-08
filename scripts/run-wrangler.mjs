@@ -337,6 +337,7 @@ const runtimeVars = {
   // Persistent local development uses real sessions. Only the isolated local
   // demo stays auth-free; remote deployments always fail closed.
   EDGE_EVER_ALLOW_UNAUTHENTICATED: isLocalCommand ? String(envValue("LOCAL_DEMO_SEED") === "true") : undefined,
+  EDGE_EVER_COMMUNITY_REGISTRY_URL: envValue("COMMUNITY_REGISTRY_URL"),
 };
 const runtimeVarLines = Object.entries(runtimeVars)
   .filter(([, value]) => Boolean(value))

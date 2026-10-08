@@ -122,12 +122,11 @@ const FieldHeader = ({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex w-full min-w-36 items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-xs font-medium text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+          className="flex w-full min-w-36 items-center rounded-md px-2 py-1 text-left text-xs font-medium text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
           aria-label={t("structuredTable.editField", { name: field.name })}
           disabled={readOnly}
         >
           <span className="truncate">{field.name}</span>
-          <span className="shrink-0 text-xs text-slate-400">{t(`structuredTable.types.${field.type}`)}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64 space-y-2 p-2">
@@ -831,7 +830,7 @@ export const TableEditorPane = ({
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-3 py-2">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" aria-label={t("structuredTable.back")} onClick={onBackToList}>
+            <Button type="button" variant="ghost" size="icon" className="lg:hidden" aria-label={t("structuredTable.back")} onClick={onBackToList}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
           </TooltipTrigger>

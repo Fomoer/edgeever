@@ -23,6 +23,12 @@ describe("lazy Japanese catalog", () => {
     expect(viteConfig).toContain("globPatterns: []");
     expect(viteConfig).toContain("name: \"i18n-ja\"");
     expect(viteConfig).toContain("edgeever-optional-locales");
-    expect(viteConfig).toContain("i18n-ja-");
+    expect(viteConfig).toContain("i18n-(?:ja|pl)-");
+  });
+
+  test("loads Polish on demand like Japanese", () => {
+    expect(source).not.toContain('import { pl } from "./resources/pl"');
+    expect(source).toContain('await import("./resources/pl")');
+    expect(viteConfig).toContain("name: \"i18n-pl\"");
   });
 });

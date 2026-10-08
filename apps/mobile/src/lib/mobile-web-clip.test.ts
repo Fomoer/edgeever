@@ -142,4 +142,18 @@ describe("mobile web clip", () => {
     expect(draft.contentMarkdown).toContain("取り込み日時: 2026-07-31T00:00:00.000Z");
     expect(draft.contentMarkdown).toContain("本文を取り込めませんでした。出典リンクは残してあるので、あとからやり直せます。");
   });
+
+  test("writes Polish labels when the page cannot be fetched", async () => {
+    const draft = await buildMobileWebClipDraft("notaurl", {
+      capturedAt: new Date("2026-07-31T00:00:00.000Z"),
+      fetcher: async () => {
+        throw new Error("offline");
+      },
+      locale: "pl",
+    });
+
+    expect(draft.title).toBe("Wycinek strony");
+    expect(draft.contentMarkdown).toContain("Źródło: [notaurl](notaurl)");
+    expect(draft.contentMarkdown).toContain("Zapisano: 2026-07-31T00:00:00.000Z");
+  });
 });

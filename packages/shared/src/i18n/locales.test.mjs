@@ -20,6 +20,9 @@ describe("supported locale matching", () => {
     expect(matchSupportedLocale("ja")).toBe("ja");
     expect(matchSupportedLocale("ja-JP")).toBe("ja");
     expect(matchSupportedLocale("ja_JP")).toBe("ja");
+    expect(matchSupportedLocale("pl")).toBe("pl");
+    expect(matchSupportedLocale("pl-PL")).toBe("pl");
+    expect(matchSupportedLocale("pl_PL")).toBe("pl");
   });
 
   test("does not treat unrelated tags as a shipped locale", () => {

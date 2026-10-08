@@ -3,7 +3,6 @@ import type { MemoFilterMode, MemoSortMode } from "@edgeever/client";
 import { DEFAULT_MEMO_TITLE, getMemoListTimestamp, getNotebookDescendantMemoCount, type MemoSummary, type Notebook } from "@edgeever/shared";
 import { MOBILE_UI_METRICS, toggleMobileMemoFilterMode } from "@edgeever/shared/mobile-ui";
 import { FlatList, Platform, RefreshControl, View } from "react-native";
-import Animated, { FadeInDown, FadeOutUp, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { ActivityIndicator, Check, ChevronDown, ChevronLeft, LayoutTemplate, MoreHorizontal, Plus, RotateCcw, Search, Sparkles, Tag, X } from "../components/icons";
 import { Pressable, Text, TextInput } from "../components/LocalizedText";
 import type { MobileBootstrapProgress } from "../lib/local-mirror";
@@ -443,21 +442,12 @@ const MemoCard = memo(function MemoCard({
     ? (resolvedLocale !== "zh-CN" ? "Created" : "创建")
     : (resolvedLocale !== "zh-CN" ? "Updated" : "更新");
   const handledLongPressRef = useRef(false);
-  const pressScale = useSharedValue(1);
-  const pressAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pressScale.value }],
-  }));
-
   return (
-    <Animated.View
-      entering={FadeInDown.duration(260).springify().damping(18)}
-      exiting={FadeOutUp.duration(220)}
-      layout={LinearTransition.duration(220)}
+    <View
       style={[
         styles.memoCard,
         listDensity === "compact" && styles.memoCardCompact,
         selected && styles.memoCardSelected,
-        pressAnimatedStyle,
       ]}
     >
       {selectionMode ? (
@@ -488,12 +478,6 @@ const MemoCard = memo(function MemoCard({
           }
           onPress();
         }}
-        onPressIn={() => {
-          pressScale.value = withTiming(0.985, { duration: 100 });
-        }}
-        onPressOut={() => {
-          pressScale.value = withTiming(1, { duration: 160 });
-        }}
         style={[styles.memoCardContent, listDensity === "compact" && styles.memoCardContentCompact, selectionMode && styles.memoCardContentWithSelection]}
       >
         <View style={styles.memoCardTop}>
@@ -518,7 +502,7 @@ const MemoCard = memo(function MemoCard({
           ))}
         </View>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 }, (previous, next) =>
   previous.memo === next.memo &&

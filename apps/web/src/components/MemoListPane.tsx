@@ -82,6 +82,7 @@ import type {
 } from "@/lib/app-helpers";
 import { contentEnterMotion, paneEnterMotion } from "@/lib/motion";
 import type { SyncQueueSummary } from "@/lib/sync-queue";
+import { api } from "@/lib/api";
 import { isLocalMemoId } from "@/lib/local-mirror";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import {

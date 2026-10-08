@@ -1,5 +1,4 @@
 import SwiftUI
-import Pow
 
 struct NotesListView: View {
     @Environment(AppEnvironment.self) private var env
@@ -8,13 +7,6 @@ struct NotesListView: View {
     var onCreateNote: (() -> Void)? = nil
     var onCreateFromTemplate: (() -> Void)? = nil
     var onCreateNotebook: (() -> Void)? = nil
-
-    /// Whole-list settle + Pow jump once when data first becomes available this session.
-    @State private var listEntranceSettled = false
-    @State private var listEntrancePulse = 0
-    @State private var didScheduleListEntrance = false
-    /// First-paint cascade: cards insert with Pow boing (cleared after entrance finishes).
-    @State private var listEntranceCascade = false
 
     /// First-login / first-mirror bootstrap (Android `initialSyncProgress`).
     private var hasBootstrapProgress: Bool {
@@ -35,17 +27,18 @@ struct NotesListView: View {
     }
 
     private var bootstrapTitle: String {
-        env.preferences.t("正在同步笔记", en: "Syncing notes")
+        env.preferences.t("正在同步笔记", en: "Syncing notes", pl: "Synchronizowanie notatek")
     }
 
     private var bootstrapDescription: String {
         if bootstrapTotal > 0 {
             return env.preferences.t(
                 "已加载 \(bootstrapLoaded) / \(bootstrapTotal) 条笔记",
-                en: "Loaded \(bootstrapLoaded) of \(bootstrapTotal) notes"
+                en: "Loaded \(bootstrapLoaded) of \(bootstrapTotal) notes",
+                pl: "Wczytane notatki: \(bootstrapLoaded) z \(bootstrapTotal)"
             )
         }
-        return env.preferences.t("正在准备首次同步…", en: "Preparing first sync…")
+        return env.preferences.t("正在准备首次同步…", en: "Preparing first sync…", pl: "Przygotowywanie pierwszej synchronizacji…")
     }
 
     var body: some View {
@@ -60,11 +53,12 @@ struct NotesListView: View {
                     .transition(Motion.softFade)
             } else if store.notebooks.isEmpty && store.memos.isEmpty && !store.isLoadingList {
                 emptyCard(
-                    title: env.preferences.t("暂无笔记本", en: "No notebooks"),
+                    title: env.preferences.t("暂无笔记本", en: "No notebooks", pl: "Brak notatników"),
                     description: env.preferences.t(
                         "先创建一个笔记本，再开始记录。",
                         en: "Create a notebook to start taking notes.",
-                        ja: "ノートブックを作成して記録を始めましょう。"
+                        ja: "ノートブックを作成して記録を始めましょう。",
+                        pl: "Utwórz notatnik, aby zacząć robić notatki."
                     ),
                     showCreate: false,
                     showCreateNotebook: true
@@ -78,86 +72,44 @@ struct NotesListView: View {
                 )
                     .transition(Motion.softFade)
             } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        // Android FlatList `list`: paddingTop 12, paddingHorizontal 12, paddingBottom 18
-                        LazyVStack(spacing: 0) {
-                            if hasBootstrapProgress {
-                                bootstrapProgressBanner
-                                    // memoSyncBanner marginBottom: 10
-                                    .padding(.bottom, 10)
-                            } else if env.lastSyncError != nil, !store.memos.isEmpty {
-                                syncPausedBanner
-                                    .padding(.bottom, 10)
-                            }
+                ScrollView {
+                    // Android FlatList `list`: paddingTop 12, paddingHorizontal 12, paddingBottom 18
+                    LazyVStack(spacing: 0) {
+                        if hasBootstrapProgress {
+                            bootstrapProgressBanner
+                                // memoSyncBanner marginBottom: 10
+                                .padding(.bottom, 10)
+                        } else if env.lastSyncError != nil, !store.memos.isEmpty {
+                            syncPausedBanner
+                                .padding(.bottom, 10)
+                        }
 
-                            ForEach(Array(store.memos.enumerated()), id: \.element.id) { index, memo in
-                                memoCard(for: memo)
-                                    .padding(.bottom, env.preferences.listDensity.cardBottomMargin)
-                                    .id(memo.id)
-                                    // First open: elastic boing cascade. Later reshuffles: quiet opacity.
-                                    .transition(listEntranceCascade ? Motion.listCardEntrance : Motion.cardAppear)
-                                    .animation(
-                                        listEntranceCascade
-                                            ? Motion.listEntrance.delay(Double(min(index, 12)) * Motion.listEntranceStagger)
-                                            : Motion.listContent,
-                                        value: listEntranceCascade
-                                    )
-                                    .onAppear {
-                                        if memo.id == store.memos.last?.id {
-                                            store.loadMore(env: env)
-                                        }
+                        ForEach(store.memos, id: \.id) { memo in
+                            memoCard(for: memo)
+                                .padding(.bottom, env.preferences.listDensity.cardBottomMargin)
+                                .onAppear {
+                                    if memo.id == store.memos.last?.id {
+                                        store.loadMore(env: env)
                                     }
-                            }
-                            if store.isLoadingMore {
-                                ProgressView()
-                                    .tint(AppTheme.title)
-                                    .padding(.vertical, 18)
-                            }
+                                }
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.top, 12)
-                        .padding(.bottom, 18)
-                        .animation(Motion.listContent, value: store.memos.map(\.id))
-                        .animation(Motion.listContent, value: store.filter)
-                        .animation(Motion.listContent, value: store.selectedTag)
-                        .animation(Motion.listContent, value: store.searchText)
-                        .animation(Motion.search, value: hasBootstrapProgress)
-                    }
-                    .contentMargins(.bottom, 0, for: .scrollContent)
-                    .background(AppTheme.background)
-                    .edgeEverNotesListEntrance(settled: listEntranceSettled, entrancePulse: listEntrancePulse)
-                    .onChange(of: store.bounceMemoId) { _, memoId in
-                        guard let memoId else { return }
-                        // Scroll immediately (no delayed animation beat) so the settling card is on-screen.
-                        if store.memos.contains(where: { $0.id == memoId }) {
-                            proxy.scrollTo(memoId, anchor: .top)
-                        }
-                        // Clear bounce marker after settle completes (~0.42s spring).
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            if store.bounceMemoId == memoId {
-                                store.clearMemoBounce()
-                            }
+                        if store.isLoadingMore {
+                            ProgressView()
+                                .tint(AppTheme.title)
+                                .padding(.vertical, 18)
                         }
                     }
-                    .onChange(of: store.bouncePulse) { _, _ in
-                        // If id remapped after create sync, ensure the new row is visible.
-                        if let memoId = store.bounceMemoId,
-                           store.memos.contains(where: { $0.id == memoId }) {
-                            proxy.scrollTo(memoId, anchor: .top)
-                        }
-                    }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 12)
+                    .padding(.bottom, 18)
+                    .animation(Motion.search, value: hasBootstrapProgress)
                 }
+                .contentMargins(.bottom, 0, for: .scrollContent)
+                .background(AppTheme.background)
             }
         }
         .animation(Motion.listContent, value: store.memos.isEmpty)
         .animation(Motion.search, value: hasBootstrapProgress)
-        .onChange(of: store.memos.count) { _, count in
-            scheduleListEntranceIfNeeded(hasMemos: count > 0)
-        }
-        .onAppear {
-            scheduleListEntranceIfNeeded(hasMemos: !store.memos.isEmpty)
-        }
         .overlay(alignment: .bottom) {
             if let err = store.listError {
                 Text(err)
@@ -281,14 +233,15 @@ struct NotesListView: View {
     private var initialSyncErrorCard: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
-                Text(env.preferences.t("暂时没有拉到笔记", en: "Could not load notes"))
+                Text(env.preferences.t("暂时没有拉到笔记", en: "Could not load notes", pl: "Nie udało się wczytać notatek"))
                     .font(.system(size: 14, weight: AppTheme.heavy))
                     .foregroundStyle(AppTheme.syncErrorTitle)
                     .multilineTextAlignment(.center)
 
                 Text(env.preferences.t(
                     "网络或 PWA 后台恢复可能短暂中断了同步。这里不会把它当作空笔记本。",
-                    en: "A network hiccup may have interrupted sync. This is not treated as an empty notebook."
+                    en: "A network hiccup may have interrupted sync. This is not treated as an empty notebook.",
+                    pl: "Synchronizacja mogła zostać przerwana przez chwilowy problem z siecią. Nie jest to traktowane jako pusty notatnik."
                 ))
                 .font(.system(size: 12))
                 .foregroundStyle(AppTheme.syncErrorBody)
@@ -303,7 +256,7 @@ struct NotesListView: View {
                     HStack(spacing: 7) {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 15, weight: .semibold))
-                        Text(env.preferences.t("重试", en: "Retry"))
+                        Text(env.preferences.t("重试", en: "Retry", pl: "Spróbuj ponownie"))
                             .font(.system(size: 13, weight: AppTheme.heavy))
                     }
                     .foregroundStyle(AppTheme.syncErrorBody)
@@ -314,7 +267,7 @@ struct NotesListView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 16)
-                .accessibilityLabel(env.preferences.t("重试加载", en: "Retry loading"))
+                .accessibilityLabel(env.preferences.t("重试加载", en: "Retry loading", pl: "Wczytaj ponownie"))
             }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 16)
@@ -339,13 +292,14 @@ struct NotesListView: View {
     private var syncPausedBanner: some View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(env.preferences.t("同步已暂停", en: "Sync paused"))
+                Text(env.preferences.t("同步已暂停", en: "Sync paused", pl: "Synchronizacja wstrzymana"))
                     .font(.system(size: 13, weight: AppTheme.heavy))
                     .foregroundStyle(AppTheme.syncErrorTitle)
 
                 Text(env.preferences.t(
                     "已加载的笔记仍可使用，请检查网络后重试。",
-                    en: "Loaded notes remain available. Check your connection and retry."
+                    en: "Loaded notes remain available. Check your connection and retry.",
+                    pl: "Wczytane notatki nadal są dostępne. Sprawdź połączenie i spróbuj ponownie."
                 ))
                 .font(.system(size: 12))
                 .foregroundStyle(AppTheme.syncErrorBody)
@@ -361,7 +315,7 @@ struct NotesListView: View {
                 HStack(spacing: 5) {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 13, weight: .semibold))
-                    Text(env.preferences.t("重试", en: "Retry"))
+                    Text(env.preferences.t("重试", en: "Retry", pl: "Spróbuj ponownie"))
                         .font(.system(size: 13, weight: AppTheme.heavy))
                 }
                 .foregroundStyle(AppTheme.syncErrorBody)
@@ -380,23 +334,6 @@ struct NotesListView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    private func scheduleListEntranceIfNeeded(hasMemos: Bool) {
-        guard hasMemos, !didScheduleListEntrance else { return }
-        didScheduleListEntrance = true
-        listEntranceSettled = false
-        listEntranceCascade = true
-        // Next frame: settle in (stagger lives on per-card delay, not a late global jump).
-        DispatchQueue.main.async {
-            withAnimation(Motion.listEntrance) {
-                listEntranceSettled = true
-            }
-            listEntrancePulse &+= 1
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.85) {
-            listEntranceCascade = false
-        }
-    }
-
     /// With sub-notebooks hidden, an empty parent must not look like its notes are gone.
     private var hiddenDescendantMemoCount: Int {
         guard !env.preferences.showDescendantNotes,
@@ -410,15 +347,15 @@ struct NotesListView: View {
 
     private var emptyTitle: String {
         if hiddenDescendantMemoCount > 0 {
-            return env.preferences.t("本级暂无笔记", en: "No notes directly in this notebook", ja: "このノートブック直下にノートはありません")
+            return env.preferences.t("本级暂无笔记", en: "No notes directly in this notebook", ja: "このノートブック直下にノートはありません", pl: "Brak notatek bezpośrednio w tym notatniku")
         }
         if !store.searchText.trimmingCharacters(in: .whitespaces).isEmpty {
-            return env.preferences.t("没有找到匹配笔记", en: "No matching notes")
+            return env.preferences.t("没有找到匹配笔记", en: "No matching notes", pl: "Brak pasujących notatek")
         }
         if store.filter != .all || store.selectedTag != nil {
-            return env.preferences.t("没有符合筛选的笔记", en: "No notes match this filter")
+            return env.preferences.t("没有符合筛选的笔记", en: "No notes match this filter", pl: "Żadne notatki nie pasują do tego filtra")
         }
-        return env.preferences.t("暂无笔记", en: "No notes yet")
+        return env.preferences.t("暂无笔记", en: "No notes yet", pl: "Brak notatek")
     }
 
     private var emptyDescription: String {
@@ -427,18 +364,20 @@ struct NotesListView: View {
             return env.preferences.t(
                 "子笔记本中还有 \(hiddenCount) 条笔记。可以打开子笔记本查看，或在设置中开启“父笔记本中显示子笔记本笔记”。",
                 en: "Its sub-notebooks still contain \(hiddenCount) notes. Open a sub-notebook to see them, or turn on \"Show notes from sub-notebooks\" in Settings.",
-                ja: "サブノートブックにはまだ \(hiddenCount) 件のノートがあります。サブノートブックを開くか、設定で「サブノートブックのノートを表示」をオンにしてください。"
+                ja: "サブノートブックにはまだ \(hiddenCount) 件のノートがあります。サブノートブックを開くか、設定で「サブノートブックのノートを表示」をオンにしてください。",
+                pl: "Podnotatniki nadal zawierają notatki (liczba: \(hiddenCount)). Otwórz podnotatnik, aby je zobaczyć, lub włącz w Ustawieniach opcję „Pokazuj notatki z podnotatników”."
             )
         }
         if !store.searchText.trimmingCharacters(in: .whitespaces).isEmpty {
-            return env.preferences.t("换个关键词再试", en: "Try another keyword")
+            return env.preferences.t("换个关键词再试", en: "Try another keyword", pl: "Spróbuj innego słowa kluczowego")
         }
         if store.filter != .all || store.selectedTag != nil {
-            return env.preferences.t("试试切换筛选条件，或调整搜索关键词。", en: "Try another filter or search.")
+            return env.preferences.t("试试切换筛选条件，或调整搜索关键词。", en: "Try another filter or search.", pl: "Spróbuj innego filtra lub wyszukiwania.")
         }
         return env.preferences.t(
             "先创建一条笔记，之后可以在这里快速预览、搜索和批量整理。",
-            en: "Create a note to preview, search, and batch-organize here."
+            en: "Create a note to preview, search, and batch-organize here.",
+            pl: "Utwórz notatkę, aby tutaj ją podglądać, wyszukiwać i porządkować zbiorczo."
         )
     }
 
@@ -454,7 +393,7 @@ struct NotesListView: View {
                 .multilineTextAlignment(.center)
             if showCreateNotebook, let onCreateNotebook {
                 Button(action: onCreateNotebook) {
-                    Label(env.preferences.t("新建笔记本", en: "New notebook", ja: "新しいノートブック"), systemImage: "plus")
+                    Label(env.preferences.t("新建笔记本", en: "New notebook", ja: "新しいノートブック", pl: "Nowy notatnik"), systemImage: "plus")
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 14)
@@ -472,7 +411,7 @@ struct NotesListView: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "plus")
                                     .font(.system(size: 14, weight: .bold))
-                                Text(env.preferences.t("新建笔记", en: "New note"))
+                                Text(env.preferences.t("新建笔记", en: "New note", pl: "Nowa notatka"))
                                     .font(.system(size: 13, weight: .heavy))
                             }
                             .foregroundStyle(Color.white)
@@ -489,7 +428,7 @@ struct NotesListView: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "square.grid.2x2")
                                     .font(.system(size: 13, weight: .semibold))
-                                Text(env.preferences.t("从模板新建", en: "New from template"))
+                                Text(env.preferences.t("从模板新建", en: "New from template", pl: "Nowa z szablonu"))
                                     .font(.system(size: 13, weight: .heavy))
                             }
                             .foregroundStyle(AppTheme.title)
@@ -530,7 +469,6 @@ struct NotesListView: View {
     private func memoCard(for memo: MemoSummary) -> some View {
         let selected = store.selectedMemoIds.contains(memo.id)
         let density = env.preferences.listDensity
-        let bouncePulse = store.bounceMemoId == memo.id ? store.bouncePulse : 0
 
         Button {
             if store.selectionMode {
@@ -546,21 +484,19 @@ struct NotesListView: View {
                     } label: {
                         Label(
                             memo.isPinned
-                                ? env.preferences.t("取消置顶", en: "Unpin")
-                                : env.preferences.t("置顶", en: "Pin"),
+                                ? env.preferences.t("取消置顶", en: "Unpin", pl: "Odepnij")
+                                : env.preferences.t("置顶", en: "Pin", pl: "Przypnij"),
                             systemImage: memo.isPinned ? "pin.slash" : "pin"
                         )
                     }
                     Button(role: .destructive) {
                         Task { await store.softDelete(env: env, memoId: memo.id) }
                     } label: {
-                        Label(env.preferences.t("删除", en: "Delete"), systemImage: "trash")
+                        Label(env.preferences.t("删除", en: "Delete", pl: "Usuń"), systemImage: "trash")
                     }
                 }
         }
-        .buttonStyle(MemoCardPressStyle())
-        // Return-from-create/edit rebound on this card only.
-        .edgeEverMemoReturnBounce(pulse: bouncePulse)
+        .buttonStyle(.plain)
         .edgeEverSelectionFeedback(selected)
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.52).onEnded { _ in
@@ -678,6 +614,7 @@ struct MemoCardContent: View {
     private var emptyNoteLabel: String {
         switch language {
         case .japanese: return "空のノート"
+        case .polish: return "Pusta notatka"
         case .english: return "Empty note"
         case .chinese: return "空笔记"
         }
@@ -686,6 +623,7 @@ struct MemoCardContent: View {
     private var untitledNoteLabel: String {
         switch language {
         case .japanese: return "無題のノート"
+        case .polish: return "Notatka bez tytułu"
         case .english: return "Untitled note"
         case .chinese: return "无标题笔记"
         }
@@ -700,12 +638,14 @@ struct MemoCardContent: View {
         case .createdAt:
             switch language {
             case .japanese: return "作成"
+            case .polish: return "Utworzono"
             case .english: return "Created"
             case .chinese: return "创建"
             }
         case .updatedAt:
             switch language {
             case .japanese: return "更新"
+            case .polish: return "Zaktualizowano"
             case .english: return "Updated"
             case .chinese: return "更新"
             }
