@@ -14,6 +14,26 @@ export const NOTE_IMAGE_CARD_WIDTH_PIXELS: Record<NoteImageCardWidth, number> = 
   wide: 800,
 };
 
+/** Bound a complete note card to dimensions that native WebViews can rasterize. */
+export const planNativeNoteImageRender = (width: number, height: number) => {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    throw new Error("Invalid note image dimensions");
+  }
+
+  const sourceScale = Math.min(1, 15_000 / height);
+  if (sourceScale < 0.5) throw new Error("NOTE_IMAGE_TOO_LONG");
+
+  const sourceWidth = Math.max(1, Math.floor(width * sourceScale));
+  const sourceHeight = Math.max(1, Math.floor(height * sourceScale));
+  const pixelRatio = Math.min(
+    2,
+    15_000 / sourceHeight,
+    Math.sqrt(12_000_000 / (sourceWidth * sourceHeight)),
+  );
+
+  return { pixelRatio, sourceHeight, sourceScale, sourceWidth };
+};
+
 const WINDOWS_RESERVED_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
 
 export const NOTE_IMAGE_BACKGROUND_COLORS: Record<NoteImageBackground, string> = {
@@ -317,7 +337,7 @@ export const resolveTheme = (background?: NoteImageBackground, theme?: NoteImage
   if (theme && NOTE_IMAGE_THEMES[theme]) return theme;
   if (background === "warm") return "sunset";
   if (background && NOTE_IMAGE_THEMES[background as NoteImageTheme]) return background as NoteImageTheme;
-  return "slate";
+  return "aurora";
 };
 
 export const buildImageExportBasename = (title: string, fallback: string) => {
@@ -345,7 +365,7 @@ export const buildNoteImageCardMarkup = ({
   tags = [],
   updatedAt = "",
   bodyHtml,
-  theme = "slate",
+  theme = "aurora",
   fontStyle = "serif",
   showTitle = true,
   showNotebook = false,
@@ -442,20 +462,20 @@ export const buildNoteImageCardMarkup = ({
 };
 
 export const generateCardCss = ({
-  theme = "slate",
+  theme = "aurora",
   fontStyle = "serif",
   fontSize = "lg",
-  cardWidth = "standard",
+  cardWidth = "wide",
 }: {
   theme: NoteImageTheme;
   fontStyle: NoteImageFontStyle;
   fontSize: NoteImageFontSize;
   cardWidth: NoteImageCardWidth;
 }) => {
-  const themeCfg = NOTE_IMAGE_THEMES[theme] || NOTE_IMAGE_THEMES.slate;
+  const themeCfg = NOTE_IMAGE_THEMES[theme] || NOTE_IMAGE_THEMES.aurora;
   const fontFam = NOTE_IMAGE_FONT_FAMILIES[fontStyle] || NOTE_IMAGE_FONT_FAMILIES.sans;
   const sizeCfg = NOTE_IMAGE_FONT_SIZES[fontSize] || NOTE_IMAGE_FONT_SIZES.md;
-  const widthPx = NOTE_IMAGE_CARD_WIDTH_PIXELS[cardWidth] || 680;
+  const widthPx = NOTE_IMAGE_CARD_WIDTH_PIXELS[cardWidth] || NOTE_IMAGE_CARD_WIDTH_PIXELS.wide;
 
   return `
     :root {

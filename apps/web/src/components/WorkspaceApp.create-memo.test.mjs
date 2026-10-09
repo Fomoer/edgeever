@@ -5,6 +5,7 @@ const workspaceSource = readFileSync(new URL("./WorkspaceApp.tsx", import.meta.u
 const editorSource = readFileSync(new URL("./EditorPane.tsx", import.meta.url), "utf8");
 const searchControllerSource = readFileSync(new URL("./editor/useEditorNoteSearchController.ts", import.meta.url), "utf8");
 const queuedSyncSource = readFileSync(new URL("../hooks/useWorkspaceQueuedSync.ts", import.meta.url), "utf8");
+const desktopSyncSource = readFileSync(new URL("../lib/desktop-sync.ts", import.meta.url), "utf8");
 
 describe("desktop create-note wiring", () => {
   test("ignores a second new-note request while the first create is still in flight", () => {
@@ -16,6 +17,15 @@ describe("desktop create-note wiring", () => {
   test("remaps the memo list when a local create id becomes the durable id", () => {
     expect(queuedSyncSource).toContain("remapMemoIdsInLists(queryClient, memoIdMappings)");
     expect(queuedSyncSource).toContain("MEMO_ID_REMAPPED_EVENT");
+  });
+
+  test("remaps a newly selected notebook before creating notes in it", () => {
+    expect(queuedSyncSource).toContain("setSelectedNotebookId((current) => current === temporaryId ? remoteId : current)");
+    expect(queuedSyncSource).toContain("notifyNotebookIdRemapped(temporaryId, (result as Notebook).id)");
+    expect(desktopSyncSource).toContain("notifyNotebookIdRemapped(item.entityId, result.id)");
+    expect(workspaceSource.indexOf("setSelectedNotebookId(data.notebook.id)")).toBeLessThan(
+      workspaceSource.indexOf("await queryClient.invalidateQueries({ queryKey: [\"notebooks\"] });")
+    );
   });
 
   test("resets in-note search on editor instance changes, not local-to-remote id remaps", () => {

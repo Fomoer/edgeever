@@ -1,35 +1,23 @@
 {
-  "version": "1.101.0",
+  "version": "1.103.0",
   "changes": {
     "en-US": [
-      "Save YouTube and Bilibili watch pages as video notes, with page images and available captions kept in the note.",
-      "Transcribe audio and video attachments through a configured speech service, view transcripts inline, and test the service connection from settings.",
-      "Use EdgeEver in Polish, with more Android interface text translated into Chinese.",
-      "Browse a signed community plugin catalog alongside official plugins.",
-      "Edit mind maps as a Markdown outline, toggle the sidebar by keyboard, select notebooks by clicking their row, control spellcheck underlines, and use the standard desktop editing context menu.",
-      "Mobile interactions use calmer motion, and login shows clearer guidance when a session is missing.",
-      "Improve sync conflict cleanup, API and notebook deletion errors, and structured table creation with the AI assistant.",
-      "Refresh the feature showcases, AI database examples, deployment guidance, and Evernote comparison across the guides."
+      "Manage all active public note shares from Settings, with quick access to links, notes, and sharing options.",
+      "Keep pasted images and attachments when creating new notes in the desktop app.",
+      "Make Android note metadata more compact, unify title typography, and stabilize title visibility while scrolling in the reader.",
+      "Preserve notes and nested notebooks when newly created desktop notebooks sync to the server, and retry dependent pending changes correctly."
     ],
     "zh-CN": [
-      "可将 YouTube 和哔哩哔哩观看页保存为视频笔记，并将页面图片和可用字幕保留在笔记中。",
-      "可通过已配置的语音服务转写音视频附件，在笔记中直接查看结果，并从设置中测试服务连接。",
-      "EdgeEver 新增波兰语，并补全更多 Android 界面的中文翻译。",
-      "可在官方插件旁浏览带签名的社区插件目录。",
-      "思维导图支持 Markdown 大纲编辑；还可用快捷键切换侧栏、点击整行选择笔记本、设置拼写检查下划线，并使用桌面标准编辑右键菜单。",
-      "移动端交互动效更加平稳，登录后缺少会话时也会给出更清晰的提示。",
-      "改进同步冲突清理、API 与笔记本删除错误提示，以及 AI 助手创建结构化表格的能力。",
-      "更新功能展示、AI 数据库示例、部署说明和各语言的 Evernote 对比指南。"
+      "在设置中集中管理所有有效的笔记公开分享，快捷访问分享链接、原笔记及分享设置。",
+      "修复桌面端新建笔记时粘贴的图片和附件未能保留的问题。",
+      "优化 Android 笔记元信息布局，统一标题字体，并修复阅读滚动时标题显示不稳定的问题。",
+      "修复桌面端新建笔记本同步时笔记与子笔记本关联丢失的问题，并正确重试依赖这些新建内容的待同步操作。"
     ],
     "ja": [
-      "YouTube と Bilibili の視聴ページを動画ノートとして保存し、ページ画像と利用可能な字幕をノートに保持できます。",
-      "設定した音声サービスで音声・動画の添付ファイルを文字起こしし、結果をノート内で表示し、設定画面から接続をテストできます。",
-      "EdgeEver にポーランド語を追加し、Android 画面の中国語訳を拡充しました。",
-      "公式プラグインと並んで、署名付きコミュニティプラグインのカタログを閲覧できます。",
-      "マインドマップを Markdown アウトラインで編集でき、ショートカットでサイドバーを切り替え、行をクリックしてノートブックを選択し、スペルチェックの下線を設定し、デスクトップの標準編集メニューを利用できます。",
-      "モバイルの動きを穏やかにし、ログイン後にセッションが見つからない場合の案内を改善しました。",
-      "同期の競合整理、API とノートブック削除時のエラー表示、AI アシスタントによる構造化テーブルの作成を改善しました。",
-      "機能紹介、AI データベースの例、導入ガイド、各言語の Evernote 比較を更新しました。"
+      "設定から有効なノートの公開共有を一覧で管理し、リンク、元のノート、共有設定にすばやくアクセスできます。",
+      "デスクトップアプリで新規ノートに貼り付けた画像や添付ファイルが保持されない問題を修正しました。",
+      "Androidのノート情報をコンパクトにし、タイトルの書体を統一して、閲覧中のスクロールに伴うタイトル表示を安定させました。",
+      "デスクトップで新規作成したノートブックの同期時にノートと子ノートブックの関連を保持し、依存する保留中の変更を正しく再試行します。"
     ]
   }
 }

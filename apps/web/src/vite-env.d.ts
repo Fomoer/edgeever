@@ -14,6 +14,20 @@ declare const __EDGEEVER_DEPLOYMENT_METHOD__: string;
 declare const __EDGEEVER_DEVELOPMENT_PROFILE__: "" | "local" | "demo";
 declare const __EDGEEVER_DESKTOP_BUILD__: boolean;
 
+interface DesktopGlobalShortcutBinding {
+  key: string;
+  ctrl: boolean;
+  meta: boolean;
+  alt: boolean;
+  shift: boolean;
+}
+
+interface DesktopGlobalShortcutState {
+  binding: DesktopGlobalShortcutBinding | null;
+  registered: boolean;
+  error?: "invalid" | "unavailable" | "saveFailed";
+}
+
 interface EdgeEverDesktopBridge {
   isAvailable: boolean;
   canClearLocalData: boolean;
@@ -61,6 +75,9 @@ interface EdgeEverDesktopBridge {
     chrome: string;
     dataDir: string;
   }>;
+  globalShortcut(): Promise<DesktopGlobalShortcutState>;
+  setGlobalShortcut(binding: DesktopGlobalShortcutBinding | null): Promise<DesktopGlobalShortcutState>;
+  captureGlobalShortcut(capturing: boolean): Promise<boolean>;
   setAccountScope(accountId: string | null): Promise<{ ready: true; scope: string }>;
   updateStatus(): Promise<DesktopUpdateStatus>;
   checkUpdate(): Promise<DesktopUpdateStatus>;

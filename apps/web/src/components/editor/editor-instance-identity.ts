@@ -32,6 +32,22 @@ export const isEditorInstanceHydratedForMemo = (
   && identity.aliases.has(renderedMemoId)
 );
 
+/** Keep an in-flight file insertion attached to the same editor across a local ID remap. */
+export const resolveEditorInsertionMemoId = (
+  identity: EditorInstanceMemoIdentity,
+  requestedInstanceKey: string | null,
+  requestedMemoId: string,
+  activeMemoId: string | null | undefined,
+): string | null => (
+  requestedInstanceKey
+  && identity.instanceKey === requestedInstanceKey
+  && identity.aliases.has(requestedMemoId)
+  && activeMemoId
+  && identity.aliases.has(activeMemoId)
+    ? activeMemoId
+    : null
+);
+
 export const remapEditorInstanceMemoIdentity = (
   identity: EditorInstanceMemoIdentity,
   memoIdMappings: ReadonlyMap<string, string>,

@@ -19,7 +19,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Alert, Pressable, Text } from "../components/LocalizedText";
 import { ApiRequestError } from "@edgeever/client";
-import { DEFAULT_MEMO_TITLE, getNotebookScopeIds, hasDiagramDocumentMarker, markdownToDoc, type MemoDetail, type Notebook } from "@edgeever/shared";
+import { DEFAULT_MEMO_TITLE, getNotebookScopeIds, hasDiagramDocumentMarker, markdownToDoc, type MemoDetail, type MemoSummary, type Notebook } from "@edgeever/shared";
 import { MOBILE_UI_METRICS, toggleMobileMemoFilterMode } from "@edgeever/shared/mobile-ui";
 import { clearMobileMemoDraft, readMobileMemoDraft, type MobileMemoDraft } from "../lib/mobile-drafts";
 import {
@@ -165,6 +165,7 @@ export const WorkspaceScreen = ({
   const [showDescendantNotes, setShowDescendantNotes] = useState<boolean | null>(null);
   const [showDescendantNotesSaveFailed, setShowDescendantNotesSaveFailed] = useState(false);
   const [selectedMemoId, setSelectedMemoId] = useState<string | null>(null);
+  const [imageShareFromList, setImageShareFromList] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [createSeed, setCreateSeed] = useState<MobileCreateMemoSeed | null>(null);
@@ -401,6 +402,7 @@ export const WorkspaceScreen = ({
       return;
     }
 
+    setImageShareFromList(false);
     setSelectedMemoId(memoId);
   };
 
@@ -449,6 +451,7 @@ export const WorkspaceScreen = ({
 
   const closeDetail = () => {
     setSelectedMemoId(null);
+    setImageShareFromList(false);
   };
 
   const closeRichEditor = () => {
@@ -995,7 +998,7 @@ export const WorkspaceScreen = ({
   });
 
   const shareMemoMutation = useMutation({
-    mutationFn: async (memo: MemoDetail) => {
+    mutationFn: async (memo: Pick<MemoSummary, "id" | "title">) => {
       if (!client || !session) {
         throw new Error("Client is not ready");
       }
@@ -1308,6 +1311,7 @@ export const WorkspaceScreen = ({
       <MemoDetailModal
         editingSession={richEditingSession}
         imageCompressionEnabled={imageCompressionEnabled}
+        imageShareFromList={imageShareFromList}
         initialSearchQuery={selectedMemoId ? searchText.trim() : ""}
         isDeleting={deleteMemoMutation.isPending}
         isLoading={memoDetailQuery.isLoading}
@@ -1479,12 +1483,27 @@ export const WorkspaceScreen = ({
       {selectionMoreOpen ? <SelectionMoreModal
         bottomOffset={58 + safeAreaInsets.bottom}
         canPin={memoView !== "trash" && selectedMemoIds.size > 0 && !pinMemosMutation.isPending}
+        canShare={memoView !== "trash" && selectedMemoIds.size === 1 && selectedMemos.length === 1 && !selectedMemos[0]?.isDeleted && !shareMemoMutation.isPending}
         canToggleVisibleSelection={canToggleVisibleSelection}
         onClear={clearSelection}
         onClose={() => setSelectionMoreOpen(false)}
         onPin={() => {
           setSelectionMoreOpen(false);
           pinMemosMutation.mutate({ memoIds: selectedMemoIdList, isPinned: nextSelectionPinValue });
+        }}
+        onShare={() => {
+          const memo = selectedMemos[0];
+          if (!memo) return;
+          setSelectionMoreOpen(false);
+          shareMemoMutation.mutate(memo);
+        }}
+        onShareImage={() => {
+          const memo = selectedMemos[0];
+          if (!memo) return;
+          setSelectionMoreOpen(false);
+          clearSelection();
+          setImageShareFromList(true);
+          setSelectedMemoId(memo.id);
         }}
         onToggleVisibleSelection={() => {
           setSelectionMoreOpen(false);

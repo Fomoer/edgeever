@@ -3,6 +3,7 @@ import type { MemoDetail } from "@edgeever/shared";
 export const SYNC_QUEUE_CHANGED_EVENT = "edgeever:sync-queue-changed";
 export const SYNC_QUEUE_DEFERRED_EVENT = "edgeever:sync-queue-deferred";
 export const MEMO_ID_REMAPPED_EVENT = "edgeever:memo-id-remapped";
+export const NOTEBOOK_ID_REMAPPED_EVENT = "edgeever:notebook-id-remapped";
 export const MEMO_SYNC_ACKNOWLEDGED_EVENT = "edgeever:memo-sync-acknowledged";
 
 export const notifySyncQueueChanged = () => {
@@ -16,6 +17,11 @@ export const notifySyncQueueDeferred = () => {
 export const notifyMemoIdRemapped = (memoIdMappings: ReadonlyMap<string, string>) => {
   if (memoIdMappings.size === 0) return;
   window.dispatchEvent(new CustomEvent(MEMO_ID_REMAPPED_EVENT, { detail: memoIdMappings }));
+};
+
+export const notifyNotebookIdRemapped = (temporaryId: string, remoteId: string) => {
+  if (temporaryId === remoteId) return;
+  window.dispatchEvent(new CustomEvent(NOTEBOOK_ID_REMAPPED_EVENT, { detail: { temporaryId, remoteId } }));
 };
 
 export const notifyMemoSyncAcknowledged = (memo: MemoDetail) => {

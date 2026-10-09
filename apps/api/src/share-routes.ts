@@ -1,4 +1,4 @@
-import { accountNoteProseFromRow, collectMemoLinkIds, isPdfAttachment, MemoShareUpdateSchema, NoteBodyFontUpdateSchema, NoteProseUpdateSchema, parsePublishedNoteBodyFont, publicNoteProseFromAccount, PublicShareUnlockSchema, resolveMemoContentDoc, resolvePlayableMediaMimeType, sanitizeNoteProseCss, type AccountNoteProse, type MemoShare, type NoteProseAccountRow, type PublicMemoShare, type TiptapDoc } from "@edgeever/shared";
+import { accountNoteProseFromRow, collectMemoLinkIds, isPdfAttachment, MemoShareUpdateSchema, NoteBodyFontUpdateSchema, NoteProseUpdateSchema, parsePublishedNoteBodyFont, publicNoteProseFromAccount, PublicShareUnlockSchema, resolveMemoContentDoc, resolvePlayableMediaMimeType, sanitizeNoteProseCss, type AccountNoteProse, type ManagedMemoShare, type MemoShare, type NoteProseAccountRow, type PublicMemoShare, type TiptapDoc } from "@edgeever/shared";
 import { zValidator } from "@hono/zod-validator";
 import type { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
@@ -31,6 +31,11 @@ type MemoShareRow = {
   created_at: string;
   updated_at: string;
   password_hash: string | null;
+};
+type ManagedMemoShareRow = MemoShareRow & {
+  title: string | null;
+  notebook_id: string;
+  notebook_name: string | null;
 };
 type PublicMemoShareRow = {
   workspace_id: string;
@@ -296,6 +301,34 @@ export const registerPublicShareRoutes = (app: Hono<AppEnv>) => {
 };
 
 export const registerMemoShareRoutes = (app: Hono<AppEnv>) => {
+  app.get("/api/v1/memo-shares", async (c) => {
+    const denied = requireUser(c);
+    if (denied) return denied;
+
+    const parsedLimit = Number(c.req.query("limit") ?? 50);
+    const parsedOffset = Number(c.req.query("offset") ?? 0);
+    const limit = Number.isSafeInteger(parsedLimit) ? Math.min(100, Math.max(1, parsedLimit)) : 50;
+    const offset = Number.isSafeInteger(parsedOffset) ? Math.min(1_000_000, Math.max(0, parsedOffset)) : 0;
+    const rows = await c.env.storage.db.prepare(
+      `SELECT ms.memo_id, ms.token, ms.created_at, ms.updated_at, ms.password_hash,
+              m.title, m.notebook_id, n.name AS notebook_name
+       FROM memo_shares ms
+       INNER JOIN memos m ON m.id = ms.memo_id AND m.workspace_id = ms.workspace_id
+       LEFT JOIN notebooks n ON n.id = m.notebook_id AND n.workspace_id = m.workspace_id
+       WHERE ms.workspace_id = ? AND m.is_deleted = 0
+       ORDER BY ms.updated_at DESC, ms.id DESC
+       LIMIT ? OFFSET ?`
+    ).bind(getWorkspaceId(c), limit + 1, offset).all<ManagedMemoShareRow>();
+    const shares: ManagedMemoShare[] = rows.results.slice(0, limit).map((row) => ({
+      ...mapMemoShare(row),
+      memoTitle: row.title,
+      notebookId: row.notebook_id,
+      notebookName: row.notebook_name,
+    }));
+    c.header("Cache-Control", "private, no-store");
+    return c.json({ shares, nextOffset: rows.results.length > limit ? offset + limit : null });
+  });
+
   app.put("/api/v1/me/note-body-font", zValidator("json", NoteBodyFontUpdateSchema), async (c) => {
     const denied = requireUser(c);
     if (denied) return denied;

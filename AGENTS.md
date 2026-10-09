@@ -2,12 +2,11 @@
 
 本文件用于约束和指导参与本项目的 AI 代理与协作者。
 
-## 文档与分支约束
+## 文档约束
 
 - **技术栈与背景**：优先参考 `README.md`。
 - **移动端平台边界**：Android 客户端位于 `apps/mobile`，使用 Expo / React Native 实现；iOS 客户端位于 `apps/ios`，使用 Swift / SwiftUI 原生实现。
-- **双语同步**：修改中文文档时必须同步更新对应的英文文档。修改根目录 README 时必须同步 `README.md`、`README.zh-CN.md`、`README.zh-TW.md`、`README.ja.md`。
-- **分支规范**：严禁创建新分支，所有修改与提交必须直接在 `main` 分支上完成。
+- **双语同步**：修改中文文档时必须同步更新对应的英文文档。修改根目录 README 时必须同步 `README.md`、`README.zh-CN.md`、`README.zh-TW.md`、`README.ja.md`、`README.pl-PL.md`。
 
 ## 变更风险评估
 

@@ -1,18 +1,44 @@
-# EdgeEver Plugin Development (P0 Preview)
+# EdgeEver Plugin Development Guide
 
-EdgeEver's P0 extension API supports trusted client plugins and no-code theme packages. Users can install extensions from the verified marketplace, a public GitHub repository, or a manifest URL. The install list follows the current workspace on Web and desktop; each browser or desktop app downloads and verifies the package itself. Android and iOS apps do not run plugins. Extensions run only while EdgeEver is open. On desktop, users can schedule a registered plugin command while EdgeEver is running. Webhooks, an always-on server background runtime, unrestricted TipTap extensions, and a hard JavaScript sandbox are not part of this preview.
+[简体中文](plugin-development.zh-CN.md)
 
-## Security model
+EdgeEver provides client plugin and no-code theme extension capabilities. Users can install extensions from the official marketplace, public GitHub repositories, or manifest URLs. Installed extensions sync across Web and desktop platforms with the current workspace and run while EdgeEver is open; Android and iOS native apps do not run plugins.
 
-Theme packages contain only a validated manifest and documented design tokens. They do not execute JavaScript.
+> [!NOTE]
+> **Security Model**: Client plugins use a trusted-code model (similar to Obsidian). Enabling a plugin grants it trust to run within the client JavaScript environment and invoke plugin APIs. Capability declarations (`permissions`) in the manifest disclose the functional scope to users and do not enforce a hard sandbox. Theme packages are purely declarative JSON and execute no JavaScript.
 
-Client plugins use an Obsidian-style trusted-code model. Enabling a plugin trusts it with the full EdgeEver plugin context; declared capabilities are optional descriptive metadata and do not gate API calls. The plugin module runs in the client JavaScript environment, so users must install plugins only from developers they trust.
+---
 
-The first time a user enables a community client plugin on a device, EdgeEver presents a community-plugin trust confirmation. Once acknowledged, it is not shown for every plugin. Official plugins (publisher EdgeEver) do not trigger the confirmation. Theme packages also do not trigger it because they cannot execute JavaScript.
+## Table of Contents
 
-Plugins never receive EdgeEver's repository, IndexedDB database, Cloudflare bindings, or internal React state through the public API.
+- [Plugin Manifest](#plugin-manifest)
+  - [Fields](#fields)
+  - [Available Permissions](#available-permissions)
+- [Plugin Entry & Lifecycle](#plugin-entry--lifecycle)
+- [API Reference](#api-reference)
+  - [API Namespace Quick Reference](#api-namespace-quick-reference)
+  - [1. Notes & Notebooks](#1-notes--notebooks)
+  - [2. Templates](#2-templates)
+  - [3. Resources & Attachments](#3-resources--attachments)
+  - [4. Editor & Embeds](#4-editor--embeds)
+  - [5. UI, Commands & Panels](#5-ui-commands--panels)
+  - [6. Settings](#6-settings)
+  - [7. Storage & Secrets](#7-storage--secrets)
+  - [8. Network Requests](#8-network-requests)
+  - [9. Schedules (Desktop Only)](#9-schedules-desktop-only)
+  - [10. Events](#10-events)
+  - [11. AI Capabilities](#11-ai-capabilities)
+- [Themes (No-Code Extensions)](#themes-no-code-extensions)
+- [Packaging, Distribution & Local Testing](#packaging-distribution--local-testing)
+  - [Packaging Rules](#packaging-rules)
+  - [GitHub Distribution](#github-distribution)
+  - [Local Testing](#local-testing)
 
-## Plugin manifest
+---
+
+## Plugin Manifest
+
+Every plugin must supply a `manifest.json` at its root:
 
 ```json
 {
@@ -22,11 +48,11 @@ Plugins never receive EdgeEver's repository, IndexedDB database, Cloudflare bind
   "version": "1.0.0",
   "apiVersion": "2",
   "settingsUi": "host",
-  "description": "Adds a command for recent notes.",
+  "description": "Shows recently updated notes.",
   "locales": {
     "zh-CN": {
       "name": "最近笔记",
-      "description": "添加一个查看最近笔记的命令。"
+      "description": "查看最近更新的笔记。"
     }
   },
   "entry": "./main.js",
@@ -35,517 +61,539 @@ Plugins never receive EdgeEver's repository, IndexedDB database, Cloudflare bind
 }
 ```
 
-The manifest and JavaScript module must be served with CORS headers that permit the EdgeEver origin. Relative `entry` paths resolve against the manifest URL.
+### Fields
 
-The top-level `name` and optional `description` remain the fallback copy. Plugins and themes can add a `locales` object keyed by BCP 47 language tags, such as `zh-CN`, `en-US`, or `ja`. Each locale can override `name`, `description`, or both. EdgeEver first matches the current interface locale, then the same base language, and finally falls back to the top-level fields. This localizes marketplace and plugin-manager metadata. Plugin setting fields can also declare `locales` with translated `label`, `description`, and (for text inputs) `placeholder`; select fields can translate option labels with an `options` object keyed by option value. The host selects setting copy using the same locale fallback. Runtime commands, panels, and notices remain the plugin's responsibility.
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `type` | `"plugin"` | Yes | Fixed value: `"plugin"`. |
+| `id` | `string` | Yes | Globally unique plugin ID. Reverse-domain format recommended (e.g. `com.example.plugin`). |
+| `name` | `string` | Yes | Default display name. |
+| `version` | `string` | Yes | SemVer-compliant version string (e.g. `1.0.0`). |
+| `apiVersion` | `"2"` | Yes | Plugin API version; currently `"2"`. |
+| `settingsUi` | `"host"` | Yes | Settings UI renderer; currently `"host"` (rendered by host). |
+| `entry` | `string` | Yes | Entry script path; fixed to `./main.js` for GitHub distribution. |
+| `description` | `string` | No | Default description. |
+| `locales` | `object` | No | Localized metadata keyed by BCP 47 language tags (e.g. `zh-CN`, `en-US`), overriding `name` and `description`. |
+| `platforms` | `string[]` | No | Supported platforms: `"web"`, `"desktop"`. |
+| `permissions` | `string[]` | No | Declared capabilities disclosed to users during install and update. |
+| `settings` | `object` | No | Declarative settings schema rendered by host (detailed below). |
 
-## GitHub distribution
+### Available Permissions
 
-Developers can share a public GitHub repository URL directly with users. The default branch must contain the latest `manifest.json` at its root, and every version is published as a GitHub Release. The Release tag may be the manifest version or its `v`-prefixed form, such as `1.2.0` or `v1.2.0`.
+Permissions are declared to transparently inform users of plugin capabilities:
+- **Notes & Content**: `notes:read`, `notes:write`, `notes:delete`, `templates:read`, `templates:write`, `metadata:read`, `metadata:write`, `resources:read`, `resources:write`
+- **Editor**: `editor:read`, `editor:write`
+- **UI & Interaction**: `ui:commands`, `ui:navigation`, `ui:notices`, `ui:panels`, `ui:embeds`
+- **Storage & System**: `storage`, `secrets`, `network`, `network:public`, `schedules`
+- **AI Capabilities**: `ai:generate`
 
-Attach these files to the Release:
+---
 
-```text
-manifest.json
-main.js
-styles.css (optional)
-```
+## Plugin Entry & Lifecycle
 
-GitHub plugins must use `./main.js` as `entry`, and `main.js` must be a single-file bundle without relative module imports. EdgeEver reads the default-branch manifest, locates the matching Release, downloads assets in parallel, verifies GitHub's SHA-256 digest when present, and caches the verified package in device-local IndexedDB. Marketplace GitHub metadata and Release assets are fetched through the current EdgeEver instance, so the desktop or browser client does not need direct access to `api.github.com`. `main.js` is limited to 5 MB and `styles.css` to 1 MB.
-
-EdgeEver checks for updates when the Plugin Marketplace opens, when the window regains focus, and every 30 minutes. Marketplace installs whose Registry entry declares `"publisher": "edgeever"` are official EdgeEver extensions. The bundled Registry version is the verified baseline; EdgeEver then resolves the live GitHub default-branch Release through the instance and auto-updates to that newer checksum-pinned version. Community Marketplace extensions and extensions installed directly from GitHub or a Manifest URL are never updated silently: the user must click Update and confirm. If a manually confirmed version changes declared capabilities or legacy network-host metadata, the confirmation lists those changes for review. For GitHub distribution, the Release `manifest.json` must exactly match the default-branch manifest used for the update prompt or installation is rejected.
-
-Updates use a rollback-capable switch. Old and new package versions are cached separately. If the new version cannot activate, EdgeEver restores the previous manifest, enabled state, and package instead of leaving the plugin broken or disabled.
-
-Users can freely install without marketplace admission by pasting this into the standalone Plugin Marketplace page:
-
-```text
-https://github.com/owner/edgeever-plugin
-```
-
-Only public GitHub repositories are supported for now; private-repository tokens are not exposed.
-
-## Verified plugin marketplace
-
-The official marketplace only lists free and open-source plugins. Complete human-readable source, an accepted open-source license, build information, and a traceable public source revision are required for every listed version. This requirement applies only to official marketplace admission; users remain free to install other plugins from GitHub or a Manifest URL. See the [Plugin Marketplace Submission Policy](plugin-marketplace-policy.md) for the complete requirements.
-
-The marketplace is a verified Registry and does not take ownership of plugin files. For each version, the Registry pins the plugin ID, GitHub repository, version, and SHA-256 hashes for `manifest.json`, `main.js`, and optional `styles.css`. Installation still downloads from the developer's GitHub Release or registered public URL and verifies those hashes again. The optional `"publisher": "edgeever"` marker is reserved for Registry entries maintained by the EdgeEver project; it enables automatic updates and must not be used for community submissions.
-
-Official entries ship inside the app as `extensions/registry.json`. Community entries are appended from a separate signed catalog when the instance sets `EDGE_EVER_COMMUNITY_REGISTRY_URL`. That catalog cannot change an official repository URL or mark an entry as official. A community badge and license mean the listing passed the admission check. They do not mean EdgeEver guarantees the plugin is safe. Self-hosted instances leave the variable unset and show only the built-in official plugins. To submit a plugin, follow [tianma-if/edgeever-plugins](https://github.com/tianma-if/edgeever-plugins).
-
-Registry format:
-
-```json
-{
-  "registryVersion": "1",
-  "updatedAt": "2026-08-16T00:00:00.000Z",
-  "entries": [{
-    "id": "com.example.recent-notes",
-    "name": "Recent Notes",
-    "description": "Shows recently updated notes.",
-    "locales": {
-      "zh-CN": {
-        "name": "最近笔记",
-        "description": "显示最近更新的笔记。"
-      }
-    },
-    "author": "EdgeEver",
-    "publisher": "edgeever",
-    "category": "Productivity",
-    "repositoryUrl": "https://github.com/example/edgeever-recent-notes",
-    "distribution": {
-      "type": "github",
-      "repositoryUrl": "https://github.com/example/edgeever-recent-notes"
-    },
-    "verification": {
-      "version": "1.0.0",
-      "checksums": {
-        "manifestJson": "<64-character SHA-256>",
-        "mainJs": "<64-character SHA-256>"
-      }
-    }
-  }]
-}
-```
-
-Marketplace installs display a Verified badge. GitHub and manifest sideloads clearly display their unverified source, but EdgeEver does not block them. Uninstalling also deletes all device-local cached package versions, ordinary plugin storage for the current workspace, and Secret Storage.
-
-Optional capability declarations, retained for disclosure and compatibility:
-
-- `notes:read`
-- `notes:write`
-- `notes:delete`
-- `templates:read`
-- `templates:write`
-- `metadata:read`
-- `metadata:write`
-- `resources:read`
-- `resources:write`
-- `network`
-- `storage`
-- `secrets`
-- `schedules`
-- `editor:read`
-- `editor:write`
-- `ui:commands`
-- `ui:navigation`
-- `ui:notices`
-- `ui:panels`
-- `ui:embeds`
-
-Network access through `context.network.fetch()` is not restricted by capability declarations or a static host list. `networkHosts` remains accepted as legacy descriptive metadata and is not enforced. The anonymous, read-only `network:public` transport is available when a plugin needs a cross-origin public response without credentials.
-
-## Plugin entry
+The plugin entry script (`main.js`) exports a default object containing an `activate` lifecycle function:
 
 ```js
 export default {
   activate(context) {
-    return context.commands.register({
-      id: "count-recent-notes",
-      title: "Count recent notes",
-      async run() {
-        const result = await context.notes.query({
-          sort: "updated-desc",
-          limit: 10
-        });
-        context.ui.showNotice(`${result.notes.length} recent notes`);
+    // Register commands
+    const disposeCommand = context.commands.register({
+      id: "hello-world",
+      title: "Say Hello",
+      run() {
+        context.ui.showNotice("Hello from EdgeEver Plugin!");
       }
     });
+
+    // Return cleanup callback (invoked on deactivation)
+    return () => {
+      disposeCommand();
+    };
   }
 };
 ```
 
-For TypeScript projects, import contracts and helpers from `@edgeever/plugin-api`:
+TypeScript projects can use `@edgeever/plugin-api`:
 
 ```ts
 import { definePlugin } from "@edgeever/plugin-api";
 
 export default definePlugin({
   activate(context) {
-    // Register commands and event listeners here.
-  }
-});
-```
-
-Every registration returns a disposer. The host also disposes registered commands and events automatically when a plugin is disabled.
-
-Commands appear on the plugin marketplace card by default. Set `listed: false` for editor-context or secondary commands that belong in the plugin toolbar menu instead of the install card:
-
-```js
-context.commands.register({
-  id: "insert-task",
-  title: "Insert task at cursor",
-  listed: false,
-  async run() {
-    await context.editor.insertAtCursor("- [ ] ");
-  }
-});
-```
-
-Workflow and preview panels are also omitted from that card. Open them from a command, the toolbar menu, or another panel.
-
-The plugin toolbar menu lists editor commands and dashboard or onboarding panels. It omits workflow or preview dialogs, and omits a command that only opens a dashboard already in the menu. Set `menu: false` when a command should appear on the marketplace card but not next to its dashboard panel:
-
-```js
-context.commands.register({
-  id: "open-dashboard",
-  title: "Open task dashboard",
-  menu: false,
-  run: () => context.ui.panels.open("tasks"),
-});
-```
-
-## Schedules API
-
-Desktop plugins can persistently schedule one of their own registered commands. Register the command first, then use a stable plugin-local key with `upsert()`:
-
-```js
-export default {
-  async activate(context) {
-    context.commands.register({
-      id: "refresh-feeds",
-      title: "Refresh feeds",
-      async run() {
-        // Long-running plugin work is allowed while the desktop app remains open.
-      }
-    });
-
-    await context.schedules.upsert({
-      key: "hourly-refresh",
-      name: "Hourly feed refresh",
-      commandId: "refresh-feeds",
-      cronExpression: "0 * * * *",
-      missedRunPolicy: "run-once"
+    return context.commands.register({
+      id: "hello-world",
+      title: "Say Hello",
+      run: () => context.ui.showNotice("Hello!")
     });
   }
-};
+});
 ```
 
-`upsert()` is idempotent for the pair of plugin ID and schedule key, so calling it on every activation does not create duplicates. The first desktop device that creates the schedule remains its executor; activation on another device updates the same definition without stealing execution. Omitting `isEnabled` preserves the user's enabled/disabled choice. Plugins can inspect and remove their own schedules with `context.schedules.list()` and `context.schedules.remove(key)`.
+> [!TIP]
+> Registration methods (commands, panels, events) return cleanup functions. When a plugin is deactivated, the host also automatically cleans up registered commands and event listeners.
 
-The execution center retains scheduled-task run history for the most recent 30 days only. Expired records are removed immediately during upgrade and continue to be physically pruned when runs execute or history is viewed.
+---
 
-### SDK package
+## API Reference
 
-`@edgeever/plugin-api` is a publish-ready ESM package with generated JavaScript and TypeScript declarations. In the EdgeEver repository, rebuild it after changing public contracts:
+### API Namespace Quick Reference
 
-```sh
-bun run build:plugin-api
-```
+The plugin context object (`context`) exposes these capability interfaces:
 
-Maintainers can inspect the exact public package without publishing it:
+| Namespace | Permission (Disclosure) | Core Methods | Description |
+| :--- | :--- | :--- | :--- |
+| **`context.notes`** | `notes:read`<br>`notes:write`<br>`notes:delete` | `query()`, `queryContent()`, `get()`, `create()`, `update()`, `editMarkdown()`, `delete()`, `move()`, `pin()`, `restore()`, `revisions` | Query notes, retrieve bodies, optimistic concurrent edits, and revision history |
+| **`context.notebooks`** | `metadata:read`<br>`metadata:write` | `list()`, `create()`, `update()`, `delete()` | Manage notebook trees, hierarchy, and CRUD operations |
+| **`context.tags`** | `metadata:read`<br>`metadata:write` | `list()`, `rename()`, `delete()` | Global tag listing, renaming, and removal |
+| **`context.templates`** | `templates:read`<br>`templates:write` | `list()`, `create()`, `update()`, `delete()`, `use()` | Template management and one-click note creation |
+| **`context.resources`** | `resources:read`<br>`resources:write` | `list()`, `read()`, `upload()`, `update()`, `rename()`, `delete()` | Upload, read, update, and manage note media/file attachments |
+| **`context.editor`** | `editor:read`<br>`editor:write`<br>`ui:embeds` | `getSelection()`, `replaceSelection()`, `insertAtCursor()`, `getDocument()`, `editMarkdown()`, `insertEmbed()`, `embeds.register()` | Active editor manipulation, live document edits, and custom block embeds |
+| **`context.ui`** | `ui:navigation`<br>`ui:notices`<br>`ui:panels` | `showNotice()`, `openNote()`, `panels.register()`, `panels.open()` | Host notifications, precise note navigation, and custom DOM panels |
+| **`context.commands`** | `ui:commands` | `register()` | Register global or editor commands for command palette and menus |
+| **`context.settings`** | *(None)* | `get()`, `set()`, `remove()` | Read and update the plugin's host-rendered settings |
+| **`context.storage`** | `storage` | `get()`, `set()`, `remove()` | Device-local lightweight key-value storage (per workspace & plugin) |
+| **`context.secrets`** | `secrets` | `get()`, `set()`, `remove()` | Device-local encrypted secret storage (API keys, tokens) |
+| **`context.network`** | `network`<br>`network:public` | `fetch(url, options)` | Network requests (standard requests or public anonymous read-only) |
+| **`context.schedules`** | `schedules` | `upsert()`, `list()`, `remove()` | Desktop-only persistent scheduled tasks running while EdgeEver is open |
+| **`context.events`** | *(None)* | `on(event, handler)` | Subscribe to workspace note, tag, template, and sync completion events |
+| **`context.ai`** | `ai:generate` | `status()`, `generate()`, `transcribeResource()`, `transcribeMedia()` | Invoke workspace-configured AI models for text generation & media transcription |
 
-```sh
-cd packages/plugin-api
-npm pack --dry-run
-```
+---
 
-The package build contains only `dist/index.js`, `dist/index.d.ts`, its README, and package metadata. Plugin projects should bundle SDK runtime helpers into their single-file `main.js`; they must not leave a runtime import of `@edgeever/plugin-api` in the distributed bundle.
+### 1. Notes & Notebooks
 
-## Notes API
+#### Querying Notes
 
 ```ts
-context.notes.query({ text, notebookId, tags, sort, limit, offset });
-context.notes.queryContent({ text, notebookId, tags, sort, limit, offset });
-context.notes.get(noteId);
-context.notes.editMarkdown(noteId, { expectedRevision, expectedContentHash, edits });
-context.notes.create({ notebookId, title, contentMarkdown, tags });
-context.notes.update(noteId, { title, contentMarkdown, tags });
-context.notes.delete(noteId, { permanent: false });
-context.notes.move([noteId], notebookId);
-context.notes.pin([noteId], true);
-context.notes.restore(noteId);
-context.notes.revisions.list(noteId);
-context.notes.revisions.restore(noteId, revisionId);
-context.notebooks.list();
-context.notebooks.create({ name, parentId });
-context.notebooks.update(notebookId, { name, parentId, sortOrder });
-context.notebooks.delete(notebookId);
-context.tags.list();
-context.tags.rename("old", "new");
-context.tags.delete("unused");
+// 1. Lightweight summaries (ideal for lists and sidebars; max 200 items per page)
+const result = await context.notes.query({
+  notebookId: "optional-notebook-id",
+  text: "keyword",
+  tags: ["todo"],
+  sort: "updated-desc", // "updated-desc" | "created-desc" | "title-asc"
+  limit: 50,
+  offset: 0
+});
+// Returns { notes: PluginNoteSummary[], totalCount: number, nextOffset: number | null }
+
+// 2. Query notes with full Markdown content (for linters, indexers, etc.)
+const fullNotes = await context.notes.queryContent({
+  tags: ["task"],
+  limit: 20
+});
 ```
 
-`notes.query()` returns lightweight summaries. Use `notes.queryContent()` when a plugin must scan Markdown across many notes, such as a Tasks index, Calendar, Kanban board, or Linter. Both APIs accept at most 200 notes per page; follow `nextOffset` until it is `null`. Prefer the summary query whenever full content is unnecessary.
-
-All writes go through EdgeEver's shared repository/business layer, including offline queueing and desktop adapters. Plugins do not access a storage implementation directly.
-`notes.update()` reads the current revision and returns the complete updated note.
-`notes.editMarkdown()` performs optimistic concurrency checks with the `revision` and `contentHash` returned by `notes.get()`. It is intended for plugins such as task togglers, linters, and index maintainers that change only specific Markdown ranges:
+#### Note Operations
 
 ```ts
+// Get single note details
 const note = await context.notes.get(noteId);
+
+// Create note
+const newNote = await context.notes.create({
+  notebookId: "target-notebook-id",
+  title: "New Note",
+  contentMarkdown: "# Title\nBody text",
+  tags: ["tag1"]
+});
+
+// Update entire note
+await context.notes.update(noteId, {
+  title: "Updated Title",
+  contentMarkdown: "New body",
+  tags: ["updated"]
+});
+
+// Partial optimistic edit with concurrency check (revision & contentHash)
 await context.notes.editMarkdown(noteId, {
   expectedRevision: note.revision,
   expectedContentHash: note.contentHash,
   edits: [
-    { from: 2, to: 3, insert: "x" },
-    { from: note.contentMarkdown.length, to: note.contentMarkdown.length, insert: "\nAppended text" }
+    { from: 0, to: 0, insert: "> Prepend quote\n\n" } // UTF-16 offsets, half-open interval [from, to)
   ]
 });
+
+// Move, pin, and delete
+await context.notes.move([noteId], targetNotebookId);
+await context.notes.pin([noteId], true);
+await context.notes.delete(noteId, { permanent: false }); // Move to trash
+await context.notes.restore(noteId); // Restore from trash
+
+// Note revisions
+const revisions = await context.notes.revisions.list(noteId);
+await context.notes.revisions.restore(noteId, revisionId);
 ```
 
-Edit ranges use JavaScript UTF-16 string offsets and half-open ranges `[from, to)`. Ranges in one call must not overlap, exceed the note, or split a Unicode surrogate pair. The host rejects writes with an error carrying `code: "NOTE_CONFLICT"` when the note baseline changed or the active editor has unsaved changes; plugins should reload and ask the user to retry. Invalid ranges use `code: "INVALID_MARKDOWN_EDIT"`. The SDK exports `PluginApiError` and `PluginApiErrorCode` for TypeScript error narrowing.
-Enabled plugins can read and change notebooks and tags without capability gates.
-
-Attachments flow through the same Web/Desktop repository adapters:
+#### Notebooks & Tags
 
 ```ts
-context.resources.list(noteId);
-const blob = await context.resources.read(resourceId);
-context.resources.upload(noteId, file);
-context.resources.update(resourceId, { file, expectedContentHash });
-context.resources.rename(resourceId, filename);
-context.resources.delete(resourceId);
+// Notebooks
+const notebooks = await context.notebooks.list();
+const nb = await context.notebooks.create({ name: "New Notebook", parentId: null });
+await context.notebooks.update(nb.id, { name: "New Name" });
+await context.notebooks.delete(nb.id);
+
+// Tags
+const tags = await context.tags.list();
+await context.tags.rename("old-tag", "new-tag");
+await context.tags.delete("unused-tag");
 ```
 
-`resources.update()` uses the `contentHash` returned by `resources.list()` as an optimistic-concurrency baseline. A stale baseline throws `PluginApiError` with `code: "RESOURCE_CONFLICT"`. Replacements are currently limited to 100 MiB and require the resource to be synchronized and online. The host stores new bytes under a new object key and switches the database pointer conditionally, so a rejected update does not damage the previous object.
+---
 
-Enabled plugins may subscribe to `note.*`, `tag.changed`, `template.*`, `resource.*`, and sync-queue events without capability gates.
+### 2. Templates
 
-Successful note, tag, template, and resource changes made through EdgeEver's normal repository layer—including user actions and plugin actions—feed the same plugin event stream. `workspace.synced` reports completed repository sync passes. Failed mutations do not emit success events.
-
-## Templates API
-
-Templates are shared workspace data rather than plugin-local settings. Enabled plugins can read, create, update, delete, and apply them without capability gates:
+Manage workspace-shared templates and apply them to create new notes:
 
 ```ts
+// List all available templates
+const templates = await context.templates.list();
+
+// Create a template (directly or from an existing noteId)
 const template = await context.templates.create({
-  name: "Daily stand-up",
-  contentMarkdown: "## Done\n\n## Next\n",
-  tags: ["daily"]
+  name: "Meeting Notes",
+  description: "Standard team sync meeting template",
+  contentMarkdown: "## Attendees\n\n## Agenda\n\n## Action Items\n",
+  tags: ["meeting"]
 });
-await context.templates.update(template.id, { description: "Team check-in" });
-const note = await context.templates.use(template.id, notebookId);
-context.events.on("template.updated", ({ template }) => console.log(template.name));
+
+// Update a template
+await context.templates.update(template.id, {
+  name: "Weekly Sync",
+  description: "Weekly team sync notes"
+});
+
+// Apply template to create a new note in target notebook
+const note = await context.templates.use(template.id, targetNotebookId);
+
+// Delete template
+await context.templates.delete(template.id);
 ```
 
-`templates.create({ noteId })` can capture an existing note. Plugins can also call `templates.list()` and `templates.delete(templateId)`.
+---
 
-## Host-rendered settings
+### 3. Resources & Attachments
 
-Plugins can declare settings that EdgeEver renders consistently on a dedicated Plugin settings page within plugin details. Installed plugin cards and the plugin toolbar menu link directly to this page. Plugins without settings fields have no settings entry, while disabled plugins remain configurable. Settings are stored on the current device only. Put defaults and credentials in settings, and use plugin commands or functional panels for actual operations; ordinary configuration does not need a separate custom panel. Supported field types are `text`, `secret`, `number`, `boolean`, and `select`. A field may also declare a read-only `list` of titles and optional descriptions; EdgeEver shows a small entry next to the field and opens the items in a host-rendered dialog.
+Manage images and file attachments associated with notes:
 
-Plugin API v2 requires `settingsUi: "host"`. The settings Schema is deliberately declarative: EdgeEver owns field layout, controls, spacing, validation, responsive behavior, accessibility, save states, and secret presentation. Presentation properties such as HTML, components, CSS classes, inline styles, colors, typography, or custom setting-page navigation are ignored. A plugin decides what can be configured, not how the settings page looks. Custom settings pages are rejected by the host. Use commands or a clearly named functional panel for workflows such as authorization, connectivity tests, migrations, and index rebuilding; do not recreate ordinary settings in a custom panel.
+```ts
+// List note attachments
+const resources = await context.resources.list(noteId);
+
+// Read attachment Blob
+const blob = await context.resources.read(resourceId);
+
+// Upload new attachment
+const uploaded = await context.resources.upload(noteId, file);
+
+// Concurrency-checked update (file limit: 100 MiB)
+await context.resources.update(resourceId, {
+  file: newFile,
+  expectedContentHash: currentResource.contentHash
+});
+
+// Rename and delete
+await context.resources.rename(resourceId, "document.pdf");
+await context.resources.delete(resourceId);
+```
+
+---
+
+### 4. Editor & Embeds
+
+Interact with active editor sessions:
+
+```ts
+// Get and replace selection
+const selection = await context.editor.getSelection();
+if (selection && !selection.empty) {
+  await context.editor.replaceSelection(selection.text.toUpperCase());
+}
+
+// Insert at cursor
+await context.editor.insertAtCursor("- [ ] New task\n");
+
+// Live edit in-memory document without losing unsaved changes
+const doc = await context.editor.getDocument();
+if (doc) {
+  await context.editor.editMarkdown([
+    { from: 0, to: 0, insert: "<!-- inserted header -->\n" }
+  ]);
+}
+```
+
+#### Custom Block Embeds
+
+Register custom block-level embed renderers (serialized in Markdown as `edgeever-plugin-embed` code fences):
+
+```ts
+// 1. Register embed renderer
+context.editor.embeds.register({
+  type: "my-diagram",
+  async mount(container, embed) {
+    const data = embed.data;
+    container.innerHTML = `<div>Diagram: ${data.title}</div>`;
+    return () => container.replaceChildren(); // Cleanup on unmount
+  }
+});
+
+// 2. Insert embed into document
+await context.editor.insertEmbed({
+  type: "my-diagram",
+  title: "Architecture",
+  data: { mode: "preview", version: 1 } // JSON-compatible object, max 64 KiB
+});
+```
+
+---
+
+### 5. UI, Commands & Panels
+
+#### Commands
+
+```ts
+context.commands.register({
+  id: "quick-action",
+  title: "Quick Action",
+  listed: true, // Display on marketplace card (default: true; false for contextual commands)
+  menu: true,   // Show in desktop shortcut menu (default: true)
+  async run() {
+    context.ui.showNotice("Action executed");
+  }
+});
+```
+
+#### Note Navigation
+
+```ts
+// Open note and optionally jump to exact search term
+await context.ui.openNote(noteId, { search: "search term" });
+```
+
+#### Custom DOM Panels
+
+Register native DOM panels presented as dialogs or full-screen views:
+
+```ts
+context.ui.panels.register({
+  id: "task-dashboard",
+  title: "Task Dashboard",
+  purpose: "dashboard", // "workflow" | "dashboard" | "preview" | "onboarding"
+  presentation: "dialog", // "dialog" | "fullscreen"
+  mount(container, { shell, requestClose, state }) {
+    // 1. Use standard host shell controls (header, toolbar, search, tabs)
+    shell.set({
+      header: {
+        title: "Tasks",
+        description: "View pending and active tasks",
+        actions: [{ id: "refresh", label: "Refresh" }]
+      },
+      toolbar: [
+        {
+          type: "tabs",
+          key: "filter",
+          value: "all",
+          options: [{ value: "all", label: "All" }, { value: "done", label: "Done" }]
+        },
+        { type: "search", key: "q", placeholder: "Search tasks" }
+      ],
+      onAction(actionId) { /* Handle action button clicks */ },
+      onChange(key, value) { /* Handle filter / search changes */ }
+    });
+
+    // 2. Render custom DOM
+    const content = document.createElement("div");
+    content.textContent = "Dashboard content";
+    container.append(content);
+
+    return () => content.remove(); // Cleanup
+  },
+  beforeClose() {
+    // Guard unsaved state: return true to close, false to keep open, or confirmation options
+    return true;
+  }
+});
+
+// Open panel
+await context.ui.panels.open("task-dashboard", { state: { initialTab: "all" } });
+```
+
+---
+
+### 6. Settings
+
+Declare settings fields in `manifest.json`; EdgeEver renders the settings UI automatically:
 
 ```json
 {
   "settings": {
     "fields": [
-      { "key": "endpoint", "type": "text", "label": "API endpoint", "required": true },
-      { "key": "token", "type": "secret", "label": "API token", "required": true },
-      { "key": "format", "type": "select", "label": "Format", "default": "md", "options": [
-        { "value": "md", "label": "Markdown" },
-        { "value": "html", "label": "HTML" }
-      ] },
+      { "key": "endpoint", "type": "text", "label": "API Endpoint", "required": true },
+      { "key": "token", "type": "secret", "label": "API Token", "required": true },
+      { "key": "autoSync", "type": "boolean", "label": "Auto Sync", "default": true },
       {
-        "key": "topics.ai",
-        "type": "boolean",
-        "label": "AI",
-        "default": true,
-        "list": {
-          "title": "AI sources",
-          "actionLabel": "View sources",
-          "items": [
-            { "title": "OpenAI News", "description": "openai.com" }
-          ]
-        }
+        "key": "mode",
+        "type": "select",
+        "label": "Sync Mode",
+        "default": "fast",
+        "options": [
+          { "value": "fast", "label": "Fast" },
+          { "value": "full", "label": "Full" }
+        ]
       }
     ]
   }
 }
 ```
 
-Plugins read the validated values through `context.settings`. Secret values are encrypted in the device-local Secret Storage, are never embedded as Manifest defaults, and are not filled back into the settings form:
+#### Accessing and Listening to Settings
 
 ```ts
-const endpoint = await context.settings.get("endpoint");
-const token = await context.settings.get("token");
-await context.settings.set("format", "html");
-await context.settings.remove("token");
-```
+// Read setting values
+const endpoint = await context.settings.get<string>("endpoint");
+const token = await context.settings.get<string>("token");
 
-Plugins can listen for changes to their own settings and then read the host-validated value again. The event is delivered only to the plugin that owns the setting and does not include the value, keeping secrets and other configuration out of event payloads:
-
-```ts
+// Listen for setting changes
 context.events.on("settings.changed", async ({ key }) => {
-  if (key !== "format") return;
-  const format = await context.settings.get("format");
-  // Apply the updated format.
-});
-```
-
-## Storage and network
-
-Plugin storage is namespaced by EdgeEver workspace and plugin ID:
-
-```ts
-await context.storage.set("cursor", "next-page");
-const cursor = await context.storage.get<string>("cursor");
-```
-
-Direct requests may use HTTP or HTTPS with arbitrary destinations, methods, headers, bodies, and browser credential modes. The Web runtime still follows the browser's CORS and cookie rules:
-
-```json
-{
-  "permissions": ["network"]
-}
-```
-
-```ts
-await context.network.fetch("https://api.example.com/items", {
-  headers: { Authorization: `Bearer ${token}`, "X-Client": "my-plugin" },
-  credentials: "include",
-});
-```
-
-Use regular `storage` for cursors and preferences. Sensitive strings such as API keys belong in `secrets`:
-
-```ts
-await context.secrets.set("api-token", token);
-const token = await context.secrets.get("api-token");
-await context.secrets.remove("api-token");
-```
-
-The web host namespaces secrets by workspace and plugin ID, encrypts them with AES-GCM using a device-local, non-exportable WebCrypto key, and stores ciphertext in IndexedDB. This prevents plaintext storage, but P0 plugins are trusted same-page code and the mechanism cannot defend against a malicious plugin reading live data.
-
-## Editor API
-
-`editor:read` reads the active editor selection or full live document. `editor:write` replaces the selection, inserts Markdown at the cursor, or applies validated UTF-16 range edits to the live document:
-
-```ts
-const selection = await context.editor.getSelection();
-if (selection && !selection.empty) {
-  await context.editor.replaceSelection(selection.text.toUpperCase());
-}
-await context.editor.insertAtCursor("**Inserted by plugin**");
-
-const document = await context.editor.getDocument();
-if (document) {
-  await context.editor.editMarkdown([
-    { from: 0, to: 0, insert: "<!-- checked by linter -->\n" }
-  ]);
-}
-```
-
-Reading returns `null` when no editable note is open; writes throw an error. `editor.editMarkdown()` uses the same range validation as `notes.editMarkdown()`, but operates on the current in-memory document so it can safely include unsaved user changes. Plugin edits use normal editor transactions and the autosave flow.
-
-### Plugin embeds
-
-An enabled plugin can register a renderer for its own constrained, block-level embed type and insert it into the editor:
-
-```ts
-const disposeEmbed = context.editor.embeds.register({
-  type: "drawing",
-  async mount(container, embed) {
-    const scene = await context.resources.read(embed.resourceId);
-    // Render a framework-independent preview into container.
-    return () => container.replaceChildren();
+  if (key === "autoSync") {
+    const autoSync = await context.settings.get<boolean>("autoSync");
+    // Update logic
   }
 });
-
-await context.editor.insertEmbed({
-  type: "drawing",
-  resourceId: sceneResource.id,
-  previewResourceId: previewResource.id,
-  title: "Architecture",
-  data: { mode: "view" }
-});
 ```
 
-The host assigns the embed ID and plugin ID, so a plugin cannot impersonate another renderer. Embed metadata is limited to JSON-compatible values and 64 KiB. EdgeEver persists the generic node as an `edgeever-plugin-embed` fenced block in Markdown. When the plugin is disabled or unavailable, Web and public-share views show a stable fallback, while native editors preserve the original node through their unsupported-content compatibility path. Plugins do not receive the raw TipTap editor or schema.
+> [!NOTE]
+> `type: "secret"` values are encrypted locally and never echoed back into form markup. Settings are stored locally per device and do not sync across devices.
 
-## Note navigation
+---
 
-An enabled plugin can open an existing note from a task, calendar, index, or search panel:
+### 7. Storage & Secrets
+
+Isolated per workspace and plugin ID on the current device:
 
 ```ts
-await context.ui.openNote(noteId, { search: "- [ ] Ship release" });
+// Ordinary key-value store (ideal for cursors and caches)
+await context.storage.set("last_sync_time", Date.now());
+const lastSync = await context.storage.get<number>("last_sync_time");
+await context.storage.remove("last_sync_time");
+
+// Secret storage (API keys, tokens; encrypted locally)
+await context.secrets.set("api_key", "sk-xxx");
+const apiKey = await context.secrets.get("api_key");
+await context.secrets.remove("api_key");
 ```
 
-The host verifies that the note exists and is not deleted, then switches to its notebook and editor. When `search` is supplied, EdgeEver opens in-note search and reveals its first exact match. Plugins do not need and cannot access private routes or React state.
+---
 
-## Custom panels
-
-Plugins can register framework-independent DOM panels. Users open them from the Plugin Marketplace's installed-plugin section; the host runs the disposer when the panel closes or the plugin is disabled or uninstalled:
+### 8. Network Requests
 
 ```ts
-context.ui.panels.register({
-  id: "dashboard",
-  title: "Dashboard",
-  purpose: "dashboard",
-  presentation: "fullscreen",
-  mount(container, { state, requestClose }) {
-    const heading = document.createElement("h2");
-    heading.textContent = "Plugin dashboard";
-    container.append(heading);
-    return () => heading.remove();
-  },
-  beforeClose() {
-    return hasUnsavedDrawing
-      ? { title: "Unsaved drawing", message: "Close without saving?", confirmLabel: "Close drawing" }
-      : true;
-  }
+// 1. Standard request (arbitrary HTTP/HTTPS; subject to host CORS policies)
+const response = await context.network.fetch("https://api.example.com/data", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ query: "example" })
 });
+const data = await response.json();
 
-await context.ui.panels.open("dashboard", { state: { resourceId } });
+// 2. Public read-only request (anonymous, read-only cross-origin GET/HEAD on port 443)
+const publicRes = await context.network.fetch("https://example.org/feed.xml", {
+  transport: "public",
+  headers: { Accept: "application/rss+xml" }
+});
+const xml = await publicRes.text();
 ```
 
-Every API v2 panel must declare one business purpose: `workflow`, `dashboard`, `preview`, or `onboarding`. A panel is not an alternative settings surface. Persistent booleans, text, numbers, secrets, and fixed-option selections belong in the Manifest settings Schema. Workspace-backed choices that are meaningful only while performing an operation may remain workflow controls until the host settings Schema supports them.
+---
 
-`presentation` accepts `dialog` (the default) or `fullscreen`. `panels.open()` can only open a panel registered by the calling plugin; its optional JSON state is limited to 64 KiB and is delivered through the mount context. `beforeClose()` may return `true` to close, `false` to stay open, or confirmation copy for a host-rendered dialog. The mount context's `requestClose()` follows the same guard.
+### 9. Schedules (Desktop Only)
 
-### Panel chrome
+Desktop plugins can persist scheduled execution of registered commands while EdgeEver is running:
 
-Use `mount` context `shell.set()` for system chrome: title, description, header actions, search, tabs, selects, and empty states. EdgeEver renders those controls with the same components as the rest of the app. The `container` argument remains the plugin body — lists, canvases, and forms stay in plugin DOM.
+```ts
+// Register command
+context.commands.register({
+  id: "sync-feed",
+  title: "Sync Feeds",
+  run: async () => { /* Long-running sync task */ }
+});
 
-```js
-mount(container, { shell, requestClose }) {
-  const list = document.createElement("div");
-  container.append(list);
-  const render = (query) => {
-    const tasks = queryTasks(query);
-    shell.set({
-      header: {
-        title: "Tasks",
-        description: `${tasks.length} open`,
-        actions: [{ id: "refresh", label: "Refresh" }],
-      },
-      toolbar: [
-        { type: "tabs", key: "view", value: query.view, options: [
-          { value: "open", label: "Open" },
-          { value: "done", label: "Done" },
-        ] },
-        { type: "search", key: "q", placeholder: "Search tasks", value: query.q },
-        { type: "select", key: "priority", label: "Priority", value: query.priority, options: [
-          { value: "all", label: "All" },
-          { value: "high", label: "High" },
-        ] },
-      ],
-      empty: tasks.length ? null : { title: "No matching tasks" },
-      onAction(id) { if (id === "refresh") render(query); },
-      onChange(key, value) { render({ ...query, [key]: value }); },
-    });
-    list.replaceChildren(...tasks.map(renderRow));
-  };
-  render({ view: "open", q: "", priority: "all" });
+// Configure schedule (idempotent; keyed by "pluginId + key")
+await context.schedules.upsert({
+  key: "hourly-sync",
+  name: "Hourly Feed Sync",
+  commandId: "sync-feed",
+  cronExpression: "0 * * * *",
+  missedRunPolicy: "run-once" // "run-once" | "skip"
+});
+
+// List or remove
+const schedules = await context.schedules.list();
+await context.schedules.remove("hourly-sync");
+```
+
+---
+
+### 10. Events
+
+Subscribe to workspace data changes:
+
+```ts
+// Note events
+context.events.on("note.created", ({ note }) => console.log("Created", note.id));
+context.events.on("note.updated", ({ note }) => console.log("Updated", note.id));
+context.events.on("note.deleted", ({ noteId }) => console.log("Deleted", noteId));
+
+// Other events
+context.events.on("tag.changed", () => { /* Tag updated */ });
+context.events.on("workspace.synced", () => { /* Workspace sync completed */ });
+```
+
+---
+
+### 11. AI Capabilities
+
+Invoke workspace-configured AI models for text generation and media transcription (credentials are managed securely by the host; plugins never touch user API keys):
+
+```ts
+// 1. Check AI configuration status
+const status = await context.ai.status();
+// { configured: boolean, modelName?: string }
+
+if (status.configured) {
+  // 2. Text generation
+  const result = await context.ai.generate({
+    system: "You are a writing assistant.",
+    prompt: "Refine this paragraph: ...",
+    maxOutputTokens: 2000,
+    signal: abortController.signal
+  });
+  console.log("Output:", result.text);
+
+  // 3. Transcribe audio/video attachments already in the note
+  const transcript = await context.ai.transcribeResource(noteId, resourceId);
+  // { text: string, resourceId: string, filename: string }
+
+  // 4. Transcribe standalone Blob / File held by the plugin
+  const ownMedia = new File([audioBytes], "recording.mp3", { type: "audio/mpeg" });
+  const mediaTranscript = await context.ai.transcribeMedia(ownMedia, {
+    signal: abortController.signal
+  });
+  console.log("Transcription:", mediaTranscript.text);
 }
 ```
 
-Passing `header.description: null` hides the default “provided by a trusted plugin” line from the visible header (it remains available to assistive technology). Plugins that never call `shell.set()` keep the previous nested card layout. Chrome callbacks are in-memory only and are not stored in panel `state`.
+---
 
-## Desktop plugin entry
+## Themes (No-Code Extensions)
 
-After a plugin is enabled, a unified puzzle button appears in the desktop workspace shortcuts on the left. Its menu groups commands and panels by plugin, keeps recently used actions at the top, and links directly to extension management. Individual plugins do not each consume a toolbar icon.
-
-## Theme manifest
-
-Themes are code-free extension packages:
+Themes are declarative extensions requiring only a `manifest.json`:
 
 ```json
 {
   "type": "theme",
   "id": "com.example.theme",
-  "name": "Example Theme",
+  "name": "Nord Emerald",
   "version": "1.0.0",
   "themeApiVersion": "1",
   "modes": ["light", "dark"],
@@ -564,75 +612,37 @@ Themes are code-free extension packages:
 }
 ```
 
-Supported token names are exported as `THEME_TOKEN_NAMES` by `@edgeever/plugin-api`. Unknown tokens are rejected so themes do not depend on private DOM selectors.
-Color tokens accept only `#RRGGBB` or `#RRGGBBAA`; font and size tokens also use restricted formats. Theme values cannot contain selectors, remote assets, or CSS functions.
+Supported tokens:
+- Colors: `color.background`, `color.surface`, `color.surfaceMuted`, `color.text`, `color.textMuted`, `color.border`, `color.accent`, `color.accentForeground`, `color.success`, `color.warning`, `color.danger` (format: `#RRGGBB` or `#RRGGBBAA`)
+- Typography & Layout: `font.body`, `font.mono`, `font.size`, `lineHeight.body`, `radius.medium`, `density.scale`, `editor.contentWidth`
 
-## Bundled examples
+---
 
-When developing EdgeEver locally, install these URLs from the standalone **Plugin Marketplace** page:
+## Packaging, Distribution & Local Testing
 
-- `/extensions/recent-notes/manifest.json`
-- `/extensions/nord-emerald/manifest.json`
+### Packaging Rules
 
-The first demonstrates note queries, selection replacement, commands, and a custom panel. The second demonstrates the code-free theme token API.
+A plugin distribution bundle must be self-contained:
+- `manifest.json`: Plugin manifest
+- `main.js`: Single-file JavaScript bundle (max 5 MB)
+- `styles.css`: Optional stylesheet (max 1 MB)
 
-## Current limits
+If using `@edgeever/plugin-api`, inline it into `main.js` during build.
 
-- The install list follows the current workspace on Web and desktop. Each client re-downloads and verifies packages. Native Android and iOS apps do not run plugins.
-- Plugin settings, ordinary plugin storage, and secrets stay on the current device and are not synchronized.
-- Plugins run only while the app is open.
-- Desktop plugins can persistently schedule their own registered commands, and users can manage those schedules and inspect paginated run history from the plugin page. A schedule is synced through the workspace, bound to one desktop device, and runs only while EdgeEver is open on that device. A missed occurrence can either be skipped or coalesced into one recovery run. This is not an always-on server background runtime.
-- There is no webhook receiver, server background runtime, marketplace submission backend, or automated review pipeline.
-- Capability declarations are optional descriptive metadata, not API authorization or a sandbox.
-- Custom panels open from the unified desktop plugin menu or extension settings and cannot yet be pinned to the main navigation or editor sidebar.
+### GitHub Distribution
 
-## Generic AI and public network capabilities (unreleased)
+1. Host a repository containing `manifest.json` on GitHub (public repository).
+2. Create a GitHub Release with a tag matching the manifest version (e.g. `1.0.0` or `v1.0.0`).
+3. Attach `manifest.json`, `main.js`, and optional `styles.css` as Release assets.
+4. Users install it directly via the Plugin Marketplace page:
+   ```text
+   https://github.com/owner/edgeever-plugin
+   ```
 
-Enabled plugins may use the current workspace's default AI model. Declaring `ai:generate` is optional disclosure metadata. These calls take ordinary prompts; source parsing, business workflows and prompts belong to the plugin. Credentials stay in the host.
+### Local Testing
 
-```ts
-const status = await context.ai.status(); // { configured, modelName? }
-const result = await context.ai.generate({
-  system: "Translate the supplied text into English.",
-  prompt: "用户提供的文本",
-  maxOutputTokens: 1000,
-  signal: controller.signal,
-});
-const transcript = await context.ai.transcribeResource(noteId, resourceId);
-// { text, resourceId, filename }. The attachment must already belong to the note; online video URLs are not accepted.
-const ownMedia = new File([audioBytes], "recording.mp3", { type: "audio/mpeg" });
-const { text } = await context.ai.transcribeMedia(ownMedia, { signal: controller.signal });
-// A plugin can also pass a video File or Blob; the host extracts its audio locally.
-```
+While developing EdgeEver, install local extension manifests in the Plugin Marketplace:
+- `/extensions/recent-notes/manifest.json` (Official example plugin)
+- `/extensions/nord-emerald/manifest.json` (Official example theme)
 
-`system` is limited to 8,000 characters and `prompt` to 90,000. `maxOutputTokens` must be a positive integer and defaults to 3,000 when omitted; the host does not impose a maximum output-token value. Generation is limited to 120 seconds. The model or provider may impose its own limit or reject a request based on available credits. The backend requires an interactive user session, disables AI in public demo mode, and redacts provider errors. AI calls have a four-request per-workspace guard in each backend instance; this is not a distributed quota. Model charges follow the configured provider. Plugin deactivation aborts outstanding calls.
-
-`transcribeResource` accepts only audio or video attachments already uploaded to a note in the current workspace. The client reads the attachment in ranges through the existing resource API, extracts its audio track, and splits it into audio segments of at most 24 MB, then sends them directly to the user's configured speech model service. The instance validates attachment ownership and gives the signed-in client the model configuration; it does not extract or convert audio or relay provider requests. Browser calls require provider CORS support; the desktop main process calls the provider locally. The plugin receives text and decides how to display or save it. This API does not resolve URLs, download third-party media, or expose speech model credentials to plugins.
-
-`transcribeMedia` accepts a plugin-supplied audio or video `Blob`/`File` without uploading it to a note. The client obtains the configured default speech model and credential through the existing authenticated settings APIs, extracts and segments the media locally with the same 1 GiB source, 24 MB segment, and 64-segment limits, and calls the speech provider directly. The API returns only `{ text }`; it does not return the credential. Enabled plugins run as trusted client JavaScript, so this is not a credential isolation boundary. The method does not fetch a URL; a plugin is responsible for obtaining authorized media bytes. Provider charges and browser CORS requirements still apply. Aborting the supplied signal or disabling the plugin stops the call.
-
-The default `network.fetch(url, init)` transport is a trusted browser request. It accepts arbitrary HTTP/HTTPS destinations, methods, bodies, request headers such as `Authorization`, and the requested browser credential mode. It remains subject to the runtime browser's CORS and cookie policy. `networkHosts` is legacy descriptive metadata and is not a security boundary. To read a cross-origin public feed or API without credentials, explicitly select `transport: "public"`; listing `network` and `network:public` remains useful disclosure but is optional.
-
-```json
-{
-  "permissions": ["network", "network:public"]
-}
-```
-
-```ts
-const response = await context.network.fetch("https://example.org/feed.xml", {
-  transport: "public",
-  headers: { Accept: "application/rss+xml" },
-  redirect: "manual",
-  signal: controller.signal,
-});
-const feed = await response.text(); // Parse inside the plugin.
-```
-
-Public mode supports any public HTTPS host on port 443 with GET/HEAD, no request body or credentials, a 20-second deadline, and at most 2,000,000 decoded response bytes. It always returns redirects without following them (`redirect: "error"` rejects them), so plugins can inspect a destination before requesting it separately. Upstream 403/429 remain upstream status codes; this transport does not bypass platform restrictions. Allowed request headers: Accept, Accept-Language, If-None-Match, If-Modified-Since, Range. Only content/cache metadata, Location and Retry-After are returned; Set-Cookie is excluded. The response is buffered within the size limit, not an unlimited streaming proxy.
-
-The host selects the least expensive safe transport without changing the plugin API. Web first tries browser fetch; a readable CORS response stays entirely client-side, while a browser network/CORS `TypeError` falls back to the authenticated backend relay. Desktop uses its Electron main process and the user's own network, capped at four concurrent requests. It does not relay public content through the EdgeEver backend. Cancellation propagates to every transport.
-
-All native/server drivers share one policy package. Desktop and self-hosted Bun validate every DNS answer and pass the validated address directly to TLS; private, special-use and mixed public/private answers are rejected. Cloudflare fallback uses workerd's default public-only Internet egress and no private-service bindings. Synthetic VPN/fake-IP DNS answers in reserved ranges are rejected; do not disable this check. Nonstandard workerd deployments must preserve public-only global egress. The Web fallback returns bounded binary bytes rather than Base64 JSON, avoiding Base64's transfer expansion.
-
-Plugin capability declarations communicate intent; enabled plugins are trusted JavaScript, not a security sandbox. A plugin can read notes and transmit them over the network. The public transport intentionally grants anonymous read access to arbitrary public HTTPS hosts. Backend routes independently require user authentication and enforce public-only egress so the shared EdgeEver service cannot be used to reach private networks; they do not claim server-attested per-plugin isolation. The backend never receives a source enum, search window, evidence schema or report workflow.
+To submit to the official verified marketplace, see the [Plugin Marketplace Policy](plugin-marketplace-policy.md).

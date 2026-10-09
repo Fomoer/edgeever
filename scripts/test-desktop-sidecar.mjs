@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Database } from "bun:sqlite";
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -521,6 +522,73 @@ const blockedNotebookIds = new Set((await request("notebook.list")).notebooks.ma
 assert.equal(blockedNotebookIds.has(blockedNotebook.id), true, "a notebook with notes in a child should stay");
 assert.equal(blockedNotebookIds.has(blockedChild.id), true, "a child notebook that still has notes should stay");
 
+// Reproduce the installed client's failed notebook acknowledgement with notes
+// and a child already referring to the placeholder.
+const pendingNotebook = (await request("notebook.create", { name: "Notebook remap regression" })).notebook;
+const pendingChild = (await request("notebook.create", { name: "Pending child", parentId: pendingNotebook.id })).notebook;
+const pendingNotes = [];
+for (const contentMarkdown of ["first preserved body", "second preserved body"]) {
+  pendingNotes.push((await request("memo.create", { notebookId: pendingNotebook.id, contentMarkdown, tags: [] })).memo);
+}
+pendingNotes[0] = (await request("memo.update", {
+  memoId: pendingNotes[0].id,
+  contentMarkdown: "edited body survives recovery",
+  contentJson: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "edited body survives recovery" }] }] },
+  tags: [],
+})).memo;
+const notebookQueue = (await request("sync.outbox.list", { limit: 200 })).items;
+const parentCreate = notebookQueue.find((item) => item.kind === "notebook.create" && item.entityId === pendingNotebook.id);
+for (const item of notebookQueue.filter((item) => item.kind === "memo.create" && pendingNotes.some((memo) => memo.id === item.entityId))) {
+  await request("sync.outbox.fail", { id: item.id, version: item.version, error: "Notebook not found", errorCode: "not_found", retryable: false });
+}
+const dependentUpdate = notebookQueue.find((item) => item.kind === "memo.update" && item.entityId === pendingNotes[0].id);
+await request("sync.outbox.fail", { id: dependentUpdate.id, version: dependentUpdate.version, error: "Memo not found", errorCode: "memo_not_found", retryable: false });
+const durableNotebook = { ...pendingNotebook, id: "nb_regression_durable" };
+await request("sync.apply", { changes: [{ entityType: "notebook", operation: "upsert", entityId: durableNotebook.id, notebook: durableNotebook }] });
+// Force the final acknowledgement to fail after all remapping statements.
+// Every relationship and queue payload must roll back together.
+const inspectionDb = new Database(join(dataDir, "edgeever.sqlite"));
+inspectionDb.exec(`CREATE TRIGGER fail_notebook_ack BEFORE DELETE ON _edgeever_sidecar_outbox
+  WHEN OLD.id = ${parentCreate.id}
+  BEGIN SELECT RAISE(ABORT, 'injected notebook ack failure'); END`);
+await assert.rejects(request("sync.outbox.ack", { id: parentCreate.id, version: parentCreate.version, remoteNotebook: durableNotebook }), /injected notebook ack failure/);
+assert.equal(inspectionDb.query("SELECT notebook_id FROM memos WHERE id = ?").get(pendingNotes[0].id).notebook_id, pendingNotebook.id);
+assert.equal(inspectionDb.query("SELECT parent_id FROM notebooks WHERE id = ?").get(pendingChild.id).parent_id, pendingNotebook.id);
+assert.equal(inspectionDb.query("SELECT COUNT(*) AS count FROM notebooks WHERE id = ?").get(pendingNotebook.id).count, 1);
+const failedRemapQueue = (await request("sync.outbox.list", { limit: 200, includeConflicts: true })).items;
+for (const original of notebookQueue.filter((item) => item.payload.notebookId === pendingNotebook.id || item.payload.parentId === pendingNotebook.id)) {
+  const current = failedRemapQueue.find((item) => item.id === original.id);
+  assert.equal(current.version, original.version);
+  assert.deepEqual(current.payload, original.payload);
+}
+assert.ok(failedRemapQueue.some((item) => item.id === parentCreate.id));
+inspectionDb.exec("DROP TRIGGER fail_notebook_ack");
+inspectionDb.close();
+await request("sync.outbox.ack", { id: parentCreate.id, version: parentCreate.version, remoteNotebook: durableNotebook });
+const afterNotebooks = (await request("notebook.list")).notebooks;
+assert.ok(!afterNotebooks.some((notebook) => notebook.id === pendingNotebook.id));
+assert.equal(afterNotebooks.find((notebook) => notebook.id === pendingChild.id).parentId, durableNotebook.id);
+const remappedQueue = (await request("sync.outbox.list", { limit: 200 })).items;
+assert.equal(remappedQueue.find((item) => item.entityId === pendingChild.id).payload.parentId, durableNotebook.id);
+for (const memo of pendingNotes) {
+  assert.equal((await request("memo.get", { memoId: memo.id })).memo.notebookId, durableNotebook.id);
+  assert.equal((await request("memo.get", { memoId: memo.id })).memo.contentMarkdown, memo.contentMarkdown);
+  const item = remappedQueue.find((item) => item.kind === "memo.create" && item.entityId === memo.id);
+  assert.equal(item.payload.notebookId, durableNotebook.id);
+  assert.equal(item.status, "pending", "dependency errors must become eligible after remapping");
+  assert.equal(item.version, notebookQueue.find((previous) => previous.id === item.id).version + 1);
+}
+
+const recoveredCreate = remappedQueue.find((item) => item.kind === "memo.create" && item.entityId === pendingNotes[0].id);
+const recoveredRemoteMemo = { ...pendingNotes[0], id: "memo_recovered_notebook", notebookId: durableNotebook.id, revision: 1 };
+await request("sync.outbox.ack", { id: recoveredCreate.id, version: recoveredCreate.version, remoteMemo: recoveredRemoteMemo });
+const recoveredUpdate = (await request("sync.outbox.list", { limit: 200 })).items.find((item) => item.id === dependentUpdate.id);
+assert.equal(recoveredUpdate.entityId, recoveredRemoteMemo.id);
+assert.equal(recoveredUpdate.payload.memoId, recoveredRemoteMemo.id);
+assert.equal(recoveredUpdate.payload.contentMarkdown, "edited body survives recovery");
+assert.equal(recoveredUpdate.payload.expectedRevision, 1);
+assert.equal(recoveredUpdate.status, "pending", "missing-memo edits should recover after memo create acknowledgement");
+
 child.stdin.end();
 await new Promise((resolve) => child.once("close", resolve));
-console.log(JSON.stringify({ ok: true, checked: ["memo.create", "memo.list.search", "memo.list.noteKind", "memo.list.tag", "memo.list.subtree", "memo.update", "memo.update.coalesce", "memo.revisions", "memo.restoreRevision", "memo.revision.cache", "tag.rename", "memo.moveBatch", "memo.pinBatch", "memo.deleteBatch", "memo.restore", "memo.emptyTrash", "memo.merge", "template.cache", "template.create.payload", "template.delete", "storage.backup", "storage.backups", "storage.restore", "sync.apply.merge-page-order", "sync.apply.deleted-notebook", "sync.apply.renamed-inbox", "sync.outbox", "sync.outbox.retry", "sync.outbox.recoverMemoUpdate", "sync.outbox.discard", "notebook.delete.empty-tree", "notebook.delete.not-empty"] }));
+console.log(JSON.stringify({ ok: true, checked: ["memo.create", "memo.list.search", "memo.list.noteKind", "memo.list.tag", "memo.list.subtree", "memo.update", "memo.update.coalesce", "memo.revisions", "memo.restoreRevision", "memo.revision.cache", "tag.rename", "memo.moveBatch", "memo.pinBatch", "memo.deleteBatch", "memo.restore", "memo.emptyTrash", "memo.merge", "template.cache", "template.create.payload", "template.delete", "storage.backup", "storage.backups", "storage.restore", "sync.apply.merge-page-order", "sync.apply.deleted-notebook", "sync.apply.renamed-inbox", "sync.outbox", "sync.outbox.notebook-remap", "sync.outbox.notebook-remap-rollback", "sync.outbox.retry", "sync.outbox.recoverMemoUpdate", "sync.outbox.discard", "notebook.delete.empty-tree", "notebook.delete.not-empty"] }));

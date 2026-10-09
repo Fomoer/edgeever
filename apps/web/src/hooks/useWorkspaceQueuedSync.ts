@@ -3,7 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { MemoDetail, MemoTemplate, Notebook, Resource } from "@edgeever/shared";
 import { isBrowserOffline } from "@/lib/network-status";
 import { emptySyncQueueSummary, type SyncQueueSummary } from "@/lib/sync-queue";
-import { MEMO_ID_REMAPPED_EVENT, notifyMemoIdRemapped, notifyMemoSyncAcknowledged } from "@/lib/sync-events";
+import { MEMO_ID_REMAPPED_EVENT, NOTEBOOK_ID_REMAPPED_EVENT, notifyMemoIdRemapped, notifyMemoSyncAcknowledged, notifyNotebookIdRemapped } from "@/lib/sync-events";
 import { observeLocalMemoIdMappings, putLocalMemo, replaceLocalMemoId } from "@/lib/local-mirror";
 import { remapMemoIdsInLists } from "@/lib/memo-list-cache";
 import { preserveRemappedMemoDetailQueries, resolveSyncedMemoId } from "@/lib/workspace-refresh";
@@ -17,6 +17,7 @@ type UseWorkspaceQueuedSyncOptions = {
   setCreatedMemoEditId: Dispatch<SetStateAction<string | null>>;
   setOnline: Dispatch<SetStateAction<boolean>>;
   setSelectedMemoId: Dispatch<SetStateAction<string | null>>;
+  setSelectedNotebookId: Dispatch<SetStateAction<string | null>>;
 };
 
 export const useWorkspaceQueuedSync = ({
@@ -28,6 +29,7 @@ export const useWorkspaceQueuedSync = ({
   setCreatedMemoEditId,
   setOnline,
   setSelectedMemoId,
+  setSelectedNotebookId,
 }: UseWorkspaceQueuedSyncOptions) => {
   const [syncSummary, setSyncSummary] = useState<SyncQueueSummary>(emptySyncQueueSummary);
   const [isSyncingQueuedChanges, setIsSyncingQueuedChanges] = useState(false);
@@ -72,6 +74,25 @@ export const useWorkspaceQueuedSync = ({
     window.addEventListener(MEMO_ID_REMAPPED_EVENT, handleMemoIdRemapped);
     return () => window.removeEventListener(MEMO_ID_REMAPPED_EVENT, handleMemoIdRemapped);
   }, [queryClient]);
+
+  useEffect(() => {
+    const handleNotebookIdRemapped = (event: Event) => {
+      const { temporaryId, remoteId } = (event as CustomEvent<{ temporaryId: string; remoteId: string }>).detail;
+      queryClient.setQueryData<{ notebooks: Notebook[] }>(["notebooks"], (current) => {
+        if (!current) return current;
+        const hasRemote = current.notebooks.some((notebook) => notebook.id === remoteId);
+        return {
+          ...current,
+          notebooks: hasRemote
+            ? current.notebooks.filter((notebook) => notebook.id !== temporaryId)
+            : current.notebooks.map((notebook) => notebook.id === temporaryId ? { ...notebook, id: remoteId } : notebook),
+        };
+      });
+      setSelectedNotebookId((current) => current === temporaryId ? remoteId : current);
+    };
+    window.addEventListener(NOTEBOOK_ID_REMAPPED_EVENT, handleNotebookIdRemapped);
+    return () => window.removeEventListener(NOTEBOOK_ID_REMAPPED_EVENT, handleNotebookIdRemapped);
+  }, [queryClient, setSelectedNotebookId]);
 
   const invalidateSyncQueries = useCallback(() => Promise.all([
     queryClient.invalidateQueries({ queryKey: ["memos"] }),
@@ -149,6 +170,7 @@ export const useWorkspaceQueuedSync = ({
           } else if (item.kind === "notebook.create" && "name" in result && temporaryId) {
             await deleteLocalNotebook(localDataScope, temporaryId);
             await putLocalNotebook(localDataScope, result as Notebook);
+            notifyNotebookIdRemapped(temporaryId, (result as Notebook).id);
           } else if (item.kind === "notebook.update" && "name" in result) {
             await putLocalNotebook(localDataScope, result as Notebook);
           } else if (item.kind === "template.create" && "contentMarkdown" in result && temporaryId) {

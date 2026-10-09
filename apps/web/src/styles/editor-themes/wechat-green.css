@@ -16,13 +16,13 @@
 
 :root.dark .edgeever-editor[data-editor-theme="wechat-green"]:not([data-editor-theme="default"]) {
   --editor-theme-bg: var(--workspace-editor);
-  --editor-theme-text: #d7ded9;
-  --editor-theme-muted: #9aa69e;
-  --editor-theme-heading: #f5f7f5;
+  --editor-theme-text: #dedede;
+  --editor-theme-muted: #a3a3a3;
+  --editor-theme-heading: #f5f5f5;
   --editor-theme-accent: #3ecf78;
-  --editor-theme-soft: #1c2a21;
-  --editor-theme-border: #314439;
-  --editor-theme-code-bg: #111a15;
+  --editor-theme-soft: #252525;
+  --editor-theme-border: #3b3b3b;
+  --editor-theme-code-bg: #151515;
   --editor-theme-code-text: #70dfa0;
 }
 

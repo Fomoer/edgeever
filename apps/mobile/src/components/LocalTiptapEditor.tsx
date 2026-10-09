@@ -1,6 +1,7 @@
 'use dom';
 
 import "katex/dist/katex.min.css";
+import { attachMobileReaderScroll } from "../lib/mobile-reader-scroll";
 import { Graph } from "@antv/x6";
 import Image from "@tiptap/extension-image";
 import CodeBlock from "@tiptap/extension-code-block";
@@ -87,6 +88,7 @@ import {
   generateCardCss,
 } from "@edgeever/shared/note-image-card";
 import { useDOMImperativeHandle, type DOMImperativeFactory, type DOMProps } from "expo/dom";
+import { toCanvas } from "html-to-image";
 import { createImageInsertTransaction, createNativeImageGalleryView, groupUploadedImages, NATIVE_IMAGE_GALLERY_CSS } from "@edgeever/shared/native-image-gallery";
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type Ref, type SetStateAction } from "react";
 import {
@@ -108,6 +110,7 @@ import {
   createMobileNoteSearchHighlightPlugin,
   getMobileNoteSearchMatches,
 } from "../lib/mobile-note-search";
+import { planMobileNoteImageRender } from "../lib/mobile-note-image-export";
 import { toProtectedResourceLoadPath } from "../lib/mobile-protected-resources";
 
 type EditorDoc = TiptapDoc;
@@ -140,6 +143,7 @@ type LocalTiptapEditorSharedProps = {
   onResourcePress?: (targetJson: string) => Promise<void>;
   onReady?: (startupMs: number) => Promise<void>;
   onSearchResult?: (count: number, index: number, query: string) => Promise<void>;
+  onReaderScroll?: (collapsed: boolean) => Promise<void>;
   onImageExportEvent?: (payloadJson: string) => Promise<void>;
   ref: Ref<LocalTiptapEditorRef>;
   locale: "zh-CN" | "en-US" | "ja" | "pl";
@@ -173,8 +177,7 @@ const TRANSIENT_IMAGE_UPLOAD_META = "edgeeverImageUploadPlaceholder";
 const ignoreSearchResult = async () => undefined;
 const ignoreAiRequest = async () => undefined;
 const AI_PROMPT_OPTION_PREFIX = "prompt:";
-const IMAGE_EXPORT_PIXEL_RATIO = 2;
-const IMAGE_EXPORT_CHUNK_SIZE = 256 * 1024;
+const IMAGE_EXPORT_CHUNK_BYTES = 192 * 1024;
 
 type ImageExportRequest = {
   requestId: string;
@@ -194,16 +197,6 @@ type ImageExportRequest = {
   showTags?: boolean;
   showUpdatedAt?: boolean;
   branding?: boolean;
-};
-
-const blobToBytes = async (blob: Blob) => new Uint8Array(await blob.arrayBuffer());
-
-const bytesToBase64 = (bytes: Uint8Array) => {
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-  }
-  return btoa(binary);
 };
 
 const fallbackPromptParameterKind = (action: AiAction): AiPromptParameterKind =>
@@ -369,7 +362,10 @@ const renderWithBeautifulMermaid = async (source: string, theme: "light" | "dark
       ...THEMES[theme === "dark" ? "zinc-dark" : "zinc-light"],
       transparent: true,
       font: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-      padding: 24,
+      padding: 12,
+      nodeSpacing: 16,
+      layerSpacing: 28,
+      componentSpacing: 16,
     });
   } catch {
     return null;
@@ -675,6 +671,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
   const onAiCancelRef = useRef(props.mode === "viewer" ? undefined : props.onAiCancel);
   const onReadyRef = useRef(props.onReady ?? (async () => undefined));
   const onSearchResultRef = useRef(props.onSearchResult ?? ignoreSearchResult);
+  const onReaderScrollRef = useRef(props.onReaderScroll);
   const onImageExportEventRef = useRef(props.onImageExportEvent);
   const searchStateRef = useRef({ activeIndex: -1, query: "" });
   const [aiPanel, setAiPanel] = useState<MobileAiPanelState | null>(null);
@@ -732,6 +729,7 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
   onAiCancelRef.current = props.mode === "viewer" ? undefined : props.onAiCancel;
   onReadyRef.current = props.onReady ?? (async () => undefined);
   onSearchResultRef.current = props.onSearchResult ?? ignoreSearchResult;
+  onReaderScrollRef.current = props.onReaderScroll;
   onImageExportEventRef.current = props.onImageExportEvent;
   const protectedImageExtension = useMemo(
     () => createProtectedImageExtension(
@@ -1238,24 +1236,29 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
   const exportImage = useCallback((requestJsonValue: DOMValue) => {
     if (typeof requestJsonValue !== "string" || !editor || editor.isDestroyed || !onImageExportEventRef.current) return;
 
+    let request: ImageExportRequest;
+    try {
+      request = JSON.parse(requestJsonValue) as ImageExportRequest;
+      if (!request.requestId || (request.format !== "png" && request.format !== "jpeg")) return;
+    } catch {
+      return;
+    }
+
+    const notify = (payload: Record<string, unknown>) =>
+      onImageExportEventRef.current?.(JSON.stringify({ requestId: request.requestId, ...payload }));
+    const reportProgress = (stage: "prepare" | "render" | "transfer") => {
+      void Promise.resolve(notify({ type: "progress", stage })).catch(() => {});
+    };
+    const missingImagePlaceholder = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
+
     void (async () => {
-      let request: ImageExportRequest;
-      try {
-        request = JSON.parse(requestJsonValue) as ImageExportRequest;
-        if (!request.requestId || (request.format !== "png" && request.format !== "jpeg")) return;
-      } catch {
-        return;
-      }
-
-      const notify = (payload: Record<string, unknown>) =>
-        onImageExportEventRef.current?.(JSON.stringify({ requestId: request.requestId, ...payload }));
-
+      reportProgress("prepare");
       const resolvedTheme = resolveTheme(request.background, request.theme);
       const fontStyle = request.fontStyle ?? "serif";
       const fontSize = request.fontSize ?? "lg";
-      const cardWidth = request.cardWidth ?? "standard";
-      const targetWidth = NOTE_IMAGE_CARD_WIDTH_PIXELS[cardWidth] || 680;
-      const themeCfg = NOTE_IMAGE_THEMES[resolvedTheme] || NOTE_IMAGE_THEMES.slate;
+      const cardWidth = request.cardWidth ?? "wide";
+      const targetWidth = NOTE_IMAGE_CARD_WIDTH_PIXELS[cardWidth] || NOTE_IMAGE_CARD_WIDTH_PIXELS.wide;
+      const themeCfg = NOTE_IMAGE_THEMES[resolvedTheme] || NOTE_IMAGE_THEMES.aurora;
 
       const editorClone = editor.view.dom.cloneNode(true) as HTMLElement;
       editorClone.removeAttribute("contenteditable");
@@ -1296,44 +1299,93 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
       document.body.appendChild(host);
 
       try {
-        await document.fonts?.ready;
-        await Promise.all(Array.from(documentRoot.querySelectorAll("img")).map(async (image) => {
-          if (image.complete) return;
-          try { await image.decode(); } catch { /* Export the readable remainder. */ }
-        }));
+        const images = Array.from(documentRoot.querySelectorAll<HTMLImageElement>("img"));
+        await Promise.race([
+          Promise.all([
+            document.fonts?.ready,
+            ...images.map(async (image) => {
+              if (image.complete) return;
+              try { await image.decode(); } catch { /* Export the readable remainder. */ }
+            }),
+          ]),
+          new Promise<void>((resolve) => window.setTimeout(resolve, 8_000)),
+        ]);
         const exportedImages = Array.from(
           documentRoot.querySelectorAll<HTMLImageElement>(".edgeever-card-body img"),
         );
         const failedImages = exportedImages.filter((image) => !image.complete || image.naturalWidth === 0).length;
         const totalHeight = Math.max(1, Math.ceil(documentRoot.getBoundingClientRect().height));
+        const renderPlan = planMobileNoteImageRender(targetWidth, totalHeight);
+        let embedFailedImages = 0;
+        let captureRoot = documentRoot;
+        let captureWrapper: HTMLDivElement | null = null;
+        if (renderPlan.sourceScale < 1) {
+          const wrapper = document.createElement("div");
+          wrapper.style.cssText = `position:relative;width:${renderPlan.sourceWidth}px;height:${renderPlan.sourceHeight}px;overflow:hidden;`;
+          documentRoot.replaceWith(wrapper);
+          wrapper.appendChild(documentRoot);
+          documentRoot.style.transform = `scale(${renderPlan.sourceScale})`;
+          documentRoot.style.transformOrigin = "top left";
+          captureRoot = wrapper;
+          captureWrapper = wrapper;
+        }
         const backgroundColor = NOTE_IMAGE_BACKGROUND_COLORS[resolvedTheme] || themeCfg.canvasBg;
 
-        const { toCanvas } = await import("html-to-image");
-        const canvas = await toCanvas(documentRoot, {
+        reportProgress("render");
+        const renderCanvas = (root: HTMLElement, width: number, height: number) => toCanvas(root, {
           backgroundColor,
           cacheBust: false,
-          height: totalHeight,
-          pixelRatio: IMAGE_EXPORT_PIXEL_RATIO,
+          height,
+          imagePlaceholder: missingImagePlaceholder,
+          onImageErrorHandler: (event) => {
+            embedFailedImages += 1;
+            if (event instanceof Event && event.target instanceof HTMLImageElement) {
+              event.target.src = missingImagePlaceholder;
+            }
+          },
+          pixelRatio: renderPlan.pixelRatio,
           skipFonts: true,
-          width: targetWidth,
+          width,
         });
-        const blob = await new Promise<Blob>((resolve, reject) => {
-          canvas.toBlob(
-            (result) => result ? resolve(result) : reject(new Error("Image renderer returned an empty file")),
-            request.format === "jpeg" ? "image/jpeg" : "image/png",
-            request.format === "jpeg" ? 0.92 : 1,
-          );
-        });
-
+        let canvas: HTMLCanvasElement;
+        try {
+          canvas = await renderCanvas(captureRoot, renderPlan.sourceWidth, renderPlan.sourceHeight);
+        } catch {
+          // Android WebView can reject a large SVG image without an Error message.
+          // Try a smaller source once while keeping the entire card visible.
+          const retryScale = renderPlan.sourceScale * 0.75;
+          const retryWidth = Math.max(1, Math.floor(targetWidth * retryScale));
+          const retryHeight = Math.max(1, Math.floor(totalHeight * retryScale));
+          if (retryScale < 0.5) throw new Error("NOTE_IMAGE_RENDER_FAILED");
+          if (!captureWrapper) {
+            captureWrapper = document.createElement("div");
+            documentRoot.replaceWith(captureWrapper);
+            captureWrapper.appendChild(documentRoot);
+          }
+          captureWrapper.style.cssText = `position:relative;width:${retryWidth}px;height:${retryHeight}px;overflow:hidden;`;
+          documentRoot.style.transform = `scale(${retryScale})`;
+          documentRoot.style.transformOrigin = "top left";
+          try {
+            canvas = await renderCanvas(captureWrapper, retryWidth, retryHeight);
+          } catch {
+            throw new Error("NOTE_IMAGE_RENDER_FAILED");
+          }
+        }
         const extension = request.format === "jpeg" ? "jpg" : "png";
         const basename = buildImageExportBasename(request.title, request.fallbackTitle);
-        const bytes = await blobToBytes(blob);
         const filename = `${basename}.${extension}`;
         const mimeType = request.format === "jpeg" ? "image/jpeg" : "image/png";
+        // Android WebView can take many seconds to return canvas.toBlob for a
+        // long note. This encodes promptly and gives the bridge base64 directly.
+        const dataUrl = canvas.toDataURL(mimeType, request.format === "jpeg" ? 0.92 : 1);
+        const dataUrlPrefix = `data:${mimeType};base64,`;
+        if (!dataUrl.startsWith(dataUrlPrefix)) throw new Error("Image renderer returned an empty file");
+        const base64 = dataUrl.slice(dataUrlPrefix.length);
 
-        const base64 = bytesToBase64(bytes);
-        for (let offset = 0; offset < base64.length; offset += IMAGE_EXPORT_CHUNK_SIZE) {
-          await notify({ type: "chunk", chunk: base64.slice(offset, offset + IMAGE_EXPORT_CHUNK_SIZE) });
+        reportProgress("transfer");
+        const chunkChars = (IMAGE_EXPORT_CHUNK_BYTES / 3) * 4;
+        for (let offset = 0; offset < base64.length; offset += chunkChars) {
+          await notify({ type: "chunk", chunk: base64.slice(offset, offset + chunkChars) });
         }
         await notify({
           type: "complete",
@@ -1342,14 +1394,16 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
           width: canvas.width,
           height: canvas.height,
           totalImages: exportedImages.length,
-          failedImages,
+          failedImages: Math.min(exportedImages.length, failedImages + embedFailedImages),
         });
       } catch (error) {
         await notify({ type: "error", message: error instanceof Error ? error.message : "Image export failed" });
       } finally {
         host.remove();
       }
-    })();
+    })().catch((error: unknown) => {
+      void notify({ type: "error", message: error instanceof Error ? error.message : "Image export failed" });
+    });
   }, [editor]);
 
   useDOMImperativeHandle(
@@ -1557,6 +1611,16 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
       editor.off("selectionUpdate", handleSelectionUpdate);
     };
   }, [editor, isViewer]);
+
+  useEffect(() => {
+    if (!editor || !isViewer) return;
+    const scrollContainer = document.querySelector<HTMLElement>(".edgeever-editor-scroll");
+    if (!scrollContainer) return;
+
+    return attachMobileReaderScroll(scrollContainer, (collapsed) => {
+      void onReaderScrollRef.current?.(collapsed);
+    });
+  }, [editor, isViewer, visualDiagram]);
 
   const toolbarState = useEditorState({
     editor,
@@ -2382,6 +2446,7 @@ const createMobileCodeBlockExtension = (
                 suppressErrorRendering: true,
                 theme: "base",
                 themeVariables: getMobileMermaidThemeVariables(theme),
+                flowchart: { nodeSpacing: 25, rankSpacing: 30 },
               });
               const valid = await mermaid.parse(source, { suppressErrors: true });
               if (!valid) {
@@ -2395,6 +2460,13 @@ const createMobileCodeBlockExtension = (
                 return;
               }
               svgContainer.innerHTML = svg;
+              const renderedSvg = svgContainer.querySelector("svg");
+              const viewBox = renderedSvg?.viewBox.baseVal;
+              if (renderedSvg && viewBox && viewBox.width > 0 && viewBox.height > 0) {
+                renderedSvg.style.width = `${Math.ceil(viewBox.width)}px`;
+                renderedSvg.style.height = `${Math.ceil(viewBox.height)}px`;
+                renderedSvg.style.maxWidth = "none";
+              }
               preview.replaceChildren(svgContainer);
             })
             .catch(() => {
@@ -3005,14 +3077,14 @@ const removeImageUploadPlaceholder = (editor: TiptapEditor, source: string) => {
 
 const getEditorStyles = (theme: "light" | "dark", options?: { viewer?: boolean }) => {
   const bodyFontSize = MEMO_CONTENT_STYLE.body.fontSize;
-  const bodyLineHeight = MEMO_CONTENT_STYLE.body.lineHeight / MEMO_CONTENT_STYLE.body.fontSize;
-  const paragraphSpacing = MEMO_CONTENT_STYLE.body.paragraphSpacing;
+  const bodyLineHeight = 24 / bodyFontSize;
+  const paragraphSpacing = 6;
   return `
   :root {
     color-scheme: ${theme};
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-feature-settings: "chws" 1;
-    /* Match PC/Web memo body (MEMO_CONTENT_STYLE) so notes don't feel oversized on phone. */
+    /* Keep the shared body font size while using tighter spacing on mobile. */
     --editor-body-font-size: ${bodyFontSize}px;
     --editor-body-line-height: ${bodyLineHeight};
     --editor-paragraph-spacing: ${paragraphSpacing}px;
@@ -3173,24 +3245,24 @@ const getEditorStyles = (theme: "light" | "dark", options?: { viewer?: boolean }
   .edgeever-editor-content ul[data-type="taskList"] li[data-checked] > div > p { margin-bottom: 0; }
   .edgeever-editor-content ul[data-type="taskList"] li[data-checked="true"] > div > p { color: #94a3b8; text-decoration: line-through; }
   .edgeever-editor-content ul[data-type="taskList"] ul[data-type="taskList"] { margin: 4px 0 0; padding-left: 24px; }
-  .edgeever-editor-content blockquote { margin-left: 0; max-width: 100%; padding: 6px 12px; border-left: 3px solid #16a06e; border-radius: 1px 4px 4px 1px; background: ${theme === "dark" ? "rgba(22, 160, 110, 0.08)" : "rgba(22, 160, 110, 0.04)"}; color: ${theme === "dark" ? "#cbd5e1" : "#334155"}; }
+  .edgeever-editor-content blockquote { margin-left: 0; margin-right: 0; max-width: 100%; padding: 6px 12px; border-left: 3px solid ${theme === "dark" ? "#475569" : "#cbd5e1"}; border-radius: 1px 4px 4px 1px; background: ${theme === "dark" ? "rgba(255, 255, 255, 0.05)" : "#f3f5f7"}; color: ${theme === "dark" ? "#f8fafc" : "#3d4450"}; }
   .edgeever-editor-content pre { max-width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid ${theme === "dark" ? "#334155" : "#e2e8f0"}; padding: 12px 90px 12px 14px; background: ${theme === "dark" ? "#1e293b" : "#f8fafc"}; color: ${theme === "dark" ? "#e2e8f0" : "#0f172a"}; font-size: 0.88rem; box-shadow: 0 1px 2px ${theme === "dark" ? "rgba(0, 0, 0, 0.2)" : "rgba(15, 23, 42, 0.03)"}; }
-  .edgeever-editor-content code { border-radius: 4px; padding: 2px 5px; border: 1px solid ${theme === "dark" ? "rgba(22, 160, 110, 0.28)" : "#d4ebdc"}; background: ${theme === "dark" ? "rgba(22, 160, 110, 0.12)" : "#f2f9f5"}; color: ${theme === "dark" ? "#6ee7b7" : "#0d5f3a"}; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; font-weight: 550; }
+  .edgeever-editor-content code { border-radius: 4px; padding: 2px 5px; border: 1px solid ${theme === "dark" ? "rgba(255, 255, 255, 0.12)" : "#e1e5ea"}; background: ${theme === "dark" ? "rgba(255, 255, 255, 0.06)" : "#f3f5f7"}; color: ${theme === "dark" ? "#f8fafc" : "#3d4450"}; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; font-weight: 550; }
   .edgeever-editor-content pre code { padding: 0; border: 0; background: transparent; font-size: inherit; font-weight: normal; color: inherit; }
   .edgeever-editor-content .tiptap-mathematics-render[data-type="block-math"] { max-width: 100%; margin: 16px 0; overflow-x: auto; overflow-y: hidden; padding: 4px 0; text-align: center; -webkit-overflow-scrolling: touch; }
   .edgeever-editor-content .inline-math-error, .edgeever-editor-content .block-math-error { color: ${theme === "dark" ? "#fda4af" : "#be123c"}; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   /* External hyperlinks (match Web default ProseMirror). Attachment chips override below. */
   .edgeever-editor-content a {
-    color: ${theme === "dark" ? "#86efac" : "#00751f"};
+    color: ${theme === "dark" ? "#cad4ce" : "#404040"};
     font-weight: 500;
     text-decoration: underline;
-    text-decoration-color: ${theme === "dark" ? "rgba(134, 239, 172, 0.45)" : "rgba(0, 117, 31, 0.45)"};
+    text-decoration-color: ${theme === "dark" ? "rgba(202, 212, 206, 0.45)" : "rgba(64, 64, 64, 0.45)"};
     text-underline-offset: 2px;
     cursor: pointer;
   }
   .edgeever-editor-content a:active {
-    color: ${theme === "dark" ? "#4ade80" : "#00a82d"};
-    text-decoration-color: ${theme === "dark" ? "#4ade80" : "#00a82d"};
+    color: ${theme === "dark" ? "#eef3f0" : "#0a0a0a"};
+    text-decoration-color: ${theme === "dark" ? "#eef3f0" : "#0a0a0a"};
   }
   /* Compact attachment chips: still ≥48px touch height, less vertical bulk than 58px. */
   .edgeever-editor-content a.edgeever-attachment-link, .edgeever-editor-content a[href*="/api/v1/resources/"] {
@@ -3284,10 +3356,10 @@ const getEditorStyles = (theme: "light" | "dark", options?: { viewer?: boolean }
   .edgeever-x6-diagram .x6-node { cursor: pointer; }
   .edgeever-mermaid-code-block > pre { display: none; margin: 8px 0 0; }
   .edgeever-mermaid-code-block.is-source-visible > pre { display: block; }
-  .edgeever-mermaid-preview { display: flex; min-height: 104px; align-items: center; justify-content: center; overflow-x: auto; padding: 16px 4px; background: transparent; }
+  .edgeever-mermaid-preview { display: flex; min-height: 72px; align-items: center; justify-content: flex-start; overflow-x: auto; padding: 8px 4px; background: transparent; }
   .edgeever-mermaid-preview[hidden] { display: none; }
-  .edgeever-mermaid-svg { width: 100%; text-align: center; }
-  .edgeever-mermaid-svg svg { display: block; width: auto; max-width: 100%; height: auto; max-height: 440px; margin: auto; }
+  .edgeever-mermaid-svg { display: flex; width: max-content; min-width: 100%; flex: none; justify-content: center; }
+  .edgeever-mermaid-svg svg { display: block; max-width: none; max-height: none; flex: none; }
   .edgeever-mermaid-message, .edgeever-mermaid-error { margin: 0; font-size: 14px; line-height: 1.5; text-align: center; }
   .edgeever-mermaid-message { color: ${theme === "dark" ? "#94a3b8" : "#64748b"}; }
   .edgeever-mermaid-error { color: ${theme === "dark" ? "#fda4af" : "#be123c"}; }

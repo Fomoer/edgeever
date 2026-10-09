@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Streamdown } from "streamdown";
-import { rewriteSidebarNoteLinks, sidebarNoteLinkAllowedTags, sidebarNoteLinkComponents } from "./sidebar-note-links.tsx";
+import { AiSidebarMessage } from "./AiSidebarMessage.tsx";
+import { normalizeSidebarMathDelimiters, rewriteSidebarNoteLinks, sidebarNoteLinkAllowedTags, sidebarNoteLinkComponents } from "./sidebar-note-links.tsx";
 
 const render = (markdown) => renderToStaticMarkup(createElement(Streamdown, {
   allowedTags: sidebarNoteLinkAllowedTags,
@@ -12,6 +13,25 @@ const render = (markdown) => renderToStaticMarkup(createElement(Streamdown, {
 }));
 
 describe("sidebar note links", () => {
+  test("renders explicit inline math without changing prices or code", () => {
+    const markdown = "炼气 $\\rightarrow$ 筑基，价格从 $5 到 $10。公式 \\(x^2\\) 和 \\(\\frac{1}{2}\\)。\n\n`\\(x^2\\)`\n\n```md\n\\(x^2\\)\n```\n\n~~~md\n\\(x^2\\)\n~~~";
+    const normalized = normalizeSidebarMathDelimiters(markdown);
+    expect(normalized).toContain("炼气 → 筑基，价格从 $5 到 $10。公式 $$x^2$$ 和 $$\\frac{1}{2}$$。");
+    expect(normalized).toContain("`\\(x^2\\)`");
+    expect(normalized).toContain("```md\n\\(x^2\\)\n```");
+    expect(normalized).toContain("~~~md\n\\(x^2\\)\n~~~");
+    const markup = renderToStaticMarkup(createElement(AiSidebarMessage, { children: markdown }));
+    expect(markup).toContain('class="katex"');
+    expect(markup).toContain("$5 到 $10");
+    expect(markup).toContain("→");
+    const price = renderToStaticMarkup(createElement(AiSidebarMessage, { children: "价格从 $5 到 $10" }));
+    expect(price).not.toContain('class="katex"');
+    const display = renderToStaticMarkup(createElement(AiSidebarMessage, { children: "$$\nx^2 + y^2 = z^2\n$$" }));
+    expect(display).toContain("katex-display");
+    const code = renderToStaticMarkup(createElement(AiSidebarMessage, { children: "`\\(x^2\\)`" }));
+    expect(code).not.toContain('class="katex"');
+  });
+
   test("turns a note link into an in-app anchor and leaves other links alone", () => {
     const markdown = "已保存至“等待分类”：\n\n[模型蒸馏流程图](#memo=memo_03de025fc0134b7da0d155c2c1686b92)\n\n详见 [文档](https://example.com/docs)。";
     expect(rewriteSidebarNoteLinks(markdown)).toContain(

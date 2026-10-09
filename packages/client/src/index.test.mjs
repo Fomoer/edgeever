@@ -325,6 +325,32 @@ describe("EdgeEver client HTTP contract", () => {
     ]);
   });
 
+  test("uploads binary parts without converting them to Blob", async () => {
+    const parts = [];
+    const client = createEdgeEverClient({
+      fetch: async (input, init) => {
+        const path = String(input);
+        if (path.endsWith("/resource-uploads")) {
+          return jsonResponse({ upload: { id: "upload_binary", partSize: 4, partCount: 2, byteSize: 6 } }, { status: 201 });
+        }
+        if (path.includes("/parts/")) {
+          expect(init.body).toBeInstanceOf(Uint8Array);
+          parts.push([...init.body]);
+          return jsonResponse({ part: { partNumber: parts.length, byteSize: init.body.byteLength } });
+        }
+        return jsonResponse({ resource: { id: "binary_resource" } }, { status: 201 });
+      },
+    });
+
+    await client.uploadMemoResourceParts("memo_1", {
+      filename: "report.pdf",
+      mimeType: "application/pdf",
+      byteSize: 6,
+      readPart: async (start, end) => new Uint8Array([0, 255, 37, 80, 68, 70].slice(start, end)),
+    });
+    expect(parts).toEqual([[0, 255, 37, 80], [68, 70]]);
+  });
+
   test("uploads small images in one request and preserves file metadata", async () => {
     const calls = [];
     const client = createEdgeEverClient({

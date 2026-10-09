@@ -7,6 +7,7 @@ import {
   Keyboard,
   KeyRound,
   LayoutTemplate,
+  Share2,
   Shield,
   SlidersHorizontal,
   Sparkles,
@@ -14,8 +15,9 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router";
 import * as m from "motion/react-m";
 import { Button } from "@/components/ui/button";
 
@@ -28,6 +30,7 @@ import { AccountInfoCard } from "./settings/AccountInfoCard";
 import { DataExportCard } from "./settings/DataExportCard";
 import { DesktopLocalDataCard } from "./settings/DesktopLocalDataCard";
 import { LoginDevicesCard } from "./settings/LoginDevicesCard";
+import { ShareManagementCard } from "./settings/ShareManagementCard";
 import { EvernoteImportGuideCard } from "./settings/EvernoteImportGuideCard";
 import { FeedbackLink } from "./settings/FeedbackLink";
 import { SystemInfoPanel } from "./settings/SystemInfoPanel";
@@ -66,6 +69,7 @@ interface SettingsPaneProps {
   user: AuthUser | null;
   refreshWorkspaceAfterImport: () => Promise<void>;
   onOpenExecutionCenter: () => void;
+  onOpenMemo: (memoId: string, notebookId: string) => void;
 }
 
 // Slate and brand color variables already switch values with the root theme.
@@ -75,7 +79,7 @@ const SettingsGroup = ({ children }: { children: ReactNode }) => (
   </div>
 );
 
-type TabKey = "general" | "shortcuts" | "users" | "data" | "ai" | "mcp" | "speech" | "advanced" | "account" | "system";
+type TabKey = "general" | "shortcuts" | "users" | "data" | "ai" | "mcp" | "speech" | "sharing" | "advanced" | "account" | "system";
 
 interface TabItem {
   key: TabKey;
@@ -104,10 +108,12 @@ export const SettingsPane = ({
   user,
   refreshWorkspaceAfterImport,
   onOpenExecutionCenter,
+  onOpenMemo,
 }: SettingsPaneProps) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<TabKey>("general");
-  const [activeMobileTab, setActiveMobileTab] = useState<TabKey | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const selectTab = (tab: TabKey | null) => setSearchParams(tab ? { tab } : {}, { replace: true });
   const { unseen: deployedUpdateUnseen } = useDeployedUpdateNotice();
   const canClearLocalData = Boolean(window.edgeeverDesktop?.canClearLocalData);
 
@@ -142,6 +148,11 @@ export const SettingsPane = ({
       label: t("settings.tabs.data"),
       icon: Database,
     },
+    {
+      key: "sharing",
+      label: t("sharing.managementTitle"),
+      icon: Share2,
+    },
     ...(isOwner
       ? [
           {
@@ -172,11 +183,15 @@ export const SettingsPane = ({
     },
   ];
 
+  const selectedTab = tabItems.find((item) => item.key === requestedTab)?.key ?? null;
+  const activeTab = selectedTab ?? "general";
+  const activeMobileTab = selectedTab;
+
   const mobileTabItems = tabItems.filter((item) => item.key !== "shortcuts");
 
   const handleBack = () => {
-    if (activeMobileTab !== null) {
-      setActiveMobileTab(null);
+    if (window.matchMedia("(max-width: 1023px)").matches && activeMobileTab !== null) {
+      selectTab(null);
     } else {
       onClose();
     }
@@ -236,6 +251,8 @@ export const SettingsPane = ({
             <EvernoteImportGuideCard />
           </SettingsGroup>
         );
+      case "sharing":
+        return <ShareManagementCard userId={user?.id ?? null} onOpenMemo={onOpenMemo} />;
       case "ai":
         return (
           <SettingsGroup>
@@ -322,7 +339,7 @@ export const SettingsPane = ({
                 <button
                   key={item.key}
                   type="button"
-                  onClick={() => setActiveTab(item.key)}
+                  onClick={() => selectTab(item.key)}
                   className={cn(
                     "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs leading-5 transition-all duration-150 text-left w-full",
                     isSelected
@@ -400,7 +417,7 @@ export const SettingsPane = ({
                     <button
                       key={item.key}
                       type="button"
-                      onClick={() => setActiveMobileTab(item.key)}
+                      onClick={() => selectTab(item.key)}
                       className="flex w-full items-center justify-between gap-4 p-4 text-left transition-colors hover:bg-slate-50/50"
                     >
                       <div className="flex items-center gap-3">

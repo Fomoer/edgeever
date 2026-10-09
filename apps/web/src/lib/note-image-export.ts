@@ -131,7 +131,7 @@ export const createNoteImage = async ({
   theme,
   fontStyle = "serif",
   fontSize = "lg",
-  cardWidth = "standard",
+  cardWidth = "wide",
   showTitle = true,
   showNotebook = false,
   showTags = false,
@@ -139,7 +139,7 @@ export const createNoteImage = async ({
   styles,
 }: DownloadNoteImageOptions): Promise<PreparedNoteImage> => {
   const resolvedTheme = resolveTheme(background, theme);
-  const targetWidth = NOTE_IMAGE_CARD_WIDTH_PIXELS[cardWidth] || 680;
+  const targetWidth = NOTE_IMAGE_CARD_WIDTH_PIXELS[cardWidth] || NOTE_IMAGE_CARD_WIDTH_PIXELS.wide;
   const themeCfg = NOTE_IMAGE_THEMES[resolvedTheme];
 
   const prepared = await prepareNoteBodyHtmlForExport(bodyHtml);

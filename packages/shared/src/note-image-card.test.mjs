@@ -13,10 +13,10 @@ describe("note-image-card shared module", () => {
     expect(resolveTheme(undefined, "notepad")).toBe("notepad");
     expect(resolveTheme(undefined, "xuan")).toBe("xuan");
     expect(resolveTheme("warm", undefined)).toBe("sunset");
-    expect(resolveTheme(undefined, undefined)).toBe("slate");
+    expect(resolveTheme(undefined, undefined)).toBe("aurora");
   });
 
-  test("contains all 8 curated themes with valid colors", () => {
+  test("retains valid colors for current themes and legacy slate exports", () => {
     const expectedThemes = ["slate", "aurora", "sunset", "midnight", "mint", "lavender", "notepad", "xuan"];
     for (const theme of expectedThemes) {
       expect(NOTE_IMAGE_THEMES[theme]).toBeDefined();

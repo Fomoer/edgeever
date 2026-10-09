@@ -122,6 +122,8 @@ describe("companion turn context", () => {
     ]);
     expect(messages.at(-1).content).toContain("[note:memo_current]");
     expect(COMPANION_INSTRUCTIONS).toContain("An older translation of different text does not override the latest relevant translation.");
+    expect(COMPANION_INSTRUCTIONS).toContain("write inline LaTeX as \\(...\\)");
+    expect(COMPANION_INSTRUCTIONS).toContain("Do not use $...$ for inline math");
   });
 
   test("unqualified translations follow conversation language and ask only when source already matches", () => {

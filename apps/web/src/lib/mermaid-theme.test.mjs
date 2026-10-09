@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { renderMermaidSVG, THEMES } from "beautiful-mermaid";
 import { MERMAID_THEME_PALETTES } from "../components/ThemeProvider";
 import { contrastRatio } from "./color-contrast";
@@ -45,9 +46,13 @@ describe("official Mermaid theme variables", () => {
     expect(lightVariables.primaryBorderColor).toBe(light.border);
     expect(lightVariables.lineColor).toBe(light.line);
     expect(lightVariables.fontSize).toBe("12px");
-    expect(dark.bg).toBe("#191e1b");
-    expect(dark.surface).toBe("#242b27");
-    expect(dark.muted).toBe("#d4d4d8");
+    const globals = readFileSync(new URL("../styles/globals.css", import.meta.url), "utf8");
+    expect(globals).toContain(`--workspace-editor: ${dark.bg};`);
+    expect(dark.bg).toBe("#222325");
+    expect(dark.line).toBe("#85898f");
+    expect(dark.surface).toBe("#2d2f32");
+    expect(dark.border).toBe("#46494e");
+    expect(dark.muted).toBe("#b9bdc1");
   });
 
   test("keeps primary and secondary diagram text readable in every theme", () => {

@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { isAiTextAttachment, type AiAttachmentMediaType } from "./ai-assistant";
 
+export const COMPANION_MATH_FORMAT_INSTRUCTION = String.raw`In user-facing replies, write inline LaTeX as \(...\) and display LaTeX as $$...$$ on separate lines. Write monetary amounts with ordinary dollar signs, such as $5 and $10. Do not use $...$ for inline math. Preserve quoted source text and note content exactly when the task requires it.`;
+
 export const CompanionIdSchema = z.string().uuid();
 export const CompanionMemoryInputSchema = z.object({
   content: z.string().trim().min(1).max(500),

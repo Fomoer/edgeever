@@ -19,7 +19,7 @@ import { api, ApiRequestError } from "@/lib/api";
 import { isDesktopResourceRuntime, mapMarkdownResourceUrls, mapTiptapResourceUrls, toApiResourceUrl } from "@/lib/desktop-resources";
 import { readEmergencyDraft } from "@/lib/emergency-draft";
 import { notebookDeleteIdsFromPayload } from "@/lib/notebook-delete";
-import { notifyMemoIdRemapped, notifyMemoSyncAcknowledged, notifySyncQueueChanged } from "@/lib/sync-events";
+import { notifyMemoIdRemapped, notifyMemoSyncAcknowledged, notifyNotebookIdRemapped, notifySyncQueueChanged } from "@/lib/sync-events";
 
 type StagedResourceRewrite = { memoId: string; placeholder: string; url: string };
 
@@ -476,7 +476,7 @@ const syncOutboxItem = async (item: DesktopOutboxItem, stagedRewrites: StagedRes
   if (item.kind === "notebook.create") {
     const data = await api.createNotebook({ name: String(payload.name ?? ""), parentId: typeof payload.parentId === "string" ? payload.parentId : null });
     await acknowledge(item, undefined, data.notebook);
-    return null;
+    return data.notebook;
   }
 
   if (item.kind === "notebook.update") {
@@ -570,8 +570,16 @@ const syncOutbox = async (stagedRewrites: StagedResourceRewrite[], onlyKinds?: S
   const response = await request("sync.outbox.list", { limit: 100 });
   const memoIdMappings = new Map<string, string>();
   const syncedMemos = new Map<string, DesktopRpcResponses["memo.get"]["memo"]>();
-  for (const item of response.items) {
+  let currentItems = response.items;
+  for (const candidate of response.items) {
+    // Earlier creates may have remapped this item and advanced its version.
+    const item = currentItems.find((current) => current.id === candidate.id);
+    if (!item) continue;
     if (onlyKinds && !onlyKinds.has(item.kind)) continue;
+    // A local dependency has no cloud id yet. Leave the action pending until
+    // its create succeeds rather than making a permanent not-found error.
+    if ([item.payload.notebookId, item.payload.parentId].some((id) => typeof id === "string" && id.startsWith("nb_local_"))) continue;
+    if (item.kind !== "memo.create" && [item.entityId, item.payload.memoId].some((id) => typeof id === "string" && id.startsWith("memo_local_"))) continue;
     try {
       const result = await syncOutboxItem(item, stagedRewrites);
       if (item.kind === "memo.create" && result && typeof result === "object" && "id" in result && typeof result.id === "string") {
@@ -581,12 +589,18 @@ const syncOutbox = async (stagedRewrites: StagedResourceRewrite[], onlyKinds?: S
         // leaves a window where the next autosave still sends revision 0.
         notifyMemoIdRemapped(new Map([[item.entityId, result.id]]));
       }
+      if (item.kind === "notebook.create" && result && typeof result === "object" && "id" in result && typeof result.id === "string") {
+        notifyNotebookIdRemapped(item.entityId, result.id);
+      }
       if (result && typeof result === "object" && "id" in result && typeof result.id === "string" && "contentJson" in result) {
         const syncedMemo = result as DesktopRpcResponses["memo.get"]["memo"];
         syncedMemos.set(result.id, syncedMemo);
         notifyMemoSyncAcknowledged(syncedMemo);
       }
       synced += 1;
+      if (["notebook.create", "memo.create", "memo.merge"].includes(item.kind)) {
+        currentItems = (await request("sync.outbox.list", { limit: 100 })).items;
+      }
     } catch (error) {
       const disposition = classifyDesktopSyncFailure(item, error);
       await request("sync.outbox.fail", {
@@ -602,7 +616,7 @@ const syncOutbox = async (stagedRewrites: StagedResourceRewrite[], onlyKinds?: S
       else failed += 1;
     }
   }
-  return { attempted: onlyKinds ? synced + failed + conflicted : response.items.length, synced, failed, conflicted, memoIdMappings, syncedMemos };
+  return { attempted: synced + failed + conflicted, synced, failed, conflicted, memoIdMappings, syncedMemos };
 };
 
 const applyBootstrap = async (page: SyncBootstrapResponse) => {
@@ -802,7 +816,7 @@ export const syncDesktopData = () => {
     }
     let phase: DesktopSyncPhase = "sync_creates";
     try {
-      const creates = await syncOutbox([], new Set(["memo.create"]));
+      const creates = await syncOutbox([], new Set(["notebook.create", "memo.create"]));
       mergeMemoIdMappings(memoIdMappings, creates.memoIdMappings);
       mergeSyncedMemos(syncedMemos, creates.syncedMemos);
       phase = "remap_created_resources";

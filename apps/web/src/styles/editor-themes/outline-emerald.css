@@ -16,14 +16,14 @@
 
 :root.dark .edgeever-editor[data-editor-theme="outline-emerald"]:not([data-editor-theme="default"]) {
   --editor-theme-bg: var(--workspace-editor);
-  --editor-theme-text: #d3dcd6;
-  --editor-theme-muted: #8f9e95;
-  --editor-theme-heading: #f3f6f4;
+  --editor-theme-text: #dcdcdc;
+  --editor-theme-muted: #a0a0a0;
+  --editor-theme-heading: #f3f3f3;
   --editor-theme-accent: #66d6ae;
-  --editor-theme-soft: #1d2822;
-  --editor-theme-border: #36463d;
-  --editor-theme-code-bg: #0f1411;
-  --editor-theme-code-text: #dbe6df;
+  --editor-theme-soft: #242424;
+  --editor-theme-border: #404040;
+  --editor-theme-code-bg: #141414;
+  --editor-theme-code-text: #e2e2e2;
 }
 
 .edgeever-editor[data-editor-theme="outline-emerald"]:not([data-editor-theme="default"]) .ProseMirror {

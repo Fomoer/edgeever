@@ -12,6 +12,12 @@ export type MemoShare = {
   password?: string;
 };
 
+export type ManagedMemoShare = MemoShare & {
+  memoTitle: string | null;
+  notebookId: string;
+  notebookName: string | null;
+};
+
 export const PUBLISHED_NOTE_BODY_FONTS = [
   "wenkai",
   "wenkai-screen",

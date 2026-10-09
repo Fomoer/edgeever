@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { DIAGRAM_CANVAS_DARK, DIAGRAM_CANVAS_LIGHT } from "@edgeever/shared";
+import { DIAGRAM_CANVAS_LIGHT } from "@edgeever/shared";
 import {
   DEFAULT_CUSTOM_DARK_COLORS,
   DEFAULT_CUSTOM_EDITOR_THEME,
@@ -61,13 +61,13 @@ export const MERMAID_THEME_PALETTES: Record<MermaidThemeName, MermaidThemePalett
     border: "#d4d4d8",
   },
   "zinc-dark": {
-    bg: DIAGRAM_CANVAS_DARK,
-    fg: "#FAFAFA",
-    line: "#8b938c",
-    accent: "#d4d4d8",
-    muted: "#d4d4d8",
-    surface: "#242b27",
-    border: "#3d4741",
+    bg: "#222325",
+    fg: "#e4e5e7",
+    line: "#85898f",
+    accent: "#c4c7cb",
+    muted: "#b9bdc1",
+    surface: "#2d2f32",
+    border: "#46494e",
   },
   "tokyo-night": { bg: "#1a1b26", fg: "#a9b1d6", line: "#3d59a1", accent: "#7aa2f7", muted: "#7c85ac" },
   "tokyo-night-storm": { bg: "#24283b", fg: "#a9b1d6", line: "#3d59a1", accent: "#7aa2f7", muted: "#8991b8" },
@@ -175,7 +175,7 @@ const EDITOR_THEME_STORAGE_KEY = "edgeever.editor-theme";
 const CUSTOM_EDITOR_THEME_STORAGE_KEY = "edgeever.custom-editor-theme";
 const CUSTOM_EDITOR_THEMES_STORAGE_KEY = "edgeever.custom-editor-themes";
 const LIGHT_THEME_COLOR = "#eef1f4";
-const DARK_THEME_COLOR = "#101311";
+const DARK_THEME_COLOR = "#121315";
 const AppearanceThemeContext = createContext<AppearanceThemeContextValue | null>(null);
 const MermaidThemeContext = createContext<MermaidThemeContextValue | null>(null);
 const MarkdownThemeContext = createContext<MarkdownThemeContextValue | null>(null);

@@ -14,6 +14,7 @@ import {
   NOTEBOOK_TREE_COLLAPSED_IDS_STORAGE_KEY,
   SHORTCUT_SETTINGS_STORAGE_KEY,
   getSearchShortcutScope,
+  getCreateMemoNotebookId,
   getShortcutActionForEvent,
   canToggleNotebookSidebar,
   getNotebookSortComparator,
@@ -45,6 +46,13 @@ import {
 } from "./app-helpers.ts";
 
 const originalWindow = globalThis.window;
+
+test("a stale selected notebook cannot send a new note to the inbox", () => {
+  const notebooks = [{ id: "nb_inbox" }, { id: "nb_remote" }];
+  expect(getCreateMemoNotebookId("nb_local", notebooks, "nb_inbox")).toBeNull();
+  expect(getCreateMemoNotebookId("nb_remote", notebooks, "nb_inbox")).toBe("nb_remote");
+  expect(getCreateMemoNotebookId(null, notebooks, "nb_inbox")).toBe("nb_inbox");
+});
 
 const installLocalStorage = (initialValue = null) => {
   const values = new Map();

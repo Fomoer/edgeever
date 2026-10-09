@@ -4,6 +4,7 @@ import {
   isEditorInstanceHydratedForMemo,
   reconcileEditorInstanceMemoIdentity,
   remapEditorInstanceMemoIdentity,
+  resolveEditorInsertionMemoId,
 } from "./editor-instance-identity.ts";
 
 describe("editor instance memo identity", () => {
@@ -68,5 +69,23 @@ describe("editor instance memo identity", () => {
       identity,
       new Map([["local_memo_2", "memo_remote_2"]]),
     )).toBe(identity);
+  });
+
+  test("keeps a pasted file on its note when a local ID becomes durable", () => {
+    const initial = createEditorInstanceMemoIdentity("memo_local_1");
+    const remapped = remapEditorInstanceMemoIdentity(initial, new Map([["memo_local_1", "memo_remote_1"]]));
+
+    expect(resolveEditorInsertionMemoId(
+      remapped,
+      initial.instanceKey,
+      "memo_local_1",
+      "memo_remote_1",
+    )).toBe("memo_remote_1");
+    expect(resolveEditorInsertionMemoId(
+      createEditorInstanceMemoIdentity("memo_other"),
+      initial.instanceKey,
+      "memo_local_1",
+      "memo_other",
+    )).toBeNull();
   });
 });

@@ -76,6 +76,7 @@ import {
   getNotebookDropSortOrder,
   getNotebookMoveOptions,
   getMemoIdsNeedingMove,
+  getCreateMemoNotebookId,
   resolveSelectionMoveTargetNotebookId,
 } from "@/lib/app-helpers";
 import { useBrowserBackLayer } from "@/lib/app-hooks";
@@ -576,6 +577,7 @@ export const WorkspaceApp = ({
     setCreatedMemoEditId,
     setOnline: setIsOnline,
     setSelectedMemoId,
+    setSelectedNotebookId,
   });
 
   const invalidateWorkspaceQueries = useCallback(async () => {
@@ -678,9 +680,7 @@ export const WorkspaceApp = ({
     notebooks.find(
       (notebook) => notebook.id === "nb_inbox" || notebook.slug === "inbox" || notebook.name === "等待分类"
     )?.id ?? null;
-  const createMemoNotebookId =
-    (selectedNotebookId && notebooks.some((notebook) => notebook.id === selectedNotebookId) ? selectedNotebookId : null) ??
-    defaultMemoNotebookId;
+  const createMemoNotebookId = getCreateMemoNotebookId(selectedNotebookId, notebooks, defaultMemoNotebookId);
   const canCreateMemo = Boolean(createMemoNotebookId && memoView !== "trash");
   const memoSelectionModeActive = memoSelectionMode || selectedMemoIds.size > 0;
   const mobileSearchActive = mobileBottomNavActive === "search";
@@ -1186,11 +1186,11 @@ export const WorkspaceApp = ({
   const createNotebookMutation = useMutation({
     mutationFn: repository.createNotebook,
     onSuccess: async (data) => {
-      await putLocalNotebook(localDataScope, data.notebook);
-      await queryClient.invalidateQueries({ queryKey: ["notebooks"] });
       setSelectedTag(null);
       setSelectedNotebookId(data.notebook.id);
       setActivePane("memos");
+      await putLocalNotebook(localDataScope, data.notebook);
+      await queryClient.invalidateQueries({ queryKey: ["notebooks"] });
     },
   });
 
@@ -3290,7 +3290,8 @@ export const WorkspaceApp = ({
                     onOpenExecutionCenter={handleOpenExecutionCenter}
                     onClose={handleCloseSettings}
                     onOpenTemplates={handleOpenTemplates}
-                  onOpenAiPrompts={handleOpenAiPrompts}
+                    onOpenAiPrompts={handleOpenAiPrompts}
+                    onOpenMemo={handleOpenPluginNote}
                     imageCompressionEnabled={imageCompressionEnabled}
                     onImageCompressionChange={setImageCompressionEnabled}
                     shortcutSettings={shortcutSettings}

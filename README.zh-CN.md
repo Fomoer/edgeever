@@ -14,7 +14,7 @@
     <a href="#赞助与支持"><img src="https://img.shields.io/badge/Sponsor-支持项目-ea4aaa?logo=github-sponsors" alt="赞助与支持" /></a>
   </p>
   <p>
-    <b>简体中文</b> | <a href="README.zh-TW.md">繁體中文</a> | <a href="README.md">English</a> | <a href="README.ja.md">日本語</a>
+    <b>简体中文</b> | <a href="README.zh-TW.md">繁體中文</a> | <a href="README.md">English</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl-PL.md">Polski</a>
   </p>
   <p>
     <a href="#wechat-group"><img src="assets/readme/community/wechat.svg" alt="WeChat" width="16" height="16" align="absmiddle" /> 微信交流群</a> &nbsp;|&nbsp;
@@ -37,7 +37,7 @@ EdgeEver 是一款现代化的开源笔记与个人知识库工作区。它为�
 
 很多长期使用**印象笔记**的用户，核心需求只是一个**可靠、开放、响应迅速**的个人知识库。然而，当下的主流方案都各有痛点：
 
-* **印象笔记**：我用了近 10 年、感情最深的笔记产品。然而随着它演进为全功能商业套件，广告与附加功能渐多，系统开销也随之走高；加之免费版配额收紧、高级 AI 订阅昂贵，且难以灵活接入现代自托管与私有 AI 工作流。
+* **印象笔记**：陪伴了作者近 10 年、感情最深的笔记产品。然而随着它演进为全功能商业套件，广告与附加功能渐多，系统开销也随之走高；加之免费版配额收紧、高级 AI 订阅昂贵，且难以灵活接入现代自托管与私有 AI 工作流。
 * **Obsidian**：Markdown 开放，核心闭源；官方同步收费，第三方同步繁琐；纯本地文件依赖遍历扫描，当笔记积累到数千上万条或加载复杂插件后，冷启动与全库检索明显卡顿迟缓；图片与附件与文本混存，仓库体积极易膨胀导致移动端同步缓慢，且删笔记后残留附件难清理；对于“随时随地随手记”的轻量场景来说偏重。
 * **Memos / Flomo 等轻量笔记**：虽然简单好用，但流式卡片布局与习惯了经典“三栏工作流”的用户有着天然的交互习惯差异。
 * **思源笔记等块级知识库**：功能深厚且支持开源自托管，但全面的“块级（Block）”架构使得日常随手记录与连续排版书写的心智负担偏重；且缺少零服务器成本的 Serverless 部署形态，多端同步主要依赖官方付费订阅，或需额外付费解锁 S3/WebDAV 同步特性并自备存储。
@@ -183,7 +183,7 @@ curl -fsSL https://edgeever.org/install.sh | bash
 
 欢迎加入 EdgeEver AI 交流群，这里聚集了大量 Vibe Coding 与 AI 玩家。一起交流 EdgeEver 体验、AI Agent 实战落地、高性价比/免费 AI 资源及自动化工作流。
 
-> 当前交流群人数已满 200 人，无法直接扫码进群。请扫描下方二维码或添加微信 `m1245207870`，并备注“EdgeEver 进群”，群主将手动邀请您加入。
+> 扫描下方二维码或添加微信 `m1245207870`（备注“EdgeEver 进群”），群主将手动邀请入群。
 
 <p align="center">
   <img src="assets/wechat-group-qr.jpg" alt="微信联系人二维码" width="260" />

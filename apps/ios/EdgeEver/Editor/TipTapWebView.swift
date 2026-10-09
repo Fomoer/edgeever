@@ -24,6 +24,7 @@ struct TipTapWebView: UIViewRepresentable {
     var onDoubleTap: (() -> Void)? = nil
     var onPickImage: (() -> Void)? = nil
     var onSearchResult: ((_ count: Int, _ index: Int) -> Void)? = nil
+    var onReaderScroll: ((_ collapsed: Bool) -> Void)? = nil
     var onImageExportEvent: (([String: Any]) -> Void)? = nil
     var onBodyReady: (() -> Void)? = nil
 
@@ -58,6 +59,7 @@ struct TipTapWebView: UIViewRepresentable {
                 onDoubleTap: onDoubleTap,
                 onPickImage: onPickImage,
                 onSearchResult: onSearchResult,
+                onReaderScroll: onReaderScroll,
                 onImageExportEvent: onImageExportEvent,
                 onBodyReady: onBodyReady
             )

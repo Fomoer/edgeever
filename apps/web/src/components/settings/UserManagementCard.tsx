@@ -22,8 +22,18 @@ interface UserManagementCardProps {
   demoMode: boolean;
 }
 
+const formatMemberTime = (value: string, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+
 export const UserManagementCard = ({ demoMode }: UserManagementCardProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage ?? i18n.language;
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [resetUser, setResetUser] = useState<InstanceUser | null>(null);
@@ -103,6 +113,12 @@ export const UserManagementCard = ({ demoMode }: UserManagementCardProps) => {
               <div className="min-w-0">
                 <p className={cn("truncate", SETTINGS_ITEM_TITLE_CLASSNAME)}>{user.displayName || user.username}</p>
                 <p className="truncate text-xs text-slate-500">@{user.username} · {t(`users.roles.${user.role}`)}</p>
+                <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
+                  <span>{t("users.createdAt", { time: formatMemberTime(user.createdAt, locale) })}</span>
+                  <span>{user.lastLoginAt
+                    ? t("users.lastLoginAt", { time: formatMemberTime(user.lastLoginAt, locale) })
+                    : t("users.noLoginRecord")}</span>
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 {demoMode && user.role === "owner" ? null : (

@@ -35,7 +35,6 @@ const THEME_OPTIONS: Array<{
   dotColor: string;
   isDark?: boolean;
 }> = [
-  { id: "slate", previewBg: "linear-gradient(135deg, #f8fafc, #e2e8f0)", dotColor: "#16a06e" },
   { id: "aurora", previewBg: "linear-gradient(135deg, #a7f3d0, #67e8f9, #c4b5fd)", dotColor: "#0d9488" },
   { id: "sunset", previewBg: "linear-gradient(135deg, #fde68a, #fbcfe8, #fed7aa)", dotColor: "#ea580c" },
   { id: "midnight", previewBg: "linear-gradient(135deg, #090d16, #1e1b4b)", dotColor: "#34d399", isDark: true },
@@ -74,10 +73,10 @@ export const ShareNoteImageDialog = ({
 }) => {
   const { t } = useTranslation();
   const [format, setFormat] = useState<NoteImageFormat>("png");
-  const [theme, setTheme] = useState<NoteImageTheme>("slate");
+  const [theme, setTheme] = useState<NoteImageTheme>("aurora");
   const [fontStyle, setFontStyle] = useState<NoteImageFontStyle>("serif");
   const [fontSize, setFontSize] = useState<NoteImageFontSize>("lg");
-  const [cardWidth, setCardWidth] = useState<NoteImageCardWidth>("standard");
+  const [cardWidth, setCardWidth] = useState<NoteImageCardWidth>("wide");
   const [showTitle, setShowTitle] = useState(true);
   const [showNotebook, setShowNotebook] = useState(false);
   const [showTags, setShowTags] = useState(false);
@@ -93,10 +92,10 @@ export const ShareNoteImageDialog = ({
   useEffect(() => {
     if (!open) return;
     setFormat("png");
-    setTheme("slate");
+    setTheme("aurora");
     setFontStyle("serif");
     setFontSize("lg");
-    setCardWidth("standard");
+    setCardWidth("wide");
     setShowTitle(true);
     setShowNotebook(false);
     setShowTags(false);
@@ -446,4 +445,3 @@ export const ShareNoteImageDialog = ({
     </Dialog>
   );
 };
-

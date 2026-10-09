@@ -3,7 +3,7 @@ import { Editor } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
 import StarterKit from "@tiptap/starter-kit";
 import { closeHistory, history, undo, redo } from "@tiptap/pm/history";
-import { ImageGallery, IMAGE_GALLERY_NODE_TYPE } from "@edgeever/shared";
+import { FileAttachment, ImageGallery, IMAGE_GALLERY_NODE_TYPE } from "@edgeever/shared";
 import { insertUploadedResources } from "./resource-insertion";
 import { getResourceInsertionTarget } from "./resource-insertion-target";
 
@@ -13,7 +13,7 @@ const gallery = (layout = "3", sources = ["one", "two"]) => ({
   type: IMAGE_GALLERY_NODE_TYPE, attrs: { layout }, content: sources.map(image),
 });
 const makeEditor = (content) => new Editor({
-  extensions: [StarterKit, Image, ImageGallery], content: { type: "doc", content },
+  extensions: [StarterKit, Image, ImageGallery, FileAttachment], content: { type: "doc", content },
 });
 const insert = (editor, target, content, select = true) => {
   expect(editor.commands.command(insertUploadedResources(target, content, select))).toBe(true);
@@ -21,6 +21,27 @@ const insert = (editor, target, content, select = true) => {
 };
 
 describe("uploaded resources beside an existing gallery", () => {
+  test("inserts a Word attachment into an empty note", () => {
+    const editor = makeEditor([paragraph()]);
+    const attachment = {
+      type: "paragraph",
+      content: [{
+        type: "edgeeverFileAttachment",
+        attrs: {
+          url: "edgeever-staged://stage_word_1",
+          label: "附件：软件外包合同.docx",
+          filename: "软件外包合同.docx",
+          mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          byteSize: 42_559,
+        },
+      }],
+    };
+
+    insert(editor, { from: 1, to: 1 }, [attachment]);
+    expect(editor.getJSON().content[0].content[0]).toMatchObject(attachment.content[0]);
+    editor.destroy();
+  });
+
   test("still extends a gallery after saving and reloading the note", () => {
     const original = makeEditor([gallery("2")]);
     const saved = JSON.parse(JSON.stringify(original.getJSON()));

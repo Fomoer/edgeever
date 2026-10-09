@@ -335,6 +335,55 @@ const readCookieValue = (response, name) => {
   return part ? part.trim().slice(prefix.length) : "";
 };
 
+describe("memo share management", () => {
+  test("lists only live shares from the signed-in workspace without exposing passwords", async () => {
+    const { sqlite, environment } = createDatabaseEnvironment();
+    sqlite.query("INSERT INTO workspaces (id, name, is_personal) VALUES (?, ?, 1)").run("ws_other", "Other workspace");
+    sqlite.query("INSERT INTO notebooks (id, workspace_id, name) VALUES (?, ?, ?)").run("nb_other", "ws_other", "Private");
+    sqlite.query("INSERT INTO memos (id, workspace_id, notebook_id, title) VALUES (?, ?, ?, ?)").run("memo_other", "ws_other", "nb_other", "Other note");
+    sqlite.query("INSERT INTO memo_shares (id, memo_id, workspace_id, token) VALUES (?, ?, ?, ?)").run("share_other", "memo_other", "ws_other", "o".repeat(43));
+    sqlite.query("UPDATE memo_shares SET password_hash = ? WHERE memo_id = ?").run("private-hash", "memo_source");
+    sqlite.query("UPDATE memos SET is_deleted = 1 WHERE id = ?").run("memo_target");
+
+    const response = await createShareApp(environment).request("/api/v1/memo-shares", {}, environment);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    const body = await response.json();
+    expect(body.nextOffset).toBeNull();
+    expect(body.shares).toEqual([expect.objectContaining({
+      memoId: "memo_source",
+      memoTitle: "Source",
+      notebookId: "nb_member",
+      notebookName: "Inbox",
+      passwordProtected: true,
+    })]);
+    expect(JSON.stringify(body)).not.toContain("private-hash");
+    expect(JSON.stringify(body)).not.toContain("memo_other");
+    sqlite.close();
+  });
+
+  test("paginates shares and requires an interactive user session", async () => {
+    const { sqlite, environment } = createDatabaseEnvironment();
+    const app = createShareApp(environment);
+    const first = await app.request("/api/v1/memo-shares?limit=1", {}, environment);
+    expect(first.status).toBe(200);
+    const firstBody = await first.json();
+    expect(firstBody.shares).toHaveLength(1);
+    expect(firstBody.nextOffset).toBe(1);
+    const second = await app.request(`/api/v1/memo-shares?limit=1&offset=${firstBody.nextOffset}`, {}, environment);
+    const secondBody = await second.json();
+    expect(secondBody.shares).toHaveLength(1);
+    expect(secondBody.shares[0].memoId).not.toBe(firstBody.shares[0].memoId);
+    expect(secondBody.nextOffset).toBeNull();
+
+    const unauthenticated = new Hono();
+    registerMemoShareRoutes(unauthenticated);
+    const denied = await unauthenticated.request("/api/v1/memo-shares", {}, environment);
+    expect(denied.status).toBe(403);
+    sqlite.close();
+  });
+});
+
 describe("password-protected memo shares", () => {
   test("keeps existing shares public until a password is enabled", async () => {
     const { sqlite, environment } = createDatabaseEnvironment();

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ApiRequestError } from "@edgeever/client";
 import { useQuery } from "@tanstack/react-query";
 import type { Notebook } from "@edgeever/shared";
@@ -418,6 +418,9 @@ export const TagPickerModal = ({
   allowCreate = true,
   dataScope,
   description = "点选已有标签，或输入名称创建新标签",
+  headerContent,
+  footerContent,
+  disabled = false,
   maxSelections = 24,
   onChange,
   onClose,
@@ -428,6 +431,9 @@ export const TagPickerModal = ({
   allowCreate?: boolean;
   dataScope: string;
   description?: string;
+  headerContent?: ReactNode;
+  footerContent?: ReactNode;
+  disabled?: boolean;
   maxSelections?: number;
   onChange: (tags: string[]) => void;
   onClose: () => void;
@@ -479,16 +485,17 @@ export const TagPickerModal = ({
               <Text style={styles.actionSheetTitle}>{translate(title)}</Text>
               <Text style={styles.panelLabel}>{translate(description)}</Text>
             </View>
-            <Pressable accessibilityLabel="关闭" accessibilityRole="button" onPress={onClose} style={styles.notebookPickerCloseButton}>
+            <Pressable accessibilityLabel="关闭" accessibilityRole="button" disabled={disabled} onPress={onClose} style={styles.notebookPickerCloseButton}>
               <X color="#0f172a" size={20} />
             </Pressable>
           </View>
 
           <ScrollView contentContainerStyle={styles.notebookPickerContent} keyboardShouldPersistTaps="handled" style={styles.notebookPickerScroll}>
+            {headerContent}
             {selectedTags.length > 0 ? (
               <View accessibilityLabel="已选标签" style={styles.tagPickerSelectedList}>
                 {selectedTags.map((tag) => (
-                  <Pressable key={tag} accessibilityLabel={`移除标签 ${tag}`} accessibilityRole="button" onPress={() => toggleTag(tag)} style={styles.tagPickerChip}>
+                  <Pressable key={tag} accessibilityLabel={`移除标签 ${tag}`} accessibilityRole="button" disabled={disabled} onPress={() => toggleTag(tag)} style={styles.tagPickerChip}>
                     <Text style={styles.tagPickerChipText}>#{tag}</Text>
                     <X color="#047857" size={14} />
                   </Pressable>
@@ -502,6 +509,7 @@ export const TagPickerModal = ({
                 accessibilityLabel={allowCreate ? "搜索或输入新标签" : "搜索标签"}
                 autoCapitalize="none"
                 autoCorrect={false}
+                editable={!disabled}
                 onChangeText={setSearchText}
                 onSubmitEditing={allowCreate ? createTag : undefined}
                 placeholder={allowCreate ? "搜索或输入新标签" : "搜索标签"}
@@ -511,7 +519,7 @@ export const TagPickerModal = ({
                 value={searchText}
               />
               {allowCreate && normalizedSearch && !exactMatch && selectedTags.length < maxSelections ? (
-                <Pressable accessibilityLabel={`新建标签 ${normalizedSearch}`} accessibilityRole="button" onPress={createTag}>
+                <Pressable accessibilityLabel={`新建标签 ${normalizedSearch}`} accessibilityRole="button" disabled={disabled} onPress={createTag}>
                   <Text style={styles.tagPickerCreateText}>{translate("新建")}</Text>
                 </Pressable>
               ) : null}
@@ -532,6 +540,7 @@ export const TagPickerModal = ({
                   accessibilityLabel={`标签 ${tag.name}`}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
+                  disabled={disabled}
                   onPress={() => toggleTag(tag.name)}
                   style={[styles.notebookPickerRow, selected && styles.notebookPickerRowActive]}
                 >
@@ -544,6 +553,7 @@ export const TagPickerModal = ({
               );
             })}
           </ScrollView>
+          {footerContent}
         </Pressable>
       </Pressable>
     </Modal>

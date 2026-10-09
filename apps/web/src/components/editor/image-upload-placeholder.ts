@@ -1,12 +1,14 @@
 import { Extension, type Editor } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { SUPPORTED_PASTE_IMAGE_TYPES } from "./editor-pane-helpers";
 
 export type ImageUploadPlaceholder = {
   id: string;
   filename: string;
   previewUrl: string | null;
   statusLabel: string;
+  kind: "image" | "file";
 };
 
 type ImageUploadPlaceholderAction =
@@ -21,13 +23,35 @@ export const IMAGE_UPLOAD_PLACEHOLDER_PLUGIN_KEY = new PluginKey<DecorationSet>(
 
 const renderPlaceholder = (placeholder: ImageUploadPlaceholder) => {
   const element = document.createElement("figure");
-  element.className = "edgeever-image-upload-placeholder";
+  const isFile = placeholder.kind === "file";
+  element.className = isFile ? "edgeever-file-upload-placeholder" : "edgeever-image-upload-placeholder";
   element.contentEditable = "false";
   element.dataset.placeholderId = placeholder.id;
   element.setAttribute("role", "status");
   element.setAttribute("aria-label", `${placeholder.statusLabel}: ${placeholder.filename}`);
 
-  if (placeholder.previewUrl) {
+  if (isFile) {
+    const icon = document.createElement("span");
+    icon.className = "edgeever-file-upload-placeholder__icon";
+    icon.setAttribute("aria-hidden", "true");
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "1.8");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    const outline = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    outline.setAttribute("d", "M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z M13 2v7h7 M8 14h8 M8 18h6");
+    svg.appendChild(outline);
+    icon.appendChild(svg);
+    element.appendChild(icon);
+
+    const filename = document.createElement("span");
+    filename.className = "edgeever-file-upload-placeholder__filename";
+    filename.textContent = placeholder.filename;
+    element.appendChild(filename);
+  } else if (placeholder.previewUrl) {
     const preview = document.createElement("img");
     preview.className = "edgeever-image-upload-placeholder__preview";
     preview.src = placeholder.previewUrl;
@@ -38,14 +62,16 @@ const renderPlaceholder = (placeholder: ImageUploadPlaceholder) => {
   }
 
   const status = document.createElement("figcaption");
-  status.className = "edgeever-image-upload-placeholder__status";
+  status.className = isFile
+    ? "edgeever-file-upload-placeholder__status"
+    : "edgeever-image-upload-placeholder__status";
 
   const spinner = document.createElement("span");
   spinner.className = "edgeever-image-upload-placeholder__spinner";
   spinner.setAttribute("aria-hidden", "true");
 
   const label = document.createElement("span");
-  label.className = "edgeever-image-upload-placeholder__label";
+  label.className = "edgeever-upload-placeholder__label";
   label.textContent = placeholder.statusLabel;
   status.appendChild(spinner);
   status.appendChild(label);
@@ -108,8 +134,31 @@ export const createImageUploadPlaceholder = (
     filename: file.name,
     previewUrl,
     statusLabel,
+    kind: "image",
   };
 };
+
+export const createFileUploadPlaceholder = (
+  file: File,
+  statusLabel: string,
+): ImageUploadPlaceholder => {
+  nextPlaceholderId += 1;
+  return {
+    id: `file-upload-${nextPlaceholderId}`,
+    filename: file.name,
+    previewUrl: null,
+    statusLabel,
+    kind: "file",
+  };
+};
+
+/** Every accepted resource gets an immediate placeholder; images keep their local preview. */
+export const createResourceUploadPlaceholder = (
+  file: File,
+  labels: { imagePreparing: string; fileWaiting: string },
+): ImageUploadPlaceholder => SUPPORTED_PASTE_IMAGE_TYPES.has(file.type)
+  ? createImageUploadPlaceholder(file, labels.imagePreparing)
+  : createFileUploadPlaceholder(file, labels.fileWaiting);
 
 export const addImageUploadPlaceholder = (
   editor: Editor,
@@ -148,7 +197,7 @@ export const updateImageUploadPlaceholder = (
   // Update the widget in place so its decoded local preview stays mounted.
   const element = editor.view.dom.querySelector(`[data-placeholder-id="${placeholder.id}"]`);
   element?.setAttribute("aria-label", `${statusLabel}: ${placeholder.filename}`);
-  const label = element?.querySelector(".edgeever-image-upload-placeholder__label");
+  const label = element?.querySelector(".edgeever-upload-placeholder__label");
   if (label) label.textContent = statusLabel;
 };
 

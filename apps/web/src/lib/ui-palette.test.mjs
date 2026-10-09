@@ -27,7 +27,7 @@ describe("application color system", () => {
     expect(globals).not.toContain("--accent-foreground: 158 70% 25%;");
     expect(globals).toContain("--switch-track-on: #525252;");
     expect(globals).toContain("--checkbox-on: #525252;");
-    expect(globals).toContain("--switch-track-on: #e7ebe8;");
+    expect(globals).toContain("--switch-track-on: #e8e8e8;");
     expect(switchSource).toContain("data-[state=checked]:bg-[var(--switch-track-on)]");
     expect(switchSource).not.toContain("bg-emerald-500");
     expect(checkbox).toContain("data-[state=checked]:bg-[var(--checkbox-on)]");
@@ -35,7 +35,7 @@ describe("application color system", () => {
     expect(settings).not.toContain("text-emerald-");
     expect(contrastRatio("#ffffff", "#525252")).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio("#ffffff", "#1a1d21")).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio("#101311", "#e7ebe8")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#121315", "#e8e8e8")).toBeGreaterThanOrEqual(4.5);
   });
 
   test("keeps the light workspace on a cool gray palette while preserving text hierarchy", () => {
@@ -62,15 +62,17 @@ describe("application color system", () => {
     expect(contrastRatio("#737373", "#f8fafb")).toBeGreaterThanOrEqual(4.5);
   });
 
-  test("keeps dark workspace surfaces distinct without blue-black color casts", () => {
-    expect(globals).toContain("--workspace-canvas: #101311;");
-    expect(globals).toContain("--workspace-sidebar: #121612;");
-    expect(globals).toContain("--workspace-memo-list: #151a17;");
-    expect(globals).toContain("--workspace-editor: #191e1b;");
+  test("keeps dark workspace surfaces distinct and neutral", () => {
+    expect(globals).toContain("--workspace-canvas: #121315;");
+    expect(globals).toContain("--workspace-sidebar: #17181a;");
+    expect(globals).toContain("--workspace-memo-list: #1d1e20;");
+    expect(globals).toContain("--workspace-editor: #222325;");
+    expect(globals).toContain("--foreground: 0 0% 87%;");
+    expect(globals).toContain("--border: 0 0% 23%;");
     expect(globals).toContain("--amber-300-rgb: 180 83 9;");
     expect(globals).not.toContain("scrollbar-color: rgba(100, 116, 139, 0.18)");
-    expect(contrastRatio("#cad4ce", "#191e1b")).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio("#9aa9a0", "#191e1b")).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio("#84948a", "#191e1b")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#dedede", "#222325")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#a3a3a3", "#222325")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#a0a0a0", "#222325")).toBeGreaterThanOrEqual(4.5);
   });
 });

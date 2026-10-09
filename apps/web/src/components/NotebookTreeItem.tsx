@@ -8,7 +8,6 @@ import {
   hasNotebookDragData,
   getMemoDragIds,
   getNotebookDropPosition,
-  notebookTreeContainsId,
   focusNotebookTreeButton,
   NOTEBOOK_DRAG_MIME,
   setMemoDragPreview,
@@ -65,7 +64,6 @@ export const NotebookTreeItem = ({
   const showsSplitCount = !showDescendantNotes && hasChildren;
   const selected = node.id === selectedNotebookId;
   const isInbox = node.slug === "inbox";
-  const hasSelectedDescendant = selectedNotebookId ? notebookTreeContainsId(node.children, selectedNotebookId) : false;
   const [dropPosition, setDropPosition] = useState<NotebookDropPosition | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -178,9 +176,7 @@ export const NotebookTreeItem = ({
               "group relative flex h-9 cursor-pointer items-center gap-1 rounded-md px-2 text-xs transition-all duration-200 select-none",
               selected
                 ? "edgeever-workspace-selection font-medium text-slate-950"
-                : hasSelectedDescendant
-                  ? "bg-slate-50 text-slate-900 hover:bg-slate-100"
-                  : "text-slate-700 hover:bg-slate-50",
+                : "text-slate-700 hover:bg-slate-50",
               dropPosition === "inside" && "ring-2 ring-slate-300",
               dropPosition === "inside" && hasChildren && !open && "bg-slate-100"
             )}
@@ -270,11 +266,11 @@ export const NotebookTreeItem = ({
                 }
               }}
             >
-              <NotebookIcon className={cn("h-4 w-4 shrink-0 transition-colors duration-200", selected || hasSelectedDescendant ? "text-slate-700" : "text-slate-500")} />
+              <NotebookIcon className={cn("h-4 w-4 shrink-0 transition-colors duration-200", selected ? "text-slate-950" : "text-slate-500")} />
               <span
                 className={cn(
-                  "truncate font-medium transition-colors duration-200",
-                  selected ? "text-slate-950" : hasSelectedDescendant ? "text-slate-900" : "text-slate-800 group-hover:text-slate-950"
+                  "truncate transition-colors duration-200",
+                  selected ? "font-semibold text-black dark:text-slate-950" : "font-medium text-slate-800 group-hover:text-slate-950"
                 )}
               >
                 {node.name}
@@ -282,7 +278,7 @@ export const NotebookTreeItem = ({
               <span
                 className={cn(
                   "shrink-0 tabular-nums text-xs font-normal transition-colors duration-200",
-                  selected ? "text-slate-600 font-medium" : "text-slate-400 group-hover:text-slate-500"
+                  selected ? "text-slate-900 font-medium" : "text-slate-400 group-hover:text-slate-500"
                 )}
                 aria-hidden="true"
               >

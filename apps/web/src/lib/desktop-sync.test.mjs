@@ -25,6 +25,148 @@ const {
 } = await import("./desktop-sync.ts");
 const { api, ApiRequestError } = await import("./api.ts");
 
+test("desktop notebook create announces its durable id after sidecar acknowledgment", async () => {
+  const previousWindow = globalThis.window;
+  const previousNavigator = globalThis.navigator;
+  const originalCreateNotebook = api.createNotebook;
+  const events = [];
+  const calls = [];
+  let outboxReads = 0;
+  const item = { id: 4, version: 1, kind: "notebook.create", entityId: "nb_local_1", payload: { name: "测试" } };
+  globalThis.window = {
+    dispatchEvent: (event) => { events.push(event); return true; },
+    edgeeverDesktop: {
+      isAvailable: true,
+      listStagedResources: async () => [],
+      listStagedResourceAliases: async () => [],
+      sidecarRequest: async (method, params) => {
+        calls.push(method);
+        if (method === "sync.outbox.list") {
+          if (params.limit === 200) return { items: [] };
+          outboxReads += 1;
+          return { items: outboxReads === 1 ? [] : [item] };
+        }
+        if (method === "sync.status") return { pending: 1, syncing: 0 };
+        return { ok: true };
+      },
+    },
+  };
+  globalThis.navigator = { onLine: true };
+  api.createNotebook = async () => ({ notebook: { id: "nb_remote_1", name: "测试", parentId: null } });
+  try {
+    const result = await syncDesktopData();
+    expect(result.failed).toBe(0);
+    expect(calls).toContain("sync.outbox.ack");
+    expect(events.find((event) => event.type === "edgeever:notebook-id-remapped")?.detail).toEqual({
+      temporaryId: "nb_local_1",
+      remoteId: "nb_remote_1",
+    });
+    expect(calls.indexOf("sync.outbox.ack")).toBeLessThan(calls.indexOf("sync.status"));
+  } finally {
+    api.createNotebook = originalCreateNotebook;
+    globalThis.navigator = previousNavigator;
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
+test("desktop creates notebooks before notes and rereads remapped queue versions", async () => {
+  const previousWindow = globalThis.window;
+  const previousNavigator = globalThis.navigator;
+  const originalCreateNotebook = api.createNotebook;
+  const originalCreateMemo = api.createMemo;
+  const calls = [];
+  let queue = [
+    { id: 1, version: 1, kind: "notebook.create", entityId: "nb_local_parent", payload: { name: "对对对" } },
+    ...[2, 3].map((id) => ({ id, version: 1, kind: "memo.create", entityId: `memo_local_${id}`, payload: { notebookId: "nb_local_parent", contentMarkdown: `body ${id}` } })),
+  ];
+  globalThis.window = {
+    dispatchEvent: () => true,
+    edgeeverDesktop: {
+      isAvailable: true,
+      listStagedResources: async () => [],
+      listStagedResourceAliases: async () => [],
+      sidecarRequest: async (method, params) => {
+        if (method === "sync.outbox.list") return { items: queue.map((item) => ({ ...item, payload: { ...item.payload } })) };
+        if (method === "sync.status") return { pending: 1, syncing: 0 };
+        if (method === "sync.outbox.ack") {
+          const current = queue.find((item) => item.id === params.id);
+          expect(params.version).toBe(current.version);
+          queue = queue.filter((item) => item.id !== params.id);
+          if (params.remoteNotebook) {
+            queue = queue.map((item) => ({ ...item, version: item.version + 1, payload: { ...item.payload, notebookId: "nb_cloud" } }));
+          }
+        }
+        if (method === "sync.outbox.fail") throw new Error("No dependency should fail");
+        return { ok: true };
+      },
+    },
+  };
+  globalThis.navigator = { onLine: true };
+  api.createNotebook = async () => {
+    calls.push("notebook");
+    return { notebook: { id: "nb_cloud", name: "对对对", parentId: null } };
+  };
+  api.createMemo = async (payload) => {
+    expect(payload.notebookId).toBe("nb_cloud");
+    calls.push(payload.contentMarkdown);
+    return { memo: { id: `memo_cloud_${calls.length}`, contentMarkdown: payload.contentMarkdown, contentJson: { type: "doc", content: [] } } };
+  };
+  try {
+    const result = await syncDesktopData();
+    expect(result.failed).toBe(0);
+    expect(result.synced).toBe(3);
+    expect(calls).toEqual(["notebook", "body 2", "body 3"]);
+    expect(queue).toEqual([]);
+  } finally {
+    api.createNotebook = originalCreateNotebook;
+    api.createMemo = originalCreateMemo;
+    globalThis.navigator = previousNavigator;
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
+test("desktop leaves dependent notes pending when their notebook upload fails", async () => {
+  const previousWindow = globalThis.window;
+  const previousNavigator = globalThis.navigator;
+  const originalCreateNotebook = api.createNotebook;
+  const originalCreateMemo = api.createMemo;
+  const failures = [];
+  let notebookEligible = true;
+  const notebook = { id: 1, version: 1, attemptCount: 0, kind: "notebook.create", entityId: "nb_local_failed", payload: { name: "Pending" } };
+  const note = { id: 2, version: 1, kind: "memo.create", entityId: "memo_local_waiting", payload: { notebookId: notebook.entityId } };
+  globalThis.window = {
+    dispatchEvent: () => true,
+    edgeeverDesktop: {
+      isAvailable: true,
+      listStagedResources: async () => [],
+      listStagedResourceAliases: async () => [],
+      sidecarRequest: async (method, params) => {
+        if (method === "sync.outbox.list") return { items: notebookEligible ? [notebook, note] : [note] };
+        if (method === "sync.status") return { pending: 1, syncing: 0, error: 1 };
+        if (method === "sync.outbox.fail") { failures.push(params.id); notebookEligible = false; }
+        return { ok: true };
+      },
+    },
+  };
+  globalThis.navigator = { onLine: true };
+  api.createNotebook = async () => { throw new TypeError("Network unavailable"); };
+  api.createMemo = async () => { throw new Error("Dependent notes must wait"); };
+  try {
+    const result = await syncDesktopData();
+    expect(result.failed).toBe(1);
+    expect(result.attempted).toBe(1);
+    expect(failures).toEqual([notebook.id]);
+  } finally {
+    api.createNotebook = originalCreateNotebook;
+    api.createMemo = originalCreateMemo;
+    globalThis.navigator = previousNavigator;
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
 test("desktop explicit discard clears a conflict whose cloud note is gone", async () => {
   const previousWindow = globalThis.window;
   const originalGetMemo = api.getMemo;

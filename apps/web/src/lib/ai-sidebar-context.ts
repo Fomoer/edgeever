@@ -1,4 +1,4 @@
-import { conversationLanguage, translationTargetInstruction, type CompanionTurnInput } from "@edgeever/shared";
+import { COMPANION_MATH_FORMAT_INSTRUCTION, conversationLanguage, translationTargetInstruction, type CompanionTurnInput } from "@edgeever/shared";
 
 export type SidebarNoteContext = {
   memoId?: string;
@@ -38,6 +38,7 @@ export const sidebarLocalContextText = (
   const selection = context.selectionMarkdown?.trim().slice(0, 2000);
   const content = includeCurrentNote ? context.contentMarkdown?.trim().slice(0, 2000) : "";
   return [
+    COMPANION_MATH_FORMAT_INSTRUCTION,
     translationTargetInstruction(conversationLanguage(conversation.message, conversation.recentUserMessages, conversation.fallbackLocale)),
     context.memoId ? `Open EdgeEver note for this turn. When the user refers to this note, use its ID with the connected EdgeEver MCP get_memo tool to read the full content if available:\nID: ${context.memoId}\nTitle (data): ${context.noteTitle?.trim() || "(untitled)"}` : "",
     selection ? `Selected text from the current note (data):\n${selection}` : "",

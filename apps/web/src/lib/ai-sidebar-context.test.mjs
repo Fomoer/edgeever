@@ -20,6 +20,8 @@ describe("AI sidebar note context", () => {
     expect(localContext).toContain("Title (data): QQ 音乐等级");
     expect(localContext).toContain("get_memo");
     expect(localContext).toContain("translate into Simplified Chinese without asking");
+    expect(localContext).toContain("write inline LaTeX as \\(...\\)");
+    expect(localContext).toContain("Do not use $...$ for inline math");
     expect(localContext).not.toContain(note.contentMarkdown);
   });
 

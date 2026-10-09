@@ -61,6 +61,7 @@ import {
   isEditorInstanceHydratedForMemo,
   reconcileEditorInstanceMemoIdentity,
   remapEditorInstanceMemoIdentity,
+  resolveEditorInsertionMemoId,
 } from "./editor/editor-instance-identity";
 import {
   analyzeMarkdownModeContent,
@@ -71,7 +72,7 @@ import { useEditorMarkdownMode } from "./editor/useEditorMarkdownMode";
 import {
   ImageUploadPlaceholderExtension,
   addImageUploadPlaceholder,
-  createImageUploadPlaceholder,
+  createResourceUploadPlaceholder,
   removeImageUploadPlaceholder,
   waitForImageSourceReady,
   updateImageUploadPlaceholder,
@@ -444,6 +445,8 @@ const RichEditorPane = ({
   // Keep field ownership and values in one React state update. memoRef changes
   // synchronously during hydration, before a new title/tags render can commit.
   const [memoFields, setMemoFields] = useState<EditorMemoFields>({ memoId: null, title: "", tagsText: "" });
+  const memoFieldsRef = useRef(memoFields);
+  memoFieldsRef.current = memoFields;
   const { memoId: fieldsMemoId, title, tagsText } = memoFields;
   const {
     dirtyVersion,
@@ -676,6 +679,7 @@ const RichEditorPane = ({
   const editSessionRef = useRef<MemoEditSession | null>(null);
   const editorRef = useRef<Editor | null>(null);
   const editorCanvasInteractionVersionRef = useRef(0);
+  const persistResourceInsertionDraftRef = useRef<() => Promise<unknown>>(() => Promise.resolve());
   const openAiAssistantRef = useRef<() => void>(() => undefined);
   const aiSpaceShortcutEnabledRef = useRef(readAiSpaceShortcutPreference());
   const editorScrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -809,6 +813,7 @@ const RichEditorPane = ({
     memo?.id ?? null,
   );
   const editorInstanceMemoKey = editorInstanceMemoIdentityRef.current.instanceKey;
+  useEffect(() => setImageUploadState("idle"), [editorInstanceMemoKey]);
   const editorIsHydratedForCurrentMemo = isEditorInstanceHydratedForMemo(
     editorInstanceMemoIdentityRef.current,
     hydratedEditorMemoId,
@@ -835,6 +840,9 @@ const RichEditorPane = ({
         mappings,
       );
       memoRef.current = { ...currentMemo, id: nextMemoId };
+      if (memoFieldsRef.current.memoId === previousMemoId) {
+        memoFieldsRef.current = { ...memoFieldsRef.current, memoId: nextMemoId };
+      }
       setMemoFields((fields) => fields.memoId === previousMemoId
         ? { ...fields, memoId: nextMemoId }
         : fields);
@@ -1019,158 +1027,184 @@ const RichEditorPane = ({
       return false;
     }
 
-    const targetMemoId = currentMemo.id;
+    const requestedMemoId = currentMemo.id;
+    const requestedInstanceKey = editorInstanceMemoIdentityRef.current.instanceKey;
+    const resolveTargetMemoId = () => resolveEditorInsertionMemoId(
+      editorInstanceMemoIdentityRef.current,
+      requestedInstanceKey,
+      requestedMemoId,
+      memoRef.current?.id,
+    );
     const interactionVersionAtRequest = editorCanvasInteractionVersionRef.current;
     const placeholderPosition = currentEditor.state.selection.from;
-    const imagePlaceholderByFile = new Map(files
-      .filter((file) => SUPPORTED_PASTE_IMAGE_TYPES.has(file.type))
-      .map((file) => [file, createImageUploadPlaceholder(
-        file,
-        t("editor.uploadState.imagePreparing"),
-      )] as const));
-    const imagePlaceholders = [...imagePlaceholderByFile.values()];
-    imagePlaceholders.forEach((placeholder) => {
+    const placeholderByFile = new Map(files.map((file) => [file,
+      createResourceUploadPlaceholder(file, {
+        imagePreparing: t("editor.uploadState.imagePreparing"),
+        fileWaiting: t("editor.uploadState.waitingToUpload"),
+      }),
+    ] as const));
+    const placeholders = [...placeholderByFile.values()];
+    placeholders.forEach((placeholder) => {
       addImageUploadPlaceholder(currentEditor, placeholder, placeholderPosition);
     });
 
     void resourceInsertionLimit(async () => {
-      const insertionEditor = editorRef.current;
-      if (
-        memoRef.current?.id !== targetMemoId ||
-        !isEditorReady(insertionEditor) ||
-        !insertionEditor.isEditable
-      ) {
-        return;
-      }
+      let resumeDesktopSync: (() => void) | null = null;
+      try {
+        // A new desktop note can receive its durable ID while a file is being
+        // staged. Keep the note ID and staged resource together until the
+        // attachment has been inserted and its draft is durable locally.
+        if (isDesktopResourceRuntime()) {
+          resumeDesktopSync = await (await import("@/lib/desktop-sync")).pauseDesktopSyncForImport();
+        }
+        const insertionEditor = editorRef.current;
+        if (!resolveTargetMemoId() || !isEditorReady(insertionEditor) || !insertionEditor.isEditable) {
+          throw new Error("The note changed before the attachment could be inserted");
+        }
 
-      // Read the selection only after earlier resource insertions complete.
-      // Rapid consecutive pastes otherwise race with the same stale cursor.
-      const insertionTarget = getResourceInsertionTarget(insertionEditor.state.selection);
-      setImageUploadState("uploading");
-      const imageReadiness: Promise<void>[] = [];
-
-      const results = await processFileUploadBatch(files, async (file) => {
-        const isImage = SUPPORTED_PASTE_IMAGE_TYPES.has(file.type);
-        const shouldCompress = isImage && imageCompressionEnabledRef.current;
-        const placeholder = imagePlaceholderByFile.get(file);
-        if (placeholder) updateImageUploadPlaceholder(editorRef.current, placeholder,
-          t(shouldCompress ? "editor.uploadState.imageCompressing" : "editor.uploadState.uploading"));
-        setImageUploadState(shouldCompress ? "compressing" : "uploading");
-        const preparedFile = shouldCompress ? (await compressImageForUpload(file)).file : file;
-        if (placeholder) updateImageUploadPlaceholder(editorRef.current, placeholder,
-          t("editor.uploadState.waitingToUpload"));
-        return preparedFile;
-      }, async (uploadFile, file) => {
-        const isImage = SUPPORTED_PASTE_IMAGE_TYPES.has(file.type);
-        const placeholder = imagePlaceholderByFile.get(file);
+        // Read the selection only after earlier resource insertions complete.
+        // Rapid consecutive pastes otherwise race with the same stale cursor.
+        const insertionTarget = getResourceInsertionTarget(insertionEditor.state.selection);
         setImageUploadState("uploading");
-        if (placeholder) updateImageUploadPlaceholder(editorRef.current, placeholder,
-          t("editor.uploadState.uploading"));
-        const resource = await uploadEditorResource(targetMemoId, uploadFile, isImage);
-        if (resource.kind === "image") {
-          imageReadiness.push(waitForImageSourceReady(resource.url));
+        const imageReadiness: Promise<void>[] = [];
+
+        const results = await processFileUploadBatch(files, async (file) => {
+          const isImage = SUPPORTED_PASTE_IMAGE_TYPES.has(file.type);
+          const shouldCompress = isImage && imageCompressionEnabledRef.current;
+          const placeholder = placeholderByFile.get(file);
+          if (placeholder) updateImageUploadPlaceholder(editorRef.current, placeholder,
+            t(shouldCompress ? "editor.uploadState.imageCompressing" : "editor.uploadState.waitingToUpload"));
+          setImageUploadState(shouldCompress ? "compressing" : "uploading");
+          const preparedFile = shouldCompress ? (await compressImageForUpload(file)).file : file;
+          if (placeholder) updateImageUploadPlaceholder(editorRef.current, placeholder,
+            t("editor.uploadState.waitingToUpload"));
+          return preparedFile;
+        }, async (uploadFile, file) => {
+          const targetMemoId = resolveTargetMemoId();
+          if (!targetMemoId) throw new Error("The active note changed during attachment upload");
+          const isImage = SUPPORTED_PASTE_IMAGE_TYPES.has(file.type);
+          const placeholder = placeholderByFile.get(file);
+          setImageUploadState("uploading");
+          if (placeholder) updateImageUploadPlaceholder(editorRef.current, placeholder,
+            t("editor.uploadState.uploading"));
+          const resource = await uploadEditorResource(targetMemoId, uploadFile, isImage);
+          if (resource.kind === "image") {
+            imageReadiness.push(waitForImageSourceReady(resource.url));
+          }
+          return resource;
+        });
+
+        const successfulResults = results.filter((result) => result.status === "fulfilled");
+        if (successfulResults.length > 0) {
+          void queryClient.invalidateQueries({ queryKey: ["resources"] });
         }
-        return resource;
-      });
+        await Promise.all(imageReadiness);
 
-      const successfulResults = results.filter((result) => result.status === "fulfilled");
-      if (successfulResults.length > 0) {
-        void queryClient.invalidateQueries({ queryKey: ["resources"] });
-      }
-      await Promise.all(imageReadiness);
-
-      const activeEditor = editorRef.current;
-      if (memoRef.current?.id !== targetMemoId || !isEditorReady(activeEditor)) {
-        setImageUploadState("idle");
-        return;
-      }
-
-      const content = successfulResults.map(({ file, value: resource }) => {
-        const filename = resource.filename || file.name;
-        if (resource.kind === "image") {
-          return {
-            type: "image",
-            attrs: {
-              src: resource.url,
-              alt: file.name,
-              title: file.name,
-              width: NEW_IMAGE_WIDTH_PERCENT,
-            },
-          };
+        const activeEditor = editorRef.current;
+        const activeMemoId = resolveTargetMemoId();
+        if (!activeMemoId || !isEditorReady(activeEditor) || !activeEditor.isEditable) {
+          throw new Error("The note changed before the attachment could be inserted");
         }
-        if (isPdfAttachment(file.type, filename)) {
+
+        const content = successfulResults.map(({ file, value: resource }) => {
+          const filename = resource.filename || file.name;
+          if (resource.kind === "image") {
+            return {
+              type: "image",
+              attrs: {
+                src: resource.url,
+                alt: file.name,
+                title: file.name,
+                width: NEW_IMAGE_WIDTH_PERCENT,
+              },
+            };
+          }
+          if (isPdfAttachment(file.type, filename)) {
+            return {
+              type: "paragraph",
+              content: [{
+                type: "edgeeverPdfAttachment",
+                attrs: {
+                  url: resource.url,
+                  label: t("editor.attachmentLabel", { filename }),
+                  filename,
+                  mimeType: resource.mimeType || file.type || "application/pdf",
+                  byteSize: resource.byteSize,
+                  displayMode: "compact",
+                },
+              }],
+            };
+          }
           return {
             type: "paragraph",
             content: [{
-              type: "edgeeverPdfAttachment",
+              type: "edgeeverFileAttachment",
               attrs: {
                 url: resource.url,
                 label: t("editor.attachmentLabel", { filename }),
                 filename,
-                mimeType: resource.mimeType || file.type || "application/pdf",
+                mimeType: file.type,
                 byteSize: resource.byteSize,
-                displayMode: "compact",
               },
             }],
           };
-        }
-        return {
-          type: "paragraph",
-          content: [{
-            type: "edgeeverFileAttachment",
-            attrs: {
-              url: resource.url,
-              label: t("editor.attachmentLabel", { filename }),
-              filename,
-              mimeType: file.type,
-              byteSize: resource.byteSize,
-            },
-          }],
-        };
-      });
+        });
 
-      if (content.length > 0) {
-        const safeInsertionTarget = clampResourceInsertionTarget(
-          insertionTarget,
-          activeEditor.state.doc.content.size,
-        );
-        const updateSelection = shouldSelectInsertedResources(
-          interactionVersionAtRequest,
-          editorCanvasInteractionVersionRef.current,
-        );
-        const insertion = activeEditor.chain();
-        if (updateSelection) {
-          insertion.focus();
+        if (content.length > 0) {
+          const safeInsertionTarget = clampResourceInsertionTarget(
+            insertionTarget,
+            activeEditor.state.doc.content.size,
+          );
+          const updateSelection = shouldSelectInsertedResources(
+            interactionVersionAtRequest,
+            editorCanvasInteractionVersionRef.current,
+          );
+          const insertion = activeEditor.chain();
+          if (updateSelection) {
+            insertion.focus();
+          }
+          const inserted = insertion
+            .command(insertUploadedResources(
+              safeInsertionTarget,
+              content,
+              updateSelection,
+            ))
+            .run();
+          if (!inserted) throw new Error("The attachment could not be inserted into the note");
+          if (!updateSelection) {
+            // ProseMirror can still map a cursor at the document boundary to a
+            // NodeSelection for the newly inserted block image. Honor the newer
+            // canvas click deterministically instead of trusting that mapping.
+            clearNodeSelectionAtDocumentEnd(activeEditor);
+          }
+          if (!getWritableEditorMemoFields(
+            memoFieldsRef.current,
+            activeMemoId,
+            hydratedMemoIdRef.current,
+            hydratingRef.current,
+          )) {
+            throw new Error("The attachment was inserted before the note finished loading");
+          }
+          await persistResourceInsertionDraftRef.current();
+          if (!hasUnsavedChangesRef.current) markDirtyStatus();
         }
-        insertion
-          .command(insertUploadedResources(
-            safeInsertionTarget,
-            content,
-            updateSelection,
-          ))
-          .run();
-        if (!updateSelection) {
-          // ProseMirror can still map a cursor at the document boundary to a
-          // NodeSelection for the newly inserted block image. Honor the newer
-          // canvas click deterministically instead of trusting that mapping.
-          clearNodeSelectionAtDocumentEnd(activeEditor);
-        }
-      }
 
-      if (results.some((result) => result.status === "rejected")) {
+        const failures = results.filter((result) => result.status === "rejected");
+        failures.forEach((result) => console.error("[editor] Attachment upload failed", result.reason));
+        setImageUploadState(failures.length > 0 ? "error" : "idle");
+      } catch (error) {
+        console.error("[editor] Attachment insertion failed", error);
         setImageUploadState("error");
-        window.setTimeout(() => setImageUploadState("idle"), 2200);
-      } else {
-        setImageUploadState("idle");
+      } finally {
+        resumeDesktopSync?.();
+        const placeholderEditor = editorRef.current;
+        placeholders.forEach((placeholder) => {
+          removeImageUploadPlaceholder(placeholderEditor, placeholder);
+        });
       }
-    }).finally(() => {
-      const placeholderEditor = editorRef.current;
-      imagePlaceholders.forEach((placeholder) => {
-        removeImageUploadPlaceholder(placeholderEditor, placeholder);
-      });
     });
     return true;
-  }, [queryClient, resourceInsertionLimit, t, uploadEditorResource]);
+  }, [markDirtyStatus, queryClient, resourceInsertionLimit, t, uploadEditorResource]);
 
   const pluginEmbedExtension = useMemo(() => createPluginEmbedExtension(pluginHost), [pluginHost]);
   const inlineFieldExtension = useMemo(() => createInlineFieldExtension(i18n.language), [i18n.language]);
@@ -1963,14 +1997,14 @@ const RichEditorPane = ({
   );
 
   const persistCurrentDraft = useCallback(
-    (nextTitle = title, nextTagsText = tagsText, nextMobilePlainText = getMobilePlainTextValue()) => {
+    (nextTitle = memoFieldsRef.current.title, nextTagsText = memoFieldsRef.current.tagsText, nextMobilePlainText = getMobilePlainTextValue()) => {
       const currentMemo = memoRef.current;
       const currentEditor = editorRef.current;
 
       if (
         !currentMemo ||
         currentMemo.isDeleted ||
-        !getWritableEditorMemoFields(memoFields, currentMemo.id, hydratedMemoIdRef.current, hydratingRef.current) ||
+        !getWritableEditorMemoFields(memoFieldsRef.current, currentMemo.id, hydratedMemoIdRef.current, hydratingRef.current) ||
         (!useMobilePlainTextEditor && !isEditorReady(currentEditor))
       ) {
         return Promise.resolve();
@@ -1992,8 +2026,9 @@ const RichEditorPane = ({
         updatedAt: new Date().toISOString(),
       });
     },
-    [getMobilePlainTextValue, markdownSource, memoFields, tagsText, title, useMarkdownSourceEditor, useMobilePlainTextEditor]
+    [getMobilePlainTextValue, markdownSource, useMarkdownSourceEditor, useMobilePlainTextEditor]
   );
+  persistResourceInsertionDraftRef.current = () => persistCurrentDraft();
 
   const markDirty = useCallback(() => {
     const currentMemo = memoRef.current;
@@ -2001,13 +2036,13 @@ const RichEditorPane = ({
       hydratingRef.current ||
       currentMemo?.isDeleted ||
       !currentMemo ||
-      !getWritableEditorMemoFields(memoFields, currentMemo.id, hydratedMemoIdRef.current, hydratingRef.current)
+      !getWritableEditorMemoFields(memoFieldsRef.current, currentMemo.id, hydratedMemoIdRef.current, hydratingRef.current)
     ) {
       return;
     }
 
     markDirtyStatus();
-  }, [markDirtyStatus, memoFields]);
+  }, [markDirtyStatus]);
 
   const getCurrentMarkdownForAi = useCallback(() => {
     if (useMobilePlainTextEditor) return getMobilePlainTextValue();

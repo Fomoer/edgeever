@@ -36,6 +36,7 @@ import {
   type ProtectedResourceLoadFailure,
 } from "../lib/mobile-protected-resources";
 import type { MobileResourceTarget } from "../lib/mobile-attachments";
+import { uploadMobileResource } from "../lib/mobile-resource-upload";
 
 export type MobileMemoUpdateMutation = UseMutationResult<
   MemoDetail,
@@ -392,7 +393,7 @@ export const useMobileRichEditor = ({
           safeDomCall(() => editorRef.current?.beginImageUpload(uploadId, previewDataUrl));
         }
         const uploadAsset = await prepareUploadAsset(asset, imageCompressionEnabled);
-        const { resource } = await client.uploadMemoResource(currentMemo.id, new ExpoFile(uploadAsset.uri));
+        const { resource } = await uploadMobileResource(client, currentMemo.id, uploadAsset);
         applyMobileEditorUpload(editorRef, resource, uploadId, uploadAsset.name || (resource.kind === "image" ? "图片" : "附件"));
         if (resource.kind === "image") sources.push(resource.url);
         uploadId = null;

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, ExternalLink, Link2, LoaderCircle, RefreshCw, Share2, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link, useLocation } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { api, getConfiguredDesktopApiBaseUrl } from "@/lib/api";
 import { copyTextToClipboard } from "@/lib/clipboard";
 
-const getPublicShareUrl = (token: string) => {
+export const getPublicShareUrl = (token: string) => {
   const baseUrl = getConfiguredDesktopApiBaseUrl() || window.location.origin;
   return `${baseUrl.replace(/\/$/, "")}/share/${encodeURIComponent(token)}`;
 };
@@ -55,6 +56,7 @@ export const ShareMemoDialog = ({
   onOpenChange: (open: boolean) => void;
 }) => {
   const { t } = useTranslation();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [copyTarget, setCopyTarget] = useState<"link" | "password" | "both">("link");
@@ -69,12 +71,16 @@ export const ShareMemoDialog = ({
   });
   const createMutation = useMutation({
     mutationFn: () => api.createMemoShare(memoId),
-    onSuccess: (data) => queryClient.setQueryData(queryKey, data),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKey, data);
+      void queryClient.invalidateQueries({ queryKey: ["memo-shares"] });
+    },
   });
   const passwordMutation = useMutation({
     mutationFn: (passwordProtected: boolean) => api.updateMemoShare(memoId, { passwordProtected }),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKey, { share: { ...data.share, password: undefined } });
+      void queryClient.invalidateQueries({ queryKey: ["memo-shares"] });
       if (data.share.password) {
         writeStoredSharePassword(memoId, data.share.token, data.share.password);
         setRevealedPassword(data.share.password);
@@ -90,6 +96,7 @@ export const ShareMemoDialog = ({
       clearStoredSharePassword(memoId);
       setRevealedPassword("");
       queryClient.setQueryData(queryKey, { share: null });
+      void queryClient.invalidateQueries({ queryKey: ["memo-shares"] });
     },
   });
   useEffect(() => {
@@ -249,6 +256,16 @@ export const ShareMemoDialog = ({
           )}
           {error ? <p className="text-xs leading-5 text-rose-600" role="alert">{t("sharing.error")}</p> : null}
         </div>
+        {location.pathname !== "/settings" ? (
+          <div className="border-t border-slate-200 px-5 py-3 text-center">
+            <Link
+              to="/settings?tab=sharing"
+              className="inline-flex items-center rounded-sm py-2 text-sm font-medium text-emerald-600 underline underline-offset-4 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:text-emerald-400 dark:hover:text-emerald-300"
+            >
+              {t("sharing.viewAll")}
+            </Link>
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

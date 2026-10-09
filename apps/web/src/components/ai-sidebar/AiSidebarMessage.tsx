@@ -6,7 +6,7 @@ import { memo } from "react";
 import { Streamdown } from "streamdown";
 import "katex/dist/katex.min.css";
 import { cn } from "@/lib/utils";
-import { rewriteSidebarNoteLinks, sidebarNoteLinkAllowedTags, sidebarNoteLinkComponents } from "./sidebar-note-links";
+import { normalizeSidebarMathDelimiters, rewriteSidebarNoteLinks, sidebarNoteLinkAllowedTags, sidebarNoteLinkComponents } from "./sidebar-note-links";
 
 const sidebarStreamdownPlugins = { cjk, code, mermaid, math };
 
@@ -20,7 +20,7 @@ export const AiSidebarMessage = memo(
       plugins={sidebarStreamdownPlugins}
       tableMaxHeight={240}
     >
-      {rewriteSidebarNoteLinks(children)}
+      {rewriteSidebarNoteLinks(normalizeSidebarMathDelimiters(children))}
     </Streamdown>
   ),
   (prev, next) => prev.children === next.children && prev.isAnimating === next.isAnimating && prev.className === next.className,

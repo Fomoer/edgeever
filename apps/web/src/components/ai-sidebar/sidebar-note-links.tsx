@@ -2,8 +2,16 @@ import { createMemoLinkHref } from "@edgeever/shared";
 import type { ComponentProps, ReactNode } from "react";
 import { parseAssistantNoteLinkHref } from "@/lib/assistant-note-links";
 
-const CODE_REGION = /(```[\s\S]*?```|```[\s\S]*$|`[^`\n]*`)/g;
+const CODE_REGION = /(```[\s\S]*?```|```[\s\S]*$|~~~[\s\S]*?~~~|~~~[\s\S]*$|``[^`\n]*``|`[^`\n]*`)/g;
 const MARKDOWN_LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/g;
+
+/** Use explicit inline math delimiters; keep dollar prices untouched. */
+export const normalizeSidebarMathDelimiters = (markdown: string): string => markdown
+  .split(CODE_REGION)
+  .map((part, index) => index % 2 === 1 ? part : part
+    .replace(/\$\\rightarrow\$/g, "→") // Existing assistant replies used single-dollar arrows.
+    .replace(/(?<!\\)\\\(([^\n]+?)\\\)/g, (_match, latex: string) => `$$${latex}$$`))
+  .join("");
 
 const escapeText = (value: string) => value
   .replace(/&/g, "&amp;")
