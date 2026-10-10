@@ -3,7 +3,7 @@
     "message": "EdgeEver 网页剪藏"
   },
   "extensionDescription": {
-    "message": "将当前网页、选中内容，或右键图片保存到你自托管的 EdgeEver 实例。"
+    "message": "将网页、选中文字、图片及 Hacker News 主帖保存到你自托管的 EdgeEver 实例。"
   },
   "actionTitle": {
     "message": "保存到 EdgeEver"
@@ -560,5 +560,41 @@
   },
   "videoNoteFallbackTitle": {
     "message": "视频笔记"
+  },
+  "saveHackerNewsToEdgeEver": {
+    "message": "保存 Hacker News 主帖到 EdgeEver"
+  },
+  "savingPlatformClip": {
+    "message": "正在保存当前内容到 EdgeEver…"
+  },
+  "platformNotDetail": {
+    "message": "请打开 Hacker News 主帖详情页后重试。"
+  },
+  "platformUnreadable": {
+    "message": "无法读取目标内容。请按需登录，等待详情页加载完成后重试。"
+  },
+  "platformPageChanged": {
+    "message": "剪藏时页面内容已切换，尚未保存。请在目标详情页重试。"
+  },
+  "platformImagesPartial": {
+    "message": "正文已保存，部分图片仍为外链。"
+  },
+  "platformSavedWithImages": {
+    "message": "已保存到 EdgeEver，图片已全部归档。"
+  },
+  "platformAuthorLabel": {
+    "message": "作者"
+  },
+  "platformPublishedAtLabel": {
+    "message": "发布时间"
+  },
+  "platformRelativeTimeLabel": {
+    "message": "页面原文，相对时间"
+  },
+  "platformScoreLabel": {
+    "message": "采集时积分"
+  },
+  "platformExternalLinkLabel": {
+    "message": "原始外链"
   }
 }

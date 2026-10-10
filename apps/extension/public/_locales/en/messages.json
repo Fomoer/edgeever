@@ -3,7 +3,7 @@
     "message": "EdgeEver Web Clipper"
   },
   "extensionDescription": {
-    "message": "Save the current webpage, selected content, or a right-clicked image to your self-hosted EdgeEver instance."
+    "message": "Save webpages, selections, images, and Hacker News posts to your self-hosted EdgeEver instance."
   },
   "actionTitle": {
     "message": "Save to EdgeEver"
@@ -560,5 +560,41 @@
   },
   "videoNoteFallbackTitle": {
     "message": "Video note"
+  },
+  "saveHackerNewsToEdgeEver": {
+    "message": "Save Hacker News post to EdgeEver"
+  },
+  "savingPlatformClip": {
+    "message": "Saving this page to EdgeEver…"
+  },
+  "platformNotDetail": {
+    "message": "Open a Hacker News post detail page, then try again."
+  },
+  "platformUnreadable": {
+    "message": "The content is unavailable. Sign in if needed, wait for the detail page to load, then try again."
+  },
+  "platformPageChanged": {
+    "message": "The page changed during capture. Nothing was saved; try again on the intended detail page."
+  },
+  "platformImagesPartial": {
+    "message": "Text saved. Some images still use external links."
+  },
+  "platformSavedWithImages": {
+    "message": "Saved to EdgeEver with all images archived."
+  },
+  "platformAuthorLabel": {
+    "message": "Author"
+  },
+  "platformPublishedAtLabel": {
+    "message": "Published"
+  },
+  "platformRelativeTimeLabel": {
+    "message": "as displayed; relative time"
+  },
+  "platformScoreLabel": {
+    "message": "Points at capture"
+  },
+  "platformExternalLinkLabel": {
+    "message": "Linked page"
   }
 }

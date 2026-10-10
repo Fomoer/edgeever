@@ -16,7 +16,10 @@ const PI_PACKAGE_URL = "https://registry.npmjs.org/pi-acp/latest";
 export const MAX_ARCHIVE_BYTES = 500 * 1024 * 1024;
 export const MAX_EXTRACTED_BYTES = 2 * 1024 * 1024 * 1024;
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
-const SUPPORTED_MAJOR = { codex: 2, antigravity: 1 };
+const SUPPORTED_MAJOR = { codex: 2, claudeCode: 0, antigravity: 1 };
+const NPM_PACKAGES = { codex: "@agentclientprotocol/codex-acp", claudeCode: "@agentclientprotocol/claude-agent-acp", piAgent: "pi-acp" };
+const MANAGED_IDS = ["codex", "claudeCode", "antigravity", "piAgent"];
+const npmEntryFile = (root, id) => path.join(root, "node_modules", ...NPM_PACKAGES[id].split("/"), "dist", "index.js");
 
 const platformTarget = (platform, arch) => {
   const system = { darwin: "darwin", linux: "linux", win32: "windows" }[platform];
@@ -33,12 +36,12 @@ const compareVersions = (left, right) => {
 
 const commandFile = (root, id, version, platform) => id === "antigravity"
   ? path.join(root, id, version, platform === "win32" ? "agy_acp_server.exe" : "agy_acp_server.par")
-  : path.join(root, id, version, "node_modules", ...(id === "codex" ? ["@agentclientprotocol", "codex-acp"] : ["pi-acp"]), "dist", "index.js");
+  : npmEntryFile(path.join(root, id, version), id);
 
 const antigravityArgs = (platform) => platform === "linux" ? ["--uid="] : [];
 
 export const managedAdapterCommand = (root, id, version, { platform = process.platform, executablePath = process.execPath } = {}) => {
-  if (!VERSION_PATTERN.test(version) || !["codex", "antigravity", "piAgent"].includes(id)) return null;
+  if (!VERSION_PATTERN.test(version) || !MANAGED_IDS.includes(id)) return null;
   const file = commandFile(root, id, version, platform);
   if (!existsSync(file)) return null;
   return id !== "antigravity"
@@ -74,12 +77,12 @@ const readPiRelease = async (fetchImpl) => {
 };
 
 export const selectAdapterRelease = (agents, id, { platform = process.platform, arch = process.arch } = {}) => {
-  const entry = agents.find((agent) => agent?.id === (id === "codex" ? "codex-acp" : "antigravity-acp"));
+  const entry = agents.find((agent) => agent?.id === ({ codex: "codex-acp", claudeCode: "claude-acp", antigravity: "antigravity-acp" }[id]));
   if (!entry || !VERSION_PATTERN.test(entry.version)) throw new Error("unsupported_release");
   if (Number(entry.version.split(".")[0]) !== SUPPORTED_MAJOR[id]) throw new Error("unsupported_release");
-  if (id === "codex") {
+  if (id === "codex" || id === "claudeCode") {
     const packageName = entry.distribution?.npx?.package;
-    if (packageName !== `@agentclientprotocol/codex-acp@${entry.version}`) throw new Error("unsupported_release");
+    if (packageName !== `${NPM_PACKAGES[id]}@${entry.version}`) throw new Error("unsupported_release");
     return { id, version: entry.version, kind: "npm", packageName };
   }
   const target = platformTarget(platform, arch);
@@ -216,7 +219,7 @@ export function createAcpAdapterManager({ root, fetchImpl = fetch, platform = pr
   };
 
   const install = (id, validate, { updateOnly = false } = {}) => {
-    if (!["codex", "antigravity", "piAgent"].includes(id)) return Promise.reject(new Error("unknown_adapter"));
+    if (!MANAGED_IDS.includes(id)) return Promise.reject(new Error("unknown_adapter"));
     if (inFlight.has(id)) return inFlight.get(id);
     const task = (async () => {
       const previous = get(id);
@@ -241,7 +244,7 @@ export function createAcpAdapterManager({ root, fetchImpl = fetch, platform = pr
         }
         // Inspect the staged command before making it visible to future sessions.
         const stagedFile = release.kind === "npm"
-          ? path.join(stage, "node_modules", ...(id === "codex" ? ["@agentclientprotocol", "codex-acp"] : ["pi-acp"]), "dist", "index.js")
+          ? npmEntryFile(stage, id)
           : path.join(stage, platform === "win32" ? "agy_acp_server.exe" : "agy_acp_server.par");
         if (!existsSync(stagedFile)) throw new Error("adapter_install_failed");
         const stagedCommand = release.kind === "npm"
@@ -269,7 +272,7 @@ export function createAcpAdapterManager({ root, fetchImpl = fetch, platform = pr
   };
 
   const prune = async () => {
-    for (const id of ["codex", "antigravity", "piAgent"]) {
+    for (const id of MANAGED_IDS) {
       const current = get(id)?.version;
       const folder = path.join(root, id);
       const names = await readdir(folder).catch(() => []);
@@ -284,5 +287,5 @@ export function createAcpAdapterManager({ root, fetchImpl = fetch, platform = pr
   };
 
 
-  return { get, install, prune, installedIds: () => ["codex", "antigravity", "piAgent"].filter((id) => get(id)) };
+  return { get, install, prune, installedIds: () => MANAGED_IDS.filter((id) => get(id)) };
 }

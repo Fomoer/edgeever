@@ -3,7 +3,7 @@
     "message": "EdgeEver Web Clipper"
   },
   "extensionDescription": {
-    "message": "表示中のページ、選択した内容、または右クリックした画像を、自分で運用する EdgeEver に保存します。"
+    "message": "ウェブページ、選択した文章、画像、Hacker News の投稿をセルフホストの EdgeEver に保存します。"
   },
   "actionTitle": {
     "message": "EdgeEver に保存"
@@ -560,5 +560,41 @@
   },
   "videoNoteFallbackTitle": {
     "message": "動画ノート"
+  },
+  "saveHackerNewsToEdgeEver": {
+    "message": "Hacker News の投稿を EdgeEver に保存"
+  },
+  "savingPlatformClip": {
+    "message": "このページを EdgeEver に保存中…"
+  },
+  "platformNotDetail": {
+    "message": "Hacker News の投稿詳細ページを開いて、もう一度お試しください。"
+  },
+  "platformUnreadable": {
+    "message": "内容を読み取れません。必要に応じてログインし、詳細ページの読み込み後にもう一度お試しください。"
+  },
+  "platformPageChanged": {
+    "message": "保存中にページが切り替わりました。保存は行われていません。目的の詳細ページで再試行してください。"
+  },
+  "platformImagesPartial": {
+    "message": "本文を保存しました。一部の画像は外部リンクのままです。"
+  },
+  "platformSavedWithImages": {
+    "message": "すべての画像とともに EdgeEver に保存しました。"
+  },
+  "platformAuthorLabel": {
+    "message": "投稿者"
+  },
+  "platformPublishedAtLabel": {
+    "message": "公開日時"
+  },
+  "platformRelativeTimeLabel": {
+    "message": "ページの表示どおりの相対時刻"
+  },
+  "platformScoreLabel": {
+    "message": "保存時のポイント"
+  },
+  "platformExternalLinkLabel": {
+    "message": "元の外部リンク"
   }
 }

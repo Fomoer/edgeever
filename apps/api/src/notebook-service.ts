@@ -263,11 +263,11 @@ const listActiveNotebookTree = async (db: DatabaseAdapter, workspaceId: string, 
        INNER JOIN tree t ON n.parent_id = t.id
        WHERE n.workspace_id = ?
      )
-     SELECT n.id, n.slug
+     SELECT n.id, n.slug, n.parent_id
      FROM notebooks n
      INNER JOIN tree t ON t.id = n.id
      WHERE n.workspace_id = ? AND n.is_deleted = 0`
-  ).bind(workspaceId, id, workspaceId, workspaceId).all<{ id: string; slug: string | null }>();
+  ).bind(workspaceId, id, workspaceId, workspaceId).all<{ id: string; slug: string | null; parent_id: string | null }>();
 
   return rows.results;
 };
@@ -284,23 +284,28 @@ const countActiveMemosInNotebooks = async (db: DatabaseAdapter, workspaceId: str
   return total;
 };
 
-export const deleteNotebookRecord = async (
+export const deleteNotebookTree = async (
   db: DatabaseAdapter,
   workspaceId: string,
   id: string,
-  actor: AuditActor
+  actor: AuditActor,
+  options: { dryRun?: boolean; guardConcurrentChanges?: boolean } = {},
 ) => {
+  const result = (notebookIds: string[]) => ({
+    notebookId: id, notebookIds, notebookCount: notebookIds.length,
+    dryRun: options.dryRun === true, deleted: options.dryRun !== true,
+  });
   const current = await db.prepare(
     `SELECT id, slug, is_deleted FROM notebooks WHERE id = ? AND workspace_id = ?`
   ).bind(id, workspaceId).first<{ id: string; slug: string | null; is_deleted: number }>();
   if (!current) throw new AppError("not_found", "Notebook not found", 404);
   if (isInboxNotebook(current, workspaceId)) {
-    if (current.is_deleted) return;
+    if (current.is_deleted) return result([]);
     throw new AppError("bad_request", "等待分类不能删除。", 400);
   }
 
   const tree = await listActiveNotebookTree(db, workspaceId, id);
-  if (tree.length === 0) return;
+  if (tree.length === 0) return result([]);
   if (tree.some((notebook) => isInboxNotebook(notebook, workspaceId))) {
     throw new AppError("bad_request", "等待分类不能删除。", 400);
   }
@@ -316,8 +321,53 @@ export const deleteNotebookRecord = async (
     );
   }
 
+  if (options.dryRun) return result(notebookIds);
+
   const now = isoNow();
   const inboxId = workspaceInboxId(workspaceId);
+  if (options.guardConcurrentChanges) {
+    // One guarded UPDATE prevents a note inserted after the emptiness check
+    // from being hidden. Require the same active subtree, including parent
+    // links, so concurrent moves/creates/deletes require a fresh attempt.
+    const serializedSnapshot = JSON.stringify(tree.map(({ id, parent_id }) => ({ id, parent_id })));
+    const update = db.prepare(`
+      WITH RECURSIVE tree(id) AS (
+        SELECT id FROM notebooks WHERE workspace_id = ? AND id = ?
+        UNION
+        SELECT n.id FROM notebooks n JOIN tree t ON n.parent_id = t.id WHERE n.workspace_id = ?
+      ), active_tree AS MATERIALIZED (
+        SELECT n.* FROM notebooks n JOIN tree t ON n.id = t.id
+        WHERE n.workspace_id = ? AND n.is_deleted = 0
+      ), expected AS (
+        SELECT json_extract(value, '$.id') AS id, json_extract(value, '$.parent_id') AS parent_id
+        FROM json_each(?)
+      )
+      UPDATE notebooks SET is_deleted = 1, deleted_at = ?, updated_at = ?
+      WHERE workspace_id = ? AND is_deleted = 0 AND id IN (SELECT id FROM active_tree)
+        AND (SELECT COUNT(*) FROM active_tree) = ?
+        AND NOT EXISTS (
+          SELECT 1 FROM active_tree n LEFT JOIN expected e ON e.id = n.id
+          WHERE e.id IS NULL OR n.parent_id IS NOT e.parent_id
+        )
+        AND NOT EXISTS (SELECT 1 FROM active_tree WHERE slug = 'inbox' OR id = 'nb_inbox' OR id = ?)
+        AND NOT EXISTS (
+          SELECT 1 FROM memos WHERE workspace_id = ? AND is_deleted = 0
+          AND notebook_id IN (SELECT id FROM active_tree)
+        )
+    `).bind(workspaceId, id, workspaceId, workspaceId, serializedSnapshot,
+      now, now, workspaceId, notebookIds.length, inboxId, workspaceId);
+    const auditDelete = db.prepare(`
+      INSERT INTO audit_events (id, actor_type, actor_id, action, entity_type, entity_id, metadata_json, created_at)
+      SELECT ?, ?, ?, 'notebook.delete', 'notebook', ?, ?, ? WHERE changes() = ?
+    `).bind(createId("audit"), actor.actorType, actor.actorId, id, JSON.stringify({ notebookIds }), now, notebookIds.length);
+    const [, audited] = await db.batch([update, auditDelete]);
+    // Adapter UPDATE metadata may include sync-trigger writes. The conditional
+    // audit uses SQLite changes(), which counts only the notebook rows.
+    if (!(Number(audited?.meta.changes) > 0)) {
+      throw new AppError("notebook_changed", "Notebook contents or hierarchy changed. Preview again before retrying deletion.", 409);
+    }
+    return result(notebookIds);
+  }
   const statements = chunkValues(notebookIds, NOTEBOOK_DELETE_ID_CHUNK).map((chunk) => {
     const placeholders = chunk.map(() => "?").join(", ");
     return db.prepare(
@@ -331,6 +381,14 @@ export const deleteNotebookRecord = async (
     notebookIds,
   }));
   await db.batch(statements);
+  return result(notebookIds);
+};
+
+// Preserve the existing REST deletion contract and mechanism.
+export const deleteNotebookRecord = async (
+  db: DatabaseAdapter, workspaceId: string, id: string, actor: AuditActor,
+) => {
+  await deleteNotebookTree(db, workspaceId, id, actor);
 };
 
 export const restoreNotebookRecord = async (

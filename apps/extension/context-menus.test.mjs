@@ -45,6 +45,7 @@ test("registers context menus on install, not on background startup", async () =
       "save-reddit",
       "save-reddit-link",
       "save-video",
+      "save-hacker-news",
     ]);
     expect(created.find((item) => item.id === "save-xhs")).toMatchObject({
       contexts: ["page", "video"],
@@ -81,6 +82,10 @@ test("registers context menus on install, not on background startup", async () =
     });
     expect(created.find((item) => item.id === "save-selection")?.contexts).toEqual(["selection"]);
     expect(created.find((item) => item.id === "save-image")?.contexts).toEqual(["image"]);
+    for (const id of ["save-hacker-news"]) {
+      expect(created.find((item) => item.id === id)?.contexts).toEqual(["page"]);
+    }
+    expect(created.find((item) => item.id === "save-hacker-news")?.documentUrlPatterns).toEqual(["https://news.ycombinator.com/item?*"]);
     const video = created.find((item) => item.id === "save-video");
     expect(video).toMatchObject({
       contexts: ["page", "video"],

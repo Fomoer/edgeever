@@ -698,6 +698,19 @@ const MCP_TOOL_DEFINITIONS = [
     },
   },
   {
+    name: "delete_notebook",
+    description: "Soft-delete a notebook and all its empty descendants. Refuses deletion if any active note exists in the subtree; never deletes notes. The default inbox is protected. Resolve paths with resolve_notebook_path first and use the exact notebookId. Use dryRun to preview affected notebook IDs without changes. Concurrent changes require a fresh preview and retry.",
+    inputSchema: {
+      type: "object",
+      required: ["notebookId"],
+      additionalProperties: false,
+      properties: {
+        notebookId: { type: "string", minLength: 1, description: "Exact EdgeEver notebook ID obtained from a unique path resolution or lookup." },
+        dryRun: { type: "boolean", description: "Preview the empty subtree without deleting it." },
+      },
+    },
+  },
+  {
     name: "create_notebook",
     description: "Create a notebook at the root or under another notebook.",
     inputSchema: {
@@ -1002,6 +1015,7 @@ const NON_DESTRUCTIVE_MCP_TOOLS = new Set([
   "restore_default_ai_instructions",
 ]);
 const IDEMPOTENT_MCP_TOOLS = new Set([
+  "delete_notebook",
   "restore_memos",
   "move_memos",
   "add_tags_to_memos",

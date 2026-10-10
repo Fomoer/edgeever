@@ -42,6 +42,15 @@ const createClient = ({ failUploadFor = [], failSave = false, session = created,
 const onlyFrom = (urls) => async (image) => (urls.includes(image.url) ? pngFile : null);
 
 describe("page clip images", () => {
+  test("counts every external image while transferring only the first 30", async () => {
+    const markdown = Array.from({ length: 32 }, (_, index) => `![${index}](https://example.com/${index}.png)`).join("\n\n");
+    const images = pageImageRefs(markdown, "https://example.com", Infinity);
+    const { client, calls } = createClient();
+    const result = await embedPageImages(client, { memoId: "memo", markdown, created, images, download: async () => pngFile });
+    expect(result).toEqual({ embedded: 30, total: 32 });
+    expect(calls.uploads).toHaveLength(30);
+    expect(calls.saves[0].body.contentMarkdown).toContain("![31](https://example.com/31.png)");
+  });
   test("finds remote image addresses, resolving relative ones against the page", () => {
     const markdown = [
       "![Hero](https://cdn.example.com/hero.png)",

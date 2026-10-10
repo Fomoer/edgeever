@@ -71,6 +71,7 @@ import {
 } from "./memo-revision-service";
 import {
   createNotebookRecord,
+  deleteNotebookTree,
   findNotebooks,
   getNotebook,
   listNotebooks,
@@ -848,6 +849,18 @@ export const callMcpTool = async (
       );
 
       return { notebook };
+    }
+    case "delete_notebook": {
+      assertScope(auth, "write:notebooks");
+      if (Object.keys(args).some((key) => key !== "notebookId" && key !== "dryRun")) {
+        throw new AppError("invalid_params", "Only notebookId and dryRun are supported; recursive note deletion is not available", 400);
+      }
+      if (args.dryRun !== undefined && typeof args.dryRun !== "boolean") {
+        throw new AppError("invalid_params", "dryRun must be a boolean", 400);
+      }
+      return deleteNotebookTree(c.env.storage.db, auth.workspaceId,
+        getRequiredString(args.notebookId, "notebookId"), getAuditActor(c),
+        { dryRun: args.dryRun === true, guardConcurrentChanges: true });
     }
     case "create_notebook": {
       assertScope(auth, "write:notebooks");

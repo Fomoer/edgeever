@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type RefObject, type ReactNode } from "react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import { useTranslation } from "react-i18next";
@@ -48,6 +48,7 @@ import {
 } from "@/lib/ai-attachments";
 import { companionLocale } from "@/lib/companion-locale";
 import {
+  AI_SIDEBAR_SELECTION_EVENT,
   AI_SIDEBAR_LOCAL_THREAD_KEY,
   AI_SIDEBAR_LOCAL_THREADS_KEY,
   AI_SIDEBAR_OPEN_KEY,
@@ -58,6 +59,7 @@ import {
   readAiSidebarAdapter,
   readAiSidebarSource,
   subscribeDesktopAcp,
+  startsNewLocalAgentThread,
   type DesktopAcpEvent,
 } from "@/lib/desktop-acp";
 import {
@@ -84,7 +86,7 @@ import { CompanionQuestionForm } from "../CompanionQuestionForm";
 import { CompanionCreatedNoteLinks } from "../CompanionCreatedNoteLinks";
 import { AiSidebarMessage } from "./AiSidebarMessage";
 import { AiSidebarLocalProcess } from "./AiSidebarLocalProcess";
-import { BuiltinAgentStatus } from "./BuiltinAgentStatus";
+import { AiAgentSelector } from "./AiAgentSelector";
 import { InfographicSidebarSession, type InfographicSidebarController } from "./InfographicSidebarSession";
 import { memoIdFromSidebarLinkEvent } from "./sidebar-note-links";
 
@@ -565,6 +567,7 @@ function SidebarComposer({
   onStop,
   skillPrompt,
   focusToken,
+  aiSelector,
 }: {
   attachments: PendingAttachment[];
   attachmentError: string | null;
@@ -580,6 +583,7 @@ function SidebarComposer({
   onStop: () => void;
   skillPrompt: (id: SkillId, rest?: string) => string;
   focusToken: number;
+  aiSelector: ReactNode;
 }) {
   const { t } = useTranslation();
   const { textInput } = usePromptInputController();
@@ -665,7 +669,7 @@ function SidebarComposer({
           onPaste={onPaste}
         />
         <PromptInputFooter className="px-2.5 pb-2.5 pt-0">
-          <PromptInputTools>
+          <PromptInputTools className="shrink-0">
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -699,20 +703,23 @@ function SidebarComposer({
               </Button>
             ) : null}
           </PromptInputTools>
-          {busy ? (
-            <Button type="button" size="sm" variant="outline" onClick={onStop}>
-              {t("aiAssistant.sidebar.stop")}
-            </Button>
-          ) : (
-            <PromptInputSubmit
-              aria-label={t("companion.send")}
-              className="rounded-full border-slate-900 bg-slate-900 text-slate-50 hover:border-slate-800 hover:bg-slate-800 disabled:border-slate-100 disabled:bg-slate-100 disabled:text-slate-300"
-              disabled={locked || !draft.trim()}
-              variant="solid"
-            >
-              <ArrowUp className="size-4" />
-            </PromptInputSubmit>
-          )}
+          <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1">
+            {aiSelector}
+            {busy ? (
+              <Button type="button" size="sm" variant="outline" onClick={onStop}>
+                {t("aiAssistant.sidebar.stop")}
+              </Button>
+            ) : (
+              <PromptInputSubmit
+                aria-label={t("companion.send")}
+                className="rounded-full border-slate-900 bg-slate-900 text-slate-50 hover:border-slate-800 hover:bg-slate-800 disabled:border-slate-100 disabled:bg-slate-100 disabled:text-slate-300"
+                disabled={locked || !draft.trim()}
+                variant="solid"
+              >
+                <ArrowUp className="size-4" />
+              </PromptInputSubmit>
+            )}
+          </div>
         </PromptInputFooter>
       </PromptInput>
       <input
@@ -777,6 +784,9 @@ function AiSidebarSession({
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [selectionPending, setSelectionPending] = useState(false);
+  const selectionPendingRef = useRef(false);
+  const previousAgent = useRef({ source, adapterId: localAdapterId });
   const [acting, setActing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1000,18 +1010,32 @@ function AiSidebarSession({
 
   useEffect(() => {
     const syncSource = () => {
-      setSource(readAiSidebarSource());
-      setLocalAdapterId(readLocalAdapter()?.id ?? null);
+      if (locked.current) return;
+      const nextSource = readAiSidebarSource();
+      const nextAdapter = readLocalAdapter()?.id ?? null;
+      const previous = previousAgent.current;
+      if (startsNewLocalAgentThread(previous, { source: nextSource, adapterId: nextAdapter })) {
+        const id = createClientUuid();
+        setLocalThreadId(id);
+        localThreadIdRef.current = id;
+        writeStorage(AI_SIDEBAR_LOCAL_THREAD_KEY, id);
+      }
+      previousAgent.current = { source: nextSource, adapterId: nextAdapter };
+      setSource(nextSource);
+      setLocalAdapterId(nextAdapter);
+      if (previous.source !== nextSource || previous.adapterId !== nextAdapter) setError(null);
     };
     syncSource();
     if (!open) return;
     window.addEventListener("focus", syncSource);
     window.addEventListener("storage", syncSource);
+    window.addEventListener(AI_SIDEBAR_SELECTION_EVENT, syncSource);
     return () => {
       window.removeEventListener("focus", syncSource);
       window.removeEventListener("storage", syncSource);
+      window.removeEventListener(AI_SIDEBAR_SELECTION_EVENT, syncSource);
     };
-  }, [open]);
+  }, [open, busy]);
 
   useEffect(() => {
     if (!companionAvailable || source === "local") {
@@ -1103,7 +1127,7 @@ function AiSidebarSession({
 
   const launch = useCallback(async (message: string, options?: { includeCurrentNote?: boolean; readOnly?: boolean }): Promise<string> => {
     const text = message.trim();
-    if (!text || locked.current) throw new Error("busy");
+    if (!text || locked.current || selectionPendingRef.current) throw new Error("busy");
     const useCurrentNote = options?.includeCurrentNote ?? includeCurrentNote;
     const focusAtSend = focusRef.current;
     const mode = readAiSidebarSource();
@@ -1525,28 +1549,10 @@ function AiSidebarSession({
             if (companionThreads.some((thread) => thread.id === threadId)) rememberThread(createClientUuid());
           }}
         />
-        {source === "local" ? (
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className="ml-auto min-w-0 max-w-[46%] shrink truncate rounded-sm text-right text-xs text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                  data-ai-local-agent=""
-                  tabIndex={0}
-                >
-                  {localAdapterId ? t(`aiAssistant.agentSource.${localAdapterId}`) : t("aiAssistant.sidebar.localStatus")}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p>{localAdapterId ? t(`aiAssistant.agentSource.${localAdapterId}`) : t("aiAssistant.sidebar.localStatus")}</p>
-                <p className="mt-1">{t("aiAssistant.agentSource.localHint")}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : <BuiltinAgentStatus />}
         <Button
           type="button"
           size="icon-sm"
+          className="ml-auto shrink-0"
           variant="ghost"
           title={t("aiAssistant.sidebar.close")}
           aria-label={t("aiAssistant.sidebar.close")}
@@ -1716,7 +1722,7 @@ function AiSidebarSession({
             attachments={attachments}
             attachmentError={attachmentError}
             busy={running}
-            locked={acting}
+            locked={acting || selectionPending}
             includeCurrentNote={includeCurrentNote}
             currentNoteAvailable={Boolean(noteTitle?.trim() || contentMarkdown?.trim())}
             onIncludeCurrentNoteChange={setIncludeCurrentNote}
@@ -1726,6 +1732,17 @@ function AiSidebarSession({
             onLaunch={launch}
             onStop={() => { void stop(); }}
             skillPrompt={skillPrompt}
+            aiSelector={
+              <AiAgentSelector
+                source={source}
+                adapterId={localAdapterId}
+                disabled={running || acting || loading}
+                onPendingChange={(pending) => {
+                  selectionPendingRef.current = pending;
+                  setSelectionPending(pending);
+                }}
+              />
+            }
             focusToken={composerFocusToken}
           />
         </PromptInputProvider>

@@ -1,5 +1,5 @@
 export type DesktopAcpAdapterId = "codex" | "claudeCode" | "antigravity" | "openClaw" | "hermesAgent" | "grokBuild" | "deepseekHarness" | "piAgent" | "workbuddyCn" | "workbuddyIntl";
-export type DesktopAcpAdapterState = "not_installed" | "installing" | "needs_login" | "available" | "failed";
+export type DesktopAcpAdapterState = "not_installed" | "not_probed" | "installing" | "needs_login" | "available" | "failed";
 
 export type DesktopAcpPromptCapabilities = {
   image?: boolean;
@@ -15,6 +15,7 @@ export type DesktopAcpAdapter = {
   version?: string;
   managed?: boolean;
   updateError?: string;
+  customPath?: string;
   authMethods?: Array<{ id: string; name: string }>;
 };
 
@@ -31,10 +32,24 @@ export const displayedDesktopAcpAdapter = ({
 }): DesktopAcpAdapter | undefined => {
   const current = listed.find((adapter) => adapter.id === id);
   const checked = probed?.id === id ? probed : undefined;
-  if (id === "antigravity" && path.trim()) return checked;
+  if (id === "antigravity" && path.trim()) {
+    return current?.customPath === path.trim() ? current : checked;
+  }
+  if (current?.customPath) return checked;
   if (current?.state === "installing" || (current?.managed && (!checked?.managed || current.version !== checked.version))) return current;
-  if (current?.state === "needs_login" && checked?.state === "available") return current;
+  if (checked?.state === "available" && (current?.state === "needs_login" || current?.state === "failed" || current?.state === "not_installed")) return current;
   return checked ?? current;
+};
+
+export const desktopAcpSelectorVisible = (adapter: DesktopAcpAdapter, customPath: string) => (
+  adapter.state !== "not_installed" || (adapter.id === "antigravity" && Boolean(customPath.trim()))
+);
+
+export const desktopAcpAutomaticProbeInput = (adapter: DesktopAcpAdapter, customPath: string) => {
+  if (adapter.state === "installing") return null;
+  if (adapter.id === "antigravity" && customPath.trim()) return { id: adapter.id, path: customPath.trim() };
+  if (adapter.state === "not_probed" || adapter.detail === "not_probed" || adapter.state === "failed") return { id: adapter.id };
+  return null;
 };
 
 export type DesktopAcpAttachment = {
@@ -75,8 +90,14 @@ export const AI_SIDEBAR_LOCAL_THREADS_KEY = "edgeever.aiSidebar.localThreads";
 export const AI_SIDEBAR_SOURCE_KEY = "edgeever.aiSidebar.source";
 export const AI_SIDEBAR_ADAPTER_KEY = "edgeever.aiSidebar.adapterId";
 export const AI_SIDEBAR_ADAPTER_PATH_KEY = "edgeever.aiSidebar.adapterPath";
+export const AI_SIDEBAR_SELECTION_EVENT = "edgeever:ai-sidebar-selection";
 
 export type AiSidebarSource = "builtin" | "local";
+
+export const startsNewLocalAgentThread = (
+  previous: { source: AiSidebarSource; adapterId: DesktopAcpAdapterId | null },
+  next: { source: AiSidebarSource; adapterId: DesktopAcpAdapterId | null },
+) => next.source === "local" && (previous.source !== "local" || previous.adapterId !== next.adapterId);
 
 const AI_SIDEBAR_ADAPTER_IDS = new Set<string>([
   "codex", "claudeCode", "antigravity", "openClaw", "hermesAgent", "grokBuild", "deepseekHarness", "piAgent", "workbuddyCn", "workbuddyIntl",
@@ -111,6 +132,27 @@ export const readAiSidebarAdapter = () => aiSidebarAdapterFromStorage(
   readStorageItem(AI_SIDEBAR_ADAPTER_PATH_KEY),
 );
 
+// Keep the settings page and sidebar on the same existing preference keys.
+export const selectAiSidebarAgent = (source: AiSidebarSource, adapterId?: DesktopAcpAdapterId) => {
+  const storage = window.localStorage;
+  const previousSource = storage.getItem(AI_SIDEBAR_SOURCE_KEY);
+  const previousAdapter = storage.getItem(AI_SIDEBAR_ADAPTER_KEY);
+  try {
+    if (adapterId) storage.setItem(AI_SIDEBAR_ADAPTER_KEY, adapterId);
+    storage.setItem(AI_SIDEBAR_SOURCE_KEY, source);
+  } catch (error) {
+    try {
+      const preferences: Array<[string, string | null]> = [[AI_SIDEBAR_SOURCE_KEY, previousSource], [AI_SIDEBAR_ADAPTER_KEY, previousAdapter]];
+      for (const [key, value] of preferences) {
+        if (value === null) storage.removeItem(key);
+        else storage.setItem(key, value);
+      }
+    } catch { /* Report the original preference-write failure. */ }
+    throw error;
+  }
+  window.dispatchEvent(new Event(AI_SIDEBAR_SELECTION_EVENT));
+};
+
 const bridge = () => (typeof window === "undefined" ? undefined : window.edgeeverDesktop);
 
 export const desktopAcpAvailable = () => Boolean(bridge()?.listAcpAdapters);
@@ -118,7 +160,10 @@ export const desktopAcpAvailable = () => Boolean(bridge()?.listAcpAdapters);
 export const listDesktopAcpAdapters = async (): Promise<DesktopAcpAdapter[]> => {
   const desktop = bridge();
   if (!desktop?.listAcpAdapters) return [];
-  return desktop.listAcpAdapters();
+  const adapters = await desktop.listAcpAdapters();
+  // Older desktop hosts encoded an unchecked connector as a failed connection.
+  return adapters.map((adapter) => adapter.detail === "not_probed"
+    ? { ...adapter, state: "not_probed" as const } : adapter);
 };
 
 export const probeDesktopAcpAdapter = async (input: { id: DesktopAcpAdapterId; path?: string }): Promise<DesktopAcpAdapter> => {
@@ -129,7 +174,7 @@ export const probeDesktopAcpAdapter = async (input: { id: DesktopAcpAdapterId; p
   return desktop.probeAcpAdapter(input);
 };
 
-export const installDesktopAcpAdapter = async (id: Extract<DesktopAcpAdapterId, "codex" | "antigravity" | "piAgent">) => {
+export const installDesktopAcpAdapter = async (id: Extract<DesktopAcpAdapterId, "codex" | "claudeCode" | "antigravity" | "piAgent">) => {
   const desktop = bridge();
   if (!desktop?.installAcpAdapter) throw new Error("desktop_acp_unavailable");
   return desktop.installAcpAdapter(id);

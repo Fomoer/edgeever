@@ -1,0 +1,12 @@
+{
+  "capturedOn": "2026-10-08",
+  "samples": [
+    {
+      "file": "hacker-news.html",
+      "url": "https://news.ycombinator.com/item?id=40380738",
+      "state": "Public, signed out; main post with both text and an external link.",
+      "expected": "Keep title, jnnnthnn, original time, score 92, complete toptext and hackersearch.net/ask. Exclude the separate comment tree."
+    }
+  ],
+  "redaction": "Only relevant main-post DOM and one comment excerpt remain. Tests derive synthetic boundary states from this fixture; these variants are not live-site acceptance evidence."
+}

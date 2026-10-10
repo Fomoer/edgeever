@@ -1,0 +1,40 @@
+{
+  "icons": {
+    "codex.svg": {
+      "source": "https://github.com/lobehub/lobe-icons/blob/master/packages/static-svg/icons/codex.svg",
+      "gitBlobSha": "4c648aff4a9188c36d32a706f1aa7813b8992f2c"
+    },
+    "claudecode-color.svg": {
+      "source": "https://github.com/lobehub/lobe-icons/blob/master/packages/static-svg/icons/claudecode-color.svg",
+      "gitBlobSha": "ed1293c473d1b6fca5403f7abddaa9147fa46d72"
+    },
+    "antigravity-color.svg": {
+      "source": "https://github.com/lobehub/lobe-icons/blob/master/packages/static-svg/icons/antigravity-color.svg",
+      "gitBlobSha": "3ed10ab651023d4fa2e14f70a820a071fd83ebdb"
+    },
+    "openclaw-color.svg": {
+      "source": "https://github.com/lobehub/lobe-icons/blob/master/packages/static-svg/icons/openclaw-color.svg",
+      "gitBlobSha": "bf6acb9f512d26521f6644f2716dc36e4998a939"
+    },
+    "hermesagent.svg": {
+      "source": "https://github.com/lobehub/lobe-icons/blob/master/packages/static-svg/icons/hermesagent.svg",
+      "gitBlobSha": "2521a105c104aa120e13306a7e02937d31394476"
+    },
+    "grok.svg": {
+      "source": "https://github.com/lobehub/lobe-icons/blob/master/packages/static-svg/icons/grok.svg",
+      "gitBlobSha": "efb1a6183cbd9d1b68471805dc6c663e2a6fd7ff"
+    },
+    "deepseek-color.svg": {
+      "source": "https://github.com/lobehub/lobe-icons/blob/master/packages/static-svg/icons/deepseek-color.svg",
+      "gitBlobSha": "3fc2302406e22f064f3efda71d8a7bcf0fc1dd41"
+    },
+    "pi.svg": {
+      "source": "https://github.com/lobehub/lobe-icons/blob/master/packages/static-svg/icons/pi.svg",
+      "gitBlobSha": "5122fb5e3e637b3703681f67b1ca63966ca4404d"
+    }
+  },
+  "workbuddy": {
+    "source": "https://download.codebuddy.ai/web/workbuddy/913b2390aae396c66b937bd9143ae5259306d7d7/assets/logo.svg",
+    "website": "https://www.workbuddy.ai/"
+  }
+}

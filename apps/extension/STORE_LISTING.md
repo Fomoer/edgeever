@@ -16,7 +16,7 @@
 
 Select the matching language in the Chrome Web Store developer dashboard and enter the corresponding copy below. Store listing localization is separate from the extension's packaged `_locales` messages.
 
-The detailed descriptions below keep the 0.1.9 wording and add one video-note line for extension 0.1.17. The uploaded store package is still 0.1.9 until that version is submitted. An earlier draft stacked every site name in the opening sentence and repeated those names in the closing paragraph. Chrome Web Store rejected it immediately as excessive keywords (violation reference Yellow Argon). Keep each site in one feature line. The Japanese listing uses the English detailed description. The short summary still comes from the packaged `_locales` `extensionDescription`.
+The detailed descriptions below include video notes and Hacker News capture prepared for the next store submission. The uploaded store package is still 0.1.9 until that version is submitted. An earlier draft stacked every site name in the opening sentence and repeated those names in the closing paragraph. Chrome Web Store rejected it immediately as excessive keywords (violation reference Yellow Argon). Keep each site in one feature line. The Japanese listing uses the English detailed description. The short summary still comes from the packaged `_locales` `extensionDescription`.
 
 ## Upload files
 
@@ -29,7 +29,7 @@ The detailed descriptions below keep the 0.1.9 wording and add one video-note li
 
 #### Summary
 
-将当前网页、选中文字、右键图片、X 推文、Reddit 帖子、小红书笔记、知乎回答或文章，或 GitHub 仓库保存到你自托管的 EdgeEver 实例。
+将网页、选中文字、图片及 Hacker News 主帖保存到你自托管的 EdgeEver 实例。
 
 #### Detailed description
 
@@ -45,6 +45,7 @@ EdgeEver Web Clipper 可以把当前网页，或你选中的那一部分，保�
 - 在知乎上保存指针下的回答或文章，包括标题、作者、正文和图片，不写入评论。
 - 在 Reddit 上右键帖子，保存标题、作者、社区、正文、链接和图片，不写入评论。
 - 在 GitHub 仓库页上保存地址和简介；页面上有主页、语言、许可证和话题时一并写入。
+- 在 Hacker News 主帖详情页保存标题、作者、原始时间、剪藏时的分数、外部链接和主帖正文，不写入评论。
 - 可以把 YouTube 或哔哩哔哩播放页保存为视频笔记。
 - 这些命令直接出现在右键菜单的第一级。
 - 笔记会保留来源和剪藏时间。
@@ -59,7 +60,7 @@ EdgeEver 是开源、自托管的现代笔记工作区。项目主页与源代�
 
 #### Summary
 
-Save a webpage, selected text, a right-clicked image, an X post, a Reddit post, a Xiaohongshu note, a Zhihu answer or article, or a GitHub repository to your self-hosted EdgeEver.
+Save webpages, selections, images, and Hacker News posts to your self-hosted EdgeEver instance.
 
 #### Detailed description
 
@@ -75,6 +76,7 @@ Key features:
 - On Zhihu, save the answer or article under the pointer, including its title, author, text, and photos. Comments are left out.
 - On Reddit, right-click a post to save its title, author, community, text, links, and images. Comments are left out.
 - On a GitHub repository page, save the address and description, plus the homepage, language, license, and topics when the page shows them.
+- On Hacker News post detail pages, save the title, author, original time, points at capture, linked page and main-post text. Comments are left out.
 - Save a YouTube or Bilibili watch page as a video note.
 - These commands stay on the top-level right-click menu.
 - The note keeps its source and the time it was clipped.
@@ -89,12 +91,12 @@ EdgeEver is an open-source, self-hosted modern notes workspace. Project homepage
 
 ### Single purpose
 
-Save the current webpage, user-selected text, a user-chosen image, one X post, one Reddit post, one Xiaohongshu note, one Zhihu answer or article, one GitHub repository card, or one video note from a supported watch page to the self-hosted EdgeEver instance explicitly configured by the user.
+Save the current webpage, user-selected text, a user-chosen image, one X post, one Reddit post, one Xiaohongshu note, one Zhihu answer or article, one GitHub repository card, one Hacker News post, or one video note from a supported watch page to the self-hosted EdgeEver instance explicitly configured by the user.
 
 ### Permission justifications
 
-- `activeTab`: Read the active page only after the user clicks the extension's save action or chooses a save command for selected text, an image, an X post, a Reddit post, a Xiaohongshu note, a Zhihu item, a GitHub repository, or a supported watch page.
-- `contextMenus`: Add one top-level item for the thing the user right-clicked: selected text, an image, an X post, a Reddit post, a Xiaohongshu note, a Zhihu answer or article, or a GitHub repository page. The video-note item appears only on a supported YouTube or Bilibili watch page and runs only after the user clicks it.
+- `activeTab`: Read the active page only after the user clicks the extension's save action or chooses a save command for selected text, an image, an X post, a Reddit post, a Xiaohongshu note, a Zhihu item, a GitHub repository, a Hacker News post, or a supported watch page.
+- `contextMenus`: Add one top-level item for the thing the user right-clicked: selected text, an image, an X post, a Reddit post, a Xiaohongshu note, a Zhihu answer or article, a GitHub repository page, or a Hacker News post detail page. The video-note item appears only on a supported YouTube or Bilibili watch page and runs only after the user clicks it.
 - `scripting`: Inject the packaged capture script into the active page after the user initiates a capture.
 - `storage`: Store the user's EdgeEver instance URL, API token, and default notebook ID locally.
 - Optional host permissions: API calls go only to the EdgeEver instance the user approves. If a page cannot provide an image file, the extension asks for that image's site, or for all sites when the user chooses that option, and uses the access only to download the chosen image. Saving from an X or Xiaohongshu feed may ask for site access to identify the item under the pointer. On Zhihu and Reddit, a content script only remembers the item under the pointer. Its content is read after the user chooses the save command. If that listener is unavailable, the extension asks the user to right-click the same item again. The video-note command does not add a host permission. It runs in the page only after the user clicks it on a supported watch page.

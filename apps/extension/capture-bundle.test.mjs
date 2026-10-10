@@ -26,6 +26,9 @@ test("the injected page capture is a standalone classic script", async () => {
     const capture = await readFile(join(outDir, "assets/capture.js"), "utf8");
     expect(() => new Script(capture)).not.toThrow();
     expect(capture).toContain("capturedPage");
+    const platform = await readFile(join(outDir, "assets/capture-platform.js"), "utf8");
+    expect(() => new Script(platform)).not.toThrow();
+    expect(platform).toContain("pagePlatformRead");
   } finally {
     await rm(outDir, { recursive: true, force: true });
   }

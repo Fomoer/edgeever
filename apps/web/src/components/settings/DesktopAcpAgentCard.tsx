@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bot, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import {
   AI_SIDEBAR_ADAPTER_KEY,
   AI_SIDEBAR_ADAPTER_PATH_KEY,
   AI_SIDEBAR_SOURCE_KEY,
+  AI_SIDEBAR_SELECTION_EVENT,
   displayedDesktopAcpAdapter,
   listDesktopAcpAdapters,
   installDesktopAcpAdapter,
@@ -19,6 +20,7 @@ import {
   type DesktopAcpAdapterId,
 } from "@/lib/desktop-acp";
 import { cn } from "@/lib/utils";
+import { AgentLogo } from "@/components/ai-sidebar/AgentLogo";
 import {
   SETTINGS_CARD_DESCRIPTION_CLASSNAME,
   SETTINGS_CARD_HEADER_CLASSNAME,
@@ -42,6 +44,7 @@ const readAdapterId = (): DesktopAcpAdapterId => {
 const statusKey = (adapter: DesktopAcpAdapter | undefined, probing: boolean) => {
   if (probing) return "aiAssistant.agentSource.probing";
   if (!adapter || adapter.detail === "not_probed") return "aiAssistant.agentSource.notProbed";
+  if (adapter.detail === "authentication_timeout") return "aiAssistant.agentSource.authenticationTimedOut";
   if (adapter.detail === "invalid_path") return "aiAssistant.agentSource.invalidPath";
   if (adapter.detail === "desktop_unavailable") return "aiAssistant.agentSource.localDisabled";
   if (adapter.id === "grokBuild" && adapter.state === "not_installed") return "aiAssistant.agentSource.grokBuildNotFound";
@@ -82,6 +85,7 @@ const desktopBridgeAvailable = () => (
 
 const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
   const { t } = useTranslation();
+  const instanceId = useId();
   const [source, setSource] = useState<AiSidebarSource>("builtin");
   const [adapterId, setAdapterId] = useState<DesktopAcpAdapterId>("codex");
   const [adapterPath, setAdapterPath] = useState("");
@@ -91,7 +95,7 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
   const [probing, setProbing] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [installError, setInstallError] = useState(false);
-  const [authenticating, setAuthenticating] = useState(false);
+  const [authenticating, setAuthenticating] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = readSource();
@@ -99,6 +103,17 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
     setAdapterId(readAdapterId());
     setAdapterPath(localStorage.getItem(AI_SIDEBAR_ADAPTER_PATH_KEY) ?? "");
     setReady(true);
+    const sync = () => {
+      setSource(bridge && readSource() === "local" ? "local" : "builtin");
+      setAdapterId(readAdapterId());
+      setAdapterPath(localStorage.getItem(AI_SIDEBAR_ADAPTER_PATH_KEY) ?? "");
+    };
+    window.addEventListener(AI_SIDEBAR_SELECTION_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(AI_SIDEBAR_SELECTION_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
   }, [bridge]);
 
   useEffect(() => {
@@ -106,6 +121,7 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
     localStorage.setItem(AI_SIDEBAR_SOURCE_KEY, source);
     localStorage.setItem(AI_SIDEBAR_ADAPTER_KEY, adapterId);
     localStorage.setItem(AI_SIDEBAR_ADAPTER_PATH_KEY, adapterPath);
+    window.dispatchEvent(new Event(AI_SIDEBAR_SELECTION_EVENT));
   }, [adapterId, adapterPath, ready, source]);
 
   useEffect(() => {
@@ -138,7 +154,9 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
     shown?.state === "not_installed" ||
     shown?.state === "needs_login" ||
     (shown?.state === "available" && authMethods.length > 0) ||
-    shown?.updateError
+    shown?.updateError ||
+    adapterId === "openClaw" ||
+    (adapterId === "hermesAgent" && shown?.state === "failed")
   );
 
   const selectAdapter = (id: DesktopAcpAdapterId) => {
@@ -148,7 +166,7 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
   };
 
   const install = async () => {
-    if (adapterId !== "codex" && adapterId !== "antigravity" && adapterId !== "piAgent") return;
+    if (adapterId !== "codex" && adapterId !== "claudeCode" && adapterId !== "antigravity" && adapterId !== "piAgent") return;
     setInstalling(true);
     setInstallError(false);
     try {
@@ -168,7 +186,7 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
   };
 
   const authenticate = async (methodId: string) => {
-    setAuthenticating(true);
+    setAuthenticating(methodId);
     setInstallError(false);
     try {
       const result = await authenticateDesktopAcpAdapter({
@@ -180,7 +198,7 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
     } catch {
       setProbed({ id: adapterId, label: t(`aiAssistant.agentSource.${adapterId}`), state: "failed" });
     } finally {
-      setAuthenticating(false);
+      setAuthenticating(null);
     }
   };
 
@@ -217,12 +235,12 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
             const disabled = option === "local" && !bridge;
             const checked = source === option;
             return (
-              <div key={option} className={cn(disabled && "opacity-60", checked && "bg-slate-50/80")}>
+              <div key={option} className={cn(disabled && "opacity-75", checked && "bg-slate-50/80")}>
                 <label className={cn("flex items-start gap-3 px-3.5 py-2.5", disabled ? "cursor-not-allowed" : "cursor-pointer")}>
                   <input
                     className="mt-0.5"
                     type="radio"
-                    name="edgeever-acp-source"
+                    name={`edgeever-acp-source-${instanceId}`}
                     value={option}
                     checked={checked}
                     disabled={disabled}
@@ -239,7 +257,7 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
                   <div role="group" className="flex flex-wrap gap-2 px-3.5 pb-3 pl-9" aria-label={t("aiAssistant.agentSource.adapter")}>
                     {adapterIds.map((id) => (
                       <span key={id} className="flex h-8 items-center gap-2 rounded-md border border-slate-200 px-2.5 text-xs text-slate-500">
-                        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                        <AgentLogo id={id} />
                         {t(`aiAssistant.agentSource.${id}`)}
                       </span>
                     ))}
@@ -259,19 +277,19 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
                   <label
                     key={id}
                     className={cn(
-                      "flex h-8 cursor-pointer items-center gap-2 rounded-md border px-2.5 text-xs",
+                      "flex h-8 cursor-pointer items-center gap-2 rounded-md border px-2.5 text-xs has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2",
                       checked ? "border-slate-900 bg-card text-slate-950" : "border-slate-200 text-slate-600"
                     )}
                   >
                     <input
                       className="sr-only"
                       type="radio"
-                      name="edgeever-acp-adapter"
+                      name={`edgeever-acp-adapter-${instanceId}`}
                       value={id}
                       checked={checked}
                       onChange={() => selectAdapter(id)}
                     />
-                    <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", checked ? "bg-slate-950" : "bg-slate-400")} />
+                    <AgentLogo id={id} />
                     {t(`aiAssistant.agentSource.${id}`)}
                   </label>
                 );
@@ -308,7 +326,7 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
               </label>
             ) : null}
 
-            <div className="space-y-2.5 pt-1">
+            <div className="space-y-2 rounded-lg bg-muted/40 p-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <span
@@ -343,7 +361,7 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {shown?.state === "not_installed" && (adapterId === "codex" || adapterId === "antigravity" || (adapterId === "piAgent" && shown?.detail === "adapter_missing")) ? (
+                  {shown?.state === "not_installed" && (adapterId === "codex" || adapterId === "claudeCode" || adapterId === "antigravity" || (adapterId === "piAgent" && shown?.detail === "adapter_missing")) ? (
                     <Button type="button" variant="outline" size="sm" className="h-8 bg-card text-xs font-normal" disabled={installing || probing} onClick={() => void install()}>
                       {installing ? t("aiAssistant.agentSource.installing") : t("aiAssistant.agentSource.install")}
                     </Button>
@@ -351,7 +369,7 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span><Button type="button" variant="outline" size="sm" className="h-8 bg-card text-xs font-normal" disabled={probing || installing} onClick={() => void probe()}>
+                        <span><Button type="button" variant="outline" size="sm" className="h-8 bg-card text-xs font-normal" disabled={probing || installing || Boolean(authenticating)} onClick={() => void probe()}>
                           {probing ? t("aiAssistant.agentSource.probing") : t("aiAssistant.agentSource.probe")}
                         </Button></span>
                       </TooltipTrigger>
@@ -362,26 +380,26 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
               </div>
 
               {hasDetails ? (
-                <div className="space-y-2">
+                <div className="space-y-1.5 text-[11px] leading-4 text-slate-500">
                   {shown?.state === "not_installed" ? (
-                    <p className="text-xs leading-relaxed text-slate-600">
+                    <p>
                       {t(adapterId === "claudeCode" ? "aiAssistant.agentSource.claudeCodeMissingHint" : adapterId === "openClaw" ? "aiAssistant.agentSource.openClawMissingHint" : adapterId === "hermesAgent" ? "aiAssistant.agentSource.hermesAgentMissingHint" : adapterId === "grokBuild" ? "aiAssistant.agentSource.grokBuildMissingHint" : adapterId === "deepseekHarness" ? "aiAssistant.agentSource.deepseekHarnessMissingHint" : adapterId === "piAgent" ? shown.detail === "adapter_missing" ? "aiAssistant.agentSource.piAgentAdapterMissingHint" : "aiAssistant.agentSource.piAgentMissingHint" : adapterId === "workbuddyCn" || adapterId === "workbuddyIntl" ? "aiAssistant.agentSource.workbuddyMissingHint" : "aiAssistant.agentSource.installHint")}
                     </p>
                   ) : null}
                   {shown?.state === "needs_login" && adapterId === "piAgent" ? (
-                    <p className="text-xs leading-relaxed text-slate-600">{t("aiAssistant.agentSource.piAgentLoginHint")}</p>
+                    <p>{t("aiAssistant.agentSource.piAgentLoginHint")}</p>
                   ) : null}
                   {(shown?.state === "needs_login" || shown?.state === "available") && isWorkBuddy ? (
-                    <p className="text-xs leading-relaxed text-slate-600">{t(adapterId === "workbuddyCn" ? "aiAssistant.agentSource.workbuddyCnLoginHint" : "aiAssistant.agentSource.workbuddyIntlLoginHint")}</p>
+                    <p>{t(adapterId === "workbuddyCn" ? "aiAssistant.agentSource.workbuddyCnLoginHint" : "aiAssistant.agentSource.workbuddyIntlLoginHint")}</p>
                   ) : null}
                   {shown?.state === "available" && !isWorkBuddy && authMethods.length ? (
-                    <p className="text-xs leading-relaxed text-slate-600">{t("aiAssistant.agentSource.authAvailableHint")}</p>
+                    <p>{t("aiAssistant.agentSource.authAvailableHint")}</p>
                   ) : null}
                   {(shown?.state === "needs_login" || shown?.state === "available") && authMethods.length ? (
                     <div className="flex flex-wrap gap-2 pt-0.5">
                       {authMethods.map((method) => (
-                        <Button key={method.id} type="button" variant="outline" size="sm" className="h-8 bg-card text-xs font-normal" disabled={authenticating} onClick={() => void authenticate(method.id)}>
-                          {authenticating ? t("aiAssistant.agentSource.authenticating") : t("aiAssistant.agentSource.authenticateWith", { method: method.name })}
+                        <Button key={method.id} type="button" variant="outline" size="sm" className="h-8 bg-card text-xs font-normal" disabled={Boolean(authenticating)} onClick={() => void authenticate(method.id)}>
+                          {authenticating === method.id ? t("aiAssistant.agentSource.authenticating") : t("aiAssistant.agentSource.authenticateWith", { method: method.name })}
                         </Button>
                       ))}
                     </div>
@@ -389,16 +407,16 @@ const DesktopAcpAgentCardBody = ({ bridge }: { bridge: boolean }) => {
                   {shown?.state === "needs_login" && !authMethods.length && adapterId !== "piAgent" ? (
                     <p className="text-xs text-amber-700" role="status">{t("aiAssistant.agentSource.loginUnavailable")}</p>
                   ) : null}
+                  {adapterId === "openClaw" ? (
+                    <p>{t("aiAssistant.agentSource.openClawNoteAccessHint")}</p>
+                  ) : null}
+                  {adapterId === "hermesAgent" && (shown?.state === "failed" || shown?.state === "needs_login") ? (
+                    <p>{t("aiAssistant.agentSource.hermesAgentSetupHint")}</p>
+                  ) : null}
                   {shown?.updateError ? (
                     <p className="text-xs text-amber-700" role="status">{t("aiAssistant.agentSource.updateFailed")}</p>
                   ) : null}
                 </div>
-              ) : null}
-              {adapterId === "openClaw" ? (
-                <p className="text-xs leading-relaxed text-amber-700">{t("aiAssistant.agentSource.openClawNoteAccessHint")}</p>
-              ) : null}
-              {adapterId === "hermesAgent" && (shown?.state === "failed" || shown?.state === "needs_login") ? (
-                <p className="text-xs leading-relaxed text-amber-700">{t("aiAssistant.agentSource.hermesAgentSetupHint")}</p>
               ) : null}
             </div>
           </div>

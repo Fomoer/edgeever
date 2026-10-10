@@ -22,21 +22,23 @@ export default defineConfig({
 
         // chrome.scripting.executeScript({ files }) loads classic scripts, so
         // capture must not inherit Vite's shared ESM chunks.
-        const capture = await buildStandaloneScript({
-          entryPoints: [fileURLToPath(new URL("./src/capture.ts", import.meta.url))],
-          outfile: "capture.js",
-          bundle: true,
-          format: "iife",
-          platform: "browser",
-          target: "es2022",
-          minify: true,
-          write: false,
-        });
-        this.emitFile({
-          type: "asset",
-          fileName: "assets/capture.js",
-          source: capture.outputFiles[0].contents,
-        });
+        for (const name of ["capture", "capture-platform"]) {
+          const capture = await buildStandaloneScript({
+            entryPoints: [fileURLToPath(new URL(`./src/${name}.ts`, import.meta.url))],
+            outfile: `${name}.js`,
+            bundle: true,
+            format: "iife",
+            platform: "browser",
+            target: "es2022",
+            minify: true,
+            write: false,
+          });
+          this.emitFile({
+            type: "asset",
+            fileName: `assets/${name}.js`,
+            source: capture.outputFiles[0].contents,
+          });
+        }
       },
     },
   ],

@@ -84,7 +84,7 @@ const collector = () => {
   };
 };
 
-const fakeAgentSource = ({ reportPath, secretPath, allowImage, allowEmbedded, hold, requireAuth, advertiseAuth, promptRefusal }) => `#!/usr/bin/env bun
+const fakeAgentSource = ({ reportPath, secretPath, allowImage, allowEmbedded, hold, requireAuth, advertiseAuth, promptRefusal, hangAuth, hangSession }) => `#!/usr/bin/env bun
 import * as acp from ${JSON.stringify(sdkHref)};
 import { writeFileSync } from "node:fs";
 
@@ -141,6 +141,10 @@ acp.agent({ name: "edgeever-fake-agent" })
   })
   .onRequest("authenticate", (ctx) => {
     report.authMethod = ctx.params.methodId;
+    if (${hangAuth ? "true" : "false"}) {
+      save();
+      return new Promise(() => {});
+    }
     authenticated = true;
     save();
     return {};
@@ -149,6 +153,7 @@ acp.agent({ name: "edgeever-fake-agent" })
     if (requireAuth && !authenticated) throw new acp.RequestError(-32000, "auth_required");
     report.newSession = { cwd: ctx.params.cwd, mcpServers: ctx.params.mcpServers };
     save();
+    if (${hangSession ? "true" : "false"}) return new Promise(() => {});
     return { sessionId: "sess-1" };
   })
   .onRequest("session/prompt", async (ctx) => {
@@ -237,7 +242,7 @@ describe("ACP command allow-list", () => {
       expect(listed.find((adapter) => adapter.id === "codex")).toEqual({
         id: "codex",
         label: "Codex",
-        state: "failed",
+        state: "not_probed",
         detail: "not_probed",
       });
       expect(listed.find((adapter) => adapter.id === "antigravity")?.state).toBe("not_installed");
@@ -358,7 +363,7 @@ describe("ACP command allow-list", () => {
       const resolved = resolveAcpCommand({ id: "grokBuild" }, { platform: "darwin", pathEnv: "", home: directory });
       expect(resolved).toEqual({ ok: true, command: { command: realpathSync(binary), args: ["agent", "stdio"] } });
       const runtime = createAcpHostRuntime({ platform: "darwin", pathEnv: "", home: directory });
-      expect(runtime.listAdapters().find((adapter) => adapter.id === "grokBuild")?.state).toBe("failed");
+      expect(runtime.listAdapters().find((adapter) => adapter.id === "grokBuild")?.state).toBe("not_probed");
       expect(resolveAcpCommand({ id: "grokBuild", path: "../grok" }, { platform: "darwin", home: directory }).detail).toBe("invalid_path");
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -649,6 +654,86 @@ describe("ACP stdio session", () => {
     }
   }, 15_000);
 
+  sessionTest("a managed Codex connector is unchecked after restart and becomes available after a real probe", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "edgeever-acp-restart-"));
+    try {
+      const scriptPath = await writeFakeAgent(directory, {
+        reportPath: path.join(directory, "report.json"),
+        secretPath: path.join(directory, "secret.txt"),
+        hold: false,
+      });
+      const options = {
+        adapterManager: {
+          get: (id) => id === "codex" ? { version: "2.1.1", command: { command: process.execPath, args: [scriptPath] } } : null,
+        },
+        pathEnv: "",
+      };
+      const runtime = createAcpHostRuntime(options);
+      const codex = (host) => host.listAdapters().find((adapter) => adapter.id === "codex");
+      expect(codex(runtime)).toMatchObject({ state: "not_probed", detail: "not_probed", managed: true });
+      expect((await runtime.probeAdapter({ id: "codex" })).state).toBe("available");
+      expect(codex(runtime).state).toBe("available");
+      expect(codex(createAcpHostRuntime(options)).state).toBe("not_probed");
+      const pid = Number(await readFile(path.join(directory, "report.json.pid"), "utf8"));
+      await waitUntilExited(pid);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }, 15_000);
+
+  for (const failure of [
+    { name: "login expiration", options: { requireAuth: true }, state: "needs_login", message: "needs_login" },
+    { name: "session timeout", options: { hangSession: true }, state: "failed", message: "connection_timeout" },
+  ]) {
+    sessionTest(`replaces an available connector status after prompt ${failure.name} and recovers on reconnection`, async () => {
+      const directory = await mkdtemp(path.join(tmpdir(), "edgeever-acp-status-"));
+      try {
+        const agentOptions = { reportPath: path.join(directory, "report.json"), secretPath: path.join(directory, "secret.txt") };
+        const scriptPath = await writeFakeAgent(directory, agentOptions);
+        const runtime = createAcpHostRuntime({
+          handshakeTimeoutMs: 1_500,
+          adapterManager: { get: (id) => id === "codex" ? { version: "2.1.1", command: { command: process.execPath, args: [scriptPath] } } : null },
+          pathEnv: "",
+        });
+        const currentStatus = () => runtime.listAdapters().find((adapter) => adapter.id === "codex");
+        expect((await runtime.probeAdapter({ id: "codex" })).state).toBe("available");
+        await writeFakeAgent(directory, { ...agentOptions, ...failure.options });
+        const failedEvents = collector();
+        await runtime.prompt({ adapterId: "codex", prompt: "Hello", noteAccess: false }, failedEvents.emit);
+        expect((await failedEvents.waitFor((event) => event.type === "error")).message).toBe(failure.message);
+        expect(currentStatus().state).toBe(failure.state);
+        expect(currentStatus()).toMatchObject({ version: "2.1.1", managed: true });
+        if (failure.state === "needs_login") expect(currentStatus().authMethods).toEqual([{ id: "browser", name: "Browser" }]);
+        await writeFakeAgent(directory, agentOptions);
+        const recoveredEvents = collector();
+        await runtime.prompt({ adapterId: "codex", prompt: "Hello", noteAccess: false }, recoveredEvents.emit);
+        await recoveredEvents.waitFor((event) => event.type === "done");
+        expect(currentStatus().state).toBe("available");
+      } finally {
+        await rm(directory, { recursive: true, force: true });
+      }
+    }, 15_000);
+  }
+
+  sessionTest("an EdgeEver MCP setup failure does not mark a healthy Agent as disconnected", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "edgeever-acp-mcp-status-"));
+    try {
+      const scriptPath = await writeFakeAgent(directory, { reportPath: path.join(directory, "report.json"), secretPath: path.join(directory, "secret.txt") });
+      const runtime = createAcpHostRuntime({
+        adapterManager: { get: (id) => id === "codex" ? { version: "2.1.1", command: { command: process.execPath, args: [scriptPath] } } : null },
+        pathEnv: "",
+        mcpAccess: () => { throw new Error("workspace_unavailable"); },
+      });
+      expect((await runtime.probeAdapter({ id: "codex" })).state).toBe("available");
+      const events = collector();
+      await runtime.prompt({ adapterId: "codex", prompt: "Hello" }, events.emit);
+      expect((await events.waitFor((event) => event.type === "error")).message).toBe("workspace_unavailable");
+      expect(runtime.listAdapters().find((adapter) => adapter.id === "codex").state).toBe("available");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }, 15_000);
+
   sessionTest("provides the signed-in workspace MCP server only during an ACP prompt", async () => {
     const directory = await mkdtemp(path.join(tmpdir(), "edgeever-acp-mcp-"));
     const reportPath = path.join(directory, "report.json");
@@ -802,6 +887,49 @@ describe("ACP stdio session", () => {
       await rm(directory, { recursive: true, force: true });
     }
   }, 15_000);
+
+  sessionTest("ends an unanswered login with retry methods instead of a connection failure", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "edgeever-acp-auth-timeout-"));
+    const reportPath = path.join(directory, "report.json");
+    try {
+      const scriptPath = await writeFakeAgent(directory, {
+        reportPath,
+        secretPath: path.join(directory, "secret.txt"),
+        requireAuth: true,
+        hangAuth: true,
+      });
+      const runtime = createAcpHostRuntime({ authenticationTimeoutMs: 1_500 });
+      const result = await runtime.authenticateAdapter({ id: "antigravity", path: scriptPath, methodId: "browser" });
+      expect((await readReport(reportPath)).authMethod).toBe("browser");
+      expect(result.state).toBe("needs_login");
+      expect(result.detail).toBe("authentication_timeout");
+      expect(result.authMethods).toEqual([{ id: "browser", name: "Browser" }]);
+      expect((await readReport(reportPath)).newSession).toBeNull();
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }, 10_000);
+
+  sessionTest("keeps a session timeout after successful login classified as a connection failure", async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), "edgeever-acp-auth-session-timeout-"));
+    const reportPath = path.join(directory, "report.json");
+    try {
+      const scriptPath = await writeFakeAgent(directory, {
+        reportPath,
+        secretPath: path.join(directory, "secret.txt"),
+        requireAuth: true,
+        hangSession: true,
+      });
+      const runtime = createAcpHostRuntime({ authenticationTimeoutMs: 1_500 });
+      const result = await runtime.authenticateAdapter({ id: "antigravity", path: scriptPath, methodId: "browser" });
+      expect((await readReport(reportPath)).authMethod).toBe("browser");
+      expect((await readReport(reportPath)).newSession).not.toBeNull();
+      expect(result.state).toBe("failed");
+      expect(result.detail).toBe("connection_timeout");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }, 10_000);
 
   sessionTest("keeps ACP login methods visible when another agent can already create a session", async () => {
     const directory = await mkdtemp(path.join(tmpdir(), "edgeever-acp-optional-auth-"));

@@ -3,7 +3,7 @@
 ## Listing
 
 - Name: EdgeEver Web Clipper
-- Summary: Save a webpage, selected text, an image, an X post, a Reddit post, a Xiaohongshu note, a Zhihu answer or article, or a GitHub repository to your EdgeEver instance.
+- Summary: Save webpages, selections, images, and Hacker News posts to your self-hosted EdgeEver instance.
 - Category: Bookmarks
 - Homepage: https://edgeever.org
 - Support: https://github.com/tianma-if/edgeever/issues
@@ -20,6 +20,7 @@ EdgeEver Web Clipper saves the current webpage, selected text, a right-clicked i
 - On Zhihu, right-click the answer or article text and save the title, author, text, and photos. Comments are left out. On a feed or question page, the item under the pointer is saved.
 - On Reddit, right-click a post and save its title, author, community, text, links, and images. Comments are left out.
 - On a GitHub repository page or code tree, right-click the page background, the description, or the README text and save the repository address and description.
+- On Hacker News post detail pages, save the title, author, original time, points at capture, linked page and main-post text. Comments are left out.
 - On a YouTube or Bilibili watch page, save that video as a note.
 - These commands stay on the top-level right-click menu.
 - Convert captured HTML to Markdown locally.
@@ -52,7 +53,8 @@ The project maintainers do not receive or retain this data. Instance settings ar
 11. Open one Zhihu answer or article, right-click the text (not a photo), choose **Save answer or article to EdgeEver**, and verify the note contains the title, text, and source link.
 12. Open one Reddit post, right-click the post text, choose **Save Reddit post to EdgeEver**, and verify the note contains the title, author, community, and source link without comments.
 13. Verify the created notes in the review EdgeEver instance.
-14. On a YouTube or Bilibili watch page, right-click the page and choose **Save video note to EdgeEver**. The new menu runs only after that click. Lives and other unsupported pages show a message and create no note.
+14. Open a Hacker News post detail page and choose **Save Hacker News post to EdgeEver** or **Clip current page**. Verify the main post and source are saved without comments; a selected passage takes priority for the toolbar action.
+15. On a YouTube or Bilibili watch page, right-click the page and choose **Save video note to EdgeEver**. The new menu runs only after that click. Lives and other unsupported pages show a message and create no note.
 
 Restricted browser pages, extension stores, built-in PDF viewers, and other privileged pages cannot be captured.
 
@@ -84,6 +86,7 @@ EdgeEver 网页剪藏插件可将当前网页、选中的文字、右键选中�
 - 在小红书笔记正文上右键，保存标题、正文和图片。评论不会写入。
 - 在知乎回答或文章正文上右键，保存标题、作者、正文和图片。评论不会写入。首页和问题页保存的是指针下的那一篇。
 - 在 Reddit 帖子正文上右键，保存标题、作者、社区、正文、链接和图片，不写入评论。
+- 在 Hacker News 主帖详情页保存标题、作者、原始时间、剪藏时的分数、外部链接和主帖正文，不写入评论。
 - 可以把 YouTube 或哔哩哔哩播放页保存为视频笔记。
 - 这些命令直接出现在右键菜单的第一级。
 - 在浏览器本地将 HTML 转换为 Markdown。

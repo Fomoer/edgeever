@@ -42,6 +42,45 @@ describe("managed ACP adapters", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+  test("installs Claude, preserves a working version on failed updates, and restores it after restart", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "edgeever-managed-claude-"));
+    let version = "0.88.0";
+    const entry = () => ({ id: "claude-acp", version, distribution: { npx: { package: `@agentclientprotocol/claude-agent-acp@${version}` } } });
+    expect(selectAdapterRelease([entry()], "claudeCode").packageName).toBe("@agentclientprotocol/claude-agent-acp@0.88.0");
+    expect(() => selectAdapterRelease([{ ...entry(), distribution: { npx: { package: "other@0.88.0" } } }], "claudeCode")).toThrow("unsupported_release");
+    expect(() => selectAdapterRelease([{ ...entry(), version: "1.0.0" }], "claudeCode")).toThrow("unsupported_release");
+    const options = {
+      root,
+      executablePath: "/usr/bin/node",
+      fetchImpl: async () => new Response(JSON.stringify({ agents: [entry()] })),
+      installNpmImpl: async (args, stage) => {
+        expect(args).toContain(`@agentclientprotocol/claude-agent-acp@${version}`);
+        expect(args).toContain("--ignore-scripts");
+        const folder = path.join(stage, "node_modules", "@agentclientprotocol", "claude-agent-acp", "dist");
+        await mkdir(folder, { recursive: true });
+        await writeFile(path.join(folder, "index.js"), "// fake Claude adapter");
+      },
+    };
+    const manager = createAcpAdapterManager(options);
+    try {
+      await manager.install("claudeCode", async () => ({ state: "available" }));
+      expect(manager.installedIds()).toEqual(["claudeCode"]);
+      expect(manager.get("claudeCode").command.args[0]).toContain("claude-agent-acp");
+      version = "0.89.0";
+      await expect(manager.install("claudeCode", async () => ({ state: "failed", detail: "handshake_failed" }), { updateOnly: true })).rejects.toThrow("handshake_failed");
+      expect(createAcpAdapterManager(options).get("claudeCode").version).toBe("0.88.0");
+      await expect(manager.install("claudeCode", async (command) => ({ state: command.args[0].includes(".stage-") ? "needs_login" : "available" }), { updateOnly: true })).rejects.toThrow("adapter_probe_failed");
+      expect(manager.get("claudeCode").version).toBe("0.88.0");
+      await manager.install("claudeCode", async () => ({ state: "needs_login" }), { updateOnly: true });
+      expect(createAcpAdapterManager(options).get("claudeCode").version).toBe("0.89.0");
+      expect((await manager.install("claudeCode", async () => ({ state: "available" }))).updated).toBe(false);
+      await manager.prune();
+      expect((await readdir(path.join(root, "claudeCode"))).sort()).toEqual(["0.88.0", "0.89.0"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   test("accepts only the supported official distribution and platform command", () => {
     expect(selectAdapterRelease([codexEntry("2.0.1")], "codex").version).toBe("2.0.1");
     expect(() => selectAdapterRelease([{ ...codexEntry("2.0.1"), distribution: { npx: { package: "evil@2.0.1" } } }], "codex")).toThrow("unsupported_release");

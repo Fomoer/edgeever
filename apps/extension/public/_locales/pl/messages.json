@@ -3,7 +3,7 @@
     "message": "EdgeEver Web Clipper"
   },
   "extensionDescription": {
-    "message": "Zapisuj bieżącą stronę, zaznaczony fragment lub obraz z menu kontekstowego w swojej samodzielnie hostowanej instancji EdgeEver."
+    "message": "Zapisuj strony, wybrany tekst, obrazy i wpisy Hacker News w swojej instancji EdgeEver."
   },
   "actionTitle": {
     "message": "Zapisz w EdgeEver"
@@ -560,5 +560,41 @@
   },
   "videoNoteFallbackTitle": {
     "message": "Notatka z wideo"
+  },
+  "saveHackerNewsToEdgeEver": {
+    "message": "Zapisz wpis Hacker News w EdgeEver"
+  },
+  "savingPlatformClip": {
+    "message": "Zapisywanie strony w EdgeEver…"
+  },
+  "platformNotDetail": {
+    "message": "Otwórz stronę szczegółów wpisu Hacker News i spróbuj ponownie."
+  },
+  "platformUnreadable": {
+    "message": "Nie można odczytać treści. W razie potrzeby zaloguj się, poczekaj na załadowanie strony i spróbuj ponownie."
+  },
+  "platformPageChanged": {
+    "message": "Strona zmieniła się podczas zapisywania. Nic nie zapisano. Spróbuj ponownie na właściwej stronie."
+  },
+  "platformImagesPartial": {
+    "message": "Tekst zapisano. Część obrazów nadal korzysta z linków zewnętrznych."
+  },
+  "platformSavedWithImages": {
+    "message": "Zapisano w EdgeEver wraz ze wszystkimi obrazami."
+  },
+  "platformAuthorLabel": {
+    "message": "Autor"
+  },
+  "platformPublishedAtLabel": {
+    "message": "Opublikowano"
+  },
+  "platformRelativeTimeLabel": {
+    "message": "czas względny wyświetlony na stronie"
+  },
+  "platformScoreLabel": {
+    "message": "Punkty w chwili zapisu"
+  },
+  "platformExternalLinkLabel": {
+    "message": "Link źródłowy"
   }
 }

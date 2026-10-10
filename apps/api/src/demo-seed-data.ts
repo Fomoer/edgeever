@@ -620,7 +620,8 @@ sequenceDiagram
 ![EdgeEver 官方 Logo](/api/v1/resources/res_demo_logo/blob)
 
 ### 多类型附件自由挂载
-支持在笔记中嵌入 PDF 文档、CSV 表格、压缩包及多媒体资源，点击即可在线预览或下载：
+支持在笔记中嵌入 Word 文档、PDF 文档、CSV 表格、压缩包及多媒体资源，点击即可在线预览或下载：
+- [📝 会议纪要 Word：edgeever-meeting-notes.docx](/api/v1/resources/res_demo_meeting_notes_docx/blob)
 - [📄 产品白皮书 PDF：edgeever-product-brief.pdf](/api/v1/resources/res_demo_product_brief_pdf/blob)
 - [📊 功能矩阵 CSV：feature-matrix.csv](/api/v1/resources/res_demo_feature_matrix_csv/blob)
 - [📦 示例附件压缩包：edgeever-attachment-demo.zip](/api/v1/resources/res_demo_attachment_bundle_zip/blob)
@@ -949,7 +950,8 @@ When pasting or dragging images into notes, EdgeEver compresses them to WebP loc
 ![EdgeEver Official Logo](/api/v1/resources/res_demo_logo/blob)
 
 ### Universal File Attachments
-Embed PDFs, spreadsheets, archives, and multimedia files directly in notes for preview or download:
+Embed Word documents, PDFs, spreadsheets, archives, and multimedia files directly in notes for preview or download:
+- [📝 Meeting notes Word: edgeever-meeting-notes.docx](/api/v1/resources/res_demo_meeting_notes_docx/blob)
 - [📄 Product brief PDF: edgeever-product-brief.pdf](/api/v1/resources/res_demo_product_brief_pdf/blob)
 - [📊 Feature matrix CSV: feature-matrix.csv](/api/v1/resources/res_demo_feature_matrix_csv/blob)
 - [📦 Sample attachment archive: edgeever-attachment-demo.zip](/api/v1/resources/res_demo_attachment_bundle_zip/blob)

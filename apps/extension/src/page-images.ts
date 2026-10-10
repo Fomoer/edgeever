@@ -204,7 +204,7 @@ export const embedPageImages = async (
 
   const uploaded: Array<{ href: string; resourceId: string }> = [];
   let remainingBytes = MAX_PAGE_IMAGE_TOTAL_BYTES;
-  for (const image of input.images) {
+  for (const image of input.images.slice(0, MAX_PAGE_IMAGES)) {
     if (transfers.aborted || remainingBytes <= 0) break;
     try {
       const maxBytes = Math.min(MAX_IMAGE_BYTES, remainingBytes);
