@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState, useEffect, useRef, type DragEvent } from "react";
 import { useTranslation } from "react-i18next";
 import * as m from "motion/react-m";
-import { ChevronDown, MoreHorizontal, Notebook as NotebookIcon, Plus, Pencil, Trash2, Share2, Globe } from "lucide-react";
+import { ChevronDown, MoreHorizontal, Palette, Plus, Pencil, Trash2, Share2, Globe } from "lucide-react";
 import type { NotebookNode, NotebookDropPosition } from "@/lib/app-helpers";
 import {
   hasMemoDragData,
@@ -12,6 +12,7 @@ import {
   NOTEBOOK_DRAG_MIME,
   setMemoDragPreview,
 } from "@/lib/app-helpers";
+import { NotebookAppearanceContent, notebookRowStyle } from "./NotebookAppearanceContent";
 import { cn } from "@/lib/utils";
 import { formatNotebookMemoCount, type Notebook } from "@edgeever/shared";
 import {
@@ -35,6 +36,7 @@ export const NotebookTreeItem = ({
   onSelect,
   onCreateNotebook,
   onRenameNotebook,
+  onEditNotebookAppearance,
   onDeleteNotebook,
   onMoveNotebook,
   onMoveMemos,
@@ -53,6 +55,7 @@ export const NotebookTreeItem = ({
   onSelect: (notebookId: string) => void;
   onCreateNotebook: (parentId?: string | null) => void;
   onRenameNotebook: (notebook: Notebook) => void;
+  onEditNotebookAppearance: (notebook: Notebook) => void;
   onDeleteNotebook: (notebook: Notebook) => void;
   onMoveNotebook: (notebookId: string, targetNotebookId: string, position: NotebookDropPosition) => void;
   onMoveMemos: (memoIds: string[], targetNotebookId: string) => void;
@@ -183,9 +186,12 @@ export const NotebookTreeItem = ({
         <ContextMenuTrigger asChild>
           <div
             data-notebook-id={node.id}
+            data-notebook-row-inverted={node.rowInverted || undefined}
             className={cn(
               "group relative flex h-9 cursor-pointer items-center gap-1 rounded-md px-2 text-xs transition-all duration-200 select-none",
-              selected
+              node.rowInverted
+                ? cn("notebook-inverted-row text-white", selected && "notebook-inverted-row-selected")
+                : selected
                 ? "edgeever-workspace-selection font-medium text-slate-950"
                 : "text-slate-700 hover:bg-slate-50",
               dropPosition === "inside" && "ring-2 ring-slate-300",
@@ -212,7 +218,7 @@ export const NotebookTreeItem = ({
             }}
             onDragEnd={clearExpandTimer}
             onDrop={handleDrop}
-            style={{ paddingLeft: `${8 + depth * 14}px` }}
+            style={{ ...notebookRowStyle(node), paddingLeft: `${8 + depth * 14}px` }}
           >
             {hasChildren ? (
               <TooltipProvider><Tooltip><TooltipTrigger asChild>
@@ -278,18 +284,10 @@ export const NotebookTreeItem = ({
                   }
                 }}
               >
-                <NotebookIcon className={cn("h-4 w-4 shrink-0 transition-colors duration-200", selected ? "text-slate-950" : "text-slate-500")} />
-                <span
-                  className={cn(
-                    "truncate transition-colors duration-200",
-                    selected ? "font-semibold text-black dark:text-slate-950" : "font-medium text-slate-800 group-hover:text-slate-950"
-                  )}
-                >
-                  {node.name}
-                </span>
+                <NotebookAppearanceContent notebook={node} selected={selected} />
                 {publicNotebook ? (
                   <Globe
-                    className={cn("h-3.5 w-3.5 shrink-0", selected ? "text-slate-700" : "text-slate-500")}
+                    className={cn("h-3.5 w-3.5 shrink-0", node.rowInverted ? "text-white/80" : selected ? "text-slate-700" : "text-slate-500")}
                     role="img"
                     aria-label={t("sharing.notebookPublic")}
                   />
@@ -297,7 +295,7 @@ export const NotebookTreeItem = ({
                 <span
                   className={cn(
                     "shrink-0 tabular-nums text-xs font-normal transition-colors duration-200",
-                    selected ? "text-slate-900 font-medium" : "text-slate-400 group-hover:text-slate-500"
+                    node.rowInverted ? "text-white/80" : selected ? "text-slate-900 font-medium" : "text-slate-400 group-hover:text-slate-500"
                   )}
                   aria-hidden="true"
                 >
@@ -348,6 +346,10 @@ export const NotebookTreeItem = ({
                   >
                     <Pencil className="h-4 w-4" />
                     {t("notebookTree.rename")}
+                  </button>
+                  <button className="flex h-9 w-full items-center gap-2 rounded-sm px-2 text-left text-xs outline-none hover:bg-slate-100"
+                    type="button" onClick={event => { event.stopPropagation(); setActionsOpen(false); onEditNotebookAppearance(node); }}>
+                    <Palette className="h-4 w-4" />{t("notebookAppearance.title")}
                   </button>
                   <button
                     className="flex h-9 w-full items-center gap-2 rounded-sm px-2 text-left text-xs outline-none hover:bg-slate-100"
@@ -418,6 +420,9 @@ export const NotebookTreeItem = ({
             <Pencil className="h-4 w-4" />
             {t("notebookTree.rename")}
           </ContextMenuItem>
+          <ContextMenuItem className="flex h-9 items-center gap-2 px-3 text-xs cursor-pointer" onClick={() => onEditNotebookAppearance(node)}>
+            <Palette className="h-4 w-4" />{t("notebookAppearance.title")}
+          </ContextMenuItem>
           <ContextMenuItem className="flex h-9 items-center gap-2 px-3 text-xs cursor-pointer" onClick={() => setShareOpen(true)}>
             <Share2 className="h-4 w-4" />{shareActionLabel}
           </ContextMenuItem>
@@ -469,6 +474,7 @@ export const NotebookTreeItem = ({
               onSelect={onSelect}
               onCreateNotebook={onCreateNotebook}
               onRenameNotebook={onRenameNotebook}
+              onEditNotebookAppearance={onEditNotebookAppearance}
               onDeleteNotebook={onDeleteNotebook}
               onMoveNotebook={onMoveNotebook}
               onMoveMemos={onMoveMemos}

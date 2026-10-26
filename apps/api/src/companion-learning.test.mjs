@@ -163,8 +163,11 @@ for (const legacyColumn of [false, true]) test(`upgrade preserves old SQLite dat
       VALUES ('legacy-turn','paw','user','legacy-turn',0,'old','completed','old-model',0,1,'en-US','2026-09-01','2027-01-01');
       INSERT INTO companion_discoveries(id,workspace_id,owner_id,turn_id,settings_version,kind,title,body,sources_json,fingerprint,created_at)
       VALUES ('legacy-discovery','paw','user','legacy-turn',7,'insight','Old','Keep me','[]','old','2026-09-01');`);
-    const oldStorage = createSelfHostedStorageAdapter(sqlite, `${dir}/resources`);
-    const note = await createMemoRecord(oldStorage.db, scope.workspaceId, { notebookId: "inbox", title: "Original", contentMarkdown: "Preserve **exactly**", tags: ["original"] }, actor, "user");
+    // Seed the historical schema directly: current services require current migrations.
+    const note = { id: "legacy-note" };
+    sqlite.exec(`INSERT INTO memos(id,workspace_id,notebook_id,title,tags_json) VALUES ('legacy-note','paw','inbox','Original','["original"]');
+      INSERT INTO memo_contents(memo_id,content_json,content_markdown,content_text,content_hash)
+      VALUES ('legacy-note','{}','Preserve **exactly**','Preserve exactly','historical-hash');`);
     if (legacyColumn) sqlite.exec("ALTER TABLE companion_discovery_settings ADD COLUMN use_memory INTEGER NOT NULL DEFAULT 0");
     sqlite.close(); sqlite = new Database(`${dir}/old.sqlite`);
     sqlite.exec("PRAGMA foreign_keys = ON");

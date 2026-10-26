@@ -1,3 +1,4 @@
+import type { NotebookUpdateInput } from "@edgeever/shared";
 import { assertLocalMemoSnapshot } from "./local-memo-guard";
 import { localizeDefaultMemoTemplate } from "@edgeever/shared/memo-template-seeds";
 import { markdownToDoc, type MemoDetail, type MemoRevision, type MemoTemplate, type Notebook, type Resource, type ResourceListItem, type ResourceStorageSummary, type TagSummary, type TiptapDoc } from "@edgeever/shared";
@@ -56,7 +57,7 @@ import { withRepositoryMutationEvents } from "@/lib/repository-events";
 export type EdgeEverRepository = {
   listNotebooks(): Promise<{ notebooks: Notebook[] }>;
   createNotebook(input: { name: string; parentId?: string | null }): Promise<{ notebook: Notebook }>;
-  updateNotebook(notebookId: string, input: { name?: string; parentId?: string | null; sortOrder?: number }): Promise<{ notebook: Notebook }>;
+  updateNotebook(notebookId: string, input: NotebookUpdateInput): Promise<{ notebook: Notebook }>;
   deleteNotebook(notebookId: string): Promise<{ ok: true }>;
   restoreNotebook(notebookId: string): Promise<{ notebook: Notebook }>;
   listTemplates(): Promise<{ templates: MemoTemplate[] }>;

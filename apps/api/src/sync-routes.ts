@@ -105,12 +105,12 @@ export const registerSyncRoutes = (
     const afterId = context.req.query("afterId")?.trim() ?? "";
     const [notebookRows, memoRows, totalRow, cursorRow] = await Promise.all([
       context.env.storage.db.prepare(
-        `SELECT n.id, ${syncNotebookParentIdSql} AS parent_id, n.name, n.slug, n.icon, n.color, n.sort_order,
+        `SELECT n.id, ${syncNotebookParentIdSql} AS parent_id, n.name, n.slug, n.icon, n.color, n.text_color, n.color_target, n.is_bold, n.icon_inverted, n.row_inverted, n.sort_order,
                 n.created_at, n.updated_at, COUNT(m.id) AS memo_count, MAX(m.updated_at) AS last_memo_updated_at
          FROM notebooks n
          LEFT JOIN memos m ON m.notebook_id = n.id AND m.workspace_id = n.workspace_id AND m.is_deleted = 0
          WHERE n.workspace_id = ? AND n.is_deleted = 0
-         GROUP BY n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.sort_order, n.created_at, n.updated_at
+         GROUP BY n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.text_color, n.color_target, n.is_bold, n.icon_inverted, n.row_inverted, n.sort_order, n.created_at, n.updated_at
          ORDER BY n.sort_order ASC, n.name ASC`,
       ).bind(workspaceId).all<NotebookRow>(),
       context.env.storage.db.prepare(
@@ -218,12 +218,12 @@ export const registerSyncRoutes = (
       Promise.all(splitSyncDetailIds(notebookIds).map((batch) => {
         const placeholders = batch.map(() => "?").join(", ");
         return context.env.storage.db.prepare(
-          `SELECT n.id, ${syncNotebookParentIdSql} AS parent_id, n.name, n.slug, n.icon, n.color, n.sort_order,
+          `SELECT n.id, ${syncNotebookParentIdSql} AS parent_id, n.name, n.slug, n.icon, n.color, n.text_color, n.color_target, n.is_bold, n.icon_inverted, n.row_inverted, n.sort_order,
                   n.created_at, n.updated_at, COUNT(m.id) AS memo_count, MAX(m.updated_at) AS last_memo_updated_at
            FROM notebooks n
            LEFT JOIN memos m ON m.notebook_id = n.id AND m.workspace_id = n.workspace_id AND m.is_deleted = 0
            WHERE n.workspace_id = ? AND n.is_deleted = 0 AND n.id IN (${placeholders})
-           GROUP BY n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.sort_order, n.created_at, n.updated_at`,
+         GROUP BY n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.text_color, n.color_target, n.is_bold, n.icon_inverted, n.row_inverted, n.sort_order, n.created_at, n.updated_at`,
         ).bind(workspaceId, ...batch).all<NotebookRow>();
       })),
     ]);

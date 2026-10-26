@@ -12,6 +12,12 @@ export type Notebook = {
   slug: string | null;
   icon: string | null;
   color: string | null;
+  textColor?: string | null;
+  /** Older clients omit this; defaults to coloring the icon. */
+  colorTarget?: "icon" | "name" | "both";
+  isBold?: boolean;
+  iconInverted?: boolean;
+  rowInverted?: boolean;
   sortOrder: number;
   memoCount: number;
   lastMemoUpdatedAt: string | null;

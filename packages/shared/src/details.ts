@@ -1,6 +1,7 @@
 import type { JSONContent, MarkdownParseHelpers, MarkdownRendererHelpers, MarkdownToken } from "@tiptap/core";
 import { Details, DetailsContent, DetailsSummary } from "@tiptap/extension-details";
 import { resolveAttachmentKind, resolveVideoMimeType } from "./attachment-kind";
+import { openBlockSource } from "./markdown-block-start";
 import { FILE_ATTACHMENT_NODE_TYPE } from "./file-attachment";
 import { parseImageWidth } from "./image-display";
 import { alignedImageToHtml, parseImageAlignment, type ImageAlignment } from "./image-alignment";
@@ -525,7 +526,7 @@ export const EdgeEverDetails = Details.extend({
     name: DETAILS_NODE_TYPE,
     level: "block",
     start(source: string) {
-      const match = /<details\b/i.exec(source);
+      const match = /<details\b/i.exec(openBlockSource(source));
       return match ? match.index : -1;
     },
     tokenize(source: string, _tokens, lexer) {

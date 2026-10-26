@@ -1,4 +1,4 @@
-import type { Notebook, NotebookCreateInput } from "@edgeever/shared";
+import type { Notebook, NotebookCreateInput, NotebookUpdateInput } from "@edgeever/shared";
 import type { AuditActor } from "./api-context";
 import { AppError } from "./app-error";
 import { auditStatement } from "./audit";
@@ -19,6 +19,11 @@ export type NotebookRow = {
   slug: string | null;
   icon: string | null;
   color: string | null;
+  text_color?: string | null;
+  color_target?: Notebook["colorTarget"];
+  is_bold?: number;
+  icon_inverted?: number;
+  row_inverted?: number;
   sort_order: number;
   memo_count: number | null;
   last_memo_updated_at: string | null;
@@ -33,6 +38,11 @@ export const mapNotebook = (row: NotebookRow): Notebook => ({
   slug: row.slug,
   icon: row.icon,
   color: row.color,
+  textColor: row.text_color ?? null,
+  colorTarget: row.color_target ?? "icon",
+  isBold: row.is_bold === 1,
+  iconInverted: row.icon_inverted === 1,
+  rowInverted: row.row_inverted === 1,
   sortOrder: row.sort_order,
   memoCount: row.memo_count ?? 0,
   lastMemoUpdatedAt: row.last_memo_updated_at,
@@ -47,6 +57,11 @@ export const notebookSelectSql = (tail: string) => `
          n.slug,
          n.icon,
          n.color,
+         n.text_color,
+         n.color_target,
+         n.is_bold,
+         n.icon_inverted,
+         n.row_inverted,
          n.sort_order,
          COUNT(m.id) AS memo_count,
          MAX(m.updated_at) AS last_memo_updated_at,
@@ -62,7 +77,7 @@ export const listNotebooks = async (db: DatabaseAdapter, workspaceId: string): P
     .prepare(
       notebookSelectSql(
         `WHERE n.workspace_id = ? AND n.is_deleted = 0
-         GROUP BY n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.sort_order, n.created_at, n.updated_at
+         GROUP BY n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.text_color, n.color_target, n.is_bold, n.icon_inverted, n.row_inverted, n.sort_order, n.created_at, n.updated_at
          ORDER BY n.parent_id IS NOT NULL, n.sort_order ASC, n.name ASC`
       )
     )
@@ -138,7 +153,7 @@ export const getNotebook = async (db: DatabaseAdapter, workspaceId: string, id: 
     .prepare(
       notebookSelectSql(
         `WHERE n.id = ? AND n.workspace_id = ? AND n.is_deleted = 0
-         GROUP BY n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.sort_order, n.created_at, n.updated_at`
+         GROUP BY n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.text_color, n.color_target, n.is_bold, n.icon_inverted, n.row_inverted, n.sort_order, n.created_at, n.updated_at`
       )
     )
     .bind(id, workspaceId)
@@ -190,7 +205,7 @@ export const updateNotebookRecord = async (
   db: DatabaseAdapter,
   workspaceId: string,
   id: string,
-  input: { name?: string; parentId?: string | null; sortOrder?: number },
+  input: NotebookUpdateInput,
   actor: AuditActor
 ) => {
   const current = await getNotebook(db, workspaceId, id);
@@ -225,10 +240,14 @@ export const updateNotebookRecord = async (
     db
       .prepare(
         `UPDATE notebooks
-         SET name = ?, slug = ?, parent_id = ?, sort_order = ?, updated_at = ?
+         SET name = ?, slug = ?, parent_id = ?, sort_order = ?, icon = ?, color = ?, text_color = ?, color_target = ?, is_bold = ?, icon_inverted = ?, row_inverted = ?, updated_at = ?
          WHERE id = ? AND workspace_id = ? AND is_deleted = 0`
       )
-      .bind(nextName, nextSlug, nextParentId ?? null, nextSortOrder, now, id, workspaceId),
+      .bind(nextName, nextSlug, nextParentId ?? null, nextSortOrder,
+        input.icon === undefined ? current.icon : input.icon,
+        input.color === undefined ? current.color : input.color,
+        input.textColor === undefined ? current.textColor : input.textColor,
+        input.colorTarget ?? current.colorTarget ?? "icon", Number(input.isBold ?? current.isBold ?? false), Number(input.iconInverted ?? current.iconInverted ?? false), Number(input.rowInverted ?? current.rowInverted ?? false), now, id, workspaceId),
     auditStatement(db, actor.actorType, actor.actorId, "notebook.update", "notebook", id, input),
   ]);
 

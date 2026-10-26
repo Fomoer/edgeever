@@ -1,4 +1,5 @@
 import { mergeAttributes, Node } from "@tiptap/core";
+import { openBlockSource } from "./markdown-block-start";
 import type { TiptapDoc, TiptapNode, TiptapTextNode } from "./content";
 import { parseImageAlignment } from "./image-alignment";
 
@@ -92,7 +93,7 @@ export const ImageGallery = Node.create({
     name: IMAGE_GALLERY_NODE_TYPE,
     level: "block",
     start(source: string) {
-      return source.indexOf("<!-- edgeever:image-gallery ");
+      return openBlockSource(source).indexOf("<!-- edgeever:image-gallery ");
     },
     tokenize(source: string, _tokens, lexer) {
       const match = /^<!-- edgeever:image-gallery fit=(width|height) layout=(auto|1|2|3) -->\s*\n([\s\S]*?)\n<!-- \/edgeever:image-gallery -->/.exec(source);

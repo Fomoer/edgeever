@@ -11,7 +11,7 @@ pub(crate) fn is_inbox_notebook(id: &str, slug: Option<&str>) -> bool {
 
 pub(crate) fn list_notebooks(database: &Connection) -> Result<Value, String> {
     let mut statement = database.prepare(
-        "SELECT n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.sort_order, n.created_at, n.updated_at,
+        "SELECT n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.color_target, n.is_bold, n.icon_inverted, n.row_inverted, n.text_color, n.sort_order, n.created_at, n.updated_at,
                 COUNT(CASE WHEN m.is_deleted = 0 THEN 1 END) AS memo_count,
                 MAX(CASE WHEN m.is_deleted = 0 THEN m.updated_at END) AS last_memo_updated_at
            FROM notebooks n LEFT JOIN memos m ON m.notebook_id = n.id
@@ -21,6 +21,11 @@ pub(crate) fn list_notebooks(database: &Connection) -> Result<Value, String> {
         "id": row.get::<_, String>("id")?, "parentId": row.get::<_, Option<String>>("parent_id")?,
         "name": row.get::<_, String>("name")?, "slug": row.get::<_, Option<String>>("slug")?,
         "icon": row.get::<_, Option<String>>("icon")?, "color": row.get::<_, Option<String>>("color")?,
+        "colorTarget": row.get::<_, String>("color_target")?,
+        "isBold": row.get::<_, i64>("is_bold")? != 0,
+        "iconInverted": row.get::<_, i64>("icon_inverted")? != 0,
+        "rowInverted": row.get::<_, i64>("row_inverted")? != 0,
+        "textColor": row.get::<_, Option<String>>("text_color")?,
         "sortOrder": row.get::<_, i64>("sort_order")?, "memoCount": row.get::<_, i64>("memo_count")?,
         "lastMemoUpdatedAt": row.get::<_, Option<String>>("last_memo_updated_at")?,
         "createdAt": row.get::<_, String>("created_at")?, "updatedAt": row.get::<_, String>("updated_at")?,
@@ -35,7 +40,7 @@ fn notebook_value(
     include_deleted: bool,
 ) -> Result<Value, String> {
     let mut statement = database.prepare(
-        "SELECT n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.sort_order, n.created_at, n.updated_at,
+        "SELECT n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.color_target, n.is_bold, n.icon_inverted, n.row_inverted, n.text_color, n.sort_order, n.created_at, n.updated_at,
                 COUNT(CASE WHEN m.is_deleted = 0 THEN 1 END) AS memo_count,
                 MAX(CASE WHEN m.is_deleted = 0 THEN m.updated_at END) AS last_memo_updated_at
            FROM notebooks n LEFT JOIN memos m ON m.notebook_id = n.id
@@ -45,6 +50,11 @@ fn notebook_value(
         "id": row.get::<_, String>("id")?, "parentId": row.get::<_, Option<String>>("parent_id")?,
         "name": row.get::<_, String>("name")?, "slug": row.get::<_, Option<String>>("slug")?,
         "icon": row.get::<_, Option<String>>("icon")?, "color": row.get::<_, Option<String>>("color")?,
+        "colorTarget": row.get::<_, String>("color_target")?,
+        "isBold": row.get::<_, i64>("is_bold")? != 0,
+        "iconInverted": row.get::<_, i64>("icon_inverted")? != 0,
+        "rowInverted": row.get::<_, i64>("row_inverted")? != 0,
+        "textColor": row.get::<_, Option<String>>("text_color")?,
         "sortOrder": row.get::<_, i64>("sort_order")?, "memoCount": row.get::<_, i64>("memo_count")?,
         "lastMemoUpdatedAt": row.get::<_, Option<String>>("last_memo_updated_at")?,
         "createdAt": row.get::<_, String>("created_at")?, "updatedAt": row.get::<_, String>("updated_at")?,
@@ -68,6 +78,12 @@ pub(crate) fn create_notebook(database: &Connection, params: &Value) -> Result<V
 
 pub(crate) fn update_notebook(database: &Connection, params: &Value) -> Result<Value, String> {
     let notebook_id = string_param(params, "notebookId")?;
+    // Keep the notebook and its queued sync operation atomic, including rejected payloads.
+    let transaction = database
+        .unchecked_transaction()
+        .map_err(|e| e.to_string())?;
+    let database = &transaction;
+
     if let Some(name) = params.get("name").and_then(Value::as_str) {
         let current_slug: Option<String> = database
             .query_row(
@@ -89,8 +105,68 @@ pub(crate) fn update_notebook(database: &Connection, params: &Value) -> Result<V
     if let Some(sort_order) = params.get("sortOrder").and_then(Value::as_i64) {
         database.execute("UPDATE notebooks SET sort_order = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2 AND is_deleted = 0", rusqlite::params![sort_order, notebook_id]).map_err(|e| e.to_string())?;
     }
+    for (key, column) in [
+        ("icon", "icon"),
+        ("color", "color"),
+        ("textColor", "text_color"),
+        ("colorTarget", "color_target"),
+    ] {
+        if let Some(value) = params.get(key) {
+            let text = value.as_str();
+            if !value.is_null() && text.is_none() {
+                return Err(format!("Invalid notebook {key}"));
+            }
+            if matches!(key, "color" | "textColor")
+                && text.is_some_and(|color| {
+                    color.len() != 7
+                        || !color.starts_with('#')
+                        || !color[1..].bytes().all(|c| c.is_ascii_hexdigit())
+                })
+            {
+                return Err(format!("Invalid notebook {key}"));
+            }
+            if key == "icon"
+                && text.is_some_and(|icon| {
+                    icon.is_empty()
+                        || icon.len() > 80
+                        || !icon.as_bytes()[0].is_ascii_lowercase()
+                        || !icon
+                            .bytes()
+                            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
+                })
+            {
+                return Err("Invalid notebook icon".to_owned());
+            }
+            if key == "colorTarget" && !matches!(text, Some("icon" | "name" | "both")) {
+                return Err("Invalid notebook color target".to_owned());
+            }
+            database.execute(
+                &format!("UPDATE notebooks SET {column} = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2 AND is_deleted = 0"),
+                rusqlite::params![text, notebook_id],
+            ).map_err(|e| e.to_string())?;
+        }
+    }
+    if let Some(value) = params.get("isBold") {
+        let bold = value
+            .as_bool()
+            .ok_or_else(|| "Invalid notebook bold value".to_owned())?;
+        database.execute("UPDATE notebooks SET is_bold = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2 AND is_deleted = 0", rusqlite::params![i64::from(bold), notebook_id]).map_err(|e| e.to_string())?;
+    }
+    if let Some(value) = params.get("iconInverted") {
+        let inverted = value
+            .as_bool()
+            .ok_or_else(|| "Invalid notebook inverted icon value".to_owned())?;
+        database.execute("UPDATE notebooks SET icon_inverted = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2 AND is_deleted = 0", rusqlite::params![i64::from(inverted), notebook_id]).map_err(|e| e.to_string())?;
+    }
+    if let Some(value) = params.get("rowInverted") {
+        let inverted = value
+            .as_bool()
+            .ok_or_else(|| "Invalid notebook inverted icon value".to_owned())?;
+        database.execute("UPDATE notebooks SET row_inverted = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2 AND is_deleted = 0", rusqlite::params![i64::from(inverted), notebook_id]).map_err(|e| e.to_string())?;
+    }
     let notebook = notebook_value(database, &notebook_id, true)?;
     enqueue_change(database, "notebook.update", &notebook_id, params)?;
+    transaction.commit().map_err(|e| e.to_string())?;
     Ok(notebook)
 }
 
@@ -479,4 +555,108 @@ pub(crate) fn rewrite_tag(
         params,
     )?;
     Ok(json!({ "ok": true, "updated": updated }))
+}
+
+#[cfg(test)]
+mod appearance_tests {
+    use super::*;
+
+    #[test]
+    fn appearance_survives_local_edits_and_sync_and_can_be_disabled() {
+        let root = std::env::temp_dir().join(now_id("edgeever-bold-test"));
+        let migrations = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../migrations");
+        let database = crate::database::open_database(&root, &migrations).unwrap();
+        let created = create_notebook(&database, &json!({"name": "Heimnetz"})).unwrap();
+        let id = created["id"].as_str().unwrap();
+        let bold = update_notebook(&database, &json!({"notebookId": id, "isBold": true, "iconInverted": true, "rowInverted": true, "icon": "house", "color": "#2563eb", "textColor": "#dc2626"})).unwrap();
+        assert_eq!(bold["isBold"], true);
+        let renamed =
+            update_notebook(&database, &json!({"notebookId": id, "name": "Network"})).unwrap();
+        assert_eq!(renamed["isBold"], true);
+        assert_eq!(renamed["iconInverted"], true);
+        assert_eq!(renamed["rowInverted"], true);
+        assert_eq!(renamed["icon"], "house");
+        assert_eq!(renamed["color"], "#2563eb");
+        assert_eq!(renamed["textColor"], "#dc2626");
+        let before = notebook_value(&database, id, false).unwrap();
+        let queued: i64 = database
+            .query_row("SELECT COUNT(*) FROM _edgeever_sidecar_outbox", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        for invalid in [
+            json!({"rowInverted": "yes"}),
+            json!({"color": "red"}),
+            json!({"textColor": 5}),
+            json!({"icon": "../house"}),
+        ] {
+            let mut params = invalid;
+            params["notebookId"] = json!(id);
+            params["name"] = json!("Must roll back");
+            assert!(update_notebook(&database, &params).is_err());
+            assert_eq!(notebook_value(&database, id, false).unwrap(), before);
+            assert_eq!(
+                database
+                    .query_row("SELECT COUNT(*) FROM _edgeever_sidecar_outbox", [], |row| {
+                        row.get::<_, i64>(0)
+                    })
+                    .unwrap(),
+                queued
+            );
+        }
+
+        let payload: String = database.query_row(
+            "SELECT payload_json FROM _edgeever_sidecar_outbox WHERE kind = 'notebook.update' ORDER BY id LIMIT 1",
+            [], |row| row.get(0),
+        ).unwrap();
+        assert_eq!(
+            serde_json::from_str::<Value>(&payload).unwrap()["isBold"],
+            true
+        );
+        let plain =
+            update_notebook(&database, &json!({"notebookId": id, "isBold": false})).unwrap();
+        assert_eq!(plain["isBold"], false);
+        let mut remote = plain.clone();
+        remote["isBold"] = json!(true);
+        remote["textColor"] = json!("#16a34a");
+        remote["iconInverted"] = json!(false);
+        remote["rowInverted"] = json!(false);
+        crate::sync::apply_sync_changes(
+            &database,
+            &json!({"changes": [{
+                "entityType": "notebook", "entityId": id, "operation": "upsert", "notebook": remote,
+            }]}),
+        )
+        .unwrap();
+        assert_eq!(
+            notebook_value(&database, id, false).unwrap()["isBold"],
+            true
+        );
+        assert_eq!(
+            notebook_value(&database, id, false).unwrap()["iconInverted"],
+            false
+        );
+        assert_eq!(
+            notebook_value(&database, id, false).unwrap()["rowInverted"],
+            false
+        );
+        assert_eq!(
+            notebook_value(&database, id, false).unwrap()["textColor"],
+            "#16a34a"
+        );
+        remote.as_object_mut().unwrap().remove("isBold");
+        crate::sync::apply_sync_changes(
+            &database,
+            &json!({"changes": [{
+                "entityType": "notebook", "entityId": id, "operation": "upsert", "notebook": remote,
+            }]}),
+        )
+        .unwrap();
+        assert_eq!(
+            notebook_value(&database, id, false).unwrap()["isBold"],
+            false
+        );
+        drop(database);
+        std::fs::remove_dir_all(root).unwrap();
+    }
 }

@@ -28,6 +28,13 @@ export const NotebookUpdateSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
   parentId: z.string().trim().min(1).nullable().optional(),
   sortOrder: z.number().int().optional(),
+  icon: z.string().trim().regex(/^[a-z][a-z0-9-]{0,79}$/).nullable().optional(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  textColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  colorTarget: z.enum(["icon", "name", "both"]).optional(),
+  isBold: z.boolean().optional(),
+  iconInverted: z.boolean().optional(),
+  rowInverted: z.boolean().optional(),
 });
 
 export const MemoCreateSchema = z.object({

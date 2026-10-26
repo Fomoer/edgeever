@@ -1,10 +1,113 @@
 diff --git a/android/src/main/java/expo/modules/sharing/ShareIntoUtils.kt b/android/src/main/java/expo/modules/sharing/ShareIntoUtils.kt
 --- a/android/src/main/java/expo/modules/sharing/ShareIntoUtils.kt
 +++ b/android/src/main/java/expo/modules/sharing/ShareIntoUtils.kt
-@@ -47,9 +47,26 @@
+@@ -1,14 +1,21 @@
+ package expo.modules.sharing
+ 
++import android.app.Activity
+ import android.content.Intent
+ import android.content.Context
+ import android.net.Uri
+ import android.os.Build
++import android.os.Bundle
+ import android.os.Parcelable
++import androidx.core.content.FileProvider
+ import androidx.core.net.toUri
+ import com.facebook.react.ReactActivity
++import com.facebook.react.ReactApplication
+ import com.facebook.react.modules.core.DeviceEventManagerModule
++import java.io.File
++import java.io.FileNotFoundException
+ import java.net.URL
++import java.util.UUID
+ 
+ // Emits intent received event to JS. This is because the `SEND` and `SEND_MULTIPLE` intents
+ // have no uri and do not inform the navigation libraries of a native intent.
+@@ -32,24 +39,102 @@
+ // Emits intent received event to JS. This is because the `SEND` and `SEND_MULTIPLE` intents
+ // do not navigation libraries of a native intent. This aligns the behaviour with ios.
+ internal fun emitShareIntentReceived(reactActivity: ReactActivity, originalIntent: Intent) {
+-  SharingSingleton.intent = originalIntent
++  publishSharedIntent(reactActivity, originalIntent)
++}
+ 
+-  val currentContext = reactActivity.reactDelegate?.reactHost?.currentReactContext
++internal fun publishSharedIntent(context: Context, intent: Intent) {
++  SharingSingleton.intent = intent
++  val reactContext = (context.applicationContext as? ReactApplication)
++    ?.reactHost
++    ?.currentReactContext
++    ?: return
+   val deviceEventManagerModule =
+-    currentContext?.getNativeModule(DeviceEventManagerModule::class.java)
++    reactContext.getNativeModule(DeviceEventManagerModule::class.java) ?: return
++  getShareIntentUri(context)?.let { uri ->
++    deviceEventManagerModule.emitNewIntentReceived(uri)
++  }
++}
+ 
+-  getShareIntentUri(reactActivity)?.let { uri ->
+-    deviceEventManagerModule?.emitNewIntentReceived(uri)
++internal fun materializeShareIntent(context: Context, source: Intent): Intent {
++  val uris = getShareIntentUris(source)
++  if (uris.isEmpty()) {
++    return baseShareIntent(source).apply {
++      if (!hasExtra(Intent.EXTRA_TEXT)) {
++        source.clipData?.let { clipData = it }
++      }
++    }
+   }
++
++  val copied = mutableListOf<File>()
++  try {
++    val localUris = uris.map { uri ->
++      val file = copySharedUri(context, uri)
++      copied.add(file)
++      FileProvider.getUriForFile(context, "${context.packageName}.SharingFileProvider", file)
++    }
++    return baseShareIntent(source).apply {
++      if (action == Intent.ACTION_SEND_MULTIPLE) {
++        putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(localUris))
++      } else {
++        putExtra(Intent.EXTRA_STREAM, localUris.first())
++      }
++      addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
++    }
++  } catch (error: Exception) {
++    copied.forEach { it.delete() }
++    throw error
++  }
+ }
+ 
++private fun baseShareIntent(source: Intent): Intent {
++  return Intent(source.action).apply {
++    type = source.type
++    source.getCharSequenceExtra(Intent.EXTRA_TEXT)?.let { putExtra(Intent.EXTRA_TEXT, it) }
++  }
++}
++
++private fun copySharedUri(context: Context, uri: Uri): File {
++  val scheme = uri.scheme
++  if (scheme != "content" && scheme != "file") {
++    throw FileNotFoundException("Unsupported shared URI")
++  }
++  val rawName = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: "shared"
++  val safeName = rawName.replace(Regex("[^A-Za-z0-9._-]"), "_").take(80)
++  val file = File(context.cacheDir, "incoming-share-${UUID.randomUUID()}-$safeName")
++  context.contentResolver.openInputStream(uri)?.use { input ->
++    file.outputStream().use { output -> input.copyTo(output) }
++  } ?: throw FileNotFoundException(uri.toString())
++  if (file.length() == 0L) {
++    file.delete()
++    throw FileNotFoundException(uri.toString())
++  }
++  return file
++}
++
  internal fun isShareIntent(intent: Intent): Boolean {
    val allowedShareActions =
      listOf("android.intent.action.SEND", "android.intent.action.SEND_MULTIPLE")
+ 
 -  return intent.type != null && allowedShareActions.contains(intent.action)
 +  // Android can recreate a task with its original SEND intent. That is a
 +  // history launch, not a new share, even after the JS process has been killed.
@@ -29,6 +132,76 @@ diff --git a/android/src/main/java/expo/modules/sharing/ShareIntoUtils.kt b/andr
  internal inline fun <reified T : Parcelable> Intent.getParcelableExtraCompat(name: String): T? {
    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
      getParcelableExtra(name, T::class.java)
+@@ -70,3 +155,48 @@
+ 
+ internal val URL.lastPathComponent: String
+   get() = path.removeSuffix("/").substringAfterLast('/')
++
++/**
++ * Receives ACTION_SEND while the singleTask host is dead.
++ *
++ * Android then brings the existing task forward with its original launcher
++ * intent and does not deliver the share to that activity. This standard-mode
++ * activity is created with the share intent, copies the payload into app
++ * cache, and only then opens the host.
++ */
++class ShareReceiverActivity : Activity() {
++  override fun onCreate(savedInstanceState: Bundle?) {
++    super.onCreate(savedInstanceState)
++    try {
++      val incoming = intent
++      if (incoming != null && isShareIntent(incoming)) {
++        val prepared = try {
++          materializeShareIntent(this, incoming)
++        } catch (_: Exception) {
++          unreadableShareIntent(incoming)
++        }
++        publishSharedIntent(this, prepared)
++        openShareHost(this)
++      }
++    } finally {
++      finish()
++    }
++  }
++}
++
++internal fun unreadableShareIntent(source: Intent): Intent {
++  return Intent(source.action ?: Intent.ACTION_SEND).apply {
++    type = source.type ?: "image/*"
++    putExtra(Intent.EXTRA_STREAM, Uri.parse("content://expo.modules.sharing/unreadable-share"))
++  }
++}
++
++internal fun openShareHost(context: Context) {
++  val launch = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return
++  getShareIntentUri(context)?.let { uri ->
++    launch.action = Intent.ACTION_VIEW
++    launch.data = uri
++    launch.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
++  }
++  context.startActivity(launch)
++}
+diff --git a/android/src/main/java/expo/modules/sharing/SharingModule.kt b/android/src/main/java/expo/modules/sharing/SharingModule.kt
+--- a/android/src/main/java/expo/modules/sharing/SharingModule.kt
++++ b/android/src/main/java/expo/modules/sharing/SharingModule.kt
+@@ -75,6 +75,17 @@
+ 
+     Function("clearSharedPayloads") {
+       SharingSingleton.intent = null
++      // ReactActivity retains the last SEND intent across task/activity recreation.
++      // Clearing only the singleton lets a consumed share be imported again.
++      appContext.currentActivity?.let { activity ->
++        val intent = activity.intent
++        if (intent != null && (isShareIntent(intent) || intent.data?.host == "expo-sharing")) {
++          activity.intent = Intent(Intent.ACTION_MAIN).apply {
++            component = intent.component
++            addCategory(Intent.CATEGORY_LAUNCHER)
++          }
++        }
++      }
+     }
+ 
+     OnActivityResult { _, (requestCode) ->
 diff --git a/android/src/main/java/expo/modules/sharing/dataParsers/ResolvingShareIntentDataParser.kt b/android/src/main/java/expo/modules/sharing/dataParsers/ResolvingShareIntentDataParser.kt
 --- a/android/src/main/java/expo/modules/sharing/dataParsers/ResolvingShareIntentDataParser.kt
 +++ b/android/src/main/java/expo/modules/sharing/dataParsers/ResolvingShareIntentDataParser.kt
@@ -151,111 +324,6 @@ diff --git a/android/src/main/java/expo/modules/sharing/dataParsers/SimpleShareI
        return SharePayload().apply {
          value = uri.toString()
          shareType = ShareType.fromMimeType(specificType)
-diff --git a/src/useIncomingShare.ts b/src/useIncomingShare.ts
---- a/src/useIncomingShare.ts
-+++ b/src/useIncomingShare.ts
-@@ -1,8 +1,8 @@
- import { useEffect, useState, useCallback, useRef } from 'react';
- import type { AppStateStatus } from 'react-native';
--import { AppState } from 'react-native';
-+import { AppState, Linking } from 'react-native';
- 
--import { clearSharedPayloads, getResolvedSharedPayloadsAsync, getSharedPayloads } from './Sharing';
-+import { clearSharedPayloads as clearNativeSharedPayloads, getResolvedSharedPayloadsAsync, getSharedPayloads } from './Sharing';
- import type { ResolvedSharePayload, SharePayload, UseIncomingShareResult } from './Sharing.types';
- 
- function sharePayloadsAreEqual(a: SharePayload[], b: SharePayload[]): boolean {
-@@ -42,6 +42,17 @@
-   const [error, setError] = useState<Error | null>(null);
-   const currentSharedDataRef = useRef<SharePayload[]>([]);
- 
-+  const resolutionVersionRef = useRef(0);
-+  const clearSharedPayloads = useCallback(() => {
-+    clearNativeSharedPayloads();
-+    resolutionVersionRef.current += 1;
-+    currentSharedDataRef.current = [];
-+    setSharedPayloads([]);
-+    setResolvedSharedPayloads([]);
-+    setError(null);
-+    setIsResolving(false);
-+  }, []);
-+
-   const refreshSharePayloads = useCallback(async () => {
-     try {
-       const newSharedData: SharePayload[] = getSharedPayloads();
-@@ -51,22 +62,28 @@
-         return;
-       }
- 
-+      const version = ++resolutionVersionRef.current;
-       currentSharedDataRef.current = newSharedData;
-       setSharedPayloads(newSharedData);
-       setResolvedSharedPayloads([]);
-       setError(null);
- 
-+      setIsResolving(newSharedData.length > 0);
-       if (newSharedData.length > 0) {
--        setIsResolving(true);
-         try {
-           const resolved = await getResolvedSharedPayloadsAsync();
-+          if (version !== resolutionVersionRef.current) return;
-+          if (resolved.length === 0) {
-+            throw new Error('Shared content could not be resolved');
-+          }
-           setResolvedSharedPayloads(resolved);
-         } catch (e) {
-+          if (version !== resolutionVersionRef.current) return;
-           setError(
-             e instanceof Error ? e : new Error('Unknown error during shared payload resolution')
-           );
-         } finally {
--          setIsResolving(false);
-+          if (version === resolutionVersionRef.current) setIsResolving(false);
-         }
-       }
-     } catch (e) {
-@@ -83,7 +100,20 @@
-       }
-     });
-
-+    // A warm share may arrive after the activity is already active. Android
-+    // emits this URL after storing the intent, so AppState alone is insufficient.
-+    const shareSubscription = Linking.addEventListener('url', ({ url }) => {
-+      try {
-+        if (new URL(url).hostname === 'expo-sharing') {
-+          void refreshSharePayloads();
-+        }
-+      } catch {
-+        // Ignore unrelated malformed deep links.
-+      }
-+    });
-+
-     return () => {
-+      shareSubscription.remove();
-       subscription.remove();
-     };
-   }, [refreshSharePayloads]);
-diff --git a/android/src/main/java/expo/modules/sharing/SharingModule.kt b/android/src/main/java/expo/modules/sharing/SharingModule.kt
---- a/android/src/main/java/expo/modules/sharing/SharingModule.kt
-+++ b/android/src/main/java/expo/modules/sharing/SharingModule.kt
-@@ -75,6 +75,17 @@
- 
-     Function("clearSharedPayloads") {
-       SharingSingleton.intent = null
-+      // ReactActivity retains the last SEND intent across task/activity recreation.
-+      // Clearing only the singleton lets a consumed share be imported again.
-+      appContext.currentActivity?.let { activity ->
-+        val intent = activity.intent
-+        if (intent != null && (isShareIntent(intent) || intent.data?.host == "expo-sharing")) {
-+          activity.intent = Intent(Intent.ACTION_MAIN).apply {
-+            component = intent.component
-+            addCategory(Intent.CATEGORY_LAUNCHER)
-+          }
-+        }
-+      }
-     }
- 
-     OnActivityResult { _, (requestCode) ->
 diff --git a/build/useIncomingShare.js b/build/useIncomingShare.js
 --- a/build/useIncomingShare.js
 +++ b/build/useIncomingShare.js
@@ -339,3 +407,197 @@ diff --git a/build/useIncomingShare.js b/build/useIncomingShare.js
              subscription.remove();
          };
      }, [refreshSharePayloads]);
+diff --git a/plugin/build/android/withAndroidIntentFilters.js b/plugin/build/android/withAndroidIntentFilters.js
+--- a/plugin/build/android/withAndroidIntentFilters.js
++++ b/plugin/build/android/withAndroidIntentFilters.js
+@@ -5,6 +5,8 @@
+ exports.default = renderIntentFilters;
+ const config_plugins_1 = require("@expo/config-plugins");
+ const SHARING_GENERATED_TAG = 'expo-sharing-intent-filters';
++const SHARE_RECEIVER_ACTIVITY = 'expo.modules.sharing.ShareReceiverActivity';
++exports.SHARE_RECEIVER_ACTIVITY = SHARE_RECEIVER_ACTIVITY;
+ const withAndroidIntentFilters = (config, { intentFilters }) => {
+     return (0, config_plugins_1.withAndroidManifest)(config, (config) => {
+         setAndroidIntentFilters(config, intentFilters);
+@@ -13,17 +15,31 @@
+ };
+ exports.withAndroidIntentFilters = withAndroidIntentFilters;
+ function setAndroidIntentFilters(config, intentFilters) {
+-    const mainActivity = config_plugins_1.AndroidConfig.Manifest.getMainActivityOrThrow(config.modResults);
+-    // Remove all generated tags from previous runs...
+-    if (mainActivity['intent-filter']?.length) {
+-        mainActivity['intent-filter'] = mainActivity['intent-filter'].filter(
+-        // @ts-ignore
+-        (value) => value.$?.[SHARING_GENERATED_TAG] !== 'true');
++    const application = config_plugins_1.AndroidConfig.Manifest.getMainApplicationOrThrow(config.modResults);
++    const activities = application.activity ?? [];
++    for (const activity of activities) {
++        if (activity['intent-filter']?.length) {
++            activity['intent-filter'] = activity['intent-filter'].filter((value) => value.$?.[SHARING_GENERATED_TAG] !== 'true');
++        }
+     }
++    // A singleTask host loses a share when Android restores its launcher intent
++    // after the process has been killed. Keep SEND on a standard activity.
++    application.activity = activities.filter((activity) => activity.$?.['android:name'] !== SHARE_RECEIVER_ACTIVITY);
+     if (!intentFilters.length) {
+         return config;
+     }
+-    mainActivity['intent-filter'] = mainActivity['intent-filter']?.concat(renderIntentFilters(intentFilters));
++    application.activity.push({
++        $: {
++            'android:name': SHARE_RECEIVER_ACTIVITY,
++            'android:exported': 'true',
++            'android:excludeFromRecents': 'true',
++            'android:launchMode': 'standard',
++            'android:noHistory': 'true',
++            'android:taskAffinity': '',
++            'android:theme': '@android:style/Theme.NoDisplay',
++        },
++        'intent-filter': renderIntentFilters(intentFilters),
++    });
+     return config;
+ }
+ function renderIntentFilters(intentFilters) {
+diff --git a/plugin/src/android/withAndroidIntentFilters.ts b/plugin/src/android/withAndroidIntentFilters.ts
+--- a/plugin/src/android/withAndroidIntentFilters.ts
++++ b/plugin/src/android/withAndroidIntentFilters.ts
+@@ -10,6 +10,7 @@
+ import { SingleIntentFilter, MultiIntentFilter, IntentFilter } from '../sharingPlugin.types';
+ 
+ const SHARING_GENERATED_TAG = 'expo-sharing-intent-filters';
++export const SHARE_RECEIVER_ACTIVITY = 'expo.modules.sharing.ShareReceiverActivity';
+ type WithAndroidIntentFiltersOptions = {
+   intentFilters: IntentFilter[];
+ };
+@@ -28,22 +29,37 @@
+   config: ExportedConfigWithProps<AndroidManifest>,
+   intentFilters: IntentFilter[]
+ ): ExportedConfigWithProps<AndroidManifest> {
+-  const mainActivity = AndroidConfig.Manifest.getMainActivityOrThrow(config.modResults);
+-  // Remove all generated tags from previous runs...
+-  if (mainActivity['intent-filter']?.length) {
+-    mainActivity['intent-filter'] = mainActivity['intent-filter'].filter(
+-      // @ts-ignore
+-      (value) => value.$?.[SHARING_GENERATED_TAG] !== 'true'
+-    );
++  const application = AndroidConfig.Manifest.getMainApplicationOrThrow(config.modResults);
++  const activities = application.activity ?? [];
++  for (const activity of activities) {
++    if (activity['intent-filter']?.length) {
++      activity['intent-filter'] = activity['intent-filter'].filter(
++        (value) => value.$?.[SHARING_GENERATED_TAG] !== 'true'
++      );
++    }
+   }
++  // A singleTask host loses a share when Android restores its launcher intent
++  // after the process has been killed. Keep SEND on a standard activity.
++  application.activity = activities.filter(
++    (activity) => activity.$?.['android:name'] !== SHARE_RECEIVER_ACTIVITY
++  );
+ 
+   if (!intentFilters.length) {
+     return config;
+   }
+ 
+-  mainActivity['intent-filter'] = mainActivity['intent-filter']?.concat(
+-    renderIntentFilters(intentFilters)
+-  );
++  application.activity.push({
++    $: {
++      'android:name': SHARE_RECEIVER_ACTIVITY,
++      'android:exported': 'true',
++      'android:excludeFromRecents': 'true',
++      'android:launchMode': 'standard',
++      'android:noHistory': 'true',
++      'android:taskAffinity': '',
++      'android:theme': '@android:style/Theme.NoDisplay',
++    },
++    'intent-filter': renderIntentFilters(intentFilters),
++  });
+ 
+   return config;
+ }
+diff --git a/src/useIncomingShare.ts b/src/useIncomingShare.ts
+--- a/src/useIncomingShare.ts
++++ b/src/useIncomingShare.ts
+@@ -1,8 +1,8 @@
+ import { useEffect, useState, useCallback, useRef } from 'react';
+ import type { AppStateStatus } from 'react-native';
+-import { AppState } from 'react-native';
++import { AppState, Linking } from 'react-native';
+ 
+-import { clearSharedPayloads, getResolvedSharedPayloadsAsync, getSharedPayloads } from './Sharing';
++import { clearSharedPayloads as clearNativeSharedPayloads, getResolvedSharedPayloadsAsync, getSharedPayloads } from './Sharing';
+ import type { ResolvedSharePayload, SharePayload, UseIncomingShareResult } from './Sharing.types';
+ 
+ function sharePayloadsAreEqual(a: SharePayload[], b: SharePayload[]): boolean {
+@@ -42,6 +42,17 @@
+   const [error, setError] = useState<Error | null>(null);
+   const currentSharedDataRef = useRef<SharePayload[]>([]);
+ 
++  const resolutionVersionRef = useRef(0);
++  const clearSharedPayloads = useCallback(() => {
++    clearNativeSharedPayloads();
++    resolutionVersionRef.current += 1;
++    currentSharedDataRef.current = [];
++    setSharedPayloads([]);
++    setResolvedSharedPayloads([]);
++    setError(null);
++    setIsResolving(false);
++  }, []);
++
+   const refreshSharePayloads = useCallback(async () => {
+     try {
+       const newSharedData: SharePayload[] = getSharedPayloads();
+@@ -51,22 +62,28 @@
+         return;
+       }
+ 
++      const version = ++resolutionVersionRef.current;
+       currentSharedDataRef.current = newSharedData;
+       setSharedPayloads(newSharedData);
+       setResolvedSharedPayloads([]);
+       setError(null);
+ 
++      setIsResolving(newSharedData.length > 0);
+       if (newSharedData.length > 0) {
+-        setIsResolving(true);
+         try {
+           const resolved = await getResolvedSharedPayloadsAsync();
++          if (version !== resolutionVersionRef.current) return;
++          if (resolved.length === 0) {
++            throw new Error('Shared content could not be resolved');
++          }
+           setResolvedSharedPayloads(resolved);
+         } catch (e) {
++          if (version !== resolutionVersionRef.current) return;
+           setError(
+             e instanceof Error ? e : new Error('Unknown error during shared payload resolution')
+           );
+         } finally {
+-          setIsResolving(false);
++          if (version === resolutionVersionRef.current) setIsResolving(false);
+         }
+       }
+     } catch (e) {
+@@ -83,7 +100,20 @@
+       }
+     });
+ 
++    // A warm share may arrive after the activity is already active. Android
++    // emits this URL after storing the intent, so AppState alone is insufficient.
++    const shareSubscription = Linking.addEventListener('url', ({ url }) => {
++      try {
++        if (new URL(url).hostname === 'expo-sharing') {
++          void refreshSharePayloads();
++        }
++      } catch {
++        // Ignore unrelated malformed deep links.
++      }
++    });
++
+     return () => {
++      shareSubscription.remove();
+       subscription.remove();
+     };
+   }, [refreshSharePayloads]);

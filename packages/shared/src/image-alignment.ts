@@ -1,6 +1,7 @@
 import { Extension, type JSONContent } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
 import { parseImageWidth } from "./image-display";
+import { openBlockSource } from "./markdown-block-start";
 
 export const IMAGE_ALIGNMENTS = ["left", "center", "right"] as const;
 export type ImageAlignment = (typeof IMAGE_ALIGNMENTS)[number];
@@ -104,7 +105,7 @@ export const EdgeEverImage = Image.extend({
   markdownTokenizer: {
     name: "image",
     level: "block",
-    start: (source) => source.search(/<img\b/i),
+    start: (source) => openBlockSource(source).search(/<img\b/i),
     tokenize(source) {
       const match = /^<img\b(?:[^"'>]|"[^"]*"|'[^']*')*\/?>[ \t]*(?:\n|$)/i.exec(source);
       if (!match) return undefined;

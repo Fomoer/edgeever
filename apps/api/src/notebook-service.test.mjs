@@ -12,7 +12,7 @@ const createFixture = () => {
   sqlite.exec(`
     CREATE TABLE notebooks (
       id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, parent_id TEXT, name TEXT NOT NULL,
-      slug TEXT, icon TEXT, color TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+      slug TEXT, icon TEXT, color TEXT, text_color TEXT, color_target TEXT NOT NULL DEFAULT 'icon', is_bold INTEGER NOT NULL DEFAULT 0, icon_inverted INTEGER NOT NULL DEFAULT 0, row_inverted INTEGER NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0,
       is_deleted INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
       deleted_at TEXT
     );
@@ -279,5 +279,50 @@ describe("notebook identity", () => {
     } finally {
       fixture.sqlite.close();
     }
+  });
+});
+
+describe("notebook appearance", () => {
+  test("persists appearance, preserves it during rename, and explicitly resets it", async () => {
+    const { sqlite, db } = createFixture();
+    try {
+    const appearance = { icon: "network", color: "#2563eb", textColor: "#dc2626", isBold: true, iconInverted: true, rowInverted: true };
+      expect(await updateNotebookRecord(db, "ws_1", "nb_notes", appearance, actor)).toMatchObject(appearance);
+      expect(await updateNotebookRecord(db, "ws_1", "nb_notes", { name: "Heimnetz" }, actor)).toMatchObject({ ...appearance, name: "Heimnetz" });
+    const reset = { icon: null, color: null, textColor: null, isBold: false, iconInverted: false, rowInverted: false };
+      expect(await updateNotebookRecord(db, "ws_1", "nb_notes", reset, actor)).toMatchObject(reset);
+      expect(sqlite.query("SELECT icon, color, color_target, is_bold FROM notebooks WHERE id = 'nb_notes'").get()).toEqual({ icon: null, color: null, color_target: "icon", is_bold: 0 });
+      await expect(updateNotebookRecord(db, "other_workspace", "nb_notes", appearance, actor)).rejects.toThrow("Notebook not found");
+    } finally { sqlite.close(); }
+  });
+
+  test("upgrades the previous complete schema without losing existing notebook data", () => {
+    const sqlite = new Database(":memory:");
+    try {
+      sqlite.exec("PRAGMA foreign_keys = ON");
+      for (const file of globSync("migrations/*.sql").sort().filter(file => file.split("/").at(-1) < "0073")) {
+        sqlite.exec(readFileSync(file, "utf8"));
+      }
+      sqlite.exec("UPDATE notebooks SET icon = 'network', color = '#2563eb' WHERE id = 'nb_inbox'");
+      // query() caches the statement, so SELECT * prepared before ALTER TABLE
+      // keeps the old columns. prepare() reads the schema after each migration.
+      const notebookRows = () => sqlite.prepare("SELECT * FROM notebooks ORDER BY id").all();
+      const before = notebookRows();
+      const memoCount = sqlite.query("SELECT COUNT(*) AS count FROM memos").get();
+      sqlite.exec(readFileSync("migrations/0073_notebook_appearance.sql", "utf8"));
+      const after = notebookRows();
+      expect(after).toEqual(before.map(row => ({ ...row, color_target: "icon" })));
+      sqlite.exec(readFileSync("migrations/0074_notebook_bold.sql", "utf8"));
+      expect(notebookRows()).toEqual(after.map(row => ({ ...row, is_bold: 0 })));
+      sqlite.exec(readFileSync("migrations/0075_notebook_text_color.sql", "utf8"));
+      const beforeInversion = notebookRows();
+      sqlite.exec(readFileSync("migrations/0076_notebook_icon_inverted.sql", "utf8"));
+      expect(notebookRows()).toEqual(beforeInversion.map(row => ({ ...row, icon_inverted: 0 })));
+      const beforeRowInversion = notebookRows();
+      sqlite.exec(readFileSync("migrations/0077_notebook_row_inverted.sql", "utf8"));
+      expect(notebookRows()).toEqual(beforeRowInversion.map(row => ({ ...row, row_inverted: 0 })));
+      expect(sqlite.query("SELECT COUNT(*) AS count FROM memos").get()).toEqual(memoCount);
+      expect(sqlite.query("PRAGMA foreign_key_check").all()).toEqual([]);
+    } finally { sqlite.close(); }
   });
 });

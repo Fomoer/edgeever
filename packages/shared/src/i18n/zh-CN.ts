@@ -2,6 +2,44 @@ import { memoTemplateSeedTranslations } from "../memo-template-seeds";
 
 // Shared by the PWA and native mobile clients.
 export const zhCN = {
+  notebookAppearance: {
+    inversion: "反转",
+    invertOff: "关闭",
+    invertIconOnly: "仅图标",
+    invertWholeRow: "整个条目",
+    invertIcon: "反转图标",
+    bold: "粗体",
+    iconSection: "图标",
+    textSection: "文字",
+    iconColor: "图标颜色",
+    textColor: "文字颜色",
+    "title": "外观",
+    "description": "自定义此笔记本，保存后生效。",
+    "icon": "图标",
+    "search": "搜索图标（英文或德文）",
+    "all": "全部",
+    "standard": "默认",
+    "color": "颜色",
+    "customColor": "自定义颜色",
+    "colorTarget": "颜色应用于",
+    "iconTarget": "图标",
+    "nameTarget": "名称",
+    "bothTarget": "图标和名称",
+    "preview": "预览",
+    "reset": "恢复默认",
+    "invalidColor": "请输入六位 HEX 颜色，例如 #2563eb。",
+    "empty": "没有匹配的图标。",
+    "contrast": "颜色会根据明暗主题调整以确保清晰。",
+    "saveError": "保存失败，已保留你的选择。",
+    "categories": {
+        "general": "通用",
+        "work": "工作与学习",
+        "technology": "技术",
+        "life": "生活与人际",
+        "finance": "财务",
+        "leisure": "休闲与旅行"
+    }
+},
   fontLoad: {"templateLoading": "字体加载中…", "templateFallback": "暂时使用替代字体，加载成功后将自动恢复", "loading": "字体加载中…", "ready": "字体已就绪", "error": "字体加载失败", "retry": "重试"},
   noteProperties: {"heading": "笔记属性", "source": "显示 YAML 源码", "name": "属性名称", "type": "属性类型", "add": "添加属性", "remove": "删除 {{name}}", "invalidName": "请输入不重复且非系统保留的属性名称。", "invalidYaml": "请检查笔记属性：", "invalidNumber": "请输入有效数字。", "listHint": "每行一个值", "text": "文本", "list": "列表", "number": "数字", "checkbox": "复选框", "date": "日期"},
   poster: {

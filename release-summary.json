@@ -1,29 +1,26 @@
 {
-  "version": "2.5.0",
+  "version": "2.7.0",
   "changes": {
     "en-US": [
-      "The web app, the in-app desktop interface, and Android can switch to Russian. A Russian system or browser language selects it when no language has been chosen yet. Text that is not translated yet stays in English, and assistant replies do not follow Russian in this release. Desktop system menus, iOS, and the browser clipper stay as they are. Thanks @Sergmay911 for #668.",
-      "The desktop app can upload images to a remote PicList or PicGo server. In image-host settings, enter the service address and a server key when the server requires one. The address can be a NAS or another computer, and the path stays /upload. Use HTTPS for a remote server. Those images stay on the external host and are left out of EdgeEver backups. The website keeps the built-in image host.",
-      "A startup launch of the desktop app opens the main window. The tray-only option is removed. A saved tray-only preference opens the main window on the next launch.",
-      "Infographic notes use the same assistant session menu as other notes. Past chats can be opened, and a new chat can be started. The graphic being edited stays as its own row in that menu, and its generation history remains on the note.",
-      "When a request already names the diagram subject, the assistant no longer reads the open note. A request to diagram or convert the open note still uses that note.",
-      "The marketing site adds a Showcase page with 17 real-world workflows, linked from the top navigation."
+      "On the web and desktop apps, each notebook can set its own icon, icon color, text color, bold text, and an inverted icon or inverted row. Colors can be a preset or a six-digit HEX value. The settings are included in sync and backups. Existing notebooks keep their current appearance, and no manual migration is required. Thanks @thorufur for #673.",
+      "On the web and desktop apps, a tooltip closes as soon as the pointer leaves its trigger, including when the pointer moves onto the tooltip. Keyboard focus, Escape, and blur still dismiss it. Interactive hover cards stay as they are. Thanks @thorufur for #674.",
+      "On Android, the first share from another app reaches EdgeEver after the app process has already exited.",
+      "While the Android editor saves in the background, the Done button stays a label, and the status no longer cycles between Saving and Saved. Further typing starts the autosave wait again.",
+      "Saving a long Markdown note no longer freezes the server by reparsing the rest of the note."
     ],
     "zh-CN": [
-      "Web、桌面端应用内和 Android 可以切换到俄语。系统或浏览器语言是俄语、且还没有手动选过语言时，会自动使用俄语。还没有翻译的文字继续显示英文，助手回复这次仍不跟随俄语。桌面端的系统菜单、iOS 和浏览器剪藏插件这次不变。感谢 @Sergmay911 的贡献（#668）。",
-      "桌面端可以把图片上传到远程 PicList 或 PicGo。在设置的图床里填写服务地址，服务器要求密钥时再填写服务密钥。地址可以是 NAS 或其他电脑，路径保持为 /upload。远程服务请使用 HTTPS。这些图片留在外部图床，不会进入 EdgeEver 备份。网页版仍然使用内置图床。",
-      "桌面端开机启动时会打开主窗口。只留在托盘的选项已经去掉。以前选过只留在托盘的，下次启动会改成打开主窗口。",
-      "信息图笔记和其他笔记使用同一个助手会话菜单，可以打开以往的对话，也可以新开对话。正在编辑的信息图在菜单里单独占一行，它的生成记录仍保存在这篇笔记上。",
-      "让助手画一张已经写明主题的图时，不再读取当前打开的笔记。要求把当前笔记画成图或转换成图时，仍然使用这篇笔记。",
-      "官网新增「真机演示」页面，收录 17 个真实使用场景，可以从顶部导航进入。"
+      "网页和桌面端的每个笔记本可以单独设置图标、图标颜色、文字颜色、粗体，以及只反转图标或反转整行。颜色可以选预设，也可以填写六位 HEX。这些设置会随同步和备份保存。已有笔记本保持原来的外观，不需要手动迁移。感谢 @thorufur（#673）。",
+      "网页和桌面端的悬停提示会在指针离开触发区域时马上关闭，指针移到提示上也会关闭。键盘聚焦、Escape 和失焦仍然会关闭提示。可以交互的悬停卡片保持原样。感谢 @thorufur（#674）。",
+      "Android 版在进程已经结束后，第一次从其他应用分享进来的内容可以进入 EdgeEver。",
+      "Android 编辑器在后台自动保存时，完成按钮保持文字，状态也不再在“保存中”和“已保存”之间来回切换。继续输入会重新等待自动保存。",
+      "保存较长的 Markdown 笔记时，服务端不再因重复解析整篇内容而卡住。"
     ],
     "ja": [
-      "Web、デスクトップ版のアプリ内界面、Android でロシア語に切り替えられます。システムまたはブラウザの言語がロシア語で、言語を手動選択していない場合は自動でロシア語になります。未翻訳の文言は英語のままです。アシスタントの返信は今回ロシア語に従いません。デスクトップのシステムメニュー、iOS、ブラウザのクリップ拡張は変わりません。@Sergmay911 の貢献に感謝します（#668）。",
-      "デスクトップ版は、リモートの PicList または PicGo に画像をアップロードできます。図床の設定でサービスアドレスを入力し、サーバーが鍵を求める場合はサービスキーも入力します。アドレスは NAS や別のパソコンでもよく、パスは /upload のままです。リモートのサーバーには HTTPS を使ってください。これらの画像は外部の画像ホストに残り、EdgeEver のバックアップには含まれません。Web 版はこれまでどおり内蔵の画像ホストを使います。",
-      "デスクトップ版をログイン時に起動すると、メインウィンドウが開きます。トレイのみの選択肢はなくなりました。以前トレイのみを保存していた場合も、次回の起動からメインウィンドウが開きます。",
-      "インフォグラフィックのノートでも、他のノートと同じアシスタントのセッションメニューを使えます。過去のチャットを開いたり、新しいチャットを始めたりできます。編集中の図はメニュー内の独立した一行のままで、その生成履歴はこのノートに残ります。",
-      "図にしてほしい主題を依頼の中ですでに指定している場合、アシスタントは開いているノートを読まなくなります。開いているノートを図にする、または図へ変換する依頼では、これまでどおりそのノートを使います。",
-      "紹介サイトに「実機デモ」ページを追加しました。17 の実用例を上部のナビゲーションから開けます。"
+      "Web とデスクトップでは、各ノートブックにアイコン、アイコンの色、文字色、太字、アイコンのみまたは行全体の反転を設定できます。色はプリセットか 6 桁の HEX です。設定は同期とバックアップに含まれます。既存のノートブックの見た目はそのままで、手動の移行は不要です。@thorufur の貢献に感謝します（#673）。",
+      "Web とデスクトップでは、ポインタがトリガーを離れるとツールチップがすぐ閉じます。ヒントの上に移動した場合も閉じます。キーボードフォーカス、Escape、フォーカス解除でも閉じます。操作できるホバーカードはこれまでどおりです。@thorufur の貢献に感謝します（#674）。",
+      "Android では、アプリのプロセスが終了したあとの最初の共有も EdgeEver に届きます。",
+      "Android のエディタがバックグラウンドで保存するとき、完了ボタンは文字のままです。状態が「保存中」と「保存済み」の間で切り替わることもありません。入力を続けると自動保存の待ち時間がやり直されます。",
+      "長い Markdown ノートを保存しても、残りの本文を繰り返し解析してサーバーが固まることはありません。"
     ]
   }
 }

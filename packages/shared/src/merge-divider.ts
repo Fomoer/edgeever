@@ -1,4 +1,5 @@
 import { mergeAttributes, Node } from "@tiptap/core";
+import { openBlockSource } from "./markdown-block-start";
 import type { TiptapDoc, TiptapNode } from "./content";
 
 /** TipTap / ProseMirror node type for note-merge section boundaries. */
@@ -48,7 +49,7 @@ export const MergeDivider = Node.create({
     name: MERGE_DIVIDER_NODE_TYPE,
     level: "block",
     start(src: string) {
-      return src.indexOf("<!-- edgeever:merge-divider -->");
+      return openBlockSource(src).indexOf("<!-- edgeever:merge-divider -->");
     },
     tokenize(src: string) {
       const match = MERGE_DIVIDER_TOKENIZER.exec(src);

@@ -1,4 +1,5 @@
 import { Extension, mergeAttributes, Node } from "@tiptap/core";
+import { openBlockSource } from "./markdown-block-start";
 
 export const BLOCK_MATH_NODE_TYPE = "blockMath" as const;
 export const INLINE_MATH_NODE_TYPE = "inlineMath" as const;
@@ -152,7 +153,7 @@ export const edgeEverInlineMathMarkdownTokenizer = {
 export const edgeEverBlockMathMarkdownTokenizer = {
   name: BLOCK_MATH_NODE_TYPE,
   level: "block" as const,
-  start: (source: string) => source.indexOf("$$"),
+  start: (source: string) => openBlockSource(source).indexOf("$$"),
   tokenize: (source: string) => {
     if (!source.startsWith("$$") || source.startsWith("$$$")) {
       return undefined;

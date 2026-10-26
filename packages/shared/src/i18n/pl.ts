@@ -2,6 +2,44 @@ import { memoTemplateSeedTranslations } from "../memo-template-seeds";
 
 // Shared by the PWA and native mobile clients.
 export const pl = {
+  notebookAppearance: {
+    inversion: "Odwrócenie",
+    invertOff: "Wyłączone",
+    invertIconOnly: "Tylko ikona",
+    invertWholeRow: "Cały wpis",
+    invertIcon: "Odwróć ikonę",
+    bold: "Pogrubienie",
+    iconSection: "Ikona",
+    textSection: "Tekst",
+    iconColor: "Kolor ikony",
+    textColor: "Kolor tekstu",
+    "title": "Wygląd",
+    "description": "Dostosuj ten notatnik. Zmiany zostaną zastosowane po zapisaniu.",
+    "icon": "Ikona",
+    "search": "Szukaj ikon (angielski lub niemiecki)",
+    "all": "Wszystkie",
+    "standard": "Domyślne",
+    "color": "Kolor",
+    "customColor": "Własny kolor",
+    "colorTarget": "Zastosuj kolor do",
+    "iconTarget": "Ikony",
+    "nameTarget": "Nazwy",
+    "bothTarget": "Ikony i nazwy",
+    "preview": "Podgląd",
+    "reset": "Przywróć domyślne",
+    "invalidColor": "Wpisz sześciocyfrowy kolor HEX, np. #2563eb.",
+    "empty": "Brak pasujących ikon.",
+    "contrast": "Kolory dostosowują się do jasnego i ciemnego motywu.",
+    "saveError": "Nie udało się zapisać. Wybór został zachowany.",
+    "categories": {
+        "general": "Ogólne",
+        "work": "Praca i nauka",
+        "technology": "Technologia",
+        "life": "Życie i ludzie",
+        "finance": "Finanse",
+        "leisure": "Czas wolny i podróże"
+    }
+},
   fontLoad: {"templateLoading": "Ładowanie czcionki…", "templateFallback": "Tymczasowo używane są czcionki zastępcze. Po załadowaniu oryginalne czcionki zostaną przywrócone automatycznie.", "loading": "Ładowanie czcionki…", "ready": "Czcionka gotowa", "error": "Nie udało się załadować czcionki", "retry": "Ponów próbę"},
   noteProperties: {"heading": "Właściwości notatki", "source": "Pokaż źródło YAML", "name": "Nazwa właściwości", "type": "Typ właściwości", "add": "Dodaj właściwość", "remove": "Usuń {{name}}", "invalidName": "Użyj unikalnej nazwy, która nie jest właściwością systemową.", "invalidYaml": "Sprawdź właściwości:", "invalidNumber": "Wprowadź poprawną liczbę.", "listHint": "Jedna wartość w wierszu", "text": "Tekst", "list": "Lista", "number": "Liczba", "checkbox": "Pole wyboru", "date": "Data"},
   poster: {

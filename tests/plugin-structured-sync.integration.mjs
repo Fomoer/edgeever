@@ -171,12 +171,27 @@ try {
   assert.equal(await localDb.syncQueue.count(), 0);
   checked.push("Web offline saves + guarded snapshots + real API synchronization");
 
+  const appearance = { icon: "alarm-clock", color: "#2563eb", textColor: "#dc2626", isBold: true, iconInverted: true, rowInverted: true };
+  await client.updateNotebook(notebook.id, appearance);
+  await repository.sync();
   const nativeDirectory = join(temporary, "desktop");
   let native = await startNative(nativePath, nativeDirectory);
   attachNative(native);
   let desktopContext = makeContext(createDesktopRepository());
   const bootstrap = await syncDesktopData();
   assert.equal(bootstrap.failed, 0);
+  const nativeNotebook = (await native.request("notebook.list")).notebooks.find(item => item.id === notebook.id);
+  for (const [key, value] of Object.entries(appearance)) assert.equal(nativeNotebook[key], value);
+  const desktopAppearance = { ...appearance, icon: "network", color: "#7c3aed", textColor: "#16a34a", iconInverted: false, rowInverted: false, isBold: false };
+  await native.request("notebook.update", { notebookId: notebook.id, ...desktopAppearance });
+  const appearanceSynced = await syncDesktopData();
+  assert.equal(appearanceSynced.failed, 0);
+  assert.equal(appearanceSynced.synced, 1);
+  await repository.sync();
+  const webNotebook = await localDb.notebooks.get([scope, notebook.id]);
+  for (const [key, value] of Object.entries(desktopAppearance)) assert.equal(webNotebook[key], value);
+  checked.push("notebook appearance: real API -> native desktop -> real API -> Web mirror");
+
   for (const { fixture, memo } of notes) assert.equal(fixture.value(await desktopContext[fixture.api].get(memo.id)), "Web offline");
   reachable = false;
   navigator.onLine = false;

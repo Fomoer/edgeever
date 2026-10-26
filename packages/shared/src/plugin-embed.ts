@@ -1,4 +1,5 @@
 import { mergeAttributes, Node } from "@tiptap/core";
+import { openBlockSource } from "./markdown-block-start";
 
 export const PLUGIN_EMBED_NODE_TYPE = "edgeeverPluginEmbed" as const;
 export const PLUGIN_EMBED_MARKDOWN_LANGUAGE = "edgeever-plugin-embed" as const;
@@ -98,7 +99,7 @@ export const PluginEmbed = Node.create({
     name: PLUGIN_EMBED_NODE_TYPE,
     level: "block",
     start(source: string) {
-      return source.indexOf(`\`\`\`${PLUGIN_EMBED_MARKDOWN_LANGUAGE}`);
+      return openBlockSource(source).indexOf(`\`\`\`${PLUGIN_EMBED_MARKDOWN_LANGUAGE}`);
     },
     tokenize(source: string) {
       const match = FENCE_PATTERN.exec(source);

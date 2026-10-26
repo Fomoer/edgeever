@@ -17,6 +17,7 @@ import { NEW_IMAGE_WIDTH_PERCENT, parseImageWidth } from "./image-display";
 import { IMAGE_GALLERY_NODE_TYPE, groupConsecutiveImagesIntoGalleries, normalizeImageGalleries } from "./image-gallery";
 import { EMPTY_EXTERNAL_LINK_NODE_TYPE } from "./empty-external-link";
 import { FRONT_MATTER_LANGUAGE, createFrontMatterNode, getFrontMatterSource, splitMarkdownFrontMatter } from "./front-matter";
+import { splitMarkdownParseChunks } from "./markdown-block-start";
 
 export { PluginEmbed, PLUGIN_EMBED_NODE_TYPE, pluginEmbedToMarkdown, normalizePluginEmbedAttributes } from "./plugin-embed";
 export type { PluginEmbedAttributes } from "./plugin-embed";
@@ -146,6 +147,16 @@ const withDefaultImageWidths = (node: TiptapNode): TiptapNode => {
   return { ...next, attrs: { ...next.attrs, width: NEW_IMAGE_WIDTH_PERCENT } };
 };
 
+// Long notes are split into pieces. marked otherwise copies the rest of the
+// note after every paragraph, and that copy blocks the single-threaded server.
+const parseMarkdownBody = (markdown: string): TiptapNode[] => {
+  const chunks = splitMarkdownParseChunks(markdown);
+  if (chunks.length <= 1) {
+    return (markdownManager.parse(markdown) as TiptapDoc).content ?? [];
+  }
+  return chunks.flatMap((chunk) => (markdownManager.parse(chunk) as TiptapDoc).content ?? []);
+};
+
 export const markdownToDoc = (markdown: string): TiptapDoc => {
   const normalized = markdown.replace(/\r\n?/g, "\n");
   if (!normalized) {
@@ -153,12 +164,12 @@ export const markdownToDoc = (markdown: string): TiptapDoc => {
   }
 
   const header = splitMarkdownFrontMatter(normalized);
-  const parsed = markdownManager.parse(expandExtraBlankLinesForParse(header?.body ?? normalized)) as TiptapDoc;
+  const content = parseMarkdownBody(expandExtraBlankLinesForParse(header?.body ?? normalized));
   return {
-    ...parsed,
+    type: "doc",
     content: [...(header ? [createFrontMatterNode(header.source)] : []),
-      ...groupConsecutiveImagesIntoGalleries(parsed.content.map(withDefaultImageWidths)),
-      ...(header && !parsed.content.length ? [{ type: "paragraph" }] : [])],
+      ...groupConsecutiveImagesIntoGalleries(content.map(withDefaultImageWidths)),
+      ...(header && !content.length ? [{ type: "paragraph" }] : [])],
   };
 };
 

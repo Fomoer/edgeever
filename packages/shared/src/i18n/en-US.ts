@@ -2,6 +2,44 @@ import { memoTemplateSeedTranslations } from "../memo-template-seeds";
 
 // Shared by the PWA and native mobile clients.
 export const enUS = {
+  notebookAppearance: {
+    inversion: "Invert",
+    invertOff: "Off",
+    invertIconOnly: "Icon only",
+    invertWholeRow: "Entire entry",
+    invertIcon: "Invert icon",
+    bold: "Bold",
+    iconSection: "Icon",
+    textSection: "Text",
+    iconColor: "Icon color",
+    textColor: "Text color",
+    "title": "Appearance",
+    "description": "Customize this notebook. Changes apply only after saving.",
+    "icon": "Icon",
+    "search": "Search icons (English or German)",
+    "all": "All",
+    "standard": "Default",
+    "color": "Color",
+    "customColor": "Custom color",
+    "colorTarget": "Apply color to",
+    "iconTarget": "Icon",
+    "nameTarget": "Name",
+    "bothTarget": "Icon and name",
+    "preview": "Preview",
+    "reset": "Reset to default",
+    "invalidColor": "Enter a six-digit HEX color, for example #2563eb.",
+    "empty": "No matching icons.",
+    "contrast": "Colors adapt for readability in light and dark mode.",
+    "saveError": "Could not save. Your choices are still here.",
+    "categories": {
+        "general": "General",
+        "work": "Work & learning",
+        "technology": "Technology",
+        "life": "Life & people",
+        "finance": "Finance",
+        "leisure": "Leisure & travel"
+    }
+},
   fontLoad: {"templateLoading": "Loading font…", "templateFallback": "Temporarily using substitute fonts. The original fonts will be restored automatically when loaded.", "loading": "Loading font…", "ready": "Font ready", "error": "Font could not load", "retry": "Retry"},
   noteProperties: {"heading": "Note properties", "source": "Show YAML source", "name": "Property name", "type": "Property type", "add": "Add property", "remove": "Remove {{name}}", "invalidName": "Use a unique name that is not a system property.", "invalidYaml": "Properties need attention:", "invalidNumber": "Enter a valid number.", "listHint": "One value per line", "text": "Text", "list": "List", "number": "Number", "checkbox": "Checkbox", "date": "Date"},
   poster: {

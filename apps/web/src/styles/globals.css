@@ -2985,3 +2985,17 @@ html[data-edgeever-extension-theme] .edgeever-memo-divider {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* Custom notebook colors remain legible in both sidebar themes. */
+.notebook-custom-color { color: var(--notebook-color-light); }
+.notebook-inverted-icon {
+  color: #fff;
+  background-color: var(--notebook-color-light);
+  border-radius: 5px;
+  padding: 4px;
+}
+.notebook-inverted-row-selected {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: -3px;
+}
+:root.dark .notebook-custom-color { color: var(--notebook-color-dark); }

@@ -79,10 +79,10 @@ const installation = () => {
 };
 
 const notebookBackups = (sqlite) => sqlite.query(
-  `SELECT id, parent_id, name, slug, icon, color, sort_order, created_at, updated_at
+  `SELECT id, parent_id, name, slug, icon, color, text_color, color_target, is_bold, icon_inverted, row_inverted, sort_order, created_at, updated_at
    FROM notebooks WHERE workspace_id = ? AND is_deleted = 0 ORDER BY parent_id IS NOT NULL, sort_order, id`,
 ).all(WORKSPACE_ID).map((row) => ({
-  id: row.id, parentId: row.parent_id, name: row.name, slug: row.slug, icon: row.icon, color: row.color,
+  id: row.id, parentId: row.parent_id, name: row.name, slug: row.slug, icon: row.icon, color: row.color, textColor: row.text_color, colorTarget: row.color_target, isBold: row.is_bold === 1, iconInverted: row.icon_inverted === 1, rowInverted: row.row_inverted === 1,
   sortOrder: row.sort_order, createdAt: row.created_at, updatedAt: row.updated_at,
 }));
 
@@ -142,8 +142,8 @@ const populate = async (source) => {
   const { sqlite, storage, context } = source;
   const inbox = sqlite.query("SELECT id FROM notebooks WHERE workspace_id = ? AND slug = 'inbox'").get(WORKSPACE_ID).id;
   sqlite.query(
-    `INSERT INTO notebooks (id, workspace_id, parent_id, name, slug, icon, color, sort_order, created_at, updated_at)
-     VALUES ('nb_trips', ?, ?, 'Trips', 'trips', 'notebook', '#0f766e', 7, '2026-01-02T10:00:00.000Z', '2026-01-03T10:00:00.000Z')`,
+    `INSERT INTO notebooks (id, workspace_id, parent_id, name, slug, icon, color, text_color, color_target, is_bold, icon_inverted, row_inverted, sort_order, created_at, updated_at)
+     VALUES ('nb_trips', ?, ?, 'Trips', 'trips', 'plane', '#2563eb', '#dc2626', 'both', 1, 1, 1, 7, '2026-01-02T10:00:00.000Z', '2026-01-03T10:00:00.000Z')`,
   ).run(WORKSPACE_ID, inbox);
   const plan = await createMemoRecord(storage.db, WORKSPACE_ID, {
     notebookId: "nb_trips", title: "Trip plan", contentMarkdown: "Draft", tags: ["travel", "2026"],

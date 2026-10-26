@@ -29,6 +29,7 @@ export * from "./note-links";
 export * from "./note-prose";
 export * from "./note-prose-css";
 export * from "./notebooks";
+export * from "./notebook-appearance";
 export * from "./revision-diff";
 export * from "./resource-links";
 export * from "./schemas";

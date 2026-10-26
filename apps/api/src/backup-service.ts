@@ -76,14 +76,19 @@ export const restoreJsonNotebooks = async (
 
   await db.batch(notebooks.map((notebook) => db.prepare(
     `INSERT INTO notebooks (
-      id, workspace_id, parent_id, name, slug, icon, color, sort_order, is_deleted, created_at, updated_at, deleted_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL)
+      id, workspace_id, parent_id, name, slug, icon, color, text_color, color_target, is_bold, icon_inverted, row_inverted, sort_order, is_deleted, created_at, updated_at, deleted_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL)
     ON CONFLICT(id) DO UPDATE SET
       parent_id = excluded.parent_id,
       name = excluded.name,
       slug = excluded.slug,
       icon = excluded.icon,
       color = excluded.color,
+      text_color = excluded.text_color,
+      color_target = excluded.color_target,
+      is_bold = excluded.is_bold,
+      icon_inverted = excluded.icon_inverted,
+      row_inverted = excluded.row_inverted,
       sort_order = excluded.sort_order,
       is_deleted = 0,
       updated_at = excluded.updated_at,
@@ -96,6 +101,11 @@ export const restoreJsonNotebooks = async (
     notebook.slug,
     notebook.icon,
     notebook.color,
+    notebook.textColor ?? null,
+    notebook.colorTarget ?? "icon",
+    Number(notebook.isBold ?? false),
+    Number(notebook.iconInverted ?? false),
+    Number(notebook.rowInverted ?? false),
     notebook.sortOrder,
     notebook.createdAt,
     notebook.updatedAt,

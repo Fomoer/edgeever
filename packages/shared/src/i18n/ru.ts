@@ -2,6 +2,44 @@ import { memoTemplateSeedTranslations } from "../memo-template-seeds";
 
 // Shared by the PWA and native mobile clients.
 export const ru = {
+  notebookAppearance: {
+    inversion: "Инверсия",
+    invertOff: "Выключена",
+    invertIconOnly: "Только значок",
+    invertWholeRow: "Вся строка",
+    invertIcon: "Инвертировать значок",
+    bold: "Жирный шрифт",
+    iconSection: "Значок",
+    textSection: "Текст",
+    iconColor: "Цвет значка",
+    textColor: "Цвет текста",
+    "title": "Оформление",
+    "description": "Настройте этот блокнот. Изменения применятся после сохранения.",
+    "icon": "Значок",
+    "search": "Поиск значков (английский или немецкий)",
+    "all": "Все",
+    "standard": "По умолчанию",
+    "color": "Цвет",
+    "customColor": "Свой цвет",
+    "colorTarget": "Применить цвет к",
+    "iconTarget": "Значку",
+    "nameTarget": "Названию",
+    "bothTarget": "Значку и названию",
+    "preview": "Предпросмотр",
+    "reset": "Сбросить",
+    "invalidColor": "Введите шестизначный HEX-цвет, например #2563eb.",
+    "empty": "Значки не найдены.",
+    "contrast": "Цвета адаптируются для светлой и тёмной темы.",
+    "saveError": "Не удалось сохранить. Ваш выбор сохранён в диалоге.",
+    "categories": {
+        "general": "Общие",
+        "work": "Работа и учёба",
+        "technology": "Технологии",
+        "life": "Жизнь и люди",
+        "finance": "Финансы",
+        "leisure": "Отдых и путешествия"
+    }
+},
   fontLoad: {"templateLoading": "Loading font…", "templateFallback": "Temporarily using substitute fonts. The original fonts will be restored automatically when loaded.", "loading": "Loading font…", "ready": "Font ready", "error": "Font could not load", "retry": "Retry"},
   noteProperties: {"heading": "Свойства заметки", "source": "Показать исходник YAML", "name": "Имя свойства", "type": "Тип свойства", "add": "Добавить свойство", "remove": "Удалить {{name}}", "invalidName": "Укажите уникальное имя, которое не занято системным свойством.", "invalidYaml": "Свойства требуют внимания:", "invalidNumber": "Введите корректное число.", "listHint": "По одному значению на строку", "text": "Текст", "list": "Список", "number": "Число", "checkbox": "Флажок", "date": "Дата"},
   poster: {

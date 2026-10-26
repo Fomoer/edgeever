@@ -2,6 +2,44 @@ import { memoTemplateSeedTranslations } from "../memo-template-seeds";
 
 // Shared by the PWA and native mobile clients.
 export const ja = {
+  notebookAppearance: {
+    inversion: "反転",
+    invertOff: "なし",
+    invertIconOnly: "アイコンのみ",
+    invertWholeRow: "項目全体",
+    invertIcon: "アイコンを反転",
+    bold: "太字",
+    iconSection: "アイコン",
+    textSection: "テキスト",
+    iconColor: "アイコンの色",
+    textColor: "テキストの色",
+    "title": "外観",
+    "description": "このノートブックの外観を変更します。保存後に反映されます。",
+    "icon": "アイコン",
+    "search": "アイコンを検索（英語・ドイツ語）",
+    "all": "すべて",
+    "standard": "既定",
+    "color": "色",
+    "customColor": "カスタムカラー",
+    "colorTarget": "色の適用先",
+    "iconTarget": "アイコン",
+    "nameTarget": "名前",
+    "bothTarget": "アイコンと名前",
+    "preview": "プレビュー",
+    "reset": "既定に戻す",
+    "invalidColor": "6桁のHEXカラーを入力してください（例：#2563eb）。",
+    "empty": "該当するアイコンはありません。",
+    "contrast": "テーマに合わせて読みやすい色に調整されます。",
+    "saveError": "保存できませんでした。選択内容は保持されています。",
+    "categories": {
+        "general": "一般",
+        "work": "仕事と学習",
+        "technology": "テクノロジー",
+        "life": "暮らしと人",
+        "finance": "財務",
+        "leisure": "趣味と旅行"
+    }
+},
   fontLoad: {"templateLoading": "フォントを読み込み中…", "templateFallback": "一時的に代替フォントを使用しています。読み込みが完了すると自動的に元に戻ります。", "loading": "フォントを読み込み中…", "ready": "フォントの準備完了", "error": "フォントを読み込めませんでした", "retry": "再試行"},
   noteProperties: {"heading": "ノートのプロパティ", "source": "YAML ソースを表示", "name": "プロパティ名", "type": "プロパティの種類", "add": "プロパティを追加", "remove": "{{name}} を削除", "invalidName": "重複しない、システム予約名以外の名前を入力してください。", "invalidYaml": "プロパティを確認してください：", "invalidNumber": "有効な数値を入力してください。", "listHint": "1 行に 1 つの値", "text": "テキスト", "list": "リスト", "number": "数値", "checkbox": "チェックボックス", "date": "日付"},
   poster: {

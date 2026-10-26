@@ -396,3 +396,34 @@ describe("web sync conflict recovery", () => {
     }
   });
 });
+
+test("replays offline appearance edits and explicit resets without dropping fields", async () => {
+  const { createLocalNotebook, updateLocalNotebook, getLocalNotebook } = await import("./local-mirror.ts");
+  const scope = createLocalDataScope("https://demo.edgeever.org", "appearance-user");
+  const notebook = await createLocalNotebook(scope, { name: "Heimnetz" });
+  const original = api.updateNotebook;
+  const previousNavigator = globalThis.navigator;
+  globalThis.navigator = { onLine: true };
+  try {
+    for (const appearance of [
+      { icon: "network", color: "#2563eb", textColor: "#dc2626", colorTarget: "both", isBold: true, iconInverted: true, rowInverted: true },
+      { icon: null, color: null, textColor: null, colorTarget: "icon", isBold: false, iconInverted: false, rowInverted: false },
+    ]) {
+      await updateLocalNotebook(scope, notebook.id, appearance);
+      expect(await getLocalNotebook(scope, notebook.id)).toMatchObject(appearance);
+      await queueLocalAction(scope, "notebook.update", notebook.id, { notebookId: notebook.id, ...appearance });
+      let uploaded;
+      api.updateNotebook = async (id, input) => {
+        expect(id).toBe(notebook.id);
+        uploaded = input;
+        return { notebook: { ...notebook, ...appearance } };
+      };
+      expect(await syncQueuedChanges({ scope })).toMatchObject({ synced: 1, failed: 0 });
+      expect(uploaded).toMatchObject(appearance);
+      expect(await getLocalNotebook(scope, notebook.id)).toMatchObject(appearance);
+    }
+  } finally {
+    api.updateNotebook = original;
+    globalThis.navigator = previousNavigator;
+  }
+});

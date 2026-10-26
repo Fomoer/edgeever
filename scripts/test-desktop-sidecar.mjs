@@ -589,6 +589,21 @@ assert.equal(recoveredUpdate.payload.contentMarkdown, "edited body survives reco
 assert.equal(recoveredUpdate.payload.expectedRevision, 1);
 assert.equal(recoveredUpdate.status, "pending", "missing-memo edits should recover after memo create acknowledgement");
 
+// Exercise appearance through the public JSON-RPC boundary, including rollback and sync.
+const appearanceBook = (await request("notebook.create", { name: "Appearance regression" })).notebook;
+const appearance = { icon: "alarm-clock", color: "#2563eb", textColor: "#dc2626", isBold: true, iconInverted: true, rowInverted: true };
+const readAppearance = async () => (await request("notebook.list")).notebooks.find(book => book.id === appearanceBook.id);
+const changedAppearance = (await request("notebook.update", { notebookId: appearanceBook.id, ...appearance })).notebook;
+for (const [key, value] of Object.entries(appearance)) assert.equal(changedAppearance[key], value);
+const appearanceQueue = (await request("sync.outbox.list", { limit: 1000 })).items.find(item => item.kind === "notebook.update" && item.entityId === appearanceBook.id);
+assert.ok(appearanceQueue);
+for (const [key, value] of Object.entries(appearance)) assert.equal(appearanceQueue.payload[key], value);
+await assert.rejects(request("notebook.update", { notebookId: appearanceBook.id, name: "Must roll back", rowInverted: "yes" }), /Invalid notebook/);
+assert.equal((await readAppearance()).name, "Appearance regression");
+const pulledAppearance = { ...changedAppearance, textColor: "#16a34a", isBold: false, iconInverted: false, rowInverted: false };
+await request("sync.apply", { changes: [{ entityType: "notebook", operation: "upsert", entityId: appearanceBook.id, notebook: pulledAppearance }] });
+for (const key of Object.keys(appearance)) assert.equal((await readAppearance())[key], pulledAppearance[key]);
+
 child.stdin.end();
 await new Promise((resolve) => child.once("close", resolve));
-console.log(JSON.stringify({ ok: true, checked: ["memo.create", "memo.list.search", "memo.list.noteKind", "memo.list.tag", "memo.list.subtree", "memo.update", "memo.update.coalesce", "memo.revisions", "memo.restoreRevision", "memo.revision.cache", "tag.rename", "memo.moveBatch", "memo.pinBatch", "memo.deleteBatch", "memo.restore", "memo.emptyTrash", "memo.merge", "template.cache", "template.create.payload", "template.delete", "storage.backup", "storage.backups", "storage.restore", "sync.apply.merge-page-order", "sync.apply.deleted-notebook", "sync.apply.renamed-inbox", "sync.outbox", "sync.outbox.notebook-remap", "sync.outbox.notebook-remap-rollback", "sync.outbox.retry", "sync.outbox.recoverMemoUpdate", "sync.outbox.discard", "notebook.delete.empty-tree", "notebook.delete.not-empty"] }));
+console.log(JSON.stringify({ ok: true, checked: ["notebook.appearance.roundtrip-sync-rollback", "memo.create", "memo.list.search", "memo.list.noteKind", "memo.list.tag", "memo.list.subtree", "memo.update", "memo.update.coalesce", "memo.revisions", "memo.restoreRevision", "memo.revision.cache", "tag.rename", "memo.moveBatch", "memo.pinBatch", "memo.deleteBatch", "memo.restore", "memo.emptyTrash", "memo.merge", "template.cache", "template.create.payload", "template.delete", "storage.backup", "storage.backups", "storage.restore", "sync.apply.merge-page-order", "sync.apply.deleted-notebook", "sync.apply.renamed-inbox", "sync.outbox", "sync.outbox.notebook-remap", "sync.outbox.notebook-remap-rollback", "sync.outbox.retry", "sync.outbox.recoverMemoUpdate", "sync.outbox.discard", "notebook.delete.empty-tree", "notebook.delete.not-empty"] }));
