@@ -127,6 +127,7 @@ import {
   deleteStoredObjects,
   getActiveObjectStorageConfig,
 } from "./object-storage";
+import { ensureWorkspaceExampleSeed } from "./workspace-example-seed";
 import {
   DEFAULT_WORKSPACE_ID,
   ensureUserWorkspace,
@@ -304,6 +305,9 @@ app.use("/api/v1/*", async (c, next) => {
       scopes: [],
       workspaceId: DEFAULT_WORKSPACE_ID,
       role: "owner",
+    });
+    await ensureWorkspaceExampleSeed(c.env, DEFAULT_WORKSPACE_ID).catch((error) => {
+      console.error("EdgeEver example seed failed", error);
     });
     await next();
     return;

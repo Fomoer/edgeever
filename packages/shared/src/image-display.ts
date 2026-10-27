@@ -9,7 +9,8 @@ export const IMAGE_WIDTH_PRESETS = [
   { id: "full", width: 100, labelKey: "editor.imageSizeFull" },
 ] as const;
 
-export const NEW_IMAGE_WIDTH_PERCENT = IMAGE_WIDTH_PRESETS[1].width;
+/** New uploads, and images with no stored width, use the large preset (较大). */
+export const NEW_IMAGE_WIDTH_PERCENT = IMAGE_WIDTH_PRESETS.find((preset) => preset.id === "large")!.width;
 
 /**
  * Phone columns are already narrow. A desktop percent such as 35% ("较小")

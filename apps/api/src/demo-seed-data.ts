@@ -18,13 +18,13 @@ import {
 export { decodeDemoAttachment };
 
 export const DEMO_SEED_NOTEBOOKS = [
-  { id: "nb_inbox", parentId: null, name: "等待分类", slug: "inbox", icon: "notebook", color: "#0f766e", sortOrder: 10 },
-  { id: "nb_projects", parentId: null, name: "工作项目", slug: "work-projects", icon: "notebook", color: "#2563eb", sortOrder: 20 },
-  { id: "nb_learning", parentId: null, name: "学习资料", slug: "learning-resources", icon: "notebook", color: "#7c3aed", sortOrder: 30 },
-  { id: "nb_creative", parentId: null, name: "灵感创作", slug: "creative-ideas", icon: "notebook", color: "#db2777", sortOrder: 40 },
-  { id: "nb_personal", parentId: null, name: "生活个人", slug: "personal-life", icon: "notebook", color: "#ea580c", sortOrder: 50 },
-  { id: "nb_demo_features", parentId: "nb_projects", name: "功能演示", slug: "demo-features", icon: "notebook", color: "#0891b2", sortOrder: 21 },
-  { id: "nb_demo_features_en", parentId: "nb_projects", name: "Feature Demos", slug: "feature-demos", icon: "notebook", color: "#0e7490", sortOrder: 22 },
+  { id: "nb_inbox", parentId: null, name: "等待分类", slug: "inbox", icon: "notebook", color: null, sortOrder: 10 },
+  { id: "nb_projects", parentId: null, name: "工作项目", slug: "work-projects", icon: "notebook", color: null, sortOrder: 20 },
+  { id: "nb_learning", parentId: null, name: "学习资料", slug: "learning-resources", icon: "notebook", color: null, sortOrder: 30 },
+  { id: "nb_creative", parentId: null, name: "灵感创作", slug: "creative-ideas", icon: "notebook", color: null, sortOrder: 40 },
+  { id: "nb_personal", parentId: null, name: "生活个人", slug: "personal-life", icon: "notebook", color: null, sortOrder: 50 },
+  { id: "nb_demo_features", parentId: "nb_projects", name: "功能演示", slug: "demo-features", icon: "notebook", color: null, sortOrder: 21 },
+  { id: "nb_demo_features_en", parentId: "nb_projects", name: "Feature Demos", slug: "feature-demos", icon: "notebook", color: null, sortOrder: 22 },
 ];
 
 export const DEMO_ARCHITECTURE_DIAGRAM_ZH: DiagramDocument = {

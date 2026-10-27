@@ -20,6 +20,7 @@ import { apiError } from "./http-errors";
 import type { DatabaseAdapter } from "./storage-contract";
 import type { InstanceUserRow } from "./user-routes";
 import { ensureUserWorkspace } from "./workspace-provisioning";
+import { ensureWorkspaceExampleSeed } from "./workspace-example-seed";
 
 type SessionRow = {
   id: string;
@@ -285,6 +286,10 @@ const authenticateBearerToken = async (c: AppContext, touch: boolean): Promise<A
     ).bind(now, row.id, cutoff).run();
   }
 
+  await ensureWorkspaceExampleSeed(c.env, row.workspace_id).catch((error) => {
+    console.error("EdgeEver example seed failed", error);
+  });
+
   return {
     kind: "agent",
     actorType: "agent",
@@ -334,6 +339,10 @@ const authenticateSessionToken = async (c: AppContext, token: string, touch: boo
   const workspace = row.workspace_id && row.role
     ? { workspaceId: row.workspace_id, role: row.role }
     : await ensureUserWorkspace(c.env.storage.db, row.user_id, row.username, c.req.header("accept-language"));
+
+  await ensureWorkspaceExampleSeed(c.env, workspace.workspaceId).catch((error) => {
+    console.error("EdgeEver example seed failed", error);
+  });
 
   return {
     kind: "user",

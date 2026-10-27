@@ -23,6 +23,41 @@ export const globalShortcutAccelerator = (binding) => {
   ].filter(Boolean).join("+");
 };
 
+export const formatGlobalShortcutForHumans = (binding, platform = process.platform) => {
+  if (!binding) return "";
+  const mac = platform === "darwin";
+  const parts = [
+    binding.ctrl && (mac ? "⌃" : "Ctrl"),
+    binding.meta && (mac ? "⌘" : "Meta"),
+    binding.alt && (mac ? "⌥" : "Alt"),
+    binding.shift && (mac ? "⇧" : "Shift"),
+    binding.key.toUpperCase(),
+  ].filter(Boolean);
+  return parts.join(mac ? "" : "+");
+};
+
+export const globalShortcutAcceleratorsConflict = (left, right) => {
+  const first = globalShortcutAccelerator(left);
+  const second = globalShortcutAccelerator(right);
+  return Boolean(first && second && first === second);
+};
+
+// Older installs stored only the window shortcut. Keep that binding and treat a
+// missing screenshot shortcut as unset.
+export const parseStoredGlobalShortcuts = (stored, platform = process.platform) => {
+  const normalize = (value) => {
+    const binding = normalizeGlobalShortcutBinding(value, platform);
+    return binding === undefined ? null : binding;
+  };
+  if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
+    return { binding: null, screenshot: null };
+  }
+  return {
+    binding: normalize(stored.binding),
+    screenshot: normalize(stored.screenshot),
+  };
+};
+
 export const toggleMainWindow = ({ window, showWindow, activateApp }) => {
   if (!window || window.isDestroyed()) return false;
   if (window.isVisible() && !window.isMinimized() && window.isFocused()) {

@@ -25,6 +25,8 @@ interface DesktopGlobalShortcutBinding {
 interface DesktopGlobalShortcutState {
   binding: DesktopGlobalShortcutBinding | null;
   registered: boolean;
+  screenshot: DesktopGlobalShortcutBinding | null;
+  screenshotRegistered: boolean;
   error?: "invalid" | "unavailable" | "saveFailed";
 }
 
@@ -91,6 +93,7 @@ interface EdgeEverDesktopBridge {
   }>;
   globalShortcut(): Promise<DesktopGlobalShortcutState>;
   setGlobalShortcut(binding: DesktopGlobalShortcutBinding | null): Promise<DesktopGlobalShortcutState>;
+  setScreenshotShortcut(binding: DesktopGlobalShortcutBinding | null): Promise<DesktopGlobalShortcutState>;
   loginItem(): Promise<DesktopLoginItemState | null>;
   setLoginItem(patch: { openAtLogin?: boolean; launchMode?: "window" | "tray" }): Promise<DesktopLoginItemState | null>;
   captureGlobalShortcut(capturing: boolean): Promise<boolean>;

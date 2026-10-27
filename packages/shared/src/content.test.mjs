@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { NEW_IMAGE_WIDTH_PERCENT } from "./image-display.ts";
 import {
   countMemoCharacters,
   DEFAULT_MEMO_TITLE,
@@ -590,9 +591,9 @@ hello **world**
     expect(doc.content[0]?.type).toBe("details");
     expect(doc.content[0]?.content?.[1]?.content?.[0]).toMatchObject({
       type: "image",
-      attrs: { src: "https://example.com/a.png", alt: "pic", width: 50 },
+      attrs: { src: "https://example.com/a.png", alt: "pic", width: NEW_IMAGE_WIDTH_PERCENT },
     });
-    expect(docToMarkdown(doc)).toContain('<img src="https://example.com/a.png" alt="pic" width="50%" />');
+    expect(docToMarkdown(doc)).toContain(`<img src="https://example.com/a.png" alt="pic" width="${NEW_IMAGE_WIDTH_PERCENT}%" />`);
   });
 
   test("plays a remote video inside details through the existing attachment", () => {

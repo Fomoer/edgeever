@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { docToMarkdown, markdownToDoc } from "@edgeever/shared";
+import { NEW_IMAGE_WIDTH_PERCENT } from "@edgeever/shared/image-display";
 
 describe("shared Markdown conversion", () => {
   test("parses adjacent headings, lists, quotes, and inline formatting into TipTap nodes", () => {
@@ -83,7 +84,7 @@ const answer = 42;
 
     const doc = markdownToDoc(markdown);
     expect(doc.content.map((node) => node.type)).toEqual(["codeBlock", "image"]);
-    expect(doc.content[1]?.attrs?.width).toBe(50);
+    expect(doc.content[1]?.attrs?.width).toBe(NEW_IMAGE_WIDTH_PERCENT);
     expect(docToMarkdown(doc)).toBe(markdown);
   });
 

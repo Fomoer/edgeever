@@ -235,8 +235,16 @@ export const WorkspaceScreen = ({
   const notebooks = notebooksQuery.data?.notebooks ?? [];
   useEffect(() => {
     const english = isEnglishMobileLocale(localePreference);
-    const preferredNotebookId = english ? "nb_demo_features_en" : "nb_demo_features";
-    const alternateNotebookId = english ? "nb_demo_features" : "nb_demo_features_en";
+    const notebookIdForSlug = (slug: string, fallbackId: string) =>
+      notebooks.find((notebook) => notebook.slug === slug)?.id ?? fallbackId;
+    const preferredNotebookId = notebookIdForSlug(
+      english ? "feature-demos" : "demo-features",
+      english ? "nb_demo_features_en" : "nb_demo_features",
+    );
+    const alternateNotebookId = notebookIdForSlug(
+      english ? "demo-features" : "feature-demos",
+      english ? "nb_demo_features" : "nb_demo_features_en",
+    );
 
     if (!notebooks.some((notebook) => notebook.id === preferredNotebookId)) {
       return;

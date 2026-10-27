@@ -1,26 +1,38 @@
 {
-  "version": "2.7.0",
+  "version": "2.9.0",
   "changes": {
     "en-US": [
-      "On the web and desktop apps, each notebook can set its own icon, icon color, text color, bold text, and an inverted icon or inverted row. Colors can be a preset or a six-digit HEX value. The settings are included in sync and backups. Existing notebooks keep their current appearance, and no manual migration is required. Thanks @thorufur for #673.",
-      "On the web and desktop apps, a tooltip closes as soon as the pointer leaves its trigger, including when the pointer moves onto the tooltip. Keyboard focus, Escape, and blur still dismiss it. Interactive hover cards stay as they are. Thanks @thorufur for #674.",
-      "On Android, the first share from another app reaches EdgeEver after the app process has already exited.",
-      "While the Android editor saves in the background, the Done button stays a label, and the status no longer cycles between Saving and Saved. Further typing starts the autosave wait again.",
-      "Saving a long Markdown note no longer freezes the server by reparsing the rest of the note."
+      "The desktop app can capture the screen into a note from its menu. The shortcut starts unset. After you bind one in shortcut settings, it works from other apps. Press it, drag a region, and release to save a note. Double-click captures the whole screen, and Esc cancels. The shortcut is saved only on this device. The first capture needs screen-recording permission.",
+      "On the web and desktop apps, the Notebooks heading collapses or expands the whole notebook list. Each notebook keeps its own expanded state, and the open note stays open.",
+      "After the document outline is collapsed, the button that opens it again stays beside the editor and no longer scrolls away with the note.",
+      "On macOS, a workspace shortcut bound to Command no longer also fires for Control, so Ctrl+F and Ctrl+N stay available for moving through text. Windows and Linux still use Control. Shortcuts already saved keep the modifier shown on the settings screen.",
+      "On the signed-in devices list, the current device uses a light gray badge. That row’s button is labeled Sign out. Other devices use a trash icon, and hovering it says that device will be signed out.",
+      "On the web, desktop, Android, and iOS apps, newly inserted images and images with no saved width default to the large width (72%). Images that already have a saved width stay as they are.",
+      "New workspaces, and upgrades that still contain only the untouched welcome note, receive the Chinese 功能演示 and English Feature Demos example notebooks. Instances that already contain your own notes stay unchanged, and no manual migration is required.",
+      "Default notebooks that never had their appearance changed return to the shared slate icon. Notebooks with a saved appearance, including one that chose a factory color again, stay as they are. The upgrade clears those untouched factory colors automatically.",
+      "In notebook appearance settings, Reset to default shows a reset icon. The confirm button is dark and labeled Confirm. The note under the title that said changes apply only after saving is gone. The settings still save only after you confirm."
     ],
     "zh-CN": [
-      "网页和桌面端的每个笔记本可以单独设置图标、图标颜色、文字颜色、粗体，以及只反转图标或反转整行。颜色可以选预设，也可以填写六位 HEX。这些设置会随同步和备份保存。已有笔记本保持原来的外观，不需要手动迁移。感谢 @thorufur（#673）。",
-      "网页和桌面端的悬停提示会在指针离开触发区域时马上关闭，指针移到提示上也会关闭。键盘聚焦、Escape 和失焦仍然会关闭提示。可以交互的悬停卡片保持原样。感谢 @thorufur（#674）。",
-      "Android 版在进程已经结束后，第一次从其他应用分享进来的内容可以进入 EdgeEver。",
-      "Android 编辑器在后台自动保存时，完成按钮保持文字，状态也不再在“保存中”和“已保存”之间来回切换。继续输入会重新等待自动保存。",
-      "保存较长的 Markdown 笔记时，服务端不再因重复解析整篇内容而卡住。"
+      "桌面端可以从菜单把屏幕截成笔记。快捷键默认未设置，在快捷键设置里绑定后，其他应用中也能使用。按下后拖拽选择区域，松开即保存为笔记；双击截取整个屏幕，Esc 取消。快捷键只保存在当前设备。第一次截图需要允许屏幕录制。",
+      "网页和桌面端点击「笔记本」标题，可以收起或展开整个笔记本列表。每个笔记本自己的展开状态会保留，当前打开的笔记不会关闭。",
+      "收起文档大纲后，重新展开的按钮会留在编辑区旁边，滚动笔记时不再滑出视野。",
+      "在 macOS 上，绑定了 Command 的工作区快捷键不再同时响应 Control，Ctrl+F 和 Ctrl+N 可以继续用来移动文字。Windows 和 Linux 仍使用 Control。已经保存的快捷键沿用设置页上显示的修饰键。",
+      "登录设备列表里，当前设备改为浅灰色标记。当前这一行的按钮写明「退出当前登录」；其他设备改为垃圾桶图标，悬停时说明会退出该设备。",
+      "网页、桌面、Android 和 iOS 上，新插入的图片以及没有保存过宽度的图片，默认使用较大宽度（72%）。已经保存过宽度的图片保持不变。",
+      "新的工作区，以及升级后仍然只有未改动欢迎笔记的实例，会得到中文「功能演示」和英文 Feature Demos 示例笔记本。已经有自己笔记的实例不会改变，也不需要手动迁移。",
+      "从未改过外观的默认笔记本会回到共用的石板色图标。已经保存过外观的笔记本，包括重新选过出厂颜色的笔记本，保持原样。升级会自动清掉这些未改动的出厂颜色。",
+      "笔记本外观设置里，「恢复默认」带有重置图标，确认按钮改为深色并写明「确认」。标题下「保存后生效」的说明已去掉。仍需确认后才会保存。"
     ],
     "ja": [
-      "Web とデスクトップでは、各ノートブックにアイコン、アイコンの色、文字色、太字、アイコンのみまたは行全体の反転を設定できます。色はプリセットか 6 桁の HEX です。設定は同期とバックアップに含まれます。既存のノートブックの見た目はそのままで、手動の移行は不要です。@thorufur の貢献に感謝します（#673）。",
-      "Web とデスクトップでは、ポインタがトリガーを離れるとツールチップがすぐ閉じます。ヒントの上に移動した場合も閉じます。キーボードフォーカス、Escape、フォーカス解除でも閉じます。操作できるホバーカードはこれまでどおりです。@thorufur の貢献に感謝します（#674）。",
-      "Android では、アプリのプロセスが終了したあとの最初の共有も EdgeEver に届きます。",
-      "Android のエディタがバックグラウンドで保存するとき、完了ボタンは文字のままです。状態が「保存中」と「保存済み」の間で切り替わることもありません。入力を続けると自動保存の待ち時間がやり直されます。",
-      "長い Markdown ノートを保存しても、残りの本文を繰り返し解析してサーバーが固まることはありません。"
+      "デスクトップアプリのメニューから、画面をノートとして保存できます。ショートカットは初期状態では未設定です。ショートカット設定で割り当てると、他のアプリからも使えます。押して範囲をドラッグし、離すとノートになります。ダブルクリックで画面全体、Esc でキャンセルです。ショートカットはこの端末にだけ保存されます。初回は画面収録の許可が必要です。",
+      "ウェブとデスクトップでは、「ノートブック」の見出しで一覧全体を開閉できます。各ノートブックの展開状態は保持され、開いているノートは閉じません。",
+      "ドキュメントアウトラインを閉じたあと、再表示ボタンはエディタの横に残り、ノートをスクロールしても見えなくなりません。",
+      "macOS では、Command に割り当てたワークスペースのショートカットが Control でも発動しなくなりました。Ctrl+F と Ctrl+N は文字の移動に使えます。Windows と Linux は引き続き Control です。保存済みのショートカットは、設定画面に表示されていた修飾キーのままです。",
+      "サインイン中の端末一覧では、現在の端末が薄いグレーの表示になりました。その行のボタンは「サインアウト」です。他の端末はゴミ箱アイコンになり、ホバーでその端末をサインアウトすると分かります。",
+      "ウェブ、デスクトップ、Android、iOS では、新しく挿入した画像と幅が保存されていない画像が、既定で大きい幅（72%）になります。保存済みの幅はそのままです。",
+      "新しいワークスペースと、未編集のようこそノートだけのままアップグレードしたインスタンスには、中国語の「功能演示」と英語の Feature Demos サンプルノートブックが追加されます。自分のノートがすでにあるインスタンスは変わらず、手動の移行も不要です。",
+      "外観を一度も変えていない既定ノートブックは、共通のスレート色アイコンに戻ります。外観を保存済みのノートブックは、初期色を選び直したものも含めてそのままです。アップグレード時に、未変更の初期色は自動で消えます。",
+      "ノートブックの外観設定では、「既定に戻す」にリセットアイコンが付き、確認ボタンは濃い色の「確認」になりました。タイトル下の「保存後に反映されます」という説明はなくなりました。設定は確認するまで保存されません。"
     ]
   }
 }

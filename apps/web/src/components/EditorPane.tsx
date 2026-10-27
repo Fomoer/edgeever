@@ -177,6 +177,7 @@ import {
   EDITOR_LOCAL_SAVE_DELAY_MS,
   formatShortcutBinding,
   getEditableMemoTitle,
+  isPrimaryModifierPressed,
   getNotebookMoveOptions,
   readDesktopReadingProtectionPreference,
   readEditorOutlineCollapsedPreference,
@@ -601,6 +602,7 @@ const RichEditorPane = ({
     enabled: noteLinkPickerOpen,
   });
   const [editorScrollContainer, setEditorScrollContainer] = useState<HTMLDivElement | null>(null);
+  const [collapsedOutlineAnchor, setCollapsedOutlineAnchor] = useState<HTMLDivElement | null>(null);
   const [editorScrollbarGutter, setEditorScrollbarGutter] = useState(0);
   const [headerTitleSlot, setHeaderTitleSlot] = useState<HTMLDivElement | null>(null);
   const [headerStatusCluster, setHeaderStatusCluster] = useState<HTMLDivElement | null>(null);
@@ -1317,7 +1319,8 @@ const RichEditorPane = ({
         }
 
         const shortcutKey = event.key.toLowerCase();
-        if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && shortcutKey === "k") {
+        // Command on Apple, Control elsewhere. Control stays free for macOS text movement.
+        if (isPrimaryModifierPressed(event) && !event.altKey && !event.shiftKey && shortcutKey === "k") {
           event.preventDefault();
           openExternalLinkDialogRef.current();
           return true;
@@ -1325,7 +1328,7 @@ const RichEditorPane = ({
 
         if (
           (shortcutKey !== "f" && shortcutKey !== "h") ||
-          (!event.ctrlKey && !event.metaKey) ||
+          !isPrimaryModifierPressed(event) ||
           event.altKey ||
           (shortcutKey === "f" && event.shiftKey)
         ) {
@@ -3895,12 +3898,12 @@ const RichEditorPane = ({
 
   const editorColumnMatchesArticle = !useMarkdownSourceEditor;
   const editorPaneTight = editorColumnWidth > 0 && editorColumnWidth < EDITOR_PANE_TIGHT_PX;
-  const outlineReservesSpace = !editorPaneTight
+  const showDocumentOutline = !editorPaneTight
     && !isMobileViewport
     && !useMobilePlainTextEditor
     && !useMarkdownSourceEditor
-    && !phonePreviewOpen
-    && !editorOutlineCollapsed;
+    && !phonePreviewOpen;
+  const outlineReservesSpace = showDocumentOutline && !editorOutlineCollapsed;
   const compactEditorReadingGutter = shouldCompactEditorReadingGutter({
     aiAssistantOpen,
     desktopColumn: isDesktopColumn,
@@ -4420,6 +4423,7 @@ const RichEditorPane = ({
         />
       </header>
 
+      <div className="relative min-h-0 min-w-0 flex-1">
       <div
         ref={setEditorScrollContainerRef}
         data-editor-theme="default"
@@ -4429,7 +4433,7 @@ const RichEditorPane = ({
           "--memo-content-divider-spacing": `${MEMO_CONTENT_STYLE.divider.marginVertical}px`,
         } as CSSProperties}
         className={cn(
-          "edgeever-editor relative min-h-0 flex-1 bg-transparent",
+          "edgeever-editor relative h-full min-h-0 bg-transparent",
           MEMO_EDITOR_READING_GUTTER_PROPERTIES_CLASS_NAME,
           useMobilePlainTextEditor
             ? "overflow-visible"
@@ -4599,16 +4603,26 @@ const RichEditorPane = ({
               noteProse={noteProse}
             />
           )}
-          {!editorPaneTight && !isMobileViewport && !useMobilePlainTextEditor && !useMarkdownSourceEditor && !phonePreviewOpen && (
+          {showDocumentOutline && (
             <EditorOutline
               editor={editor}
               scrollContainer={editorScrollContainer}
+              collapsedAnchor={collapsedOutlineAnchor}
               collapsed={editorOutlineCollapsed}
               shortcutLabel={formatShortcutBinding(shortcutSettings.toggleOutline)}
               onCollapsedChange={handleEditorOutlineCollapsedChange}
             />
           )}
         </div>
+      </div>
+      {showDocumentOutline ? (
+        <div
+          ref={setCollapsedOutlineAnchor}
+          className="pointer-events-none absolute top-6 z-10 h-8 w-8"
+          style={{ right: editorScrollbarGutter }}
+          data-editor-outline-anchor="collapsed"
+        />
+      ) : null}
       </div>
 
       {noteLinkHintPosition && (

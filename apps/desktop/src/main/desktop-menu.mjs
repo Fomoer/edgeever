@@ -109,3 +109,40 @@ export const desktopMenuCopy = (locale) => {
   if (normalized === "pl" || normalized.startsWith("pl-")) return menuCopy.pl;
   return menuCopy.en;
 };
+
+const regionCopy = {
+  en: {
+    hint: "Drag to select an area. Release to save it as a note",
+    cancel: "Esc to cancel",
+    full: "Double-click to capture the whole screen",
+  },
+  zh: {
+    hint: "拖拽选择区域，松开后保存为笔记",
+    cancel: "Esc 取消",
+    full: "双击截取整个屏幕",
+  },
+  pl: {
+    hint: "Przeciągnij, aby zaznaczyć obszar. Puść, aby zapisać jako notatkę",
+    cancel: "Esc anuluje",
+    full: "Kliknij dwukrotnie, aby przechwycić cały ekran",
+  },
+  ja: {
+    hint: "ドラッグして範囲を選択し、離すとノートに保存します",
+    cancel: "Esc でキャンセル",
+    full: "ダブルクリックで画面全体",
+  },
+  ru: {
+    hint: "Перетащите, чтобы выбрать область. Отпустите, чтобы сохранить в заметку",
+    cancel: "Esc — отмена",
+    full: "Двойной щелчок — весь экран",
+  },
+};
+
+export const screenshotRegionCopy = (locale) => {
+  const normalized = typeof locale === "string" ? locale.toLowerCase() : "";
+  if (normalized.startsWith("zh")) return regionCopy.zh;
+  if (normalized === "pl" || normalized.startsWith("pl-")) return regionCopy.pl;
+  if (normalized === "ja" || normalized.startsWith("ja-")) return regionCopy.ja;
+  if (normalized === "ru" || normalized.startsWith("ru-")) return regionCopy.ru;
+  return regionCopy.en;
+};

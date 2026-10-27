@@ -10,6 +10,7 @@ import { badRequest, conflict, forbidden, notFound, unauthorized } from "./http-
 import { requireOwner } from "./request-auth";
 import { mapResourceStorageSummary, type ResourceStatsRow } from "./resource-service";
 import type { DatabaseAdapter } from "./storage-contract";
+import { markWorkspaceExampleSeedPendingStatement } from "./workspace-example-seed";
 import {
   createDefaultNotebookRows,
   markWorkspaceSeedLocalizationPendingStatement,
@@ -139,6 +140,7 @@ export const registerUserRoutes = (
          VALUES (?, ?, NULL, ?, ?, 'notebook', ?, ?, ?, ?)`,
       ).bind(notebook.id, workspaceId, notebook.name, notebook.slug, notebook.color, notebook.sortOrder, now, now)),
       markWorkspaceSeedLocalizationPendingStatement(context.env.storage.db, workspaceId, now),
+      markWorkspaceExampleSeedPendingStatement(context.env.storage.db, workspaceId, now),
       auditStatement(context.env.storage.db, "user", context.get("auth").actorId, "user.create", "user", userId, {
         username: input.username,
       }),

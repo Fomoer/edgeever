@@ -29,7 +29,12 @@ export type ShortcutAction =
   | "toggleSidebar";
 export type ShortcutBinding = {
   key: string;
+  // Defaults and shortcuts saved before Control and Command were stored apart.
+  // True means the platform primary modifier: Command on Apple, Control elsewhere.
+  // A recorded shortcut also sets ctrl and meta, and those exact keys win.
   ctrlOrMeta: boolean;
+  ctrl?: boolean;
+  meta?: boolean;
   shift: boolean;
   alt: boolean;
 };
@@ -152,6 +157,7 @@ export const MEMO_LIST_DENSITY_STORAGE_KEY = "edgeever.memoListDensity";
 export const MEMO_LIST_WIDTH_STORAGE_KEY = "edgeever.memoListWidth";
 export const NOTEBOOK_SORT_STORAGE_KEY = "edgeever.notebookSort";
 export const NOTEBOOK_TREE_COLLAPSED_IDS_STORAGE_KEY = "edgeever.notebookTreeCollapsedIds:v1";
+export const NOTEBOOK_SECTION_COLLAPSED_STORAGE_KEY = "edgeever.notebookSectionCollapsed";
 export const SHORTCUT_SETTINGS_STORAGE_KEY = "edgeever.shortcutSettings";
 export const DEFAULT_MEMO_LIST_WIDTH_PX = 360;
 export const MIN_MEMO_LIST_WIDTH_PX = 300;
@@ -548,6 +554,22 @@ export const writeNotebookTreeCollapsedIdsPreference = (notebookIds: Iterable<st
   }
 };
 
+export const readNotebookSectionCollapsedPreference = () => {
+  try {
+    return window.localStorage.getItem(NOTEBOOK_SECTION_COLLAPSED_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+export const writeNotebookSectionCollapsedPreference = (collapsed: boolean) => {
+  try {
+    window.localStorage.setItem(NOTEBOOK_SECTION_COLLAPSED_STORAGE_KEY, collapsed ? "true" : "false");
+  } catch {
+    // Local storage can be unavailable in private or restricted browser contexts.
+  }
+};
+
 export const normalizeShortcutKey = (key: string) => {
   if (key === " ") {
     return "space";
@@ -556,13 +578,53 @@ export const normalizeShortcutKey = (key: string) => {
   return key.toLowerCase();
 };
 
+const readShortcutPlatform = () => {
+  if (typeof window !== "undefined" && window.navigator?.platform) return window.navigator.platform;
+  if (typeof navigator !== "undefined" && navigator.platform) return navigator.platform;
+  return "";
+};
+
+export const isAppleShortcutPlatform = (platform = readShortcutPlatform()) =>
+  /mac|iphone|ipad|ipod/i.test(platform);
+
+// Recorded ctrl/meta describe the keys the user pressed. Older ctrlOrMeta
+// bindings follow the modifier the settings screen drew for this platform.
+export const resolvedShortcutModifiers = (
+  binding: Pick<ShortcutBinding, "ctrlOrMeta" | "ctrl" | "meta">,
+  platform = readShortcutPlatform(),
+) => {
+  if (typeof binding.ctrl === "boolean" || typeof binding.meta === "boolean") {
+    return { ctrl: binding.ctrl === true, meta: binding.meta === true };
+  }
+
+  if (binding.ctrlOrMeta && isAppleShortcutPlatform(platform)) {
+    return { ctrl: false, meta: true };
+  }
+
+  if (binding.ctrlOrMeta) {
+    return { ctrl: true, meta: false };
+  }
+
+  return { ctrl: false, meta: false };
+};
+
+export const isPrimaryModifierPressed = (
+  event: { ctrlKey?: boolean; metaKey?: boolean },
+  platform = readShortcutPlatform(),
+) => {
+  const ctrl = event.ctrlKey === true;
+  const meta = event.metaKey === true;
+  return isAppleShortcutPlatform(platform) ? meta && !ctrl : ctrl && !meta;
+};
+
 const isShortcutBinding = (value: unknown): value is ShortcutBinding => {
+  if (!value || typeof value !== "object") return false;
   const binding = value as ShortcutBinding;
+  const splitModifiers = typeof binding.ctrl === "boolean" && typeof binding.meta === "boolean";
   return (
-    Boolean(binding) &&
     typeof binding.key === "string" &&
     binding.key.trim().length > 0 &&
-    typeof binding.ctrlOrMeta === "boolean" &&
+    (typeof binding.ctrlOrMeta === "boolean" || splitModifiers) &&
     typeof binding.shift === "boolean" &&
     typeof binding.alt === "boolean"
   );
@@ -579,7 +641,11 @@ export const readShortcutSettingsPreference = (): ShortcutSettings => {
     return SHORTCUT_ACTION_VALUES.reduce<ShortcutSettings>((settings, action) => {
       const storedBinding = parsedValue[action];
       const normalizedBinding = isShortcutBinding(storedBinding)
-        ? { ...storedBinding, key: normalizeShortcutKey(storedBinding.key) }
+        ? {
+            ...storedBinding,
+            key: normalizeShortcutKey(storedBinding.key),
+            ctrlOrMeta: typeof storedBinding.ctrlOrMeta === "boolean" ? storedBinding.ctrlOrMeta : false,
+          }
         : DEFAULT_SHORTCUT_SETTINGS[action];
       const binding = action === "toggleReadingProtection"
         && shortcutBindingsEqual(normalizedBinding, LEGACY_READING_PROTECTION_SHORTCUT)
@@ -601,19 +667,33 @@ export const writeShortcutSettingsPreference = (settings: ShortcutSettings) => {
   }
 };
 
-export const formatShortcutBinding = (binding: ShortcutBinding) => {
-  const isMac = /mac|iphone|ipad|ipod/i.test(window.navigator.platform);
+export const formatShortcutBinding = (binding: ShortcutBinding, platform = readShortcutPlatform()) => {
+  const apple = isAppleShortcutPlatform(platform);
+  const modifiers = resolvedShortcutModifiers(binding, platform);
   const parts = [
-    binding.ctrlOrMeta ? (isMac ? "⌘" : "Ctrl") : null,
-    binding.alt ? (isMac ? "⌥" : "Alt") : null,
-    binding.shift ? (isMac ? "⇧" : "Shift") : null,
+    modifiers.ctrl ? (apple ? "⌃" : "Ctrl") : null,
+    modifiers.meta ? (apple ? "⌘" : "Meta") : null,
+    binding.alt ? (apple ? "⌥" : "Alt") : null,
+    binding.shift ? (apple ? "⇧" : "Shift") : null,
     binding.key === "space" ? "Space" : binding.key.length === 1 ? binding.key.toUpperCase() : binding.key,
   ].filter(Boolean);
 
-  return parts.join(isMac ? "" : " + ");
+  return parts.join(apple ? "" : " + ");
 };
 
-export const shortcutBindingFromKeyboardEvent = (event: KeyboardEvent): ShortcutBinding | null => {
+type ShortcutKeyEvent = {
+  key: string;
+  code?: string;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+};
+
+export const shortcutBindingFromKeyboardEvent = (
+  event: ShortcutKeyEvent,
+  platform = readShortcutPlatform(),
+): ShortcutBinding | null => {
   const digitKey = typeof event.code === "string" ? /^Digit([0-9])$/.exec(event.code)?.[1] : undefined;
   const key = digitKey ?? normalizeShortcutKey(event.key);
 
@@ -627,17 +707,27 @@ export const shortcutBindingFromKeyboardEvent = (event: KeyboardEvent): Shortcut
 
   return {
     key,
-    ctrlOrMeta: event.ctrlKey || event.metaKey,
+    ctrlOrMeta: isPrimaryModifierPressed(event, platform),
+    ctrl: event.ctrlKey,
+    meta: event.metaKey,
     shift: event.shiftKey,
     alt: event.altKey,
   };
 };
 
-export const shortcutBindingsEqual = (first: ShortcutBinding, second: ShortcutBinding) =>
-  first.key === second.key &&
-  first.ctrlOrMeta === second.ctrlOrMeta &&
-  first.shift === second.shift &&
-  first.alt === second.alt;
+export const shortcutBindingsEqual = (
+  first: ShortcutBinding,
+  second: ShortcutBinding,
+  platform = readShortcutPlatform(),
+) => {
+  const firstModifiers = resolvedShortcutModifiers(first, platform);
+  const secondModifiers = resolvedShortcutModifiers(second, platform);
+  return first.key === second.key &&
+    firstModifiers.ctrl === secondModifiers.ctrl &&
+    firstModifiers.meta === secondModifiers.meta &&
+    first.shift === second.shift &&
+    first.alt === second.alt;
+};
 
 // The sidebar shortcut only acts when the sidebar can be seen: Focus Mode hides
 // it, so toggling there would change a persisted state without any feedback.
@@ -646,16 +736,20 @@ export const canToggleNotebookSidebar = ({ isDesktop, focusModeActive }: {
   focusModeActive: boolean;
 }) => isDesktop && !focusModeActive;
 
-export const getShortcutActionForEvent = (event: KeyboardEvent, settings: ShortcutSettings): ShortcutAction | null => {
-  const eventBinding = shortcutBindingFromKeyboardEvent(event);
+export const getShortcutActionForEvent = (
+  event: ShortcutKeyEvent,
+  settings: ShortcutSettings,
+  platform = readShortcutPlatform(),
+): ShortcutAction | null => {
+  const eventBinding = shortcutBindingFromKeyboardEvent(event, platform);
 
   if (!eventBinding) {
     return null;
   }
 
   return SHORTCUT_ACTION_VALUES.find((action) =>
-    shortcutBindingsEqual(settings[action], eventBinding) ||
-    (SHORTCUT_ALIASES[action] ?? []).some((binding) => shortcutBindingsEqual(binding, eventBinding))
+    shortcutBindingsEqual(settings[action], eventBinding, platform) ||
+    (SHORTCUT_ALIASES[action] ?? []).some((binding) => shortcutBindingsEqual(binding, eventBinding, platform))
   ) ?? null;
 };
 

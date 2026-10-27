@@ -686,7 +686,9 @@ export const WorkspaceApp = ({
   const notebooks = notebooksQuery.data?.notebooks ?? [];
   useEffect(() => {
     const english = i18n.resolvedLanguage === "en-US";
-    const preferredNotebookId = english ? "nb_demo_features_en" : "nb_demo_features";
+    const preferredSlug = english ? "feature-demos" : "demo-features";
+    const preferredNotebookId = notebooks.find((notebook) => notebook.slug === preferredSlug)?.id
+      ?? (english ? "nb_demo_features_en" : "nb_demo_features");
 
     if (!notebooks.some((notebook) => notebook.id === preferredNotebookId)) {
       return;

@@ -20,19 +20,25 @@ import {
   MAX_MEMO_LIST_WIDTH_PX,
   MIN_EDITOR_WIDTH_PX,
   NOTEBOOK_SORT_STORAGE_KEY,
+  NOTEBOOK_SECTION_COLLAPSED_STORAGE_KEY,
   NOTEBOOK_TREE_COLLAPSED_IDS_STORAGE_KEY,
   SHORTCUT_SETTINGS_STORAGE_KEY,
   getSearchShortcutScope,
   getMaxMemoListWidthForViewport,
   getEditorPaneWidths,
   getCreateMemoNotebookId,
+  formatShortcutBinding,
   getShortcutActionForEvent,
+  isPrimaryModifierPressed,
+  shortcutBindingFromKeyboardEvent,
+  shortcutBindingsEqual,
   canToggleNotebookSidebar,
   clampMemoListWidth,
   clampNotebookSidebarWidth,
   getNotebookSortComparator,
   readEditorContentAlignmentPreference,
   readNotebookSortPreference,
+  readNotebookSectionCollapsedPreference,
   readNotebookTreeCollapsedIdsPreference,
   readDesktopFocusModePreference,
   readDesktopReadingProtectionPreference,
@@ -46,6 +52,7 @@ import {
   readShortcutSettingsPreference,
   writeEditorContentAlignmentPreference,
   writeNotebookSortPreference,
+  writeNotebookSectionCollapsedPreference,
   writeNotebookTreeCollapsedIdsPreference,
   writeDesktopFocusModePreference,
   writeDesktopReadingProtectionPreference,
@@ -510,6 +517,19 @@ describe("notebook tree collapsed preference", () => {
     expect(readNotebookTreeCollapsedIdsPreference()).toEqual(new Set());
     expect(() => writeNotebookTreeCollapsedIdsPreference(["notebook-1"])).not.toThrow();
   });
+
+  test("remembers whether the notebook section itself is collapsed", () => {
+    const values = installLocalStorage();
+
+    expect(readNotebookSectionCollapsedPreference()).toBe(false);
+
+    writeNotebookSectionCollapsedPreference(true);
+    expect(values.get(NOTEBOOK_SECTION_COLLAPSED_STORAGE_KEY)).toBe("true");
+    expect(readNotebookSectionCollapsedPreference()).toBe(true);
+
+    writeNotebookSectionCollapsedPreference(false);
+    expect(readNotebookSectionCollapsedPreference()).toBe(false);
+  });
 });
 
 describe("workspace shortcut preferences", () => {
@@ -605,7 +625,7 @@ describe("workspace shortcut preferences", () => {
     expect(settings.toggleOutline).toEqual(DEFAULT_SHORTCUT_SETTINGS.toggleOutline);
   });
 
-  test("recognizes Ctrl and Command variants for the new actions", () => {
+  test("uses Control for default shortcuts on Windows and Linux", () => {
     const keyboardEvent = (key, modifiers = {}) => ({
       key,
       ctrlKey: false,
@@ -616,45 +636,208 @@ describe("workspace shortcut preferences", () => {
     });
 
     expect(getShortcutActionForEvent(
-      keyboardEvent("f", { metaKey: true, shiftKey: true }),
+      keyboardEvent("f", { ctrlKey: true, shiftKey: true }),
       DEFAULT_SHORTCUT_SETTINGS,
+      "Win32",
     )).toBe("focusGlobalSearch");
     expect(getShortcutActionForEvent(
       keyboardEvent("o", { ctrlKey: true }),
       DEFAULT_SHORTCUT_SETTINGS,
+      "Linux",
     )).toBe("openQuickSwitcher");
-    expect(getShortcutActionForEvent(
-      keyboardEvent("[", { metaKey: true }),
-      DEFAULT_SHORTCUT_SETTINGS,
-    )).toBe("openPreviousMemo");
     expect(getShortcutActionForEvent(
       keyboardEvent("]", { ctrlKey: true }),
       DEFAULT_SHORTCUT_SETTINGS,
+      "Win32",
     )).toBe("openNextMemo");
-    expect(getShortcutActionForEvent(
-      keyboardEvent("j", { metaKey: true }),
-      DEFAULT_SHORTCUT_SETTINGS,
-    )).toBe("openAiAssistant");
     expect(getShortcutActionForEvent(
       keyboardEvent("s", { ctrlKey: true }),
       DEFAULT_SHORTCUT_SETTINGS,
+      "Win32",
     )).toBe("saveAndSync");
     expect(getShortcutActionForEvent(
       keyboardEvent("e", { ctrlKey: true }),
       DEFAULT_SHORTCUT_SETTINGS,
+      "Win32",
     )).toBe("toggleReadingProtection");
-    expect(getShortcutActionForEvent(
-      keyboardEvent("/", { metaKey: true }),
-      DEFAULT_SHORTCUT_SETTINGS,
-    )).toBe("toggleEditorMode");
     expect(getShortcutActionForEvent(
       keyboardEvent("!", { code: "Digit1", ctrlKey: true, shiftKey: true }),
       DEFAULT_SHORTCUT_SETTINGS,
+      "Win32",
     )).toBe("toggleOutline");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("f", { metaKey: true, shiftKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+      "Win32",
+    )).toBeNull();
+    expect(formatShortcutBinding(DEFAULT_SHORTCUT_SETTINGS.focusSearch, "Win32")).toBe("Ctrl + F");
+  });
+
+  test("keeps Command defaults on macOS and leaves Control for text movement", () => {
+    const keyboardEvent = (key, modifiers = {}) => ({
+      key,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      altKey: false,
+      ...modifiers,
+    });
+    const mac = "MacIntel";
+
+    expect(getShortcutActionForEvent(
+      keyboardEvent("f", { metaKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+      mac,
+    )).toBe("focusSearch");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("n", { metaKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+      mac,
+    )).toBe("createMemo");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("f", { metaKey: true, shiftKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+      mac,
+    )).toBe("focusGlobalSearch");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("[", { metaKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+      mac,
+    )).toBe("openPreviousMemo");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("j", { metaKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+      mac,
+    )).toBe("openAiAssistant");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("/", { metaKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+      mac,
+    )).toBe("toggleEditorMode");
     expect(getShortcutActionForEvent(
       keyboardEvent("\\", { metaKey: true }),
       DEFAULT_SHORTCUT_SETTINGS,
+      mac,
     )).toBe("toggleSidebar");
+
+    for (const key of ["f", "n", "e", "h", "o"]) {
+      expect(getShortcutActionForEvent(
+        keyboardEvent(key, { ctrlKey: true }),
+        DEFAULT_SHORTCUT_SETTINGS,
+        mac,
+      )).toBeNull();
+    }
+    expect(getShortcutActionForEvent(
+      keyboardEvent("f", { ctrlKey: true, metaKey: true }),
+      DEFAULT_SHORTCUT_SETTINGS,
+      mac,
+    )).toBeNull();
+    expect(formatShortcutBinding(DEFAULT_SHORTCUT_SETTINGS.focusSearch, mac)).toBe("⌘F");
+    expect(formatShortcutBinding(DEFAULT_SHORTCUT_SETTINGS.createMemo, mac)).toBe("⌘N");
+  });
+
+  test("records Command and Control separately and keeps an older combined shortcut on the displayed key", () => {
+    const keyboardEvent = (key, modifiers = {}) => ({
+      key,
+      code: "KeyF",
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      altKey: false,
+      ...modifiers,
+    });
+
+    expect(shortcutBindingFromKeyboardEvent(
+      keyboardEvent("f", { metaKey: true, altKey: true }),
+      "MacIntel",
+    )).toEqual({
+      key: "f",
+      ctrlOrMeta: true,
+      ctrl: false,
+      meta: true,
+      shift: false,
+      alt: true,
+    });
+    expect(shortcutBindingFromKeyboardEvent(
+      keyboardEvent("f", { ctrlKey: true, altKey: true }),
+      "MacIntel",
+    )).toEqual({
+      key: "f",
+      ctrlOrMeta: false,
+      ctrl: true,
+      meta: false,
+      shift: false,
+      alt: true,
+    });
+    expect(formatShortcutBinding({
+      key: "f",
+      ctrlOrMeta: false,
+      ctrl: true,
+      meta: false,
+      shift: false,
+      alt: true,
+    }, "MacIntel")).toBe("⌃⌥F");
+
+    const recordedSearch = shortcutBindingFromKeyboardEvent(
+      keyboardEvent("f", { metaKey: true, altKey: true }),
+      "MacIntel",
+    );
+    expect(getShortcutActionForEvent(
+      keyboardEvent("f", { metaKey: true, altKey: true }),
+      { ...DEFAULT_SHORTCUT_SETTINGS, focusSearch: recordedSearch },
+      "MacIntel",
+    )).toBe("focusSearch");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("f", { ctrlKey: true, altKey: true }),
+      { ...DEFAULT_SHORTCUT_SETTINGS, focusSearch: recordedSearch },
+      "MacIntel",
+    )).toBeNull();
+    expect(shortcutBindingsEqual(DEFAULT_SHORTCUT_SETTINGS.focusSearch, {
+      key: "f",
+      ctrlOrMeta: true,
+      ctrl: false,
+      meta: true,
+      shift: false,
+      alt: false,
+    }, "MacIntel")).toBe(true);
+    expect(shortcutBindingsEqual(DEFAULT_SHORTCUT_SETTINGS.focusSearch, {
+      key: "f",
+      ctrlOrMeta: false,
+      ctrl: true,
+      meta: false,
+      shift: false,
+      alt: false,
+    }, "MacIntel")).toBe(false);
+
+    const values = installLocalStorage();
+    values.set(SHORTCUT_SETTINGS_STORAGE_KEY, JSON.stringify({
+      focusSearch: { key: "f", ctrlOrMeta: true, shift: false, alt: true },
+    }));
+    const settings = readShortcutSettingsPreference();
+    expect(getShortcutActionForEvent(
+      keyboardEvent("f", { metaKey: true, altKey: true }),
+      settings,
+      "MacIntel",
+    )).toBe("focusSearch");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("f", { ctrlKey: true, altKey: true }),
+      settings,
+      "MacIntel",
+    )).toBeNull();
+    expect(getShortcutActionForEvent(
+      keyboardEvent("f", { ctrlKey: true, altKey: true }),
+      settings,
+      "Win32",
+    )).toBe("focusSearch");
+    expect(getShortcutActionForEvent(
+      keyboardEvent("f", { metaKey: true, altKey: true }),
+      settings,
+      "Win32",
+    )).toBeNull();
+    expect(isPrimaryModifierPressed({ ctrlKey: true }, "MacIntel")).toBe(false);
+    expect(isPrimaryModifierPressed({ metaKey: true }, "MacIntel")).toBe(true);
+    expect(isPrimaryModifierPressed({ ctrlKey: true }, "Win32")).toBe(true);
+    expect(isPrimaryModifierPressed({ ctrlKey: true, metaKey: true }, "Win32")).toBe(false);
   });
 
   test("toggles the sidebar only when it is visible", () => {

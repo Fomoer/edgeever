@@ -30,6 +30,7 @@ import {
   gruvboxDark,
 } from "@uiw/codemirror-themes-all";
 import type { MarkdownThemeName } from "../ThemeProvider";
+import { isPrimaryModifierPressed } from "@/lib/app-helpers";
 import { getAiSlashCommandStart } from "@/lib/editor-shortcuts";
 import { lightMarkdownHighlightStyles } from "@/lib/markdown-source-highlight";
 import { cn } from "@/lib/utils";
@@ -315,9 +316,9 @@ export const MarkdownSourceEditor = forwardRef<MarkdownSourceEditorRef, Markdown
 
     const handleKeyDown = useCallback(
       (event: React.KeyboardEvent | KeyboardEvent) => {
-        // Link shortcut: Cmd+K / Ctrl+K
+        // Link shortcut uses the platform primary modifier, leaving macOS Control+K for deleting to the line end.
         if (
-          (event.ctrlKey || event.metaKey) &&
+          isPrimaryModifierPressed(event) &&
           !event.altKey &&
           !event.shiftKey &&
           event.key.toLowerCase() === "k"

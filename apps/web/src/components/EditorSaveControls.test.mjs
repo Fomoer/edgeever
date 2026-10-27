@@ -14,7 +14,7 @@ describe("editor save controls", () => {
     expect(editorSource).not.toContain('aria-label={t("editor.save")}');
   });
 
-  test("keeps Ctrl or Command S as the explicit save and sync action", () => {
+  test("keeps the platform primary modifier as the save and sync shortcut", () => {
     expect(helperSource).toContain('saveAndSync: { key: "s", ctrlOrMeta: true');
     expect(workspaceSource).toContain('action === "saveAndSync"');
     expect(workspaceSource).toContain("setNoteSaveAndSyncToken((value) => value + 1)");

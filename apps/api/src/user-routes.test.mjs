@@ -504,11 +504,30 @@ describe("instance user management with a real database", () => {
 
     expect(response.status).toBe(200);
     const usage = await response.json();
-    expect(usage.summary).toEqual({ totalCount: 3, totalBytes: 1320, imageCount: 2, attachmentCount: 1 });
+    // The owner's first authenticated request also writes the installation example files.
+    const seeded = instance.sqlite.query(
+      `SELECT COUNT(*) AS totalCount,
+              COALESCE(SUM(byte_size), 0) AS totalBytes,
+              COALESCE(SUM(CASE WHEN kind = 'image' THEN 1 ELSE 0 END), 0) AS imageCount,
+              COALESCE(SUM(CASE WHEN kind = 'attachment' THEN 1 ELSE 0 END), 0) AS attachmentCount
+       FROM resources
+       WHERE is_deleted = 0 AND object_key LIKE 'examples/%'`,
+    ).get();
+    expect(usage.summary).toEqual({
+      totalCount: 3 + seeded.totalCount,
+      totalBytes: 1320 + seeded.totalBytes,
+      imageCount: 2 + seeded.imageCount,
+      attachmentCount: 1 + seeded.attachmentCount,
+    });
     const byUser = Object.fromEntries(usage.users.map((entry) => [entry.userId, entry.summary]));
     expect(byUser).toEqual({
       [member.id]: { totalCount: 2, totalBytes: 320, imageCount: 1, attachmentCount: 1 },
-      usr_owner: { totalCount: 1, totalBytes: 1000, imageCount: 1, attachmentCount: 0 },
+      usr_owner: {
+        totalCount: 1 + seeded.totalCount,
+        totalBytes: 1000 + seeded.totalBytes,
+        imageCount: 1 + seeded.imageCount,
+        attachmentCount: seeded.attachmentCount,
+      },
     });
   });
 });

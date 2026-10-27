@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Contrast,
   Palette,
+  RotateCcw,
   Search,
   Shapes,
 } from "lucide-react";
@@ -20,7 +21,6 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -96,6 +96,7 @@ export const NotebookAppearanceDialog = ({
       }}
     >
       <DialogContent
+        aria-describedby={undefined}
         className="max-h-[90dvh] w-[calc(100%-2rem)] max-w-[520px] gap-0 overflow-hidden p-0"
         showCloseButton={!saving}
         onEscapeKeyDown={(event) => {
@@ -110,9 +111,6 @@ export const NotebookAppearanceDialog = ({
             <Palette className="h-5 w-5 text-slate-700" />
             {t("notebookAppearance.title")}
           </DialogTitle>
-          <DialogDescription className="pt-1 leading-5">
-            {t("notebookAppearance.description")}
-          </DialogDescription>
         </DialogHeader>
         <form onSubmit={save} className="min-h-0 overflow-y-auto">
           <fieldset
@@ -386,6 +384,7 @@ export const NotebookAppearanceDialog = ({
                 setRowInverted(false);
               }}
             >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
               {t("notebookAppearance.reset")}
             </Button>
             <div className="flex justify-end gap-2">
@@ -400,9 +399,10 @@ export const NotebookAppearanceDialog = ({
               <Button
                 type="submit"
                 variant="solid"
+                className="border-slate-900 bg-slate-900 text-white hover:border-slate-800 hover:bg-slate-800 dark:border-slate-200 dark:bg-slate-200 dark:text-slate-900 dark:hover:border-slate-100 dark:hover:bg-slate-100"
                 disabled={saving || !validColor || !validTextColor}
               >
-                {saving ? t("common.processing") : t("common.save")}
+                {saving ? t("common.processing") : t("notebookAppearance.confirm")}
               </Button>
             </div>
           </DialogFooter>

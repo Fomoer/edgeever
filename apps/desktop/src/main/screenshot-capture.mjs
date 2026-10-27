@@ -7,7 +7,11 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFileCallback);
 const MAC_SCREENCAPTURE = "/usr/sbin/screencapture";
 
-export const macScreencaptureArgs = (outputPath) => ["-x", "-t", "png", outputPath];
+// -i opens the system selection UI (drag a region, Space for a window, Esc cancels).
+// -x keeps the capture silent. The temp path receives only the chosen area.
+export const macScreencaptureArgs = (outputPath) => ["-i", "-x", "-t", "png", outputPath];
+
+export const MIN_REGION_SELECTION_PX = 8;
 
 export const normalizeIpcBytes = (value) => {
   if (value instanceof Uint8Array) {
@@ -69,6 +73,13 @@ export const createScreenshotCaptureGuard = ({
         inFlight = false;
         cooldownTimer = null;
       }, cooldownMs);
+    },
+    // A region selection outlives the tray's double-click, so the next capture
+    // can start as soon as the user finishes instead of waiting out the cooldown.
+    release() {
+      if (cooldownTimer != null) cancel(cooldownTimer);
+      cooldownTimer = null;
+      inFlight = false;
     },
   };
 };
@@ -146,7 +157,61 @@ const matchCaptureSource = (sources, display) => {
   return sources.find((source) => source && String(source.display_id) === displayId) || sources[0];
 };
 
-export const captureDisplayScreenshot = async ({ desktopCapturer, screen }) => {
+export const clampRegionSelection = (selection, displaySize, minimum = MIN_REGION_SELECTION_PX) => {
+  if (!selection || typeof selection !== "object") return null;
+  if (selection.full === true) return { full: true };
+  const width = Number(selection.width);
+  const height = Number(selection.height);
+  const x = Number(selection.x);
+  const y = Number(selection.y);
+  const displayWidth = Number(displaySize?.width);
+  const displayHeight = Number(displaySize?.height);
+  if (![x, y, width, height, displayWidth, displayHeight].every(Number.isFinite)) return null;
+  if (displayWidth <= 0 || displayHeight <= 0 || width < minimum || height < minimum) return null;
+  const left = Math.max(0, Math.min(x, displayWidth));
+  const top = Math.max(0, Math.min(y, displayHeight));
+  const right = Math.max(left, Math.min(x + width, displayWidth));
+  const bottom = Math.max(top, Math.min(y + height, displayHeight));
+  if (right - left < minimum || bottom - top < minimum) return null;
+  return { x: left, y: top, width: right - left, height: bottom - top };
+};
+
+export const cropRectForDisplay = ({ selection, displaySize, imageSize }) => {
+  if (!selection || selection.full) return null;
+  const displayWidth = Number(displaySize?.width);
+  const displayHeight = Number(displaySize?.height);
+  const imageWidth = Number(imageSize?.width);
+  const imageHeight = Number(imageSize?.height);
+  if (![displayWidth, displayHeight, imageWidth, imageHeight].every((value) => value > 0)) return null;
+  if (![selection.x, selection.y, selection.width, selection.height].every(Number.isFinite)) return null;
+  const scaleX = imageWidth / displayWidth;
+  const scaleY = imageHeight / displayHeight;
+  let x = Math.round(selection.x * scaleX);
+  let y = Math.round(selection.y * scaleY);
+  let width = Math.round(selection.width * scaleX);
+  let height = Math.round(selection.height * scaleY);
+  x = Math.max(0, Math.min(x, imageWidth - 1));
+  y = Math.max(0, Math.min(y, imageHeight - 1));
+  width = Math.max(1, Math.min(width, imageWidth - x));
+  height = Math.max(1, Math.min(height, imageHeight - y));
+  if (width < 2 || height < 2) return null;
+  return { x, y, width, height };
+};
+
+export const pngBytesForRegion = (image, display, selection) => {
+  if (!image || image.isEmpty?.()) return null;
+  const imageSize = image.getSize?.();
+  if (!imageSize?.width || !imageSize?.height) return null;
+  if (selection?.full) return toPngBytes(image);
+  const rect = cropRectForDisplay({ selection, displaySize: display?.size, imageSize });
+  if (!rect) return null;
+  if (rect.x === 0 && rect.y === 0 && rect.width === imageSize.width && rect.height === imageSize.height) {
+    return toPngBytes(image);
+  }
+  return toPngBytes(image.crop?.(rect));
+};
+
+export const captureCursorDisplayImage = async ({ desktopCapturer, screen }) => {
   const point = screen.getCursorScreenPoint();
   const display = screen.getDisplayNearestPoint(point);
   const thumbnailSize = displayThumbnailSize(display);
@@ -156,13 +221,27 @@ export const captureDisplayScreenshot = async ({ desktopCapturer, screen }) => {
   });
   const source = matchCaptureSource(sources, display);
   const thumbnail = source?.thumbnail;
-  if (!thumbnail || thumbnail.isEmpty()) {
-    throw new Error("Screen capture is unavailable");
-  }
+  if (!thumbnail || thumbnail.isEmpty()) return null;
+  return { display, image: thumbnail };
+};
 
-  const screenshotBytes = toPngBytes(thumbnail);
+export const captureDisplayScreenshot = async (input) => {
+  const captured = await captureCursorDisplayImage(input);
+  if (!captured) throw new Error("Screen capture is unavailable");
+  const screenshotBytes = toPngBytes(captured.image);
   if (!screenshotBytes) throw new Error("Screen capture is unavailable");
   return screenshotBytes;
+};
+
+const screenshotResult = (locale, now, bytes) => {
+  const capturedAt = now ? new Date(now) : new Date();
+  return {
+    captureId: screenshotCaptureId(capturedAt),
+    bytes: normalizeIpcBytes(bytes),
+    name: screenshotFileName(capturedAt),
+    type: "image/png",
+    title: screenshotNoteTitle(locale, capturedAt),
+  };
 };
 
 export const captureScreenToNote = async (input) => {
@@ -170,14 +249,21 @@ export const captureScreenToNote = async (input) => {
     ? await captureMacScreenScreenshot(input)
     : await captureDisplayScreenshot(input);
   if (!bytes || bytes.byteLength === 0) return null;
-  const capturedAt = input.now ? new Date(input.now) : new Date();
-  return {
-    captureId: screenshotCaptureId(capturedAt),
-    bytes: normalizeIpcBytes(bytes),
-    name: screenshotFileName(capturedAt),
-    type: "image/png",
-    title: screenshotNoteTitle(input.locale, capturedAt),
-  };
+  return screenshotResult(input.locale, input.now, bytes);
+};
+
+// Windows and Linux have no system region tool that returns a file. Freeze the
+// display under the cursor, let the caller collect a selection, then crop.
+export const captureRegionScreenToNote = async (input) => {
+  const captured = await captureCursorDisplayImage(input);
+  if (!captured) throw new Error("Screen capture is unavailable");
+  const choice = await input.selectRegion(captured);
+  if (!choice) return null;
+  const selection = clampRegionSelection(choice, captured.display?.size);
+  if (!selection) return null;
+  const bytes = pngBytesForRegion(captured.image, captured.display, selection);
+  if (!bytes) throw new Error("Screen capture is unavailable");
+  return screenshotResult(input.locale, input.now, bytes);
 };
 
 export const writeScreenshotTempPath = (root = tmpdir()) =>

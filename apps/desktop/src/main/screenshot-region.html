@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>EdgeEver</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #111;
+      cursor: crosshair;
+      user-select: none;
+    }
+    img {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      pointer-events: none;
+    }
+    #shade {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      pointer-events: none;
+    }
+    #selection {
+      position: fixed;
+      display: none;
+      box-sizing: border-box;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45);
+      pointer-events: none;
+    }
+    #hint, #size {
+      position: fixed;
+      pointer-events: none;
+      color: #fff;
+      background: rgba(7, 19, 11, 0.88);
+      font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    #hint {
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: min(720px, calc(100% - 32px));
+      padding: 8px 14px;
+      border-radius: 16px;
+      text-align: center;
+    }
+    #size {
+      display: none;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <img id="shot" alt="">
+  <div id="shade"></div>
+  <div id="selection"></div>
+  <div id="hint"></div>
+  <div id="size"></div>
+  <script>
+    const api = window.edgeeverScreenshotRegion;
+    const shot = document.getElementById("shot");
+    const shade = document.getElementById("shade");
+    const selectionEl = document.getElementById("selection");
+    const hint = document.getElementById("hint");
+    const sizeEl = document.getElementById("size");
+    const minimum = 8;
+    let displayWidth = 1;
+    let displayHeight = 1;
+    let dragging = false;
+    let start = null;
+
+    const toDisplayPoint = (event) => {
+      const viewWidth = window.innerWidth || 1;
+      const viewHeight = window.innerHeight || 1;
+      return {
+        x: Math.max(0, Math.min(displayWidth, event.clientX * displayWidth / viewWidth)),
+        y: Math.max(0, Math.min(displayHeight, event.clientY * displayHeight / viewHeight)),
+      };
+    };
+
+    const paint = (end) => {
+      const x = Math.min(start.x, end.x);
+      const y = Math.min(start.y, end.y);
+      const width = Math.abs(end.x - start.x);
+      const height = Math.abs(end.y - start.y);
+      const viewWidth = window.innerWidth || 1;
+      const viewHeight = window.innerHeight || 1;
+      const left = x * viewWidth / displayWidth;
+      const top = y * viewHeight / displayHeight;
+      const viewSelectionWidth = width * viewWidth / displayWidth;
+      const viewSelectionHeight = height * viewHeight / displayHeight;
+      selectionEl.style.display = "block";
+      selectionEl.style.left = left + "px";
+      selectionEl.style.top = top + "px";
+      selectionEl.style.width = viewSelectionWidth + "px";
+      selectionEl.style.height = viewSelectionHeight + "px";
+      shade.style.display = "none";
+      sizeEl.style.display = "block";
+      sizeEl.textContent = Math.round(width) + " × " + Math.round(height);
+      sizeEl.style.left = Math.max(8, Math.min(viewWidth - 88, left + viewSelectionWidth + 8)) + "px";
+      sizeEl.style.top = Math.max(8, Math.min(viewHeight - 28, top + viewSelectionHeight + 8)) + "px";
+    };
+
+    if (api) {
+      api.onStart((payload) => {
+        displayWidth = Number(payload.displayWidth) || window.innerWidth || 1;
+        displayHeight = Number(payload.displayHeight) || window.innerHeight || 1;
+        shot.src = payload.imageUrl || "";
+        hint.textContent = [payload.hint, payload.cancel, payload.full].filter(Boolean).join("  ·  ");
+      });
+    }
+
+    window.addEventListener("mousedown", (event) => {
+      if (event.button !== 0 || !displayWidth || !displayHeight) return;
+      event.preventDefault();
+      dragging = true;
+      start = toDisplayPoint(event);
+    });
+
+    window.addEventListener("mousemove", (event) => {
+      if (!dragging || !start) return;
+      paint(toDisplayPoint(event));
+    });
+
+    window.addEventListener("mouseup", (event) => {
+      if (!dragging || !start || event.button !== 0) return;
+      dragging = false;
+      const end = toDisplayPoint(event);
+      const width = Math.abs(end.x - start.x);
+      const height = Math.abs(end.y - start.y);
+      if (width < minimum || height < minimum) return;
+      api?.complete({
+        x: Math.min(start.x, end.x),
+        y: Math.min(start.y, end.y),
+        width,
+        height,
+      });
+    });
+
+    window.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      api?.complete({ full: true });
+    });
+
+    window.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      api?.cancel();
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      api?.cancel();
+    });
+  </script>
+</body>
+</html>

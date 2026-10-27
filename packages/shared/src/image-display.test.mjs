@@ -15,7 +15,8 @@ const readRepoFile = (relativePath) => readFileSync(new URL(relativePath, import
 describe("shared image display widths", () => {
   test("keeps the four editor presets stable across clients", () => {
     expect(DEFAULT_IMAGE_WIDTH_PERCENT).toBe(72);
-    expect(NEW_IMAGE_WIDTH_PERCENT).toBe(IMAGE_WIDTH_PRESETS[1].width);
+    expect(NEW_IMAGE_WIDTH_PERCENT).toBe(IMAGE_WIDTH_PRESETS.find((preset) => preset.id === "large").width);
+    expect(NEW_IMAGE_WIDTH_PERCENT).toBe(DEFAULT_IMAGE_WIDTH_PERCENT);
     expect(IMAGE_WIDTH_PRESETS.map(({ id, width }) => [id, width])).toEqual([
       ["small", 35],
       ["medium", 50],

@@ -89,6 +89,18 @@ describe("editor outline demo preference wiring", () => {
   });
 });
 
+describe("collapsed outline entry", () => {
+  test("pins the collapsed button to the editor pane instead of the scrolling note", () => {
+    const editorSource = readFileSync(new URL("../EditorPane.tsx", import.meta.url), "utf8");
+    const outlineSource = readFileSync(new URL("../EditorOutline.tsx", import.meta.url), "utf8");
+
+    expect(editorSource).toContain('data-editor-outline-anchor="collapsed"');
+    expect(editorSource).toContain("collapsedAnchor={collapsedOutlineAnchor}");
+    expect(outlineSource).toContain("createPortal(outline, collapsedAnchor)");
+    expect(outlineSource).not.toContain("absolute right-0 top-6");
+  });
+});
+
 
 test('document reset keeps reused image sources, releases removed media and clears undo history',async()=>{
  const {parseHTML}=await import('linkedom'),{Schema}=await import('@tiptap/pm/model'),{EditorView}=await import('@tiptap/pm/view'),{EditorState}=await import('@tiptap/pm/state'),{history,undoDepth}=await import('@tiptap/pm/history');

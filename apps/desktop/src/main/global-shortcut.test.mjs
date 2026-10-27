@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
+  formatGlobalShortcutForHumans,
   globalShortcutAccelerator,
+  globalShortcutAcceleratorsConflict,
   normalizeGlobalShortcutBinding,
+  parseStoredGlobalShortcuts,
   replaceGlobalShortcut,
   toggleMainWindow,
 } from "./global-shortcut.mjs";
@@ -13,10 +16,30 @@ describe("desktop global shortcut", () => {
   test("accepts safe key combinations and rejects single modifiers or unsupported keys", () => {
     expect(normalizeGlobalShortcutBinding(oldBinding, "win32")).toEqual(oldBinding);
     expect(globalShortcutAccelerator(oldBinding)).toBe("Control+Alt+W");
+    expect(formatGlobalShortcutForHumans(oldBinding, "win32")).toBe("Ctrl+Alt+W");
+    expect(formatGlobalShortcutForHumans(oldBinding, "darwin")).toBe("⌃⌥W");
     expect(normalizeGlobalShortcutBinding({ ...oldBinding, alt: false }, "win32")).toBeUndefined();
     expect(normalizeGlobalShortcutBinding({ ...oldBinding, key: "escape" }, "win32")).toBeUndefined();
     expect(normalizeGlobalShortcutBinding({ ...oldBinding, meta: true }, "linux")).toBeUndefined();
     expect(normalizeGlobalShortcutBinding(null, "win32")).toBeNull();
+  });
+
+  test("keeps an older window shortcut file and rejects a duplicate screenshot chord", () => {
+    expect(parseStoredGlobalShortcuts({ binding: oldBinding }, "win32")).toEqual({
+      binding: oldBinding,
+      screenshot: null,
+    });
+    expect(parseStoredGlobalShortcuts({
+      binding: oldBinding,
+      screenshot: { ...oldBinding, key: "a" },
+    }, "win32")).toEqual({
+      binding: oldBinding,
+      screenshot: { ...oldBinding, key: "a" },
+    });
+    expect(parseStoredGlobalShortcuts({ binding: { ...oldBinding, key: "escape" } }, "win32").binding).toBeNull();
+    expect(globalShortcutAcceleratorsConflict(oldBinding, { ...oldBinding })).toBe(true);
+    expect(globalShortcutAcceleratorsConflict(oldBinding, newBinding)).toBe(false);
+    expect(globalShortcutAcceleratorsConflict(null, oldBinding)).toBe(false);
   });
 
   test("shows a background window and hides only a focused window", () => {

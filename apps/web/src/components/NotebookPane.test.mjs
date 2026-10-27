@@ -113,6 +113,25 @@ describe("NotebookPane tree expansion persistence", () => {
     expect(treeItemSource).not.toContain("const [open, setOpen] = useState(true)");
     expect(treeItemSource).not.toContain("if (hasSelectedDescendant) {");
   });
+
+  test("lets the notebooks heading collapse the list without touching each branch", () => {
+    const catalogs = ["en-US", "zh-CN", "ja", "pl", "ru"].map((locale) =>
+      readFileSync(new URL(`../../../../packages/shared/src/i18n/${locale}.ts`, import.meta.url), "utf8"),
+    );
+
+    expect(source).toContain("readNotebookSectionCollapsedPreference");
+    expect(source).toContain("writeNotebookSectionCollapsedPreference(notebookSectionCollapsed)");
+    expect(source).toContain("data-notebook-section-toggle");
+    expect(source).toContain('t(notebookSectionCollapsed ? "notebookPane.expandNotebooks" : "notebookPane.collapseNotebooks")');
+    expect(source).toContain("{notebookSectionCollapsed ? null : isLoading ? (");
+    expect(source).toContain("setNotebookSectionCollapsed(false)");
+    expect(source).toContain("collapsible={!isLoading && tree.length > 0}");
+
+    for (const catalog of catalogs) {
+      expect(catalog).toContain("collapseNotebooks:");
+      expect(catalog).toContain("expandNotebooks:");
+    }
+  });
 });
 
 describe("NotebookPane client downloads", () => {

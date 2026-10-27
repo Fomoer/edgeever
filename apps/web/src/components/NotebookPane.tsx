@@ -57,8 +57,10 @@ import {
   getNotebookSortOptions,
   getNotebookSortComparator,
   hasEdgeEverDragData,
+  readNotebookSectionCollapsedPreference,
   readNotebookTreeCollapsedIdsPreference,
   readNotebookSortPreference,
+  writeNotebookSectionCollapsedPreference,
   writeNotebookTreeCollapsedIdsPreference,
   writeNotebookSortPreference,
 } from "@/lib/app-helpers";
@@ -234,12 +236,67 @@ const SidebarTrashShortcut = ({
   );
 };
 
-const SidebarSectionLabel = ({ icon, label }: { icon: ReactNode; label: string }) => (
-  <div className="flex h-9 items-center gap-3 px-3 text-xs font-medium leading-none tracking-wide text-slate-500">
-    <span className="flex h-4 w-4 shrink-0 items-center justify-center">{icon}</span>
-    <span className="min-w-0 flex-1 truncate">{label}</span>
-  </div>
-);
+const SidebarSectionLabel = ({
+  icon,
+  label,
+  collapsed = false,
+  collapsible = false,
+  onToggle,
+  toggleLabel,
+}: {
+  icon: ReactNode;
+  label: string;
+  collapsed?: boolean;
+  collapsible?: boolean;
+  onToggle?: () => void;
+  toggleLabel?: string;
+}) => {
+  const content = (
+    <>
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center">{icon}</span>
+      <span className="flex min-w-0 items-center gap-1">
+        <span className="truncate">{label}</span>
+        {collapsible ? (
+          <ChevronDown
+            className={cn(
+              "h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-150 ease-out",
+              collapsed ? "-rotate-90" : "rotate-0",
+            )}
+            aria-hidden="true"
+          />
+        ) : null}
+      </span>
+    </>
+  );
+  const className = "flex h-9 min-w-0 flex-1 items-center gap-3 rounded-md px-3 text-left text-xs font-medium leading-none tracking-wide text-slate-500";
+
+  if (!collapsible || !onToggle || !toggleLabel) {
+    return <div className={className}>{content}</div>;
+  }
+
+  return (
+    <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            className={cn(
+              className,
+              "transition-colors hover:bg-slate-50 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70",
+            )}
+            type="button"
+            data-notebook-section-toggle
+            aria-expanded={!collapsed}
+            aria-label={toggleLabel}
+            onClick={onToggle}
+          >
+            {content}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{toggleLabel}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 const SidebarCollapseButton = ({
   collapsed,
@@ -564,6 +621,7 @@ export const NotebookPane = ({
   const [expandSiblingsRequest, setExpandSiblingsRequest] = useState<{ parentId: string | null; token: number } | null>(null);
   const [notebookSortMode, setNotebookSortMode] = useState<NotebookSortMode>(readNotebookSortPreference);
   const [collapsedNotebookIds, setCollapsedNotebookIds] = useState<Set<string>>(readNotebookTreeCollapsedIdsPreference);
+  const [notebookSectionCollapsed, setNotebookSectionCollapsed] = useState(readNotebookSectionCollapsedPreference);
 
   const handleMoveNotebook = useCallback((notebookId: string, targetNotebookId: string, position: NotebookDropPosition) => {
     setNotebookSortMode("custom");
@@ -652,6 +710,19 @@ export const NotebookPane = ({
     writeNotebookTreeCollapsedIdsPreference(collapsedNotebookIds);
   }, [collapsedNotebookIds]);
 
+  useEffect(() => {
+    writeNotebookSectionCollapsedPreference(notebookSectionCollapsed);
+  }, [notebookSectionCollapsed]);
+
+  const handleCreateRootNotebook = useCallback(() => {
+    setNotebookSectionCollapsed(false);
+    onCreateNotebook(null);
+  }, [onCreateNotebook]);
+
+  const handleToggleNotebookSection = useCallback(() => {
+    setNotebookSectionCollapsed((collapsed) => !collapsed);
+  }, []);
+
   const handleNotebookOpenChange = useCallback((notebookId: string, open: boolean) => {
     setCollapsedNotebookIds((current) => {
       if (current.has(notebookId) === !open) {
@@ -694,7 +765,7 @@ export const NotebookPane = ({
           <Button size="icon" variant="ghost" title={t("notebookPane.backToList")} aria-label={t("notebookPane.backToList")} onClick={onBackToList}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" title={t("notebookPane.newNotebook")} aria-label={t("notebookPane.newNotebook")} onClick={() => onCreateNotebook(null)}>
+          <Button size="icon" variant="ghost" title={t("notebookPane.newNotebook")} aria-label={t("notebookPane.newNotebook")} onClick={handleCreateRootNotebook}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -803,14 +874,21 @@ export const NotebookPane = ({
         </nav>
 
         <div className="group mb-2 flex items-center justify-between gap-2">
-          <SidebarSectionLabel icon={<NotebookIcon className="h-4 w-4" />} label={t("notebookPane.notebooks")} />
+          <SidebarSectionLabel
+            icon={<NotebookIcon className="h-4 w-4" />}
+            label={t("notebookPane.notebooks")}
+            collapsed={notebookSectionCollapsed}
+            collapsible={!isLoading && tree.length > 0}
+            onToggle={handleToggleNotebookSection}
+            toggleLabel={t(notebookSectionCollapsed ? "notebookPane.expandNotebooks" : "notebookPane.collapseNotebooks")}
+          />
           <div className="flex items-center gap-1 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
             <button
               className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
               type="button"
               title={t("notebookPane.newNotebook")}
               aria-label={t("notebookPane.newNotebook")}
-              onClick={() => onCreateNotebook(null)}
+              onClick={handleCreateRootNotebook}
             >
               <BookPlus className="h-3.5 w-3.5" />
             </button>
@@ -848,7 +926,7 @@ export const NotebookPane = ({
           </div>
         </div>
 
-        {isLoading ? (
+        {notebookSectionCollapsed ? null : isLoading ? (
           <div className="mb-4 px-2 py-3 text-sm text-slate-500">{t("notebookPane.loading")}</div>
         ) : (
           <div className="mb-4 space-y-1" data-notebook-tree>

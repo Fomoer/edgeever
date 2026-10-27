@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Laptop, MonitorSmartphone, Pencil, Smartphone, Tablet, X } from "lucide-react";
+import { Check, Laptop, MonitorSmartphone, Pencil, Smartphone, Tablet, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -162,7 +162,7 @@ export const LoginDevicesCard = ({ authRequired, isLoggingOut, onLogout }: Login
                           <p className={SETTINGS_ITEM_TITLE_CLASSNAME}>{session.label || t(`loginDevices.${deviceKind}`)}</p>
                         )}
                         {session.isCurrent ? (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-700">
+                          <span className="inline-flex shrink-0 items-center rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700">
                             {t("loginDevices.current")}
                           </span>
                         ) : null}
@@ -204,16 +204,19 @@ export const LoginDevicesCard = ({ authRequired, isLoggingOut, onLogout }: Login
                         disabled={isLoggingOut}
                         onClick={onLogout}
                       >
-                        {isLoggingOut ? t("session.loggingOut") : t("loginDevices.revokeDevice")}
+                        {isLoggingOut ? t("session.loggingOut") : t("loginDevices.revokeCurrent")}
                       </Button>
                     ) : (
                       <Button
-                        size="sm"
-                        variant="danger"
+                        size="icon"
+                        variant="ghost"
+                        className="text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                        title={t("loginDevices.revokeDevice")}
+                        aria-label={t("loginDevices.revokeDevice")}
                         disabled={revokeMutation.isPending}
                         onClick={() => setRevokeTarget({ type: "session", sessionId: session.id })}
                       >
-                        {t("loginDevices.revokeDevice")}
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                     </div>
