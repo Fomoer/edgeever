@@ -103,6 +103,16 @@ describe("desktop release workflow", () => {
     expect(step("Verify packaged macOS private protocol file flows")).toContain("verify:desktop-protocol-e2e");
   });
 
+  test("limits the Apple HTTP/3 workaround to hosted Intel packaging", () => {
+    const workaround = step("Use TCP for Apple notarization tickets on Intel runners");
+    expect(workaround).toContain("if: matrix.arch == 'x64' && runner.environment == 'github-hosted'");
+    expect(workaround).toContain("block return out quick proto udp from any to any port 443");
+    expect(workaround).toContain("sudo pfctl -f -");
+    expect(workaround).toContain("sudo pfctl -E");
+    expect(workflow.indexOf(workaround)).toBeLessThan(workflow.indexOf("      - name: Package desktop installer\n"));
+    expect(workflow).toContain("Verify packaged macOS cross-version startup");
+  });
+
   test("reports timings after builds without instrumenting native build steps", () => {
     expect(workflow).toContain("name: Report desktop build timings");
     expect(workflow).toContain("--platform desktop");

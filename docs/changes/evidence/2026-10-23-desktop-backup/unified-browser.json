@@ -1,0 +1,62 @@
+{
+  "scope": "Real React components through a controlled desktop bridge; no user files or instance writes.",
+  "passed": [
+    "manual timestamp default has no UUID",
+    "cancel sends no run",
+    "Enter submits named plain archive",
+    "name collision remains in dialog with retry",
+    "encrypted password confirmation blocks mismatch",
+    "one-off encryption preserves automatic configuration",
+    "delete confirms selected filename",
+    "delete cancel sends no request",
+    "delete failure keeps row and displays error",
+    "successful deletion removes only selected row",
+    "history restore selects without native picker",
+    "only one restore dialog",
+    "wrong password remains inline outside backup status",
+    "retry reaches target confirmation",
+    "confirm starts restore and completion closes dialog",
+    "external-file entry uses picker",
+    "Escape cancels checking",
+    "last-success time survives check failure",
+    "automatic settings retain frequency/encryption/password save",
+    "manual encryption defaults to saved settings",
+    "account change closes manual dialog"
+  ],
+  "screenshots": [
+    "unified-unchanged.png",
+    "unified-manual.png",
+    "unified-restore.png",
+    "unified-failed.png"
+  ],
+  "currentCalls": [
+    {
+      "action": "status"
+    },
+    {
+      "action": "status"
+    },
+    {
+      "action": "select-history",
+      "name": "EdgeEver-2026-10-25_110000.edgeever.enc"
+    },
+    {
+      "action": "prepare-import"
+    },
+    {
+      "action": "confirm-import"
+    },
+    {
+      "action": "choose-import"
+    },
+    {
+      "action": "prepare-import"
+    },
+    {
+      "action": "cancel"
+    },
+    {
+      "action": "save"
+    }
+  ]
+}

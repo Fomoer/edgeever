@@ -7,7 +7,7 @@ import {
   type MobileAttachmentTarget,
   type MobileResourceTarget,
 } from "../lib/mobile-attachments";
-import { useMobileLocale } from "../lib/mobile-locale";
+import { useMobileLocale, getMobileCatalog } from "../lib/mobile-locale";
 import { useMobileTheme } from "../lib/mobile-theme";
 
 type MobileResourceActionsProps = {
@@ -147,7 +147,7 @@ export const MobileAttachmentCard = ({
   return (
     <View style={[styles.card, dark && styles.cardDark]}>
       <Pressable
-        accessibilityHint={resolvedLocale !== "zh-CN" ? "Opens the system share sheet for this attachment" : "打开系统分享面板分享此附件"}
+        accessibilityHint={getMobileCatalog(resolvedLocale).mobile.resources.shareAttachmentHint}
         accessibilityLabel={target.filename}
         accessibilityRole="button"
         disabled={busy}
@@ -170,7 +170,7 @@ export const MobileAttachmentCard = ({
         </View>
       </Pressable>
       <Pressable
-        accessibilityLabel={resolvedLocale !== "zh-CN" ? "Attachment actions" : "附件操作"}
+        accessibilityLabel={getMobileCatalog(resolvedLocale).mobile.resources.attachmentActions}
         accessibilityRole="button"
         disabled={busy}
         onPress={onActions}

@@ -15,7 +15,12 @@ const notebook = (id: string, name: string, parentId: string | null = null): Not
   name,
   slug: id,
   icon: "notebook",
-  color: null,
+  color: "#2563eb",
+  textColor: "#123456",
+  colorTarget: "both",
+  isBold: true,
+  iconInverted: true,
+  rowInverted: true,
   sortOrder: parentId ? 20 : 10,
   memoCount: 1,
   lastMemoUpdatedAt: "2026-07-14T00:00:00.000Z",
@@ -154,6 +159,10 @@ describe("EdgeEver ZIP", () => {
     expect(backup.manifest.format).toBe("edgeever-zip");
     expect(backup.manifest.formatVersion).toBe(2);
     expect(backup.manifest.counts).toEqual({ notebooks: 2, memos: 1, revisions: 1, resources: 1, prompts: 1 });
+    expect(backup.notebooks.find((item) => item.id === "nb_child")).toMatchObject({
+      color: "#2563eb", textColor: "#123456", colorTarget: "both",
+      isBold: true, iconInverted: true, rowInverted: true,
+    });
     expect(backup.prompts).toEqual([prompt]);
     expect(backup.notebooks.map((item) => item.id)).toEqual(["nb_root", "nb_child"]);
     expect(backup.memos[0].memo.contentMarkdown).toBe(memo.contentMarkdown);

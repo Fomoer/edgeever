@@ -149,6 +149,58 @@ export const copyImageUrlToClipboard = async (url: string): Promise<boolean> => 
   }
 };
 
+export const copyResourceToClipboard = async ({
+  load,
+  filename,
+  asImage,
+}: {
+  load: () => Promise<Response>;
+  filename: string;
+  asImage: boolean;
+}): Promise<boolean> => {
+  const desktop = typeof window !== "undefined" ? window.edgeeverDesktop : undefined;
+  if (desktop?.copyImage || desktop?.copyFile) {
+    try {
+      const response = await load();
+      if (!response.ok) return false;
+      const blob = await response.blob();
+      if (asImage) return await copyImageBlobToClipboard(blob);
+      if (!desktop.copyFile) return false;
+      return await desktop.copyFile(new Uint8Array(await blob.arrayBuffer()), filename || "attachment");
+    } catch {
+      return false;
+    }
+  }
+
+  if (!asImage || typeof window === "undefined" || !navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+    return false;
+  }
+
+  try {
+    // Safari keeps the click gesture only when write() runs now and the
+    // ClipboardItem payload is still a Promise. Fetch and PNG conversion stay inside it.
+    const pngPromise = load()
+      .then((response) => {
+        if (!response.ok) throw new Error("Resource fetch failed");
+        return response.blob();
+      })
+      .then((blob) => toPngBlob(blob))
+      .then((png) => {
+        if (!png) throw new Error("PNG conversion failed");
+        return png;
+      });
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "image/png": pngPromise,
+      }),
+    ]);
+    return true;
+  } catch (error) {
+    console.warn("Failed to copy resource to clipboard:", error);
+    return false;
+  }
+};
+
 export const copyImageBlobToClipboard = async (blob: Blob): Promise<boolean> => {
   const copyImage = typeof window !== "undefined" ? window.edgeeverDesktop?.copyImage : undefined;
   if (copyImage) {

@@ -2,6 +2,17 @@ import { expect, test } from "bun:test";
 import { parseHTML } from "linkedom";
 import { prepareNoteImageContent } from "./note-image-content";
 
+test("removes the whole unified image panel from exports without removing the image", () => {
+  const { document } = parseHTML('<div id="source"><figure class="edgeever-image-node"><img src="photo.png"><div class="edgeever-image-panel"><div class="edgeever-image-controls"><button>Small</button></div><div class="edgeever-image-resource-actions"><div data-edgeever-resource-menu><button>Download</button></div></div></div></figure></div>');
+  const source = document.querySelector("#source");
+  const clone = source.cloneNode(true);
+  prepareNoteImageContent(clone);
+  expect(clone.querySelector(".edgeever-image-panel")).toBeNull();
+  expect(clone.querySelector("[data-edgeever-resource-menu]")).toBeNull();
+  expect(clone.querySelector("img").getAttribute("src")).toBe("photo.png");
+  expect(source.querySelector(".edgeever-image-panel")).not.toBeNull();
+});
+
 test("reflows wide labelled tables without dropping values or changing the source", () => {
   const { document } = parseHTML(`<div id="source"><div class="tableWrapper" style="width:1800px;overflow:auto"><table style="min-width:1800px"><colgroup><col width="300"></colgroup><tbody><tr>${[1,2,3,4,5,6].map(n => `<th>Field ${n}</th>`).join("")}</tr><tr>${[1,2,3,4,5,6].map(n => `<td style="width:300px"><p><strong>Value ${n}</strong></p></td>`).join("")}</tr></tbody></table></div></div>`);
   const source = document.querySelector("#source");

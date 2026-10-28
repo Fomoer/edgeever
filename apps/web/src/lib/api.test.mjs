@@ -90,8 +90,46 @@ const {
   clearCachedDesktopSession,
   getConfiguredDesktopApiBaseUrl,
   getCachedDesktopSession,
+  getOrCreateClientDeviceId,
   saveDesktopApiBaseUrl,
 } = await import("./api.ts?desktop-ai-routing-test");
+
+describe("browser device identity", () => {
+  const deviceKey = "edgeever.web.device-id";
+
+  test("reuses the persisted browser device id across repeated calls", () => {
+    const previous = storage.get(deviceKey);
+    const previousCallCount = calls.length;
+    storage.delete(deviceKey);
+    try {
+      const first = getOrCreateClientDeviceId();
+      expect(first).toMatch(/^web-/);
+      expect(storage.get(deviceKey)).toBe(first);
+      expect(getOrCreateClientDeviceId()).toBe(first);
+    } finally {
+      calls.length = previousCallCount;
+      if (previous === undefined) storage.delete(deviceKey);
+      else storage.set(deviceKey, previous);
+    }
+  });
+
+  test("currently generates a different device id on each call when browser storage is blocked", () => {
+    const localStorage = window.localStorage;
+    window.localStorage = {
+      getItem: () => { throw new Error("Storage blocked"); },
+      setItem: () => { throw new Error("Storage blocked"); },
+    };
+    try {
+      const first = getOrCreateClientDeviceId();
+      const second = getOrCreateClientDeviceId();
+      expect(first).toMatch(/^web-/);
+      expect(second).toMatch(/^web-/);
+      expect(second).not.toBe(first);
+    } finally {
+      window.localStorage = localStorage;
+    }
+  });
+});
 
 describe("desktop AI routing", () => {
   test("an already cancelled generation does not prepare or contact the provider", async () => {

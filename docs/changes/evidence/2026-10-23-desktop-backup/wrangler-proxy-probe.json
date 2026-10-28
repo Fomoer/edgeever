@@ -1,0 +1,217 @@
+{
+  "checkedAt": "2026-10-26T09:26:59Z",
+  "scope": "Isolated dummy worker; no live instance requests or business data",
+  "wrangler": "4.112.0",
+  "results": [
+    {
+      "cadenceSeconds": 5,
+      "index": 1,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 9.48
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 2,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 30.84
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 3,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 14.78
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 4,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 37.46
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 5,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 18.67
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 6,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 16.27
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 7,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 15.95
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 8,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 34.54
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 9,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 12.29
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 10,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 40.45
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 11,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 13.72
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 12,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 30.88
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 13,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 16.69
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 14,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 16.37
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 15,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 37.01
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 16,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 18.66
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 17,
+      "status": 503,
+      "body": "Your worker restarted mid-request. Please try sending the request again. Only GET or HEAD requests are retried automatically.",
+      "elapsedMs": 21.64
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 18,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 29.09
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 19,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 13.29
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 20,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 15.48
+    },
+    {
+      "cadenceSeconds": 4,
+      "index": 1,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 15.5
+    },
+    {
+      "cadenceSeconds": 4,
+      "index": 2,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 15.31
+    },
+    {
+      "cadenceSeconds": 4,
+      "index": 3,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 20.44
+    },
+    {
+      "cadenceSeconds": 4,
+      "index": 4,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 17.89
+    },
+    {
+      "cadenceSeconds": 4,
+      "index": 5,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 21.57
+    },
+    {
+      "cadenceSeconds": 4,
+      "index": 6,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 17.84
+    },
+    {
+      "cadenceSeconds": 4,
+      "index": 7,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 19.36
+    },
+    {
+      "cadenceSeconds": 4,
+      "index": 8,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 19.14
+    },
+    {
+      "cadenceSeconds": 4,
+      "index": 9,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 21.05
+    },
+    {
+      "cadenceSeconds": 4,
+      "index": 10,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 20.54
+    }
+  ]
+}

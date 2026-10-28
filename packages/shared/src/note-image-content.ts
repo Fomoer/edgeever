@@ -2,7 +2,7 @@ import { parseImageWidth } from "./image-display";
 
 /** Prepare an export-only clone; never pass the live editor DOM here. */
 export const prepareNoteImageContent = (root: HTMLElement): void => {
-  root.querySelectorAll("button, .edgeever-image-controls, .edgeever-code-copy-button, .edgeever-image-size-controls, .edgeever-native-gallery-toolbar, .column-resize-handle").forEach(element => element.remove());
+  root.querySelectorAll("button, .edgeever-image-panel, .edgeever-image-controls, .edgeever-code-copy-button, .edgeever-image-size-controls, .edgeever-native-gallery-toolbar, .column-resize-handle").forEach(element => element.remove());
   root.querySelectorAll(".edgeever-native-gallery-content").forEach(content => content.replaceWith(...Array.from(content.childNodes)));
   const releaseDimensions = (element: HTMLElement) => {
     for (const property of ["width", "min-width", "max-width", "height", "min-height", "max-height", "overflow", "overflow-x", "overflow-y"]) element.style.removeProperty(property);

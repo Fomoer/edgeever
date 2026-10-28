@@ -16,9 +16,11 @@ import { createMarkdownImagePasteRule } from "@/lib/markdown-image-paste";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { isImageInGallery } from "./image-editing-context";
+import { createImageSelectionPlugin, imageSelectionKey } from "./image-selection";
 
 export type ImageMenuRequestDetail = {
   element: HTMLElement;
+  actionsElement: HTMLElement | null;
   url: string;
   filename: string;
   resourceId: string | null;
@@ -46,19 +48,22 @@ const ResizableImageNodeView = ({
   const { t } = useTranslation();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const actionsRef = useRef<HTMLDivElement | null>(null);
   const [previewWidth, setPreviewWidth] = useState<number | null>(null);
   const nodeWidth = parseImageWidth(node.attrs.width) ?? NEW_IMAGE_WIDTH_PERCENT;
   const width = previewWidth ?? nodeWidth;
   const explicitAlignment = parseImageAlignment(node.attrs.alignment);
   const alignment = explicitAlignment ?? "left";
-  const { editable, inGallery } = useEditorState({
+  const { editable, inGallery, explicitlySelected } = useEditorState({
     editor,
     selector: ({ editor: activeEditor }) => ({
       editable: activeEditor.isEditable,
       inGallery: isImageInGallery(activeEditor.state.doc, getPos()),
+      explicitlySelected: imageSelectionKey.getState(activeEditor.state) === getPos(),
     }),
   });
-  const showSizeControls = editable && selected && !inGallery;
+  const showImageControls = selected && explicitlySelected && !inGallery;
+  const showSizeControls = editable && showImageControls;
   const alt = typeof node.attrs.alt === "string" ? node.attrs.alt : "";
   const title = typeof node.attrs.title === "string" ? node.attrs.title : "";
   const src = typeof node.attrs.src === "string" ? node.attrs.src : "";
@@ -133,6 +138,7 @@ const ResizableImageNodeView = ({
     window.dispatchEvent(new CustomEvent<ImageMenuRequestDetail>(IMAGE_MENU_SHOW_EVENT, {
       detail: {
         element,
+        actionsElement: actionsRef.current,
         url: src,
         filename: title || alt || getAttachmentResourceId(src) || "image",
         resourceId: getAttachmentResourceId(src),
@@ -147,19 +153,55 @@ const ResizableImageNodeView = ({
   }, []);
 
   useEffect(() => {
-    if (showSizeControls) hideImageMenu();
-  }, [hideImageMenu, showSizeControls]);
+    if (!showImageControls) return;
+    requestImageMenu();
+    return hideImageMenu;
+  }, [hideImageMenu, requestImageMenu, showImageControls]);
+
+  useEffect(() => {
+    if (!showImageControls) return;
+    const dismiss = () => {
+      if (!editor.isDestroyed) editor.view.dispatch(editor.state.tr.setMeta(imageSelectionKey, null));
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !wrapperRef.current?.contains(event.target)) dismiss();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        dismiss();
+        editor.view.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [editor, showImageControls]);
+
+  const selectImage = () => {
+    if (inGallery) return;
+    const position = getPos();
+    if (typeof position !== "number") return;
+    editor.chain().focus().setNodeSelection(position).command(({ tr }) => {
+      tr.setMeta(imageSelectionKey, position);
+      return true;
+    }).run();
+  };
 
   const requestImagePreview = useCallback(() => {
     if (!src) return;
     hideImageMenu();
+    editor.view.dispatch(editor.state.tr.setMeta(imageSelectionKey, null));
     window.dispatchEvent(new CustomEvent<ImagePreviewRequestDetail>(IMAGE_PREVIEW_SHOW_EVENT, {
       detail: {
         url: src,
         alt: title || alt,
       },
     }));
-  }, [alt, hideImageMenu, src, title]);
+  }, [alt, editor, hideImageMenu, src, title]);
 
   const updateWidth = useCallback((nextWidth: number) => {
     if (!editor.isEditable || isImageInGallery(editor.state.doc, getPos())) return;
@@ -235,32 +277,28 @@ const ResizableImageNodeView = ({
     <NodeViewWrapper
       ref={wrapperRef}
       as="figure"
-      className={cn("edgeever-image-node", selected && "is-selected")}
+      className={cn("edgeever-image-node", showImageControls && "is-selected")}
       style={{ width: `${width}%`, ...(explicitAlignment ? imageAlignmentMargins(explicitAlignment) : {}) }}
       data-width={width}
       data-image-align={alignment}
-      onMouseEnter={showSizeControls ? undefined : requestImageMenu}
-      onMouseLeave={hideImageMenu}
+      onMouseLeave={inGallery ? hideImageMenu : undefined}
       onContextMenu={(event: MouseEvent<HTMLElement>) => {
         event.preventDefault();
-        requestImageMenu();
+        if (inGallery || showImageControls) requestImageMenu();
+        else selectImage();
       }}
     >
       <img
         ref={imageRef}
         src={src}
         alt={alt}
-        title={title || undefined}
         draggable={false}
         referrerPolicy={getImageReferrerPolicy(src)}
         onClick={(event) => {
-          if (!editor.isEditable || isImageInGallery(editor.state.doc, getPos())) return;
-          const position = getPos();
-          if (typeof position !== "number") return;
           // A positioned figure does not occupy the full block wrapper. Select
           // its node explicitly instead of relying on coordinate hit testing.
           event.preventDefault();
-          editor.chain().focus().setNodeSelection(position).run();
+          selectImage();
         }}
         onDoubleClick={(event) => {
           event.preventDefault();
@@ -268,76 +306,81 @@ const ResizableImageNodeView = ({
           requestImagePreview();
         }}
       />
-      {showSizeControls && (
-        <div className="edgeever-image-controls" contentEditable={false} onMouseEnter={hideImageMenu}>
-          {previewButton}
-          <div className="edgeever-image-presets" aria-label={t("editor.imageScale")}>
-            {IMAGE_WIDTH_PRESETS.map((preset) => (
-              <button
-                key={preset.width}
-                type="button"
-                className={cn("edgeever-image-preset", width === preset.width && "is-active")}
-                aria-label={t(preset.labelKey)}
-                aria-pressed={width === preset.width}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => updateWidth(preset.width)}
-              >
-                <span>{t(preset.labelKey)}</span>
-              </button>
-            ))}
-          </div>
-          <TooltipProvider delayDuration={0} skipDelayDuration={0}>
-            <div className="edgeever-image-alignments" role="group" aria-label={t("editor.imageAlignment")}>
-              {([
-                { value: "left", Icon: AlignLeft },
-                { value: "center", Icon: AlignCenter },
-                { value: "right", Icon: AlignRight },
-              ] as const).map(({ value, Icon }) => (
-                <Tooltip key={value}>
+      {showImageControls && (
+        <div className="edgeever-image-panel" contentEditable={false} onMouseDown={(event) => event.preventDefault()}>
+          <div className="edgeever-image-controls">
+            {previewButton}
+            {showSizeControls && (<>
+              <div className="edgeever-image-presets" aria-label={t("editor.imageScale")}>
+                {IMAGE_WIDTH_PRESETS.map((preset) => (
+                  <button
+                    key={preset.width}
+                    type="button"
+                    className={cn("edgeever-image-preset", width === preset.width && "is-active")}
+                    aria-label={t(preset.labelKey)}
+                    aria-pressed={width === preset.width}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => updateWidth(preset.width)}
+                  >
+                    <span>{t(preset.labelKey)}</span>
+                  </button>
+                ))}
+              </div>
+              <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+                <div className="edgeever-image-alignments" role="group" aria-label={t("editor.imageAlignment")}>
+                  {([
+                    { value: "left", Icon: AlignLeft },
+                    { value: "center", Icon: AlignCenter },
+                    { value: "right", Icon: AlignRight },
+                  ] as const).map(({ value, Icon }) => (
+                    <Tooltip key={value}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className={cn("edgeever-image-alignment", alignment === value && "is-active")}
+                          aria-label={t(`editor.imageAlignments.${value}`)}
+                          aria-pressed={alignment === value}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => updateAlignment(value)}
+                        >
+                          <Icon aria-hidden="true" className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">{t(`editor.imageAlignments.${value}`)}</TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+              </TooltipProvider>
+              {canGroupAdjacentImages ? (
+                <button
+                  type="button"
+                  className="edgeever-image-preset"
+                  aria-label={t("editor.imageGallery.group")}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={groupAdjacentImages}
+                >
+                  <span>{t("editor.imageGallery.group")}</span>
+                </button>
+              ) : null}
+              <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+                <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className={cn("edgeever-image-alignment", alignment === value && "is-active")}
-                      aria-label={t(`editor.imageAlignments.${value}`)}
-                      aria-pressed={alignment === value}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => updateAlignment(value)}
-                    >
-                      <Icon aria-hidden="true" className="h-4 w-4" />
-                    </button>
+                      className="edgeever-image-resize-handle"
+                      aria-label={t("editor.resizeImage")}
+                      onPointerDown={startResize}
+                    />
                   </TooltipTrigger>
-                  <TooltipContent side="top">{t(`editor.imageAlignments.${value}`)}</TooltipContent>
+                  <TooltipContent side="top">{t("editor.resizeImage")}</TooltipContent>
                 </Tooltip>
-              ))}
-            </div>
-          </TooltipProvider>
-          {canGroupAdjacentImages ? (
-            <button
-              type="button"
-              className="edgeever-image-preset"
-              aria-label={t("editor.imageGallery.group")}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={groupAdjacentImages}
-            >
-              <span>{t("editor.imageGallery.group")}</span>
-            </button>
-          ) : null}
-          <TooltipProvider delayDuration={0} skipDelayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="edgeever-image-resize-handle"
-                  aria-label={t("editor.resizeImage")}
-                  onPointerDown={startResize}
-                />
-              </TooltipTrigger>
-              <TooltipContent side="top">{t("editor.resizeImage")}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              </TooltipProvider>
+            </>)}
+          </div>
+          <div ref={actionsRef} className="edgeever-image-resource-actions" />
         </div>
       )}
-      {!showSizeControls && (
+      {!showImageControls && (
         <div className="edgeever-image-preview-control" contentEditable={false}>
           {previewButton}
         </div>
@@ -347,6 +390,9 @@ const ResizableImageNodeView = ({
 };
 
 export const ResizableImage = Image.extend({
+  addProseMirrorPlugins() {
+    return [...(this.parent?.() ?? []), createImageSelectionPlugin()];
+  },
   addPasteRules() {
     return [createMarkdownImagePasteRule(this.type)];
   },

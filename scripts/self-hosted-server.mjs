@@ -6,6 +6,7 @@ import { hasBootstrapCredential } from "../apps/api/src/auth-bootstrap.ts";
 import { isUnauthenticatedAccessEnabled } from "../apps/api/src/auth-state.ts";
 import { fetchEdgeEverApp } from "../apps/api/src/index.ts";
 import { isNotebookSitePagePath, renderNotebookSitePage } from "../apps/api/src/notebook-site-page.ts";
+import { isPublicMemoSharePagePath, renderPublicMemoSharePage } from "../apps/api/src/share-page.ts";
 import { isPublicPagePath, PUBLIC_PAGE_HEADERS } from "../packages/shared/src/public-page-headers.ts";
 import { nodePublicFetch } from "../apps/api/src/node-public-network.ts";
 import { createSelfHostedStorageAdapter } from "../apps/api/src/self-hosted-storage-adapter.ts";
@@ -163,9 +164,13 @@ const server = Bun.serve({
   idleTimeout: config.idleTimeout,
   async fetch(request) {
     const pathname = new URL(request.url).pathname;
+    const loadAppShell = () => serveStatic(new Request(new URL("/index.html", request.url)));
     if (isNotebookSitePagePath(pathname)) {
-      return renderNotebookSitePage(request, storage.db,
-        () => serveStatic(new Request(new URL("/index.html", request.url))));
+      return renderNotebookSitePage(request, storage.db, loadAppShell);
+    }
+    if (isPublicMemoSharePagePath(pathname)) {
+      const page = await renderPublicMemoSharePage(request, storage.db, loadAppShell);
+      if (page) return page;
     }
     if (pathname.startsWith("/api/") || pathname === "/mcp" || pathname.startsWith("/mcp/")) {
       return fetchEdgeEverApp(request, env, executionContext);

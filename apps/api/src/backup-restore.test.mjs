@@ -381,6 +381,48 @@ describe("JSON backup and restore", () => {
     expect(target.sqlite.query("SELECT COUNT(*) AS count FROM memos WHERE id IN (?, ?)").get(valid.memo.id, plan.memo.id).count).toBe(0);
   });
 
+  for (const crossWorkspace of [false, true]) test(`rejects existing revision IDs owned by another note (${crossWorkspace ? "other workspace" : "same workspace"}) before any page writes`, async () => {
+    const source = installation();
+    await populate(source);
+    const backup = await exportBackup(source);
+    const target = installation();
+    await target.postJson("/api/v1/restores/json/notebooks", { notebooks: backup.notebooks });
+    const plan = backup.memos.find(({ revisions }) => revisions.length > 0);
+    const valid = backup.memos.find(({ memo, revisions }) => revisions.length === 0 && memo.id !== "memo_welcome");
+    if (crossWorkspace) target.sqlite.exec(`
+      INSERT INTO workspaces (id, name, is_personal) VALUES ('ws_other', 'Other', 1);
+      INSERT INTO notebooks (id, workspace_id, name, slug) VALUES ('nb_other', 'ws_other', 'Other', 'other');
+    `);
+    target.sqlite.query(`INSERT INTO memos (id, workspace_id, notebook_id, title, created_by, updated_by)
+      VALUES ('memo_owner', ?, ?, 'Owner', 'other', 'other')`)
+      .run(crossWorkspace ? "ws_other" : WORKSPACE_ID, crossWorkspace ? "nb_other" : plan.memo.notebookId);
+    target.sqlite.query(`INSERT INTO memo_revisions (id, memo_id, revision, title, content_json, content_markdown, content_hash, created_by)
+      VALUES (?, 'memo_owner', 1, 'Original', '{}', 'Do not replace', 'original', 'other')`).run(plan.revisions[0].id);
+    const before = target.sqlite.query("SELECT * FROM memo_revisions WHERE id = ?").get(plan.revisions[0].id);
+
+    const response = await target.postJson("/api/v1/restores/json/memos", { memos: [valid, plan] });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe("backup_revision_id_conflict");
+    expect(target.sqlite.query("SELECT * FROM memo_revisions WHERE id = ?").get(plan.revisions[0].id)).toEqual(before);
+    expect(target.sqlite.query("SELECT COUNT(*) AS count FROM memos WHERE id IN (?, ?)").get(valid.memo.id, plan.memo.id).count).toBe(0);
+  });
+
+  test("rejects a revision ID assigned to two notes within the same restore page", async () => {
+    const source = installation();
+    await populate(source);
+    const backup = await exportBackup(source);
+    const target = installation();
+    await target.postJson("/api/v1/restores/json/notebooks", { notebooks: backup.notebooks });
+    const plan = backup.memos.find(({ revisions }) => revisions.length > 0);
+    const other = backup.memos.find(({ memo, revisions }) => revisions.length === 0 && memo.id !== "memo_welcome");
+    const response = await target.postJson("/api/v1/restores/json/memos", { memos: [plan, {
+      ...other, revisions: [{ ...plan.revisions[0], memoId: other.memo.id }],
+    }] });
+    expect(response.status).toBe(409);
+    expect(target.sqlite.query("SELECT COUNT(*) AS count FROM memos WHERE id IN (?, ?)").get(plan.memo.id, other.memo.id).count).toBe(0);
+  });
+
   test("allows only signed-in users to restore", async () => {
     const source = installation();
     await populate(source);

@@ -2,7 +2,7 @@ import { getCookie, setCookie } from "hono/cookie";
 import type { AppContext } from "./api-context";
 import { createShareAccessCookieValue, isValidShareAccessCookieValue, SHARE_ACCESS_COOKIE, SHARE_ACCESS_MAX_AGE_SECONDS } from "./share-access";
 
-const shareAccessCookiePath = (token: string) => `/api/public/shares/${encodeURIComponent(token)}`;
+export const shareAccessCookiePath = (token: string) => `/api/public/shares/${encodeURIComponent(token)}`;
 
 export const setShareAccessCookie = async (c: AppContext, token: string, passwordHash: string, path = shareAccessCookiePath(token)) => {
   const value = await createShareAccessCookieValue(passwordHash, token);

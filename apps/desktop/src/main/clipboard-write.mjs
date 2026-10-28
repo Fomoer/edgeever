@@ -1,3 +1,69 @@
+import { randomBytes } from "node:crypto";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const previousClipboardFolders = new Map();
+
+export const MAX_FILE_CLIPBOARD_BYTES = 32 * 1024 * 1024;
+
+const clipboardBytes = (value) => {
+  if (value instanceof Uint8Array) return value;
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  if (value && value.type === "Buffer" && Array.isArray(value.data)) return Uint8Array.from(value.data);
+  throw new TypeError("Clipboard file must be bytes");
+};
+
+const clipboardFilename = (value) => {
+  if (typeof value !== "string") throw new TypeError("Clipboard filename must be a string");
+  const base = value.split(/[\\/]/).pop() ?? "";
+  // oxlint-disable-next-line no-control-regex -- strips control characters from clipboard filenames
+  const cleaned = base.replace(/[\u0000-\u001f\u007f]/g, "").replace(/^\.+$/, "").trim().slice(0, 180);
+  return cleaned || "attachment";
+};
+
+const removeFolder = async (folder) => {
+  if (!folder) return;
+  await rm(folder, { recursive: true, force: true }).catch(() => undefined);
+};
+
+// Electron maps text/uri-list onto the native copied-file clipboard
+// (NSFilenamesPboardType, CF_HDROP, or text/uri-list), so Finder, Explorer,
+// and chat apps can paste the attachment. The file has to stay on disk until
+// the next copy replaces it.
+export const writeFileClipboard = async (clipboard, ClipboardItem, input, options = {}) => {
+  const bytes = clipboardBytes(input?.bytes);
+  const filename = clipboardFilename(input?.filename);
+  const maxBytes = options.maxBytes ?? MAX_FILE_CLIPBOARD_BYTES;
+  if (bytes.byteLength === 0 || bytes.byteLength > maxBytes) return false;
+  if (typeof options.directory !== "string" || !options.directory) {
+    throw new TypeError("Clipboard file directory is required");
+  }
+
+  const folder = join(options.directory, randomBytes(8).toString("hex"));
+  const path = join(folder, filename);
+  try {
+    await mkdir(folder, { recursive: true });
+    await writeFile(path, bytes);
+    const uriList = `${pathToFileURL(path).href}\r\n`;
+    await clipboard.write([new ClipboardItem({ "text/uri-list": uriList })]);
+    if (!await clipboard.has("text/uri-list")) {
+      await removeFolder(folder);
+      return false;
+    }
+  } catch (error) {
+    await removeFolder(folder);
+    if (error instanceof TypeError) throw error;
+    return false;
+  }
+
+  const previous = previousClipboardFolders.get(options.directory);
+  previousClipboardFolders.set(options.directory, folder);
+  if (previous && previous !== folder) await removeFolder(previous);
+  return true;
+};
+
 export const writeTextClipboard = async (clipboard, value) => {
   if (typeof value !== "string") {
     throw new TypeError("Clipboard value must be a string");

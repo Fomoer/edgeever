@@ -1,0 +1,43 @@
+{
+  "scope": "Native unmodified CLI comparison, then fresh frozen-install persistent patches; no live instance requests",
+  "cadenceSeconds": 5,
+  "checks": {
+    "freshFrozenPatchReplay": true,
+    "compressionAndCookiesMatchNative": true,
+    "noContent": true,
+    "headBodyEmpty": true,
+    "multipartSizedBodyPreserved": true,
+    "redirectPreserved": true,
+    "websocketEcho": true,
+    "serverAliveAfterCadence": true
+  },
+  "nativeHttpBaseline": {
+    "identity": {
+      "status": 200,
+      "encoding": null,
+      "body": "636f6d707265737365642066697874757265"
+    },
+    "gzip": {
+      "status": 200,
+      "encoding": "gzip",
+      "body": "1f8b08000000000000134bcecf2d284a2d2e4e4d5148cbac28292d4a0500df30119212000000"
+    },
+    "cookieCount": 2
+  },
+  "patchedHttp": {
+    "identity": {
+      "status": 200,
+      "encoding": null,
+      "body": "636f6d707265737365642066697874757265"
+    },
+    "gzip": {
+      "status": 200,
+      "encoding": "gzip",
+      "body": "1f8b08000000000000134bcecf2d284a2d2e4e4d5148cbac28292d4a0500df30119212000000"
+    },
+    "cookieCount": 2
+  },
+  "results": [],
+  "completed": true,
+  "cadenceReusedFrom": "wrangler-proxy-node.json"
+}

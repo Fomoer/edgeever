@@ -1,0 +1,16 @@
+{
+  "runtime": "macOS arm64 / Electron 44.7.0",
+  "asyncSecureStorage": {
+    "available": true,
+    "previousProcessSecretReadable": true,
+    "passwordNotReturnedToRenderer": true,
+    "newEncryptedBackupBytes": 2102868
+  },
+  "backgroundRestore": {
+    "beforeTitle": "恢复前临时标题",
+    "afterTitle": "离线灾难恢复验收",
+    "settingsMountedAtCompletion": false,
+    "workspaceRefreshed": true
+  },
+  "nativeDialogs": "Test selections supplied to Electron dialog API; OS picker interaction not exercised"
+}

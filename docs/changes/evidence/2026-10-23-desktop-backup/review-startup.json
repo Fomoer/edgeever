@@ -1,0 +1,10 @@
+{
+  "runtime": "macOS arm64 / Electron 44.7.0",
+  "renderer": "Static HTML with no JavaScript or account IPC",
+  "accountRestored": "local (authentication disabled)",
+  "sessionRequests": 3,
+  "backupCompleted": true,
+  "historyEntries": 1,
+  "archiveBytes": 4941,
+  "error": null
+}

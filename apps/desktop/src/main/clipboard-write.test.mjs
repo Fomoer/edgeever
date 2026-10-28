@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { readFileSync } from "node:fs";
-import { writeImageClipboard, writeRichClipboard, writeTextClipboard } from "./clipboard-write.mjs";
+import { tmpdir } from "node:os";
+import { basename, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+import { writeFileClipboard, writeImageClipboard, writeRichClipboard, writeTextClipboard } from "./clipboard-write.mjs";
 
 const PNG = Uint8Array.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -94,6 +98,111 @@ describe("writeImageClipboard", () => {
     const preload = readFileSync(new URL("../preload/index.cjs", import.meta.url), "utf8");
     expect(main).toContain('ipcMain.handle("desktop:copy-image"');
     expect(preload).toContain('ipcRenderer.invoke("desktop:copy-image"');
+  });
+});
+
+describe("writeFileClipboard", () => {
+  const clipboardWith = (writes, has = async (type) => type === "text/uri-list") => ({
+    write: async (value) => writes.push(value),
+    has,
+  });
+
+  const writtenPath = (writes) => fileURLToPath(String(writes.at(-1)[0].data["text/uri-list"]).trim());
+
+  test("copies the original filename inside the clipboard directory", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "edgeever-clipboard-"));
+    const writes = [];
+    try {
+      const bytes = Uint8Array.from([1, 2, 3, 4]);
+      await expect(writeFileClipboard(clipboardWith(writes), TestClipboardItem, {
+        bytes,
+        filename: "notes/报告.pdf",
+      }, { directory })).resolves.toBe(true);
+      const path = writtenPath(writes);
+      expect(relative(directory, path).startsWith("..")).toBe(false);
+      expect(basename(path)).toBe("报告.pdf");
+      expect(new Uint8Array(await readFile(path))).toEqual(bytes);
+      expect(writes[0][0].data["text/uri-list"].endsWith("\r\n")).toBe(true);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("keeps only the latest copied file", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "edgeever-clipboard-"));
+    const writes = [];
+    try {
+      await writeFileClipboard(clipboardWith(writes), TestClipboardItem, {
+        bytes: Uint8Array.from([1]),
+        filename: "first.txt",
+      }, { directory });
+      const first = writtenPath(writes);
+      await writeFileClipboard(clipboardWith(writes), TestClipboardItem, {
+        bytes: Uint8Array.from([2]),
+        filename: "second.txt",
+      }, { directory });
+      await expect(stat(first)).rejects.toThrow();
+      expect(new Uint8Array(await readFile(writtenPath(writes)))).toEqual(Uint8Array.from([2]));
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("drops path segments and refuses an empty or oversized payload", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "edgeever-clipboard-"));
+    const writes = [];
+    try {
+      await expect(writeFileClipboard(clipboardWith(writes), TestClipboardItem, {
+        bytes: Uint8Array.from([9]),
+        filename: "../../etc/passwd",
+      }, { directory })).resolves.toBe(true);
+      expect(basename(writtenPath(writes))).toBe("passwd");
+      expect(relative(directory, writtenPath(writes)).startsWith("..")).toBe(false);
+
+      await expect(writeFileClipboard(clipboardWith(writes), TestClipboardItem, {
+        bytes: Uint8Array.from([]),
+        filename: "..",
+      }, { directory })).resolves.toBe(false);
+      await expect(writeFileClipboard(clipboardWith(writes), TestClipboardItem, {
+        bytes: Uint8Array.from([1, 2, 3, 4]),
+        filename: "big.bin",
+      }, { directory, maxBytes: 3 })).resolves.toBe(false);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("removes the file when the clipboard does not keep it", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "edgeever-clipboard-"));
+    const writes = [];
+    try {
+      await expect(writeFileClipboard(clipboardWith(writes, async () => false), TestClipboardItem, {
+        bytes: Uint8Array.from([1]),
+        filename: "gone.txt",
+      }, { directory })).resolves.toBe(false);
+      await expect(stat(writtenPath(writes))).rejects.toThrow();
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects malformed file input", async () => {
+    const clipboard = { write: async () => {}, has: async () => true };
+    await expect(writeFileClipboard(clipboard, TestClipboardItem, {
+      bytes: "nope",
+      filename: "a.txt",
+    }, { directory: "/tmp" })).rejects.toThrow("Clipboard file must be bytes");
+    await expect(writeFileClipboard(clipboard, TestClipboardItem, {
+      bytes: Uint8Array.from([1]),
+      filename: 12,
+    }, { directory: "/tmp" })).rejects.toThrow("Clipboard filename must be a string");
+  });
+
+  test("desktop file copy is wired through the main process", () => {
+    const main = readFileSync(new URL("./index.mjs", import.meta.url), "utf8");
+    const preload = readFileSync(new URL("../preload/index.cjs", import.meta.url), "utf8");
+    expect(main).toContain('ipcMain.handle("desktop:copy-file"');
+    expect(preload).toContain('ipcRenderer.invoke("desktop:copy-file"');
   });
 });
 

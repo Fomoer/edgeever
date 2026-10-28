@@ -1,0 +1,110 @@
+{
+  "fixture": "Real DesktopScheduledBackupCard with mocked desktop bridge; responsive container classes read from SettingsPane.tsx",
+  "layout": {
+    "desktop": "hidden lg:flex flex-1 min-h-0 min-w-0 mx-auto max-w-5xl px-6 py-6 gap-6",
+    "main": "flex-1 min-w-0 overflow-y-auto [scrollbar-gutter:stable] pr-2",
+    "narrow": "flex lg:hidden flex-1 flex-col min-h-0 min-w-0 overflow-y-auto [scrollbar-gutter:stable] px-4 py-4",
+    "group": "min-w-0 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-card [&>*]:rounded-none [&>*]:border-0 [&>*]:bg-transparent"
+  },
+  "cases": [
+    {
+      "name": "wide-collapsed",
+      "viewport": 1280,
+      "open": false,
+      "cardWidth": 723,
+      "cardLeft": 385,
+      "clientWidth": 733,
+      "scrollWidth": 733,
+      "clientHeight": 688,
+      "scrollHeight": 688,
+      "gutter": "stable",
+      "order": true,
+      "historyCount": 3
+    },
+    {
+      "name": "wide-expanded",
+      "viewport": 1280,
+      "open": true,
+      "cardWidth": 723,
+      "cardLeft": 385,
+      "clientWidth": 733,
+      "scrollWidth": 733,
+      "clientHeight": 688,
+      "scrollHeight": 945,
+      "gutter": "stable",
+      "order": true,
+      "historyCount": 3
+    },
+    {
+      "name": "wide-collapsed-again",
+      "viewport": 1280,
+      "open": false,
+      "cardWidth": 723,
+      "cardLeft": 385,
+      "clientWidth": 733,
+      "scrollWidth": 733,
+      "clientHeight": 688,
+      "scrollHeight": 688,
+      "gutter": "stable",
+      "order": true,
+      "historyCount": 3
+    },
+    {
+      "name": "narrow-collapsed",
+      "viewport": 390,
+      "open": false,
+      "cardWidth": 345,
+      "cardLeft": 17,
+      "clientWidth": 379,
+      "scrollWidth": 379,
+      "clientHeight": 780,
+      "scrollHeight": 780,
+      "gutter": "stable",
+      "order": true,
+      "historyCount": 3
+    },
+    {
+      "name": "narrow-expanded",
+      "viewport": 390,
+      "open": true,
+      "cardWidth": 345,
+      "cardLeft": 17,
+      "clientWidth": 379,
+      "scrollWidth": 379,
+      "clientHeight": 780,
+      "scrollHeight": 1067,
+      "gutter": "stable",
+      "order": true,
+      "historyCount": 3
+    },
+    {
+      "name": "narrow-collapsed-again",
+      "viewport": 390,
+      "open": false,
+      "cardWidth": 345,
+      "cardLeft": 17,
+      "clientWidth": 379,
+      "scrollWidth": 379,
+      "clientHeight": 780,
+      "scrollHeight": 780,
+      "gutter": "stable",
+      "order": true,
+      "historyCount": 3
+    }
+  ],
+  "keyboardAndSave": {
+    "enterCollapse": true,
+    "spaceCollapse": true,
+    "interval": "daily"
+  },
+  "restore": {
+    "selectedName": "EdgeEver-2026-10-25T03-15-12-000Z-67cabf32-8fc5-4d13-b08a-abcdefghijklmnop.edgeever.enc",
+    "dialogNamesSelectedFile": true,
+    "dialogCount": 1,
+    "filePickerCalls": 0
+  },
+  "deleteCancel": {
+    "historyCount": 3,
+    "deleteCalls": 0
+  }
+}

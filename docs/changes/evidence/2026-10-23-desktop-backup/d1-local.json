@@ -1,0 +1,8 @@
+{
+  "runtime": "Cloudflare local workerd/D1",
+  "protocolVersion": 1,
+  "pageStatus": 200,
+  "legacyStatus": 200,
+  "staleStatus": 409,
+  "staleError": "backup_source_changed"
+}

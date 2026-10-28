@@ -1,6 +1,6 @@
 {
   "name": "edgeever",
-  "version": "2.9.0",
+  "version": "2.12.0",
   "packageManager": "bun@1.3.14",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "test": "bun run test:bulk && bun run test:integration",
-    "test:bulk": "bun test --path-ignore-patterns='tests/e2e/**' --path-ignore-patterns='apps/api/src/companion-learning.test.mjs' --path-ignore-patterns='apps/api/src/resource-upload-integration.test.mjs' --path-ignore-patterns='apps/desktop/src/main/workbuddy-auth.test.mjs' --path-ignore-patterns='apps/desktop/src/main/acp-cleanup.test.mjs'",
+    "test:bulk": "bun test --path-ignore-patterns='tests/e2e/**' --path-ignore-patterns='apps/ios/build/**' --path-ignore-patterns='apps/mobile/ios/**' --path-ignore-patterns='apps/api/src/companion-learning.test.mjs' --path-ignore-patterns='apps/api/src/resource-upload-integration.test.mjs' --path-ignore-patterns='apps/desktop/src/main/workbuddy-auth.test.mjs' --path-ignore-patterns='apps/desktop/src/main/acp-cleanup.test.mjs'",
     "test:integration": "bun test apps/api/src/companion-learning.test.mjs apps/api/src/resource-upload-integration.test.mjs && bun test --cwd apps/desktop src/main/workbuddy-auth.test.mjs src/main/acp-cleanup.test.mjs",
     "dev": "bun run dev:local",
     "dev:api": "bun run dev:api:local",
@@ -158,6 +158,7 @@
     "@tiptap/starter-kit": "3.31.4",
     "@tiptap/suggestion": "3.31.4",
     "@tiptap/y-tiptap": "3.0.9",
+    "@zip.js/zip.js": "2.24.0",
     "ai": "7.0.137",
     "aws4fetch": "^1.0.20",
     "class-variance-authority": "0.7.1",
@@ -217,7 +218,7 @@
     "prosemirror-model": "1.25.11",
     "react-native": "0.86.3",
     "prosemirror-view": "1.42.6",
-    "dompurify": "3.4.16",
+    "dompurify": "3.4.17",
     "katex": "0.18.2",
     "sharp": "0.35.5",
     "mermaid": "11.16.1",
@@ -231,6 +232,8 @@
     "mermaid@11.16.1": "patches/mermaid@11.16.1.patch",
     "expo-sharing@57.0.22": "patches/expo-sharing@57.0.22.patch",
     "npm@11.21.0": "patches/npm@11.21.0.patch",
-    "@joplin/turndown-plugin-gfm@1.0.68": "patches/@joplin%2Fturndown-plugin-gfm@1.0.68.patch"
+    "@joplin/turndown-plugin-gfm@1.0.68": "patches/@joplin%2Fturndown-plugin-gfm@1.0.68.patch",
+    "wrangler@4.112.0": "patches/wrangler@4.112.0.patch",
+    "miniflare@4.20260714.0": "patches/miniflare@4.20260714.0.patch"
   }
 }

@@ -397,6 +397,73 @@ describe("login session management with a real database", () => {
     expect(sessions.map((entry) => [entry.id, entry.isCurrent])).toEqual([[second.id, true]]);
   });
 
+  test("keeps the same device across IP changes, continued use, and browser upgrades", async () => {
+    const instance = await createInstance();
+    const edge = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0";
+    const first = await instance.login("owner", "owner-password", DEVICE_A, {
+      "User-Agent": edge,
+      "CF-Connecting-IP": "203.0.113.7",
+      "CF-IPCountry": "US",
+    });
+
+    // Changing networks while authenticated must neither reject the cookie
+    // nor insert another session, even when last-seen tracking runs.
+    instance.sqlite.query("UPDATE sessions SET last_seen_at = ? WHERE id = ?")
+      .run("2026-01-01T00:00:00.000Z", first.id);
+    const context = new Hono();
+    context.get("/touch", async (c) => c.json(await authenticateSession(c, true)));
+    const touched = await context.request("/touch", {
+      headers: {
+        Cookie: `edgeever_session=${first.token}`,
+        "User-Agent": edge,
+        "CF-Connecting-IP": "2001:db8::7",
+        "CF-IPCountry": "CN",
+      },
+    }, { storage: createSelfHostedStorageAdapter(instance.sqlite, "/tmp/edgeever-auth-sessions-unused") });
+    expect(touched.status).toBe(200);
+    expect(await touched.json()).toMatchObject({ sessionId: first.id });
+    expect(instance.sqlite.query("SELECT COUNT(*) AS count FROM sessions").get().count).toBe(1);
+
+    for (const userAgent of [edge, edge.replaceAll("140.0.0.0", "141.0.0.0")]) {
+      const next = await instance.login("owner", "owner-password", DEVICE_A, {
+        "User-Agent": userAgent,
+        "CF-Connecting-IP": "2001:db8::7",
+        "CF-IPCountry": "CN",
+      });
+      const sessions = await instance.listSessions(next.token);
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0]).toMatchObject({ id: next.id, isCurrent: true, ipAddress: "2001:db8::7" });
+    }
+    expect(instance.session(first.id).revoked_at).not.toBeNull();
+  });
+
+  test("lists separate devices when the client device id changes despite identical IP and browser", async () => {
+    const instance = await createInstance();
+    const headers = { "User-Agent": "Windows Edge", "CF-Connecting-IP": "203.0.113.7" };
+    const first = await instance.login("owner", "owner-password", DEVICE_A, headers);
+    const second = await instance.login("owner", "owner-password", DEVICE_B, headers);
+    expect(await instance.listSessions(second.token)).toHaveLength(2);
+    expect(instance.session(first.id).revoked_at).toBeNull();
+  });
+
+  test("legacy clients ignore IP changes but split devices when the user-agent changes", async () => {
+    const instance = await createInstance();
+    const first = await instance.login("owner", "owner-password", undefined, {
+      "User-Agent": "Windows Edge/140", "CF-Connecting-IP": "203.0.113.7",
+    });
+    const moved = await instance.login("owner", "owner-password", undefined, {
+      "User-Agent": "Windows Edge/140", "CF-Connecting-IP": "2001:db8::7",
+    });
+    expect(await instance.listSessions(moved.token)).toHaveLength(1);
+    expect(instance.session(first.id).revoked_at).not.toBeNull();
+
+    const upgraded = await instance.login("owner", "owner-password", undefined, {
+      "User-Agent": "Windows Edge/141", "CF-Connecting-IP": "2001:db8::7",
+    });
+    expect(await instance.listSessions(upgraded.token)).toHaveLength(2);
+    expect(instance.session(moved.id).revoked_at).toBeNull();
+  });
+
   test("authenticates session endpoints with the session cookie and revokes it on logout", async () => {
     const instance = await createInstance();
     const login = await instance.login("owner", "owner-password", DEVICE_A);

@@ -121,6 +121,7 @@ import {
 import { registerNotebookRoutes } from "./notebook-routes";
 import { registerNotebookShareRoutes, registerPublicNotebookShareRoutes } from "./notebook-share-routes";
 import { isNotebookSitePagePath, renderNotebookSitePage } from "./notebook-site-page";
+import { isPublicMemoSharePagePath, renderPublicMemoSharePage } from "./share-page";
 import { registerMemoShareRoutes, registerPublicShareRoutes } from "./share-routes";
 import { registerPublicTableFormRoutes, registerTableFormRoutes } from "./table-form-routes";
 import {
@@ -459,9 +460,19 @@ export const fetchEdgeEverApp = async (
 
 const worker = {
   async fetch(request: Request, env: WorkerBindings, ctx: ExecutionContext) {
-    if (isNotebookSitePagePath(new URL(request.url).pathname)) {
-      return (await renderNotebookSitePage(request, createCloudflareStorageAdapter(env).db,
-        () => env.ASSETS.fetch(new Request(new URL("/", request.url), { method: "GET" }))))!;
+    const { pathname } = new URL(request.url);
+    const loadAppShell = () => env.ASSETS.fetch(new Request(new URL("/", request.url), { method: "GET" }));
+    if (isNotebookSitePagePath(pathname)) {
+      return (await renderNotebookSitePage(request, createCloudflareStorageAdapter(env).db, loadAppShell))!;
+    }
+    // `/share/*` runs the worker first. Unknown share paths still fall through
+    // to the asset shell so a typo does not become a JSON 404.
+    if (pathname.startsWith("/share/")) {
+      if (isPublicMemoSharePagePath(pathname)) {
+        const page = await renderPublicMemoSharePage(request, createCloudflareStorageAdapter(env).db, loadAppShell);
+        if (page) return page;
+      }
+      return env.ASSETS.fetch(request);
     }
     return fetchEdgeEverApp(request, {
       ...env,

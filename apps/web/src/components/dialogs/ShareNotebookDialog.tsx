@@ -209,7 +209,7 @@ export const ShareNotebookDialog = ({
               </CollapsibleContent>
             </Collapsible>}
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
               <Button
                 variant="danger"
                 disabled={busy}
@@ -220,6 +220,7 @@ export const ShareNotebookDialog = ({
               </Button>
               <Button
                 variant="outline"
+                className="ml-auto"
                 onClick={() =>
                   window.open(shareUrl, "_blank", "noopener,noreferrer")
                 }

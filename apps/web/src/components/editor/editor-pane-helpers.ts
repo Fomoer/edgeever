@@ -96,6 +96,9 @@ export const resetEditorDocument = (editor: Editor, content: TiptapDoc) => {
     doc: editor.schema.nodeFromJSON(content),
     plugins: editor.state.plugins,
   }));
+  // updateState bypasses TipTap's transaction subscribers. Refresh node-view
+  // controls even when the new note reuses the same image and selection.
+  editor.view.dispatch(editor.state.tr.setMeta("addToHistory", false));
   releaseHtmlMediaSources({
     querySelectorAll: (selector)=>previousMedia.filter(node=>node.matches(selector) && !root.contains(node)),
   });

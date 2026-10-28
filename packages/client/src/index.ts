@@ -1460,7 +1460,7 @@ export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
         body: JSON.stringify({}),
       }),
 
-    updateMemoShare: (memoId: string, payload: { passwordProtected: boolean }) =>
+    updateMemoShare: (memoId: string, payload: { passwordProtected?: boolean; slug?: string | null }) =>
       request<{ share: MemoShare }>(`/api/v1/memos/${memoId}/share`, {
         method: "PATCH",
         body: JSON.stringify(payload),

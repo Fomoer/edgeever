@@ -1,0 +1,30 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/backup-restore.test.mjs:
+(pass) JSON backup and restore > restores notebooks, notes, revisions and files into a new installation unchanged [186.80ms]
+(pass) JSON backup and restore > restoring the same backup twice changes nothing and keeps one copy of each file [137.87ms]
+(pass) JSON backup and restore > brings back notes and notebooks deleted after the backup and undoes later edits [77.09ms]
+(pass) JSON backup and restore > falls back safely for damaged or minimal note content [66.19ms]
+(pass) JSON backup and restore > rejects a backup that would take over another user's notebooks or notes [116.69ms]
+(pass) JSON backup and restore > rejects notes and notebooks that point outside the current workspace [110.48ms]
+(pass) JSON backup and restore > rejects a revision that belongs to another note [127.28ms]
+(pass) JSON backup and restore > writes nothing from a page in which any note has another note's revision [117.96ms]
+(pass) JSON backup and restore > rejects existing revision IDs owned by another note (same workspace) before any page writes [117.57ms]
+(pass) JSON backup and restore > rejects existing revision IDs owned by another note (other workspace) before any page writes [117.99ms]
+(pass) JSON backup and restore > rejects a revision ID assigned to two notes within the same restore page [127.43ms]
+(pass) JSON backup and restore > allows only signed-in users to restore [112.12ms]
+(pass) restoring a file of a backup > replaces the stored object when the same file is restored again [122.17ms]
+(pass) restoring a file of a backup > rejects invalid metadata, a missing note, a bad size and another user's file id [160.71ms]
+
+apps/desktop/src/backup/worker-integration.test.mjs:
+(pass) failed workers cancel unfinished sibling requests and exit [344.27ms]
+(pass) real Node background workers export encrypted and plain archives and restore without the original server [3821.06ms]
+(pass) preserves and diagnoses a third-resource HTTP 503 (API JSON) [1828.47ms]
+(pass) preserves and diagnoses a third-resource HTTP 503 (non-JSON response) [1630.16ms]
+(pass) unchanged scheduled sources read only state and changed sources produce an archive [926.61ms]
+(pass) manager creates named files, restores from history and deletes only the selected archive [1820.07ms]
+
+ 20 pass
+ 0 fail
+ 175 expect() calls
+Ran 20 tests across 2 files. [12.50s]

@@ -1,0 +1,29 @@
+{
+  "archiveBytes": 4718598326,
+  "resources": 5,
+  "resourceBytes": 943718400,
+  "seconds": 34.921,
+  "peakWorkerRssMiB": 444,
+  "phasePeaks": {
+    "export": {
+      "rss": 405536768,
+      "external": 90092984,
+      "heapUsed": 21380216,
+      "arrayBuffers": 77868960
+    },
+    "scan": {
+      "rss": 271089664,
+      "external": 94272644,
+      "heapUsed": 14845608,
+      "arrayBuffers": 77171719
+    },
+    "restore": {
+      "rss": 465338368,
+      "external": 155373911,
+      "heapUsed": 16821304,
+      "arrayBuffers": 161956986
+    }
+  },
+  "restored": true,
+  "sourceDisconnected": true
+}

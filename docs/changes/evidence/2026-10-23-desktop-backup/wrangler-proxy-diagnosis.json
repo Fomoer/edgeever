@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-10-26T10:21:22.648623+00:00",
+  "failedEndpoint": "POST /api/v1/restores/json/resources/<resource-id>/uploads",
+  "desktopDiagnostic": {
+    "code": "backup_request_failed",
+    "message": "Service Unavailable",
+    "status": 503
+  },
+  "nativeDisplay": "Native import error dialog displayed HTTP503 rather than invalidZip.",
+  "runtimeObservation": "No reload at either retry; API user-worker isolate ID unchanged. Last prior reload completed at 2026-10-26T08:55:54.635Z.",
+  "inference": "The reproducible local development proxy defect matches the generic503 while the runtime stays alive. The original failing response body was not retained, so attribution of those particular historical responses remains an inference.",
+  "unmodifiedProxy": {
+    "cadenceSeconds": 5,
+    "requests": 20,
+    "http503": 1,
+    "controlCadenceSeconds": 4,
+    "controlRequests": 10,
+    "controlFailures": 0,
+    "evidence": "wrangler-proxy-probe.json"
+  },
+  "acceptedFix": {
+    "officialCli": "4.112.0",
+    "miniflare": "4.20260714.0",
+    "transport": "Existing service binding to bundled Undici with pipelining=0 for ordinary loopback HTTP only",
+    "postRetriesAdded": false,
+    "nativeRemoteAndUpgradeForwardingPreserved": true,
+    "loopbackKeepAliveTimeout": 0,
+    "loopbackHeadersTimeout": 0,
+    "streaming": "Node stream pipeline with backpressure and upstream cancellation on disconnect",
+    "patches": [
+      "patches/wrangler@4.112.0.patch",
+      "patches/miniflare@4.20260714.0.patch"
+    ]
+  },
+  "verification": {
+    "automatedTestsPassed": 36,
+    "assertions": 128,
+    "cadenceRequestsPassed": 20,
+    "cadenceSeconds": 5,
+    "resourcesRestoredThroughWranglerD1R2": 3,
+    "exactAttachmentBytesMatched": true,
+    "finalFreshFrozenPatchReplayPassed": true,
+    "httpCompressionCookiesHeadNoContentRedirectAndWebSocketPassed": true,
+    "evidence": [
+      "wrangler-proxy-checks.txt",
+      "wrangler-proxy-node.json",
+      "wrangler-proxy-stream.json",
+      "wrangler-backup-replay.json"
+    ]
+  },
+  "upstreamSources": [
+    "https://github.com/cloudflare/workers-sdk/issues/14641",
+    "https://github.com/cloudflare/workers-sdk/pull/14593",
+    "https://github.com/cloudflare/workers-sdk/issues/14848"
+  ]
+}

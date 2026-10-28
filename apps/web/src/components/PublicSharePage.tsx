@@ -248,7 +248,10 @@ export const PublicSharePasswordForm = ({
 
 export const PublicSharePage = () => {
   const { t } = useTranslation();
-  const { token = "" } = useParams();
+  const { token: routeToken = "" } = useParams();
+  // The dev server answers `/share/<token>.md` itself. If the app shell still
+  // loads that address, the suffix is not part of the share token.
+  const token = routeToken.endsWith(".md") ? routeToken.slice(0, -3) : routeToken;
   const shareQuery = useQuery({
     queryKey: ["public-share", token],
     queryFn: () => api.getPublicMemoShare(token),

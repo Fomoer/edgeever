@@ -151,6 +151,28 @@ describe("editor typography contract", () => {
     }
   });
 
+  test("lets the system font follow the OS locale for Han glyphs", () => {
+    const globals = readStyle("./globals.css");
+    const mobileEditor = readStyle("./mobile-markdown-editor.css");
+    const systemStack =
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif';
+    const regionFaces = ["PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC"];
+    const fontSans = globals.match(/--font-sans:\s*([^;]+);/)?.[1];
+    const systemFamily = globals.match(/--edgeever-system-font-family:\s*([^;]+);/)?.[1];
+
+    expect(fontSans).toBe(systemStack);
+    expect(systemFamily).toBe(systemStack);
+    for (const face of regionFaces) {
+      expect(fontSans).not.toContain(face);
+    }
+
+    const mobileDiagramText = declarationsForSelector(mobileEditor, ".edgeever-mermaid-svg text");
+    expect(mobileDiagramText).toContain("var(--edgeever-system-font-family,");
+    for (const face of regionFaces) {
+      expect(mobileDiagramText).not.toContain(face);
+    }
+  });
+
   test("does not let preset themes override table geometry", () => {
     const geometryPattern =
       /(?<![\w-])(?:padding|min-width|max-width|min-height|max-height|line-height|table-layout|width|height)(?:-[a-z]+)?\s*:/;

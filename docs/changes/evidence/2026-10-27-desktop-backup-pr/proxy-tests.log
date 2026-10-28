@@ -1,0 +1,48 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/wrangler-runner.test.ts:
+(pass) cross-platform Wrangler runner > uses the installed JavaScript CLI instead of a platform shell shim [0.25ms]
+(pass) cross-platform Wrangler runner > runs the project-local Wrangler without a global installation [862.39ms]
+(pass) cross-platform Wrangler runner > runs Wrangler with Node when the project command itself uses Bun [0.08ms]
+(pass) cross-platform Wrangler runner > forces D1 migration apply into non-interactive CI mode [0.29ms]
+(pass) cross-platform Wrangler runner > normalizes Windows migration line endings for remote D1 [0.06ms]
+(pass) cross-platform Wrangler runner > gives local development an isolated credential encryption key [0.18ms]
+(pass) cross-platform Wrangler runner > resolves the configured assets directory so local dev can create it [0.20ms]
+(pass) cross-platform Wrangler runner > prepares missing dev assets before Wrangler starts and preserves existing files [213.50ms]
+(pass) cross-platform Wrangler runner > resolves an exact D1 database name from Wrangler JSON [0.25ms]
+(pass) cross-platform Wrangler runner > rejects malformed D1 database list output [0.11ms]
+(pass) cross-platform Wrangler runner > reads active production versions and legacy deployment settings [0.14ms]
+(pass) cross-platform Wrangler runner > rejects malformed Worker deployment responses [0.04ms]
+(pass) cross-platform Wrangler runner > keeps every D1 trigger on one physical line for remote compatibility [13.51ms]
+
+tests/wrangler-proxy.test.mjs:
+(pass) local proxy forwards ordinary HTTP through the Node adapter for 127.0.0.1 [1.59ms]
+(pass) local proxy forwards ordinary HTTP through the Node adapter for localhost [0.25ms]
+(pass) local proxy forwards ordinary HTTP through the Node adapter for [::1] [0.24ms]
+(pass) proxy keeps existing connection behavior for https://127.0.0.1:7000 [0.20ms]
+(pass) proxy keeps existing connection behavior for https://preview.example [0.15ms]
+(pass) proxy keeps existing connection behavior for http://remote.example [0.13ms]
+(pass) local WebSocket forwarding keeps its Upgrade connection [0.23ms]
+(pass) GET connection failure on an unchanged worker is reported without retry [0.39ms]
+(pass) POST connection failure on an unchanged worker is reported without retry [0.32ms]
+(pass) actual worker replacement keeps POST failure non-retryable [0.29ms]
+(pass) actual worker replacement keeps GET queued until play [1.16ms]
+(pass) local loopback does not read ahead when its response is backpressured [4.17ms]
+(pass) local loopback cancels its upstream reader when a blocked downstream closes [0.66ms]
+(pass) local loopback preserves a valid compressed empty response [1.41ms]
+
+scripts/local-dev.test.mjs:
+(pass) local development environment > targets every online Android device for local API reverse forwarding [0.42ms]
+(pass) local development environment > keeps persistent development and resettable demo profiles isolated [0.04ms]
+(pass) local development environment > rejects unknown local development profiles [0.02ms]
+(pass) local development environment > renders a Demo banner without requiring an AI bootstrap result [0.04ms]
+(pass) local development environment > inspects a stopped WAL-mode D1 database [7.47ms]
+(pass) local development environment > parses local-only environment files without exposing comments [0.14ms]
+(pass) local development environment > skips AI bootstrap until a local API key is configured [0.04ms]
+(pass) local development environment > builds one deterministic local AI provider seed [0.03ms]
+(pass) local development environment > rejects invalid provider and base URL values [0.04ms]
+
+ 36 pass
+ 0 fail
+ 128 expect() calls
+Ran 36 tests across 3 files. [1192.00ms]

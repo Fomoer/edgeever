@@ -1,0 +1,51 @@
+diff --git a/dist/src/index.js b/dist/src/index.js
+index dc7b58d8ed39c7190ae18562e55cd74e004e6df4..04d6387cc5bfe255d4233fa833140fb426371453 100644
+--- a/dist/src/index.js
++++ b/dist/src/index.js
+@@ -103357,24 +103357,20 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
+       delete headers["content-length"];
+     }
+     res.writeHead(response.status, response.statusText, headers);
+-    let initialStream = res;
+-    for (let i2 = encoders.length - 1; i2 >= 0; i2--) {
+-      encoders[i2].pipe(initialStream);
+-      initialStream = encoders[i2];
+-    }
+-    if (response.body) {
+-      try {
+-        for await (const chunk of response.body) {
+-          if (chunk) initialStream.write(chunk);
+-        }
+-      } catch (error51) {
+-        this.#log.debug(
+-          `Error writing response body, closing response early: ${error51}`
+-        );
+-      }
++    try {
++      // Keep memory bounded, cancel on disconnect, and finalize even empty encoders.
++      await require("node:stream/promises").pipeline(
++        require("node:stream").Readable.from(response.body ?? [], { objectMode: false }),
++        ...encoders,
++        res
++      );
++    } catch (error51) {
++      this.#log.debug(
++        `Error writing response body, closing response early: ${error51}`
++      );
+     }
+-    initialStream.end();
+   }
++
+   async #getLoopbackPort() {
+     const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
+     const loopbackHost = resolveLocalhost(configuredHost) ?? configuredHost;
+@@ -103396,6 +103392,9 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
+         /* grace */
+         0
+       );
++      // Match workerd's local pooling lifetime; do not close an idle socket mid-reuse.
++      server.keepAliveTimeout = 0;
++      server.headersTimeout = 0;
+       server.on("upgrade", this.#handleLoopbackUpgrade);
+       server.listen(0, hostname3, () => resolve7(server));
+     });

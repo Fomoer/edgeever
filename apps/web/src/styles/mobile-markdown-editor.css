@@ -779,7 +779,7 @@ html.dark .edgeever-mobile-tiptap-content a:hover {
 }
 
 .edgeever-mobile-tiptap-content .edgeever-mermaid-svg text {
-  font-family: var(--editor-body-font-family, var(--edgeever-system-font-family, -apple-system, "PingFang SC", "Noto Sans SC", sans-serif));
+  font-family: var(--editor-body-font-family, var(--edgeever-system-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", ui-sans-serif, system-ui, sans-serif));
   font-synthesis: weight;
 }
 

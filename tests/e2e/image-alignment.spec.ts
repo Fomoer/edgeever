@@ -48,12 +48,24 @@ test("positions individual images and preserves alignment through resize, undo, 
     const first = images.nth(0);
     const second = images.nth(1);
     await expect(images).toHaveCount(2);
+    await expect(first).not.toHaveClass(/is-selected/);
+    await expect(rich.locator(".edgeever-image-controls")).toHaveCount(0);
     await expectPosition(first, "left");
     await selectImage(first);
+    const panel = first.locator(".edgeever-image-panel");
+    await expect(panel.locator("[data-edgeever-resource-menu]")).toHaveCount(1);
+    await expect(panel.getByRole("button", { name: "Download", exact: true })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Copy", exact: true })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
+    await rich.press("Escape");
+    await expect(panel).toHaveCount(0);
+    await first.locator("img").click({ button: "right" });
+    await expect(panel).toBeVisible();
     await first.getByRole("button", { name: "Center image", exact: true }).click();
     await expectPosition(first, "center");
     await first.getByRole("button", { name: "Small", exact: true }).click();
     await expect(first).toHaveAttribute("data-width", "35");
+    await expect(panel.getByRole("button", { name: "Download", exact: true })).toBeVisible();
     await expectPosition(first, "center");
 
     // Starting a drag must not resize the image; moving the handle changes its

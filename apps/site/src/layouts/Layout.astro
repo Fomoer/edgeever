@@ -1,5 +1,7 @@
 ---
 import { SEO } from "astro-seo";
+import { getImage } from "astro:assets";
+import heroProductImage from "@/assets/edgeever-hero-product.png";
 import Footer from "@/components/footer.astro";
 import Navbar from "@/components/navbar/navbar.astro";
 import {
@@ -46,11 +48,19 @@ const jaAlternateURL = localeAlternateUrls.ja;
 const plAlternateURL = localeAlternateUrls.pl;
 
 const defaultDescription = copy.defaultDescription;
+// Build a content-hashed JPEG so crawlers can fetch a fresh branded preview.
+const defaultShareImage = await getImage({
+  src: heroProductImage,
+  width: 1200,
+  height: 630,
+  fit: "contain",
+  format: "jpg",
+});
 
 const {
   title,
   description = defaultDescription,
-  image = "/opengraph.jpg",
+  image = defaultShareImage.src,
   imageAlt = copy.imageAlt,
   openGraphType = "website",
   articlePublishedTime,
@@ -63,7 +73,10 @@ const {
   localeRedirect = true,
 } = Astro.props;
 
-const resolvedImageWithDomain = new URL(image, Astro.site).toString();
+const resolvedImageWithDomain = new URL(
+  image === "/opengraph.jpg" ? defaultShareImage.src : image,
+  Astro.site,
+).toString();
 
 const makeTitle = title
   ? title + " | " + "EdgeEver"
@@ -186,8 +199,7 @@ const localeRedirectScript = `(() => {
       canonical={canonicalURL}
       noindex={noindex}
       twitter={{
-        creator: "@msh01",
-        site: "@edgeever",
+        creator: "@tianma_if",
         card: "summary_large_image",
         title: makeTitle,
         description,

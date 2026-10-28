@@ -202,3 +202,48 @@ export const RestoreJsonAiPromptsSchema = z.object({
 });
 
 export const JsonBackupResourceMetadataSchema = JsonBackupMemoSchema.shape.resources.element;
+
+// Desktop-only IPC metadata. Archive bytes and saved passwords never cross this interface.
+export type DesktopBackupConfig = {
+  enabled: boolean;
+  interval: "daily" | "weekly" | "biweekly" | "monthly";
+  retention: 3 | 5 | 10 | 20;
+  directory: string;
+  encrypted: boolean;
+};
+export type DesktopBackupError = { code: string; message?: string; status?: number };
+export type DesktopBackupStatus = {
+  blocked: boolean;
+  config: DesktopBackupConfig;
+  backupSetId: string;
+  actualDirectory: string;
+  passwordSet: boolean;
+  secureStorageAvailable: boolean;
+  lastCheck: { at: string; result: "running" | "success" | "unchanged" | "failed" | "cancelled" } | null;
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  lastRestoreAt: string | null;
+  nextDueAt: string | null;
+  pendingPublication: { name: string; encrypted: boolean } | null;
+  target: { baseUrl: string; accountId: string };
+  error: DesktopBackupError | null;
+  warning: DesktopBackupError | null;
+  importError: DesktopBackupError | null;
+  importWarning: DesktopBackupError | null;
+  history: Array<{ name: string; directory: string; completedAt: string; size: number; encrypted: boolean }>;
+  task: null | { kind: "export" | "import"; phase: "checking-source" | "exporting" | "decrypting" | "checking" | "ready" | "restoring"; completed: number; total: number; manifest?: JsonBackupManifest };
+};
+export type DesktopBackupSelection = { id: string; name: string; encrypted: boolean };
+export type DesktopBackupActions = {
+  status: { input?: never; output: DesktopBackupStatus | null };
+  save: { input: { backupSetId: string; config: DesktopBackupConfig; password?: string }; output: DesktopBackupStatus };
+  "choose-directory": { input: { backupSetId: string }; output: string | null };
+  run: { input: { backupSetId: string; password?: string; options?: { name: string; encrypted: boolean } }; output: DesktopBackupStatus };
+  cancel: { input: { backupSetId: string }; output: DesktopBackupStatus | null };
+  "open-folder": { input: { backupSetId: string }; output: boolean };
+  "choose-import": { input: { backupSetId: string }; output: DesktopBackupSelection | null };
+  "select-history": { input: { backupSetId: string; name: string }; output: DesktopBackupSelection };
+  "delete-history": { input: { backupSetId: string; name: string }; output: DesktopBackupStatus };
+  "prepare-import": { input: { backupSetId: string; id: string; password?: string }; output: DesktopBackupStatus };
+  "confirm-import": { input: { backupSetId: string }; output: DesktopBackupStatus };
+};

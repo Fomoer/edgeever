@@ -1,6 +1,6 @@
 {
   "name": "@edgeever/desktop",
-  "version": "2.9.0",
+  "version": "2.12.0",
   "desktopName": "EdgeEver",
   "private": true,
   "description": "Native EdgeEver desktop client",
@@ -8,8 +8,8 @@
   "type": "module",
   "main": "src/main/index.mjs",
   "scripts": {
-    "dev": "electron .",
-    "start": "electron .",
+    "dev": "bun scripts/build-backup-worker.mjs && electron .",
+    "start": "bun scripts/build-backup-worker.mjs && electron .",
     "dist": "electron-builder --config electron-builder.yml",
     "verify-origin-migration": "electron ../../scripts/renderer-origin-verifier"
   },

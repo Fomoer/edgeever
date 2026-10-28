@@ -1,0 +1,16 @@
+{
+  "runtime": "ego-browser / Chromium",
+  "component": "DesktopBackupImport",
+  "bridge": "Mocked desktop bridge; no archive or instance access",
+  "beforeFix": {
+    "enterSubmitted": false
+  },
+  "afterFix": {
+    "emptyPasswordBlocked": true,
+    "enterSubmitted": true,
+    "pendingRepeatBlocked": true,
+    "cancelDidNotSubmit": true,
+    "clickAndEnterInputsMatch": true,
+    "passwordSpacesPreserved": true
+  }
+}

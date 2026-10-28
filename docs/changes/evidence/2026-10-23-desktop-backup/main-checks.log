@@ -1,0 +1,25 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/desktop/src/main/backup-ipc.test.mjs:
+(pass) restricts backup IPC to the main window and main frame [0.42ms]
+(pass) selects files only through the native dialog and preserves actionable error codes [0.17ms]
+(pass) rejects settings actions from a previously displayed account [0.04ms]
+
+apps/desktop/src/main/backup-manager.test.mjs:
+(pass) publishes only completed jobs, retains registered files and isolates account changes [20.94ms]
+(pass) failure and cancellation preserve success and never rotate; credentials stay out of config [18.66ms]
+(pass) basic_text cannot persist a password and a one-time encrypted run never downgrades [3.89ms]
+(pass) scheduled failures wait one hour while manual retries remain immediate [8.38ms]
+(pass) interrupted publication is verified before success and only registered staging is cleaned [8.22ms]
+(pass) a context switch while preparing a job cannot launch it with the old credentials [3.82ms]
+(pass) the existing local workspace can back up when instance authentication is disabled [6.47ms]
+(pass) temporarily unavailable secure storage pauses encrypted work without plaintext fallback [4.16ms]
+(pass) unreadable backup settings do not block account readiness or overwrite recovery records [2.99ms]
+(pass) a missing renderer cannot fail or strand the background job [5.23ms]
+(pass) the default backup set survives restart before the first backup [1.92ms]
+(pass) a failed completion journal preserves the previous success and leaves a recoverable publication [7.64ms]
+
+ 15 pass
+ 0 fail
+ 62 expect() calls
+Ran 15 tests across 2 files. [125.00ms]

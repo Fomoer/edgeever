@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-26T10:16:02.346Z",
+  "scope": "Real Node backup workers; private Bun source stopped before restore; genuine Cloudflare API behind patched Wrangler with fresh D1/R2",
+  "restoredResources": 3,
+  "attachmentBytes": [
+    1048577,
+    1048578,
+    1048579
+  ],
+  "contentAndHierarchyMatch": true,
+  "exactResourceBytesMatch": true,
+  "stagingEmpty": true,
+  "failedRequests": 0,
+  "result": {
+    "manifest": {
+      "format": "edgeever-zip",
+      "formatVersion": 2,
+      "schemaVersion": 1,
+      "edgeeverVersion": "2.2.0",
+      "buildId": "proxy-fixture",
+      "exportedAt": "2026-10-26T10:15:47.076Z",
+      "includesTrash": false,
+      "counts": {
+        "notebooks": 6,
+        "memos": 2,
+        "revisions": 0,
+        "resources": 3,
+        "prompts": 6
+      }
+    }
+  }
+}

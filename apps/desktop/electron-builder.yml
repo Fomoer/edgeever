@@ -18,6 +18,7 @@ fileAssociations:
     description: Open a Markdown document in EdgeEver
     role: Editor
 asar: true
+beforePack: ./scripts/prepare-backup-worker.cjs
 # Cross-platform master (1024). macOS uses the prebuilt full ICNS below so Dock
 # always receives ic10/ic14 instead of electron-builder's thin 512-only pack.
 icon: assets/icon.png
@@ -25,6 +26,8 @@ directories:
   output: ../../release/desktop
 files:
   - src/**
+  - build/backup-worker.mjs
+  - build/zip.js.LICENSE
   - package.json
   # Apply to application code and production dependencies. Keep executable JS,
   # npm commands (including test.js), node-gyp, schemas and license notices.

@@ -8,6 +8,7 @@ import { fileURLToPath, URL } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { localDevelopmentAuth } from "./local-dev-auth";
+import { publicShareMarkdownDev } from "./share-markdown-dev";
 import { resolveAppVersion, resolveReleaseTimestamp } from "./build-metadata";
 
 const readPackageVersion = () => {
@@ -148,6 +149,7 @@ export default defineConfig({
     automaticPosterThumbnails(),
     tailwindcss(),
     localDevelopmentAuth(),
+    publicShareMarkdownDev(),
     developmentServiceWorkerReset,
     react(),
     VitePWA({
@@ -197,7 +199,8 @@ export default defineConfig({
           {
             urlPattern: ({ request, url }) =>
               request.mode === "navigate" &&
-              !/^\/(?:share\/notebook|s)\//.test(url.pathname) &&
+              // Share HTML includes the note. Leave it out of the shared navigation cache.
+              !/^\/(?:share|s)\//.test(url.pathname) &&
               !["/mobile-edit.html", "/note-print.html", "/tiptap-ime-test.html"].includes(url.pathname),
             handler: "NetworkFirst",
             options: {

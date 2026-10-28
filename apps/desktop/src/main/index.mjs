@@ -1,11 +1,14 @@
-import { app, BrowserWindow, Menu, Tray, globalShortcut, nativeImage, ipcMain, session, net, protocol, shell, dialog, safeStorage, clipboard, ClipboardItem, powerMonitor, desktopCapturer, screen } from "electron";
+import { app, Notification, BrowserWindow, Menu, Tray, globalShortcut, nativeImage, ipcMain, session, net, protocol, shell, dialog, safeStorage, clipboard, ClipboardItem, powerMonitor, desktopCapturer, screen } from "electron";
 import { createReadStream, existsSync } from "node:fs";
 import { appendFile, mkdir, open, readdir, readFile, rename, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { Readable } from "node:stream";
 import { execFile, spawn } from "node:child_process";
+import { backgroundNodeExecutable } from "./background-node.mjs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { release as operatingSystemRelease } from "node:os";
+import { BackupManager } from "./backup-manager.mjs";
+import { registerBackupIpc } from "./backup-ipc.mjs";
 import { SidecarRpcClient } from "./rpc.mjs";
 import { instanceOrigin, encodeSessionCredential, decodeSessionCredential, credentialForUrl } from "./session-credential.mjs";
 import { resourceRequestHeaders } from "./resource-request.mjs";
@@ -35,7 +38,7 @@ import { isAllowedAppNavigation, isAllowedPrintPreviewUrl, isResourceDownloadUrl
 import { showWindow } from "./window-visibility.mjs";
 import { formatGlobalShortcutForHumans, globalShortcutAccelerator, globalShortcutAcceleratorsConflict, normalizeGlobalShortcutBinding, parseStoredGlobalShortcuts, replaceGlobalShortcut, toggleMainWindow } from "./global-shortcut.mjs";
 import { trayIconPath } from "./tray-icon.mjs";
-import { writeImageClipboard, writeRichClipboard, writeTextClipboard } from "./clipboard-write.mjs";
+import { writeFileClipboard, writeImageClipboard, writeRichClipboard, writeTextClipboard } from "./clipboard-write.mjs";
 import { registerClipboardReadIpc } from "./clipboard-read.mjs";
 import { captureRegionScreenToNote, captureScreenToNote, createScreenshotCaptureGuard, screenshotImportIpcPayload, writeScreenshotTempPath } from "./screenshot-capture.mjs";
 import { cancelScreenshotRegionSelection, openScreenshotRegionSelector } from "./screenshot-region.mjs";
@@ -200,6 +203,21 @@ const installationMarkerPath = () => join(app.getPath("userData"), "installation
 const logPath = () => join(app.getPath("userData"), "logs", "desktop.log");
 let desktopSessionToken = "";
 let desktopSessionTokenOrigin = null;
+let backupManager = null;
+let backupCheckTimer = null;
+const backupSession = () => ({ baseUrl: configuredApiBaseUrl, token: credentialForUrl(desktopSessionToken, desktopSessionTokenOrigin, configuredApiBaseUrl), locale: app.getLocale() });
+const refreshBackupContext = () => {
+  const seed = backupSession();
+  // Startup may authenticate backups before the renderer scopes its sidecar.
+  const authenticated = backupManager?.context;
+  const accountId = activeAccountId ?? (authenticated?.baseUrl === seed.baseUrl && authenticated?.token === seed.token ? authenticated.accountId : null);
+  return backupManager?.setContext({ ...seed, accountId });
+};
+const checkBackups = async () => {
+  if (!backupManager) return;
+  await backupManager.restoreContext(backupSession(), (url, init) => net.fetch(url, init));
+  await backupManager.tick();
+};
 let instanceChangePending = false;
 let configuredGlobalShortcut = null;
 let registeredGlobalShortcut = null;
@@ -1847,6 +1865,19 @@ const startApplication = async () => {
     }
     return result;
   });
+  backupManager = new BackupManager({
+    userData: app.getPath("userData"), defaultDirectory: join(app.getPath("documents"), "EdgeEver Backups"), secureStorage: safeStorage,
+    version: { edgeeverVersion: app.getVersion(), buildId: app.getVersion() },
+    onChange: (status) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("desktop:backup-status", status); },
+    onDiagnostic: (event, details) => writeDiagnostic(event, details),
+    onSuccess: () => {
+      if (Notification.isSupported()) new Notification({ title: "EdgeEver", body: app.getLocale().startsWith("zh") ? "本地备份完成" : "Local backup complete" }).show();
+    },
+  });
+  registerBackupIpc({ ipcMain, manager: backupManager, getWindow: () => mainWindow, dialog, shell });
+  void checkBackups();
+  backupCheckTimer = setInterval(() => { void checkBackups(); }, 3600000);
+  powerMonitor.on("resume", () => { void checkBackups(); });
   ipcMain.handle("desktop:sidecar-status", () => ({ available: Boolean(sidecar), path: sidecarPath, scope: sidecarScopeKey }));
   ipcMain.handle("desktop:system-info", () => desktopRuntimeSystemInfo());
   ipcMain.handle("desktop:global-shortcut", (event) => {
@@ -1874,18 +1905,22 @@ const startApplication = async () => {
     globalShortcut.setSuspended(capturing);
     return true;
   });
-  ipcMain.handle("desktop:set-account-scope", async (_event, accountId) => {
+  ipcMain.handle("desktop:set-account-scope", async (event, accountId) => {
+    if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) throw new Error("Account changes must come from the main frame");
     const normalizedAccountId = typeof accountId === "string" && accountId.trim() ? accountId.trim() : null;
     const nextScopeKey = accountScopeKey(configuredApiBaseUrl, normalizedAccountId);
     scheduledTaskScheduler.clear();
     if (sidecar && sidecarScopeKey === nextScopeKey) {
       await sidecar.waitUntilReady();
+      await refreshBackupContext(); void backupManager.tick();
       return { ready: true, scope: nextScopeKey };
     }
+    if (backupManager.context?.baseUrl !== configuredApiBaseUrl || backupManager.context?.accountId !== normalizedAccountId) await backupManager.setContext(null);
     await stopSidecar();
     const nextSidecar = await startSidecar(normalizedAccountId);
     if (!nextSidecar) throw new Error("EdgeEver sidecar is unavailable");
     await nextSidecar.waitUntilReady();
+    await refreshBackupContext(); void backupManager.tick();
     return { ready: true, scope: nextScopeKey };
   });
   ipcMain.on("desktop:rich-text-heading-shortcut", (event, active) => {
@@ -1915,6 +1950,10 @@ const startApplication = async () => {
   ipcMain.handle("desktop:copy-text", (_event, value) => writeTextClipboard(clipboard, value));
   ipcMain.handle("desktop:copy-html", (_event, input) => writeRichClipboard(clipboard, ClipboardItem, input));
   ipcMain.handle("desktop:copy-image", (_event, bytes) => writeImageClipboard(clipboard, ClipboardItem, bytes));
+  ipcMain.handle("desktop:copy-file", (_event, bytes, filename) => writeFileClipboard(clipboard, ClipboardItem, {
+    bytes,
+    filename,
+  }, { directory: join(app.getPath("temp"), "edgeever-clipboard") }));
   registerClipboardReadIpc(ipcMain, {
     clipboard,
     getMainWindow: () => mainWindow,
@@ -1923,11 +1962,13 @@ const startApplication = async () => {
   ipcMain.handle("desktop:set-session-token", async (event, value) => {
     if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame || instanceChangePending) throw new Error("Session update forbidden");
     await saveDesktopSessionToken(value);
+    await refreshBackupContext(); void backupManager.tick();
     return { stored: Boolean(desktopSessionToken) };
   });
   ipcMain.handle("desktop:clear-session-token", async (event) => {
     if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame || instanceChangePending) throw new Error("Session update forbidden");
     scheduledTaskScheduler.clear();
+    await backupManager.setContext(null);
     await saveDesktopSessionToken("");
     return { stored: false };
   });
@@ -1985,6 +2026,8 @@ const startApplication = async () => {
     if (event.sender === mainWindow?.webContents && event.senderFrame === event.sender.mainFrame && typeof requestId === "string") aiDirect.cancel(requestId);
   });
   const acpRuntime = registerAcpIpc(ipcMain, createAcpHostRuntime({
+    executablePath: backgroundNodeExecutable(process.execPath),
+    mcpExecutablePath: backgroundNodeExecutable(process.execPath),
     adapterStore: join(app.getPath("userData"), "acp-adapters"),
     adapterFetchImpl: (url, init) => net.fetch(url, { ...init, credentials: "omit" }),
     onUpdateDiagnostic: (details) => { void writeDiagnostic("acp.adapter-update-failed", details); },
@@ -2086,6 +2129,8 @@ const startApplication = async () => {
         message: error instanceof Error ? error.message : String(error),
       });
     }
+    if (backupCheckTimer) clearInterval(backupCheckTimer);
+    await backupManager?.close();
     await stopSidecar().catch((error) => writeDiagnostic("local-data-reset.sidecar-stop-failed", {
       message: error instanceof Error ? error.message : String(error),
     }));
@@ -2126,9 +2171,11 @@ const startApplication = async () => {
           buttons: chinese ? ["取消", "切换实例"] : ["Cancel", "Switch instance"], defaultId: 0, cancelId: 0,
         });
         if (answer.response !== 1) throw new Error("Instance change cancelled");
+        await backupManager.setContext(null);
         await saveDesktopSessionToken("");
       }
       scheduledTaskScheduler.clear();
+      await backupManager.setContext(null);
       const temporaryInstancePath = `${instanceUrlPath()}.tmp`;
       await writeFile(temporaryInstancePath, normalized, { mode: 0o600 });
       await rename(temporaryInstancePath, instanceUrlPath());
@@ -2139,6 +2186,7 @@ const startApplication = async () => {
         if (!nextSidecar) throw new Error("EdgeEver sidecar is unavailable after changing instance");
         await nextSidecar.waitUntilReady();
       }
+      await refreshBackupContext(); void backupManager.tick();
       return configuredApiBaseUrl;
     } finally { instanceChangePending = false; }
   });
@@ -2408,7 +2456,9 @@ app.on("before-quit", (event) => {
     updateCheckTimer = null;
   }
   tray?.destroy();
+  if (backupCheckTimer) clearInterval(backupCheckTimer);
   void (async () => {
+    await backupManager?.close();
     await releaseDesktopAcpSessions().catch(() => {});
     await stopSidecar();
     await unlink(crashMarkerPath()).catch(() => {});

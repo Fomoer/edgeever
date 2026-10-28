@@ -1,2 +1,8 @@
 [test]
-pathIgnorePatterns = ["tests/e2e/**"]
+pathIgnorePatterns = [
+  "tests/e2e/**",
+  # Local build trees. Bun keeps a file descriptor for every scanned file, and
+  # macOS subprocess pipes stop delivering output once that count passes 10k.
+  "apps/ios/build/**",
+  "apps/mobile/ios/**",
+]

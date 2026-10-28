@@ -15,7 +15,8 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
+import { isDesktopViewport } from "@/lib/workspace-shell";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import * as m from "motion/react-m";
@@ -26,6 +27,7 @@ import type { NoteProsePatch, ResolvedNoteProse } from "@edgeever/shared";
 import { BETA_BADGE_CLASSNAME, WORKSPACE_PAGE_TITLE_CLASSNAME } from "@/lib/workspace-ui";
 import { cn } from "@/lib/utils";
 import { AccountInfoCard } from "./settings/AccountInfoCard";
+import { DesktopScheduledBackupCard } from "./settings/DesktopScheduledBackupCard";
 import { DataExportCard } from "./settings/DataExportCard";
 import { DesktopLocalDataCard } from "./settings/DesktopLocalDataCard";
 import { LoginDevicesCard } from "./settings/LoginDevicesCard";
@@ -47,6 +49,12 @@ import type { AuthUser } from "@edgeever/shared";
 import { contentEnterMotion } from "@/lib/motion";
 import { useDeployedUpdateNotice } from "@/hooks/useDeployedUpdateNotice";
 import { ExecutionCenterButton } from "@/components/execution/ExecutionCenterButton";
+
+const subscribeViewport = (callback: () => void) => {
+  const media = window.matchMedia("(min-width: 1024px)");
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
+};
 
 interface SettingsPaneProps {
   onClose: () => void;
@@ -208,7 +216,10 @@ export const SettingsPane = ({
     return User;
   })();
 
-  const renderTabContent = (key: TabKey) => {
+  const desktopViewport = useSyncExternalStore(subscribeViewport, isDesktopViewport);
+  const renderTabContent = (key: TabKey, desktopLayout: boolean) => {
+    // Backup dialogs reflect a main-process task; mount one consumer, not both CSS layouts.
+    if (key === "data" && desktopLayout !== desktopViewport) return null;
     switch (key) {
       case "general":
         return (
@@ -240,7 +251,7 @@ export const SettingsPane = ({
       case "data":
         return (
           <SettingsGroup>
-            <DataExportCard refreshWorkspaceAfterImport={refreshWorkspaceAfterImport} />
+            {window.edgeeverDesktop?.backup ? <DesktopScheduledBackupCard /> : <DataExportCard refreshWorkspaceAfterImport={refreshWorkspaceAfterImport} />}
             <EvernoteImportGuideCard />
           </SettingsGroup>
         );
@@ -363,15 +374,15 @@ export const SettingsPane = ({
           </aside>
 
           {/* 右侧设置内容区 */}
-          <main className="flex-1 min-w-0 overflow-y-auto pr-2">
+          <main className="flex-1 min-w-0 overflow-y-auto [scrollbar-gutter:stable] pr-2">
             <m.div key={activeTab} className="grid gap-4" {...contentEnterMotion}>
-              {renderTabContent(activeTab)}
+              {renderTabContent(activeTab, true)}
             </m.div>
           </main>
         </div>
 
         {/* 移动端布局 */}
-        <div className="flex lg:hidden flex-1 flex-col min-h-0 min-w-0 overflow-y-auto px-4 py-4">
+        <div className="flex lg:hidden flex-1 flex-col min-h-0 min-w-0 overflow-y-auto [scrollbar-gutter:stable] px-4 py-4">
           {activeMobileTab === null ? (
             /* 分类主菜单 */
             <div className="grid gap-2">
@@ -435,7 +446,7 @@ export const SettingsPane = ({
           ) : (
             /* 详情页面 */
             <m.div key={activeMobileTab} className="grid gap-4" {...contentEnterMotion}>
-              {renderTabContent(activeMobileTab)}
+              {renderTabContent(activeMobileTab, false)}
             </m.div>
           )}
         </div>

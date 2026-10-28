@@ -1,0 +1,147 @@
+{
+  "checkedAt": "2026-10-26T09:39:31Z",
+  "scope": "Isolated dummy worker through patched installed Wrangler; no live instance requests or business data",
+  "wrangler": "4.112.0",
+  "websocketEcho": true,
+  "results": [
+    {
+      "cadenceSeconds": 5,
+      "index": 1,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 25.23
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 2,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 16.27
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 3,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 38.62
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 4,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 15.54
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 5,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 32.62
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 6,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 15.53
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 7,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 33.61
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 8,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 19.79
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 9,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 14.52
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 10,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 31.73
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 11,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 21.88
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 12,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 14.06
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 13,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 37.23
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 14,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 12.52
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 15,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 32.34
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 16,
+      "status": 200,
+      "body": "{\"ok\":true,\"method\":\"POST\"}",
+      "elapsedMs": 19.43
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 17,
+      "status": 500,
+      "body": "Error: Network connection lost.\n    at async Object.fetch (file://<original-checkout>/node_modules/.bun/miniflare@4.20260714.0+f980cb6d692add5a/node_modules/miniflare/dist/src/workers/core/entry.worker.js:4688:22)",
+      "elapsedMs": 22.17
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 18,
+      "error": "<urlopen error [Errno 61] Connection refused>",
+      "elapsedMs": 13.14
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 19,
+      "error": "<urlopen error [Errno 61] Connection refused>",
+      "elapsedMs": 20.56
+    },
+    {
+      "cadenceSeconds": 5,
+      "index": 20,
+      "error": "<urlopen error [Errno 61] Connection refused>",
+      "elapsedMs": 16.6
+    }
+  ],
+  "candidate": "Connection: close header plus upstream origin classification",
+  "result": "rejected: real requests still failed, and the dev process exited after reporting the error"
+}

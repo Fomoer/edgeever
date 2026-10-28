@@ -11,6 +11,9 @@ const createDatabase = (options: { userId?: string; error?: Error } = {}) =>
   ({
     prepare(sql: string) {
       return {
+        bind() {
+          return this;
+        },
         async first() {
           if (options.error) throw options.error;
           if (sql.includes("d1_migrations")) return { name: "0035_normalized_memo_tags.sql" };

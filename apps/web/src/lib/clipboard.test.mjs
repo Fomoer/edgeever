@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { copyHtmlToClipboard, copyImageBlobToClipboard, copyImageUrlToClipboard, copyTextToClipboard, installDesktopClipboardBridge } from "./clipboard.ts";
+import { copyHtmlToClipboard, copyImageBlobToClipboard, copyImageUrlToClipboard, copyResourceToClipboard, copyTextToClipboard, installDesktopClipboardBridge } from "./clipboard.ts";
 
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
@@ -354,5 +354,130 @@ describe("copyImageBlobToClipboard", () => {
     const source = readFileSync(new URL("../components/dialogs/ShareNoteImageDialog.tsx", import.meta.url), "utf8");
     expect(source).toContain('t("editor.imageShare.copyFailed")');
     expect(source).toContain('role="alert"');
+  });
+});
+
+describe("copyResourceToClipboard", () => {
+  test("copies an image through the desktop image bridge", async () => {
+    const calls = [];
+    const png = new Blob([Uint8Array.from([0x89, 0x50, 0x4e, 0x47])], { type: "image/png" });
+    globalThis.window = {
+      edgeeverDesktop: {
+        isAvailable: true,
+        copyImage: async (bytes) => {
+          calls.push(bytes);
+          return true;
+        },
+        copyFile: async () => {
+          throw new Error("file clipboard should not be used for an image");
+        },
+      },
+    };
+
+    await expect(copyResourceToClipboard({
+      filename: "portrait.png",
+      asImage: true,
+      load: async () => ({ ok: true, blob: async () => png }),
+    })).resolves.toBe(true);
+    expect(calls).toEqual([new Uint8Array(await png.arrayBuffer())]);
+  });
+
+  test("copies an attachment through the desktop file bridge", async () => {
+    const calls = [];
+    const pdf = new Blob([Uint8Array.from([7, 8, 9])], { type: "application/pdf" });
+    globalThis.window = {
+      edgeeverDesktop: {
+        isAvailable: true,
+        copyImage: async () => {
+          throw new Error("image clipboard should not be used for an attachment");
+        },
+        copyFile: async (bytes, filename) => {
+          calls.push([bytes, filename]);
+          return true;
+        },
+      },
+    };
+
+    await expect(copyResourceToClipboard({
+      filename: "notes/报告.pdf",
+      asImage: false,
+      load: async () => ({ ok: true, blob: async () => pdf }),
+    })).resolves.toBe(true);
+    expect(calls).toEqual([[new Uint8Array(await pdf.arrayBuffer()), "notes/报告.pdf"]]);
+  });
+
+  test("reports failure when the resource cannot be loaded", async () => {
+    globalThis.window = {
+      edgeeverDesktop: {
+        isAvailable: true,
+        copyImage: async () => true,
+        copyFile: async () => true,
+      },
+    };
+
+    await expect(copyResourceToClipboard({
+      filename: "missing.pdf",
+      asImage: false,
+      load: async () => {
+        throw new Error("Resource download failed");
+      },
+    })).resolves.toBe(false);
+  });
+
+  test("starts the browser image write during the click, before the response arrives", async () => {
+    const writes = [];
+    const png = new Blob([Uint8Array.from([9])], { type: "image/png" });
+    let resolveLoad = () => {};
+    globalThis.window = {};
+    installClipboardItem();
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: { clipboard: { write: async (items) => writes.push(items) } },
+    });
+
+    const pending = copyResourceToClipboard({
+      filename: "portrait.jpg",
+      asImage: true,
+      load: () => new Promise((resolve) => {
+        resolveLoad = () => resolve({ ok: true, blob: async () => png });
+      }),
+    });
+    expect(writes).toHaveLength(1);
+    const payload = writes[0][0].data["image/png"];
+    expect(payload).toBeInstanceOf(Promise);
+    resolveLoad();
+    await expect(payload).resolves.toBe(png);
+    await expect(pending).resolves.toBe(true);
+  });
+
+  test("does not pretend a browser can copy a non-image attachment", async () => {
+    const writes = [];
+    globalThis.window = {};
+    installClipboardItem();
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: { clipboard: { write: async (items) => writes.push(items) } },
+    });
+
+    await expect(copyResourceToClipboard({
+      filename: "报告.pdf",
+      asImage: false,
+      load: async () => {
+        throw new Error("should not fetch when the browser cannot hold the file");
+      },
+    })).resolves.toBe(false);
+    expect(writes).toEqual([]);
+  });
+
+  test("the image and attachment menu copies instead of exporting", () => {
+    const chrome = readFileSync(new URL("../components/editor/EditorPaneChrome.tsx", import.meta.url), "utf8");
+    const editor = readFileSync(new URL("../components/EditorPane.tsx", import.meta.url), "utf8");
+    expect(chrome).toContain("onCopy");
+    expect(chrome).not.toContain("onSaveAs");
+    expect(chrome).not.toContain("labels.saveAs");
+    expect(editor).toContain("copyResourceToClipboard");
+    expect(editor).toContain('t("editor.resourceActions.copy")');
+    expect(editor).not.toContain("handleResourceSaveAs");
+    expect(editor).not.toContain('editor.resourceActions.saveAs');
   });
 });

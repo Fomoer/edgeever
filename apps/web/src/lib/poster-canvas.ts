@@ -112,6 +112,9 @@ export const posterObject = async (
     cornerSize: 9,
     cornerStyle: "circle" as const,
     transparentCorners: false,
+    // Thin vector shapes must be rasterized at the current drag scale. Stretching
+    // their old bitmap cache magnifies antialiasing far beyond the selection box.
+    noScaleCache: element.type === "text" || element.type === "image",
   };
   const fill = element.gradient
     ? makePosterGradient(element.gradient, element.width, element.height)

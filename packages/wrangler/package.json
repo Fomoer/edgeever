@@ -9,6 +9,6 @@
     "cf-wrangler": "bin/wrangler.js"
   },
   "dependencies": {
-    "edgeever-wrangler-cli": "npm:wrangler@^4.112.0"
+    "edgeever-wrangler-cli": "npm:wrangler@4.112.0"
   }
 }

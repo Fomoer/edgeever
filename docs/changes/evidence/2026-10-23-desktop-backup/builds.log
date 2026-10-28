@@ -1,0 +1,3 @@
+bun run build:web: PASS
+bun apps/desktop/scripts/build-backup-worker.mjs: PASS
+bun install --frozen-lockfile --ignore-scripts: PASS

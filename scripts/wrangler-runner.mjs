@@ -13,7 +13,7 @@ const REPOSITORY_WRANGLER_VALUES = {
   bucket_name: "edgeever-resources",
   preview_bucket_name: "edgeever-resources-preview",
 };
-const REPOSITORY_WRANGLER_SHA256 = "55b5f99e86f4d752c44560a6e392d8b52d782c8cdb0311faec9544e6cb883af7";
+const REPOSITORY_WRANGLER_SHA256 = "1da7f15efc45e2efbac1f5c04609e1ff69f3b4451b81871719ab1fde2276ac17";
 
 const configValue = (config, key) => {
   const match = config.match(new RegExp(`^${key}\\s*=\\s*(?:"([^"]*)"|(true|false))`, "m"));

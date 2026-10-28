@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-27",
+  "fixture": "Real DesktopScheduledBackupCard, DesktopBackupRunDialog and DesktopBackupImport with a mocked desktop bridge on official-main contribution branch",
+  "checks": {
+    "settingsSaved": "daily",
+    "manualRun": {
+      "name": "项目资料",
+      "encrypted": true,
+      "submittedByEnter": true
+    },
+    "wrongPassword": "inline error, retry reaches confirmation",
+    "restore": "selected encrypted history entry, checked target then confirmed",
+    "deleteCancelRetainedCount": 2,
+    "deleteResult": {
+      "history": [
+        "周报归档.zip"
+      ],
+      "calls": [
+        {
+          "action": "select-history",
+          "input": {
+            "backupSetId": "fixture-backup-set",
+            "name": "EdgeEver-2026-10-25_110000.edgeever.enc"
+          }
+        },
+        {
+          "action": "confirm-import",
+          "input": {
+            "backupSetId": "fixture-backup-set"
+          }
+        },
+        {
+          "action": "delete-history",
+          "input": {
+            "backupSetId": "fixture-backup-set",
+            "name": "EdgeEver-2026-10-25_110000.edgeever.enc"
+          }
+        }
+      ]
+    }
+  },
+  "screenshots": [
+    "overview.png",
+    "settings.png",
+    "manual-plain.png",
+    "manual-encrypted.png",
+    "unlock-error.png",
+    "restore-confirm.png"
+  ],
+  "scope": "UI interaction and layout only; actual files and API restoration are covered by worker-integration tests"
+}

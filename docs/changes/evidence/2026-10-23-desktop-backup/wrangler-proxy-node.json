@@ -1,0 +1,143 @@
+{
+  "scope": "Native unmodified CLI comparison, then fresh frozen-install persistent patches; no live instance requests",
+  "cadenceSeconds": 5,
+  "checks": {
+    "freshFrozenPatchReplay": true,
+    "compressionAndCookiesMatchNative": true,
+    "noContent": true,
+    "headBodyEmpty": true,
+    "multipartSizedBodyPreserved": true,
+    "redirectPreserved": true,
+    "websocketEcho": true,
+    "serverAliveAfterCadence": true
+  },
+  "nativeHttpBaseline": {
+    "identity": {
+      "status": 200,
+      "encoding": null,
+      "body": "636f6d707265737365642066697874757265"
+    },
+    "gzip": {
+      "status": 200,
+      "encoding": "gzip",
+      "body": "1f8b08000000000000134bcecf2d284a2d2e4e4d5148cbac28292d4a0500df30119212000000"
+    },
+    "cookieCount": 2
+  },
+  "patchedHttp": {
+    "identity": {
+      "status": 200,
+      "encoding": null,
+      "body": "636f6d707265737365642066697874757265"
+    },
+    "gzip": {
+      "status": 200,
+      "encoding": "gzip",
+      "body": "1f8b08000000000000134bcecf2d284a2d2e4e4d5148cbac28292d4a0500df30119212000000"
+    },
+    "cookieCount": 2
+  },
+  "results": [
+    {
+      "index": 1,
+      "status": 200,
+      "elapsedMs": 24.63
+    },
+    {
+      "index": 2,
+      "status": 200,
+      "elapsedMs": 36.39
+    },
+    {
+      "index": 3,
+      "status": 200,
+      "elapsedMs": 29.21
+    },
+    {
+      "index": 4,
+      "status": 200,
+      "elapsedMs": 35.9
+    },
+    {
+      "index": 5,
+      "status": 200,
+      "elapsedMs": 37.64
+    },
+    {
+      "index": 6,
+      "status": 200,
+      "elapsedMs": 36.67
+    },
+    {
+      "index": 7,
+      "status": 200,
+      "elapsedMs": 29.93
+    },
+    {
+      "index": 8,
+      "status": 200,
+      "elapsedMs": 35.24
+    },
+    {
+      "index": 9,
+      "status": 200,
+      "elapsedMs": 36.89
+    },
+    {
+      "index": 10,
+      "status": 200,
+      "elapsedMs": 32.93
+    },
+    {
+      "index": 11,
+      "status": 200,
+      "elapsedMs": 33.35
+    },
+    {
+      "index": 12,
+      "status": 200,
+      "elapsedMs": 31.87
+    },
+    {
+      "index": 13,
+      "status": 200,
+      "elapsedMs": 30.6
+    },
+    {
+      "index": 14,
+      "status": 200,
+      "elapsedMs": 27.7
+    },
+    {
+      "index": 15,
+      "status": 200,
+      "elapsedMs": 28.08
+    },
+    {
+      "index": 16,
+      "status": 200,
+      "elapsedMs": 29.88
+    },
+    {
+      "index": 17,
+      "status": 200,
+      "elapsedMs": 70.33
+    },
+    {
+      "index": 18,
+      "status": 200,
+      "elapsedMs": 33.42
+    },
+    {
+      "index": 19,
+      "status": 200,
+      "elapsedMs": 31.39
+    },
+    {
+      "index": 20,
+      "status": 200,
+      "elapsedMs": 30.53
+    }
+  ],
+  "completed": true
+}

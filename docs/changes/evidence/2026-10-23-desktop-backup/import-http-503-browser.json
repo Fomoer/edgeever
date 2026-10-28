@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-26T08:59:49.090Z",
+  "environment": "Ego Lite, real import UI with mocked desktop bridge; no live instance writes",
+  "dialog": "导入未完成Object storage initialization unavailable（HTTP 503）原备份文件未修改。如果部分批次已恢复，再次导入会按相同 ID 重试。关闭Close",
+  "backupAlerts": 0,
+  "status": {
+    "code": "object_storage_unavailable",
+    "message": "Object storage initialization unavailable",
+    "status": 503
+  },
+  "verificationScope": "Semantic active-dialog and backup-alert checks only; desktop bridge mocked",
+  "visualCheck": {
+    "result": "not_completed_for_final_error_dialog",
+    "reason": "Captured frame showed outgoing progress dialog during exit animation; unusable screenshot discarded."
+  }
+}

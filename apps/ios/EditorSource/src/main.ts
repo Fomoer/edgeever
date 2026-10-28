@@ -1197,16 +1197,16 @@ function setToolbarVisible(visible: boolean) {
     btn.textContent = action.label;
     btn.dataset.action = action.id;
     const labels: Record<string, Record<MobileEditorLocale, string>> = {
-      undo: { "zh-CN": "撤销", "en-US": "Undo", ja: "元に戻す", pl: "Cofnij" },
-      redo: { "zh-CN": "重做", "en-US": "Redo", ja: "やり直す", pl: "Ponów" },
-      image: { "zh-CN": "插入图片", "en-US": "Insert image", ja: "画像を挿入", pl: "Wstaw obraz" },
-      bold: { "zh-CN": "粗体", "en-US": "Bold", ja: "太字", pl: "Pogrubienie" },
-      bullet: { "zh-CN": "项目符号列表", "en-US": "Bullet list", ja: "箇条書き", pl: "Lista punktowana" },
-      task: { "zh-CN": "任务清单", "en-US": "Task list", ja: "タスクリスト", pl: "Lista zadań" },
-      indent: { "zh-CN": "增加列表缩进", "en-US": "Increase list indent", ja: "リストのインデントを増やす", pl: "Zwiększ wcięcie listy" },
-      outdent: { "zh-CN": "减少列表缩进", "en-US": "Decrease list indent", ja: "リストのインデントを減らす", pl: "Zmniejsz wcięcie listy" },
-      quote: { "zh-CN": "引用", "en-US": "Block quote", ja: "引用", pl: "Cytat" },
-      hr: { "zh-CN": "分隔线", "en-US": "Horizontal rule", ja: "区切り線", pl: "Linia pozioma" },
+      undo: { "zh-CN": "撤销", "en-US": "Undo", ja: "元に戻す", pl: "Cofnij", ru: "Отменить" },
+      redo: { "zh-CN": "重做", "en-US": "Redo", ja: "やり直す", pl: "Ponów", ru: "Повторить" },
+      image: { "zh-CN": "插入图片", "en-US": "Insert image", ja: "画像を挿入", pl: "Wstaw obraz", ru: "Вставить изображение" },
+      bold: { "zh-CN": "粗体", "en-US": "Bold", ja: "太字", pl: "Pogrubienie", ru: "Полужирный" },
+      bullet: { "zh-CN": "项目符号列表", "en-US": "Bullet list", ja: "箇条書き", pl: "Lista punktowana", ru: "Маркированный список" },
+      task: { "zh-CN": "任务清单", "en-US": "Task list", ja: "タスクリスト", pl: "Lista zadań", ru: "Список задач" },
+      indent: { "zh-CN": "增加列表缩进", "en-US": "Increase list indent", ja: "リストのインデントを増やす", pl: "Zwiększ wcięcie listy", ru: "Увеличить отступ списка" },
+      outdent: { "zh-CN": "减少列表缩进", "en-US": "Decrease list indent", ja: "リストのインデントを減らす", pl: "Zmniejsz wcięcie listy", ru: "Уменьшить отступ списка" },
+      quote: { "zh-CN": "引用", "en-US": "Block quote", ja: "引用", pl: "Cytat", ru: "Цитата" },
+      hr: { "zh-CN": "分隔线", "en-US": "Horizontal rule", ja: "区切り線", pl: "Linia pozioma", ru: "Горизонтальная линия" },
     };
     btn.setAttribute("aria-label", labels[action.id]?.[locale] ?? action.id);
     btn.addEventListener("click", () => {
@@ -1452,6 +1452,12 @@ const api: EdgeEverEditorAPI = {
     // Configuring a reused WebView is not a document edit. TipTap otherwise emits
     // an update for its old (often empty) body before native pushes the share seed.
     editor.setEditable(mode === "editor", false);
+    if (modeChanged) {
+      // Without that update event, node views that hide editing controls (the image
+      // gallery toolbar) keep their old state. A no-op transaction refreshes them
+      // without recording history or triggering a save.
+      editor.view.dispatch(editor.state.tr.setMeta("addToHistory", false).setMeta("preventUpdate", true));
+    }
     setToolbarVisible(mode === "editor");
     document.documentElement.dataset.theme = opts.theme || "light";
     document.body.classList.toggle("viewer-mode", mode === "viewer");

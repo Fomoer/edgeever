@@ -7,12 +7,19 @@ import type { NotebookSiteSettings } from "./notebook-site";
 export type MemoShare = {
   memoId: string;
   token: string;
+  /** Owner-chosen public address. The token link keeps working alongside it. */
+  slug: string | null;
   createdAt: string;
   updatedAt: string;
   passwordProtected: boolean;
   /** Plaintext is returned only immediately after the owner enables or regenerates a password. */
   password?: string;
 };
+
+export { isValidMemoShareSlug, MEMO_SHARE_SLUG_MAX_LENGTH, MEMO_SHARE_SLUG_PATTERN, RESERVED_MEMO_SHARE_SLUGS } from "./share-slug";
+
+/** Path segment for the public link: the custom address when set, otherwise the token. */
+export const memoSharePathSegment = (share: Pick<MemoShare, "slug" | "token">) => share.slug ?? share.token;
 
 export type ManagedMemoShare = MemoShare & {
   memoTitle: string | null;

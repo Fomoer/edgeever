@@ -378,7 +378,7 @@ export const generateCardCss = ({ theme = "glass", fontStyle = "auto", fontSize 
 .edgeever-card-body .edgeever-table-label { color: var(--ee-meta); font-weight: 600; }
 .edgeever-card-body .edgeever-table-value { min-width: 0; }
 .edgeever-card-body [data-edgeever-theme-block] { border-left: ${px(2)} solid var(--ee-accent); background: ${cfg.metaBg}; padding: 0.8em; margin: 1em 0; }
-.edgeever-card-body .edgeever-image-controls, .edgeever-card-body .edgeever-code-copy-button,
+.edgeever-card-body .edgeever-image-panel, .edgeever-card-body .edgeever-image-controls, .edgeever-card-body .edgeever-code-copy-button,
 .edgeever-card-body .edgeever-theme-block__toolbar, .edgeever-card-body .edgeever-mermaid-source { display: none !important; }
 .edgeever-card-footer { display: flex; flex-direction: column; gap: ${px(12)}; margin-top: ${px(24)}; color: var(--ee-meta); font-size: var(--ee-meta-size); }
 .edgeever-footer-author { display: flex; align-items: center; gap: ${px(8)}; min-width: 0; overflow-wrap: anywhere; }

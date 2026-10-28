@@ -1,0 +1,106 @@
+$ bun test apps/desktop/src/main/backup-manager.test.mjs
+bun test v1.3.14 (0d9b296a)
+
+apps/desktop/src/main/backup-manager.test.mjs:
+(pass) publishes only completed jobs, retains registered files and isolates account changes [38.50ms]
+(pass) failure and cancellation preserve success and never rotate; credentials stay out of config [19.90ms]
+(pass) basic_text cannot persist a password and a one-time encrypted run never downgrades [4.39ms]
+(pass) scheduled failures wait one hour while manual retries remain immediate [8.77ms]
+(pass) interrupted publication is verified before success and only registered staging is cleaned [9.64ms]
+(pass) a context switch while preparing a job cannot launch it with the old credentials [4.07ms]
+(pass) the existing local workspace can back up when instance authentication is disabled [5.70ms]
+(pass) temporarily unavailable secure storage pauses encrypted work without plaintext fallback [5.54ms]
+(pass) unreadable backup settings do not block account readiness or overwrite recovery records [2.09ms]
+(pass) a missing renderer cannot fail or strand the background job [4.81ms]
+(pass) the default backup set survives restart before the first backup [2.13ms]
+(pass) a failed completion journal preserves the previous success and leaves a recoverable publication [7.89ms]
+(pass) an account transition rejects queued actions from the previous ready context [4.27ms]
+(pass) a successfully disabled schedule cannot start a queued automatic run [4.47ms]
+(pass) pending encrypted publication accepts its original password (rotated saved password) [9.66ms]
+(pass) pending encrypted publication accepts its original password (unsaved one-time password) [7.86ms]
+(pass) failed private staging cleanup keeps its registration until cleanup succeeds [6.53ms]
+(pass) startup restores the saved backup account without a renderer [5.51ms]
+(pass) logout cancels an unresolved startup session without restoring its account later [1.77ms]
+(pass) failed part cleanup cannot be overwritten by the next backup [5.32ms]
+(pass) part cleanup never follows a replaced backup root [5.07ms]
+(pass) pending verification preserves external parts when its root was replaced [3.92ms]
+(pass) publication cannot rename an external part through a replaced backup root [7.16ms]
+
+ 23 pass
+ 0 fail
+ 97 expect() calls
+Ran 23 tests across 1 file. [279.00ms]
+
+$ bun test apps/desktop/src/main/backup-manager.test.mjs apps/desktop/src/main/backup-ipc.test.mjs apps/desktop/src/main/backup-settings.test.mjs packages/shared/src/i18n/catalog.test.mjs
+bun test v1.3.14 (0d9b296a)
+
+apps/desktop/src/main/backup-ipc.test.mjs:
+(pass) restricts backup IPC to the main window and main frame [4.07ms]
+(pass) selects files only through the native dialog and preserves actionable error codes [0.67ms]
+(pass) rejects settings actions from a previously displayed account [0.27ms]
+
+apps/desktop/src/main/backup-settings.test.mjs:
+(pass) calendar schedules clamp month end and preserve successful history when frequency changes [0.54ms]
+(pass) accepts the specified defaults and choices, rejects invalid configuration [0.22ms]
+
+apps/desktop/src/main/backup-manager.test.mjs:
+(pass) publishes only completed jobs, retains registered files and isolates account changes [25.97ms]
+(pass) failure and cancellation preserve success and never rotate; credentials stay out of config [18.53ms]
+(pass) basic_text cannot persist a password and a one-time encrypted run never downgrades [4.31ms]
+(pass) scheduled failures wait one hour while manual retries remain immediate [8.68ms]
+(pass) interrupted publication is verified before success and only registered staging is cleaned [8.73ms]
+(pass) a context switch while preparing a job cannot launch it with the old credentials [3.19ms]
+(pass) the existing local workspace can back up when instance authentication is disabled [5.25ms]
+(pass) temporarily unavailable secure storage pauses encrypted work without plaintext fallback [4.32ms]
+(pass) unreadable backup settings do not block account readiness or overwrite recovery records [1.96ms]
+(pass) a missing renderer cannot fail or strand the background job [5.09ms]
+(pass) the default backup set survives restart before the first backup [1.91ms]
+(pass) a failed completion journal preserves the previous success and leaves a recoverable publication [8.29ms]
+(pass) an account transition rejects queued actions from the previous ready context [3.93ms]
+(pass) a successfully disabled schedule cannot start a queued automatic run [4.57ms]
+(pass) pending encrypted publication accepts its original password (rotated saved password) [10.89ms]
+(pass) pending encrypted publication accepts its original password (unsaved one-time password) [8.33ms]
+(pass) failed private staging cleanup keeps its registration until cleanup succeeds [6.33ms]
+(pass) startup restores the saved backup account without a renderer [4.95ms]
+(pass) logout cancels an unresolved startup session without restoring its account later [1.26ms]
+(pass) failed part cleanup cannot be overwritten by the next backup [4.62ms]
+(pass) part cleanup never follows a replaced backup root [3.53ms]
+
+packages/shared/src/i18n/catalog.test.mjs:
+(pass) shared i18n catalogs > ships Japanese alongside Chinese and English with matching keys [2.40ms]
+
+ 27 pass
+ 0 fail
+ 116 expect() calls
+Ran 27 tests across 4 files. [269.00ms]
+
+$ bun run typecheck
+$ tsc -p tsconfig.json --noEmit
+
+$ bun apps/desktop/scripts/build-backup-worker.mjs && bun test apps/desktop/src/backup/worker-integration.test.mjs
+bun test v1.3.14 (0d9b296a)
+
+apps/desktop/src/backup/worker-integration.test.mjs:
+(pass) failed workers cancel unfinished sibling requests and exit [245.57ms]
+(pass) real Node background workers export encrypted and plain archives and restore without the original server [2387.41ms]
+
+ 2 pass
+ 0 fail
+ 17 expect() calls
+Ran 2 tests across 1 file. [2.86s]
+
+$ bun run typecheck:mobile && bun run build:web
+$ bun run --cwd apps/mobile typecheck
+$ tsc -p tsconfig.json --noEmit
+$ vite build --config apps/web
+[build asset listing omitted]
+ndor-beautiful-mermaid-DeoO4YbT.js                                                                              1,429.22 kB │ gzip: 441.49 kB
+
+✓ built in 1.38s
+
+PWA v1.3.0
+mode      generateSW
+precache  1 entries (0.00 KiB)
+files generated
+  dist/sw.js
+  dist/workbox-5ff8427f.js

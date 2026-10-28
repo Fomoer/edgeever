@@ -1,15 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import type { Transaction } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
-import { ChevronDown, ChevronRight, ListTree } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, ListTree } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { buildOutlineTree, type OutlineItem, type OutlineTreeItem } from "@/lib/editor-outline";
+import { mapCollapsedOutlinePositions, readOutlineSnapshot, restoreOutlinePositions, writeOutlineSnapshot, type OutlineSnapshot } from "@/lib/editor-outline-state";
 import { cn } from "@/lib/utils";
 import { EDITOR_OUTLINE_WIDTH } from "@/lib/workspace-ui";
 
 type EditorOutlineProps = {
   editor: Editor | null;
+  memoId: string;
+  editingMemoIdRef: RefObject<string | null>;
   scrollContainer: HTMLDivElement | null;
   // Non-scrolling slot at the editor pane's top-right. The collapsed button
   // portals here so it stays put while the note scrolls.
@@ -35,13 +39,9 @@ const getOutlineItems = (editor: Editor): OutlineItem[] => {
     }
 
     const text = node.textContent.trim();
-    if (text) {
-      items.push({
-        level: Number(node.attrs.level) || 1,
-        pos,
-        text,
-      });
-    }
+    // Keep empty headings in the identity snapshot: clearing a title before
+    // retyping it must not discard its folding choice.
+    items.push({ level: Number(node.attrs.level) || 1, pos, text });
   });
 
   return items;
@@ -53,7 +53,7 @@ const sameOutlineItems = (left: OutlineItem[], right: OutlineItem[]) =>
     return other?.level === item.level && other.pos === item.pos && other.text === item.text;
   });
 
-export const EditorOutline = ({ editor, scrollContainer, collapsedAnchor, collapsed, shortcutLabel, onCollapsedChange }: EditorOutlineProps) => {
+export const EditorOutline = ({ editor, memoId, editingMemoIdRef, scrollContainer, collapsedAnchor, collapsed, shortcutLabel, onCollapsedChange }: EditorOutlineProps) => {
   const { t } = useTranslation();
   const [items, setItems] = useState<OutlineItem[]>([]);
   const [activePos, setActivePos] = useState<number | null>(null);
@@ -61,15 +61,63 @@ export const EditorOutline = ({ editor, scrollContainer, collapsedAnchor, collap
   const scrollTrackingPausedUntilRef = useRef(0);
   const tree = useMemo(() => buildOutlineTree(items), [items]);
 
-  const refresh = useCallback(() => {
-    if (!editor || editor.isDestroyed) {
-      setItems([]);
-      return;
-    }
+  const snapshotRef = useRef<OutlineSnapshot>({ items: [], collapsed: [] });
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const save = useCallback(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      writeOutlineSnapshot(memoId, snapshotRef.current);
+      saveTimerRef.current = null;
+    }, 250);
+  }, [memoId]);
 
-    const nextItems = getOutlineItems(editor);
-    setItems((currentItems) => (sameOutlineItems(currentItems, nextItems) ? currentItems : nextItems));
-  }, [editor]);
+  useEffect(() => {
+    if (!editor || editor.isDestroyed || editingMemoIdRef.current !== memoId) return;
+    const initialItems = getOutlineItems(editor);
+    const initialCollapsed = restoreOutlinePositions(readOutlineSnapshot(memoId), initialItems);
+    snapshotRef.current = { items: initialItems, collapsed: [...initialCollapsed] };
+    setItems(initialItems.filter((item) => item.text));
+    setCollapsedPositions(initialCollapsed);
+
+    const refresh = ({ transaction }: { transaction: Transaction }) => {
+      if (!transaction.docChanged || editingMemoIdRef.current !== memoId || editor.isDestroyed) return;
+      const nextItems = getOutlineItems(editor);
+      const previous = snapshotRef.current;
+      // Draft hydration, source-mode edits and remote refreshes may replace the
+      // entire document. Transaction positions cannot identify headings then.
+      const replacesDocument = transaction.mapping.maps.some((map) => {
+        let replaces = false;
+        map.forEach((from, to) => { if (from === 0 && to >= transaction.before.content.size) replaces = true; });
+        return replaces;
+      });
+      const nextCollapsed = replacesDocument
+        ? restoreOutlinePositions(previous, nextItems)
+        : mapCollapsedOutlinePositions(new Set(previous.collapsed), transaction.mapping, nextItems);
+      snapshotRef.current = { items: nextItems, collapsed: [...nextCollapsed] };
+      const visibleItems = nextItems.filter((item) => item.text);
+      setItems((current) => sameOutlineItems(current, visibleItems) ? current : visibleItems);
+      setCollapsedPositions(nextCollapsed);
+      save();
+    };
+    const flush = () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+      writeOutlineSnapshot(memoId, snapshotRef.current);
+    };
+    editor.on("transaction", refresh);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      editor.off("transaction", refresh);
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, [editor, memoId, editingMemoIdRef, save]);
+
+  const changeCollapsedPositions = (next: Set<number>) => {
+    snapshotRef.current = { ...snapshotRef.current, collapsed: [...next] };
+    setCollapsedPositions(next);
+    writeOutlineSnapshot(memoId, snapshotRef.current);
+  };
 
   const updateActiveItem = useCallback(() => {
     if (!editor || editor.isDestroyed || items.length === 0) {
@@ -87,30 +135,19 @@ export const EditorOutline = ({ editor, scrollContainer, collapsedAnchor, collap
   }, [editor, items]);
 
   useEffect(() => {
-    refresh();
     if (!editor) {
       return;
     }
 
-    editor.on("update", refresh);
     editor.on("selectionUpdate", updateActiveItem);
     return () => {
-      editor.off("update", refresh);
       editor.off("selectionUpdate", updateActiveItem);
     };
-  }, [editor, refresh, updateActiveItem]);
+  }, [editor, updateActiveItem]);
 
   useEffect(() => {
     updateActiveItem();
   }, [updateActiveItem]);
-
-  useEffect(() => {
-    const availablePositions = new Set(items.map((item) => item.pos));
-    setCollapsedPositions((current) => {
-      const next = new Set([...current].filter((pos) => availablePositions.has(pos)));
-      return next.size === current.size ? current : next;
-    });
-  }, [items]);
 
   useEffect(() => {
     if (!scrollContainer || items.length === 0) {
@@ -185,16 +222,21 @@ export const EditorOutline = ({ editor, scrollContainer, collapsedAnchor, collap
   };
 
   const toggleItem = (pos: number) => {
-    setCollapsedPositions((current) => {
-      const next = new Set(current);
-      if (next.has(pos)) {
-        next.delete(pos);
-      } else {
-        next.add(pos);
-      }
-      return next;
-    });
+    const next = new Set(snapshotRef.current.collapsed);
+    if (next.has(pos)) next.delete(pos);
+    else next.add(pos);
+    changeCollapsedPositions(next);
   };
+
+  const parentPositions = useMemo(() => {
+    const positions: number[] = [];
+    const visit = (nodes: OutlineTreeItem[]) => nodes.forEach((node) => {
+      if (node.children.length) positions.push(node.pos);
+      visit(node.children);
+    });
+    visit(tree);
+    return positions;
+  }, [tree]);
 
   const renderItems = (treeItems: OutlineTreeItem[], depth = 0) => (
     <ol className={cn("space-y-0.5", depth > 0 && "py-0.5")}>
@@ -309,6 +351,29 @@ export const EditorOutline = ({ editor, scrollContainer, collapsedAnchor, collap
             </TooltipTrigger>
             <TooltipContent side="left">{outlineToggleLabel}</TooltipContent>
           </Tooltip>
+          {!collapsed && parentPositions.length > 0 && (
+            <div className="flex shrink-0 items-center gap-0.5">
+              {([
+                ["editor.collapseAllOutline", ChevronsDownUp, true],
+                ["editor.expandAllOutline", ChevronsUpDown, false],
+              ] as const).map(([label, Icon, collapseAll]) => (
+                <Tooltip key={label}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-7 w-7 items-center justify-center rounded text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:opacity-40"
+                      aria-label={t(label)}
+                      disabled={collapseAll ? parentPositions.every((pos) => collapsedPositions.has(pos)) : collapsedPositions.size === 0}
+                      onClick={() => changeCollapsedPositions(new Set(collapseAll ? parentPositions : []))}
+                    >
+                      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t(label)}</TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          )}
         </div>
 
         {!collapsed && (

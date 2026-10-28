@@ -18,6 +18,8 @@ import { AppError } from "./app-error";
 import { isoNow, parseJsonArray } from "./entity-utils";
 import { apiError, badRequest, conflict, notFound } from "./http-errors";
 import { resolveObjectStorage } from "./object-storage";
+import { AI_PROMPT_SELECT_COLUMNS, mapAiPromptTemplateRow, type AiPromptTemplateRow } from "./ai-prompt-service";
+import { mapNotebook, notebookSelectSql, type NotebookRow } from "./notebook-service";
 import {
   MAX_ATTACHMENT_UPLOAD_BYTES,
   MAX_IMAGE_UPLOAD_BYTES,
@@ -134,6 +136,45 @@ const MEMO_EXPORT_SELECT_SQL = `SELECT m.id, m.notebook_id, m.title, m.excerpt, 
      FROM memos m
      INNER JOIN memo_contents mc ON mc.memo_id = m.id`;
 
+type BackupStateRow = {
+  identity: string;
+  backup_revision: string;
+  notebooks: number;
+  memos: number;
+  revisions: number;
+  resources: number;
+  prompts: number;
+};
+
+const readBackupState = (database: DatabaseAdapter, workspaceId: string) => database.prepare(
+  `SELECT w.created_at AS identity, CAST(w.backup_revision AS TEXT) AS backup_revision,
+     (SELECT COUNT(*) FROM notebooks WHERE workspace_id = w.id AND is_deleted = 0) AS notebooks,
+     (SELECT COUNT(*) FROM memos WHERE workspace_id = w.id AND is_deleted = 0) AS memos,
+     (SELECT COUNT(*) FROM memo_revisions r JOIN memos m ON m.id = r.memo_id WHERE m.workspace_id = w.id AND m.is_deleted = 0) AS revisions,
+     (SELECT COUNT(*) FROM resources r JOIN memos m ON m.id = r.memo_id WHERE m.workspace_id = w.id AND m.is_deleted = 0 AND r.is_deleted = 0) AS resources,
+     (SELECT COUNT(*) FROM ai_prompt_templates WHERE workspace_id = w.id) AS prompts
+   FROM workspaces w WHERE w.id = ?`,
+).bind(workspaceId).first<BackupStateRow>();
+
+const readBackupRelations = async (database: DatabaseAdapter, memoIds: string[]) => {
+  if (memoIds.length === 0) return { resources: [] as Resource[], revisions: [] as JsonBackupRevision[] };
+  const placeholders = memoIds.map(() => "?").join(", ");
+  const [resources, revisions] = await Promise.all([
+    database.prepare(
+      `SELECT id, memo_id, original_memo_id, bucket_name, object_key, storage_config_id, kind, mime_type,
+              filename, byte_size, sha256, width, height, created_at, updated_at
+       FROM resources WHERE is_deleted = 0 AND memo_id IN (${placeholders})
+       ORDER BY memo_id ASC, created_at ASC, id ASC`,
+    ).bind(...memoIds).all<ResourceRow>(),
+    database.prepare(
+      `SELECT id, memo_id, revision, title, tags_json, content_json, content_markdown,
+              content_text, content_hash, created_by, created_at FROM memo_revisions
+       WHERE memo_id IN (${placeholders}) ORDER BY memo_id ASC, revision ASC, created_at ASC`,
+    ).bind(...memoIds).all<BackupRevisionRow>(),
+  ]);
+  return { resources: resources.results.map(mapResource), revisions: revisions.results.map(mapJsonBackupRevision) };
+};
+
 const listBackupPage = async (
   database: DatabaseAdapter,
   workspaceId: string,
@@ -193,6 +234,79 @@ export const registerBackupRoutes = (
   app: Hono<AppEnv>,
   dependencies: BackupRouteDependencies,
 ) => {
+  app.get("/api/v1/backups/state", async (context) => {
+    const denied = requireScopes(context, "read:memos", "read:resources");
+    if (denied) return denied;
+    // The aggregate includes private AI prompts, just like their existing route.
+    const userDenied = requireUser(context);
+    if (userDenied) return userDenied;
+    context.header("Cache-Control", "private, no-store");
+    const workspaceId = getWorkspaceId(context);
+    const state = await readBackupState(context.env.storage.db, workspaceId);
+    if (!state) return notFound(context, "Workspace not found.");
+    return context.json({
+      protocolVersion: 1,
+      userId: context.get("auth").actorId,
+      workspaceId,
+      identity: state.identity,
+      backupRevision: state.backup_revision,
+      counts: { notebooks: state.notebooks, memos: state.memos, revisions: state.revisions, resources: state.resources, prompts: state.prompts },
+    });
+  });
+
+  app.get("/api/v1/backups/data", async (context) => {
+    const denied = requireScopes(context, "read:memos", "read:resources");
+    if (denied) return denied;
+    context.header("Cache-Control", "private, no-store");
+    const kind = context.req.query("kind");
+    if (!["memos", "notebooks", "prompts"].includes(kind ?? "")) return badRequest(context, "Unknown backup data kind.");
+    if (kind === "notebooks") {
+      const notebookDenied = requireScopes(context, "read:notebooks");
+      if (notebookDenied) return notebookDenied;
+    }
+    if (kind === "prompts") {
+      const promptDenied = requireUser(context);
+      if (promptDenied) return promptDenied;
+    }
+    const identity = context.req.query("identity");
+    const revision = context.req.query("revision");
+    if (!identity || revision === undefined || !/^\d+$/.test(revision)) return badRequest(context, "A backup identity and revision are required.");
+    const workspaceId = getWorkspaceId(context);
+    const database = context.env.storage.db;
+    const unchanged = async () => {
+      const state = await readBackupState(database, workspaceId);
+      return state?.identity === identity && state.backup_revision === revision;
+    };
+    const changed = () => conflict(context, "backup_source_changed", "The source changed during backup. Try again when it is idle.");
+    if (!await unchanged()) return changed();
+    const after = context.req.query("after") ?? "";
+    const limit = dependencies.clampNumber(Number(context.req.query("limit") ?? 25), 1, 50);
+    let result: Record<string, unknown>;
+    let ids: string[];
+    if (kind === "memos") {
+      const rows = await database.prepare(
+        `${MEMO_EXPORT_SELECT_SQL} WHERE m.workspace_id = ? AND m.is_deleted = 0 AND m.id > ? ORDER BY m.id ASC LIMIT ?`,
+      ).bind(workspaceId, after, limit + 1).all<BackupMemoDetailRow>();
+      const selected = rows.results.slice(0, limit);
+      ids = rows.results.map((row) => row.id);
+      result = { memos: selected.map(dependencies.mapMemoDetail), ...await readBackupRelations(database, selected.map((row) => row.id)) };
+    } else if (kind === "notebooks") {
+      const rows = await database.prepare(notebookSelectSql(
+        `WHERE n.workspace_id = ? AND n.is_deleted = 0 AND n.id > ? GROUP BY n.id ORDER BY n.id ASC LIMIT ?`,
+      )).bind(workspaceId, after, limit + 1).all<NotebookRow>();
+      ids = rows.results.map((row) => row.id);
+      result = { notebooks: rows.results.slice(0, limit).map(mapNotebook) };
+    } else {
+      const rows = await database.prepare(
+        `SELECT ${AI_PROMPT_SELECT_COLUMNS} FROM ai_prompt_templates WHERE workspace_id = ? AND id > ? ORDER BY id ASC LIMIT ?`,
+      ).bind(workspaceId, after, limit + 1).all<AiPromptTemplateRow>();
+      ids = rows.results.map((row) => row.id);
+      result = { prompts: rows.results.slice(0, limit).map((row) => mapAiPromptTemplateRow(row, context.req.header("Accept-Language"))) };
+    }
+    if (!await unchanged()) return changed();
+    return context.json({ ...result, nextCursor: ids.length > limit ? ids[limit - 1] : null });
+  });
+
   app.get("/api/v1/exports/markdown", async (context) => {
     const denied = requireScopes(context, "read:memos", "read:resources");
     if (denied) return denied;

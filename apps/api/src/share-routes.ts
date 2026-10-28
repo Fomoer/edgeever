@@ -14,17 +14,18 @@ import {
   isShareUnlockBlocked,
   nextShareUnlockFailure,
 } from "./share-access";
-import { allowPasswordProtectedShare, setShareAccessCookie } from "./share-http-access";
+import { allowPasswordProtectedShare, setShareAccessCookie, shareAccessCookiePath } from "./share-http-access";
 import { encryptSharePassword, readSharePassword } from "./share-password-encryption";
+import { resolveMemoShareToken } from "./share-page";
 import { generateSharePassword } from "./share-password";
 
 const SHARE_TOKEN_BYTES = 32;
-const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 type MemoShareRow = {
   password_encrypted?: string | null;
   memo_id: string;
   token: string;
+  slug?: string | null;
   created_at: string;
   updated_at: string;
   password_hash: string | null;
@@ -66,6 +67,7 @@ type SharedResourceRow = {
 const mapMemoShare = (row: MemoShareRow, password?: string): MemoShare => ({
   memoId: row.memo_id,
   token: row.token,
+  slug: row.slug ?? null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   passwordProtected: Boolean(row.password_hash),
@@ -77,10 +79,10 @@ const contentDisposition = (kind: SharedResourceRow["kind"], mimeType: string | 
   return inline ? contentDispositionInline(filename) : contentDispositionAttachment(filename);
 };
 
-const normalizeShareToken = (value: string) => {
-  const token = value.trim();
-  return SHARE_TOKEN_PATTERN.test(token) ? token : null;
-};
+const resolveShareToken = (c: AppContext, value: string) => resolveMemoShareToken(c.env.storage.db, value);
+
+const shareSlugTaken = (c: AppContext) =>
+  apiError(c, "share_slug_taken", "This share address is already in use", 409);
 
 const sharePasswordRequired = (c: AppContext) =>
   apiError(c, "share_password_required", "Password required to view this shared note", 403);
@@ -100,7 +102,7 @@ const loadShareGate = async (c: AppContext, token: string) =>
      LIMIT 1`
   ).bind(token).first<ShareGateRow>();
 
-const selectMemoShareSql = `SELECT memo_id, token, created_at, updated_at, password_hash, password_encrypted
+const selectMemoShareSql = `SELECT memo_id, token, slug, created_at, updated_at, password_hash, password_encrypted
   FROM memo_shares WHERE memo_id = ? AND workspace_id = ?`;
 
 const NOTE_PROSE_COLUMNS = `note_prose_font_size, note_prose_line_height, note_prose_palette, note_prose_custom_css, note_prose_custom_colors`;
@@ -167,7 +169,7 @@ export const serveSharedResource = async (c: AppContext, resource: SharedResourc
 
 export const registerPublicShareRoutes = (app: Hono<AppEnv>) => {
   app.get("/api/public/shares/:token", async (c) => {
-    const token = normalizeShareToken(c.req.param("token"));
+    const token = await resolveShareToken(c, c.req.param("token"));
     if (!token) return notFound(c, "Shared note not found");
 
     const row = await c.env.storage.db.prepare(
@@ -193,7 +195,7 @@ export const registerPublicShareRoutes = (app: Hono<AppEnv>) => {
       const batch = referencedMemoIds.slice(offset, offset + 80);
       const placeholders = batch.map(() => "?").join(", ");
       const linkedShares = await c.env.storage.db.prepare(
-        `SELECT ms.memo_id, ms.token
+        `SELECT ms.memo_id, COALESCE(ms.slug, ms.token) AS token
          FROM memo_shares ms
          INNER JOIN memos m ON m.id = ms.memo_id AND m.workspace_id = ms.workspace_id
          WHERE ms.workspace_id = ? AND ms.memo_id IN (${placeholders}) AND m.is_deleted = 0`
@@ -219,7 +221,7 @@ export const registerPublicShareRoutes = (app: Hono<AppEnv>) => {
   });
 
   app.post("/api/public/shares/:token/unlock", zValidator("json", PublicShareUnlockSchema), async (c) => {
-    const token = normalizeShareToken(c.req.param("token"));
+    const token = await resolveShareToken(c, c.req.param("token"));
     if (!token) return notFound(c, "Shared note not found");
 
     const gate = await loadShareGate(c, token);
@@ -247,14 +249,15 @@ export const registerPublicShareRoutes = (app: Hono<AppEnv>) => {
        SET unlock_failed_count = 0, unlock_window_started_at = NULL, unlock_blocked_until = NULL
        WHERE token = ?`
     ).bind(token).run();
-    await setShareAccessCookie(c, token, gate.password_hash);
+    // Scope the grant to the address the visitor used, so a slug link keeps its unlock.
+    await setShareAccessCookie(c, token, gate.password_hash, shareAccessCookiePath(c.req.param("token").trim()));
     c.header("Cache-Control", "private, no-store");
     c.header("X-Robots-Tag", "noindex, nofollow, noarchive");
     return c.json({ ok: true });
   });
 
   app.get("/api/public/shares/:token/resources/:resourceId/blob", async (c) => {
-    const token = normalizeShareToken(c.req.param("token"));
+    const token = await resolveShareToken(c, c.req.param("token"));
     if (!token) return notFound(c, "Shared resource not found");
 
     const resource = await c.env.storage.db.prepare(
@@ -285,7 +288,7 @@ export const registerMemoShareRoutes = (app: Hono<AppEnv>) => {
     const limit = Number.isSafeInteger(parsedLimit) ? Math.min(100, Math.max(1, parsedLimit)) : 50;
     const offset = Number.isSafeInteger(parsedOffset) ? Math.min(1_000_000, Math.max(0, parsedOffset)) : 0;
     const rows = await c.env.storage.db.prepare(
-      `SELECT ms.memo_id, ms.token, ms.created_at, ms.updated_at, ms.password_hash,
+      `SELECT ms.memo_id, ms.token, ms.slug, ms.created_at, ms.updated_at, ms.password_hash,
               m.title, m.notebook_id, n.name AS notebook_name
        FROM memo_shares ms
        INNER JOIN memos m ON m.id = ms.memo_id AND m.workspace_id = ms.workspace_id
@@ -370,7 +373,7 @@ export const registerMemoShareRoutes = (app: Hono<AppEnv>) => {
 
     c.header("Cache-Control", "private, no-store");
     const row = await c.env.storage.db.prepare(
-      `SELECT ms.memo_id, ms.token, ms.created_at, ms.updated_at, ms.password_hash, ms.password_encrypted
+      `SELECT ms.memo_id, ms.token, ms.slug, ms.created_at, ms.updated_at, ms.password_hash, ms.password_encrypted
        FROM memo_shares ms
        INNER JOIN memos m ON m.id = ms.memo_id AND m.workspace_id = ms.workspace_id
        WHERE ms.memo_id = ? AND ms.workspace_id = ? AND m.is_deleted = 0
@@ -430,7 +433,38 @@ export const registerMemoShareRoutes = (app: Hono<AppEnv>) => {
 
     const now = isoNow();
     const actor = getAuditActor(c);
-    if (!c.req.valid("json").passwordProtected) {
+    const { passwordProtected, slug } = c.req.valid("json");
+    if (slug !== undefined && slug !== (existing.slug ?? null)) {
+      if (slug !== null) {
+        await c.env.storage.db.prepare(
+          `INSERT OR IGNORE INTO memo_share_slug_claims (slug, workspace_id, created_at) VALUES (?, ?, ?)`
+        ).bind(slug, workspaceId, now).run();
+        const claim = await c.env.storage.db.prepare(
+          `SELECT workspace_id FROM memo_share_slug_claims WHERE slug = ?`
+        ).bind(slug).first<{ workspace_id: string }>();
+        if (claim?.workspace_id !== workspaceId) return shareSlugTaken(c);
+        const owner = await c.env.storage.db.prepare(
+          `SELECT memo_id FROM memo_shares WHERE slug = ? LIMIT 1`
+        ).bind(slug).first<{ memo_id: string }>();
+        if (owner) return shareSlugTaken(c);
+      }
+      try {
+        await c.env.storage.db.prepare(
+          `UPDATE memo_shares SET slug = ?, updated_at = ? WHERE memo_id = ? AND workspace_id = ?`
+        ).bind(slug, now, memoId, workspaceId).run();
+      } catch (error) {
+        // A concurrent claim of the same slug loses on the unique index.
+        if (String(error).includes("UNIQUE")) return shareSlugTaken(c);
+        throw error;
+      }
+      await audit(c.env.storage.db, actor.actorType, actor.actorId, slug ? "memo.share_slug_set" : "memo.share_slug_clear", "memo", memoId, {});
+    }
+    if (passwordProtected === undefined) {
+      const current = await c.env.storage.db.prepare(selectMemoShareSql)
+        .bind(memoId, workspaceId).first<MemoShareRow>() ?? existing;
+      return c.json({ share: mapMemoShare(current, current.password_hash ? await readSharePassword(current.password_encrypted, current.token, c.env, current.password_hash) : undefined) });
+    }
+    if (!passwordProtected) {
       await c.env.storage.db.prepare(
         `UPDATE memo_shares
          SET password_hash = NULL, password_encrypted = NULL, unlock_failed_count = 0, unlock_window_started_at = NULL,

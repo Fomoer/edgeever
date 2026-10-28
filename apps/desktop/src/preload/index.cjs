@@ -28,6 +28,15 @@ contextBridge.exposeInMainWorld("edgeeverDesktop", Object.freeze({
   isAvailable: true,
   canClearLocalData: ipcRenderer.sendSync("desktop:local-data-reset-available-sync"),
   recoveredAfterAbnormalExit: ipcRenderer.sendSync("desktop:recovered-after-abnormal-exit-sync"),
+  backup: (action, input) => ipcRenderer.invoke("desktop:backup", action, input).then((result) => {
+    if (!result.ok) throw Object.assign(new Error(result.error.message), { code: result.error.code });
+    return result.value;
+  }),
+  onBackupStatus: (callback) => {
+    const listener = (_event, status) => callback(status);
+    ipcRenderer.on("desktop:backup-status", listener);
+    return () => ipcRenderer.removeListener("desktop:backup-status", listener);
+  },
   sidecarStatus: () => ipcRenderer.invoke("desktop:sidecar-status"),
   systemInfo: () => ipcRenderer.invoke("desktop:system-info"),
   globalShortcut: () => ipcRenderer.invoke("desktop:global-shortcut"),
@@ -43,6 +52,7 @@ contextBridge.exposeInMainWorld("edgeeverDesktop", Object.freeze({
   copyText: (value) => ipcRenderer.invoke("desktop:copy-text", value),
   copyHtml: (html, plainText) => ipcRenderer.invoke("desktop:copy-html", { html, plainText }),
   copyImage: (bytes) => ipcRenderer.invoke("desktop:copy-image", bytes),
+  copyFile: (bytes, filename) => ipcRenderer.invoke("desktop:copy-file", bytes, filename),
   readClipboard: () => {
     // Check in the isolated preload world; renderer JavaScript cannot forge this
     // gesture state. Clipboard reads are reserved for an explicit paste action.

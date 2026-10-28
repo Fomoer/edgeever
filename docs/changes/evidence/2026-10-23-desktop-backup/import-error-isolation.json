@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-26T06:38:55.149Z",
+  "environment": "Ego Lite, real React import and backup-card components, mocked desktop bridge; no archive or instance writes",
+  "wrongPassword": {
+    "keptUnlockDialog": true,
+    "inlineError": "无法解密，密码不正确或文件已损坏。",
+    "automaticBackupAlerts": 0
+  },
+  "submission": {
+    "emptyPasswordBlocked": true,
+    "repeatedEnterBlocked": true,
+    "passwordWhitespacePreserved": true,
+    "oneOpenDialogWhileChecking": true
+  },
+  "retry": {
+    "reachedConfirmationOnlyAfterReady": true
+  },
+  "restoreFailure": {
+    "dialog": "导入未完成后台任务已停止，请重试。原备份文件未修改。如果部分批次已恢复，再次导入会按相同 ID 重试。关闭Close",
+    "backupError": "backup_source_changed",
+    "backupAlert": "备份期间数据发生变化，请在停止编辑后重试。"
+  },
+  "cancellation": {
+    "duringCheckByEscape": true,
+    "beforeWorkerStartupWaitedForHandshake": true,
+    "totalCancelRequests": 2
+  },
+  "invalidArchive": {
+    "dialog": "导入未完成无法解压这个文件：它不是有效的 ZIP，或文件已经损坏。原备份文件未修改。如果部分批次已恢复，再次导入会按相同 ID 重试。关闭Close",
+    "backupError": "backup_source_changed"
+  },
+  "successfulImport": {
+    "text": "导入备份私有临时文件清理失败。请检查应用数据目录权限并重启。EdgeEver ZIP 导入完成。",
+    "backupError": "backup_source_changed",
+    "backupWarning": "backup_cleanup_failed",
+    "backupText": "自动备份将已同步的笔记和附件备份到本地文件夹。备份目录/test/Backups/fixture-backup-set选择…备份频率每天每周每两周每月保留份数3 份5 份10 份20 份密码加密保存立即备份一次打开文件夹上次本地备份：2026&#x2F;10&#x2F;25 11:00:00备份期间数据发生变化，请在停止编辑后重试。本地备份已完成，但部分旧备份清理失败。"
+  }
+}

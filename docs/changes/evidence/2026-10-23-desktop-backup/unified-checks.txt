@@ -1,0 +1,83 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/ui-locale-fallback.test.ts:
+(pass) unmatched locale fallback > site, Android, and iOS resolve Japanese to ja and other unmatched languages to English [1.78ms]
+
+apps/desktop/src/backup/worker-integration.test.mjs:
+(pass) failed workers cancel unfinished sibling requests and exit [301.24ms]
+(pass) real Node background workers export encrypted and plain archives and restore without the original server [2625.26ms]
+(pass) preserves and diagnoses a third-resource HTTP 503 (API JSON) [1157.27ms]
+(pass) preserves and diagnoses a third-resource HTTP 503 (non-JSON response) [1106.11ms]
+(pass) unchanged scheduled sources read only state and changed sources produce an archive [552.86ms]
+(pass) manager creates named files, restores from history and deletes only the selected archive [992.95ms]
+
+apps/desktop/src/main/backup-ipc.test.mjs:
+(pass) restricts backup IPC to the main window and main frame [0.38ms]
+(pass) selects files only through the native dialog and preserves actionable error codes [0.19ms]
+(pass) rejects settings actions from a previously displayed account [0.03ms]
+
+apps/desktop/src/main/backup-settings.test.mjs:
+(pass) calendar schedules clamp month end and preserve successful history when frequency changes [0.16ms]
+(pass) accepts the specified defaults and choices, rejects invalid configuration [0.06ms]
+
+apps/desktop/src/main/backup-manager.test.mjs:
+(pass) publishes only completed jobs, retains registered files and isolates account changes [22.14ms]
+(pass) failure and cancellation preserve success and never rotate; credentials stay out of config [25.65ms]
+(pass) basic_text cannot persist a password and a one-time encrypted run never downgrades [5.57ms]
+(pass) scheduled failures wait one hour while manual retries remain immediate [20.00ms]
+(pass) interrupted publication is verified before success and only registered staging is cleaned [17.59ms]
+(pass) a context switch while preparing a job cannot launch it with the old credentials [3.75ms]
+(pass) the existing local workspace can back up when instance authentication is disabled [14.84ms]
+(pass) temporarily unavailable secure storage pauses encrypted work without plaintext fallback [15.52ms]
+(pass) unreadable backup settings do not block account readiness or overwrite recovery records [3.70ms]
+(pass) a missing renderer cannot fail or strand the background job [9.81ms]
+(pass) the default backup set survives restart before the first backup [4.80ms]
+(pass) a failed completion journal preserves the previous success and leaves a recoverable publication [11.72ms]
+(pass) an account transition rejects queued actions from the previous ready context [6.80ms]
+(pass) a successfully disabled schedule cannot start a queued automatic run [5.41ms]
+(pass) pending encrypted publication accepts its original password (rotated saved password) [11.84ms]
+(pass) pending encrypted publication accepts its original password (unsaved one-time password) [9.93ms]
+(pass) failed private staging cleanup keeps its registration until cleanup succeeds [7.70ms]
+(pass) startup restores the saved backup account without a renderer [5.33ms]
+(pass) logout cancels an unresolved startup session without restoring its account later [1.74ms]
+(pass) failed part cleanup cannot be overwritten by the next backup [7.47ms]
+(pass) part cleanup never follows a replaced backup root [7.25ms]
+(pass) pending verification preserves external parts when its root was replaced [3.81ms]
+(pass) publication cannot rename an external part through a replaced backup root [6.77ms]
+(pass) import failure and successful retry preserve automatic-backup errors and history [10.70ms]
+(pass) legacy decryption errors belong to import [6.40ms]
+(pass) legacy decryption errors belong to pending backup verification [6.88ms]
+(pass) preserves HTTP status and emits only redacted request diagnostics without affecting failure handling [5.18ms]
+(pass) named manual backups preserve formats/settings and never overwrite a collision [15.24ms]
+(pass) history restore/delete are scoped, reject replacements and remove only the selected file [19.19ms]
+(pass) automatic no-change advances checks, not archive time/retention, and invalidates its baseline correctly [19.21ms]
+(pass) restart retains the unchanged schedule and resolves an interrupted running check [9.19ms]
+
+ 43 pass
+ 0 fail
+ 262 expect() calls
+Ran 43 tests across 5 files. [7.42s]
+
+
+bun test v1.3.14 (0d9b296a)
+
+apps/desktop/src/main/backup-manager.test.mjs:
+(pass) named publication recovery verifies the owned file (owned archive recovered) [25.89ms]
+(pass) named publication recovery verifies the owned file (replacement rejected) [13.02ms]
+
+ 2 pass
+ 31 filtered out
+ 0 fail
+ 10 expect() calls
+Ran 2 tests across 1 file. [112.00ms]
+
+
+bun test v1.3.14 (0d9b296a)
+
+packages/shared/src/i18n/catalog.test.mjs:
+(pass) shared i18n catalogs > ships Japanese alongside Chinese and English with matching keys [3.89ms]
+
+ 1 pass
+ 0 fail
+ 7 expect() calls
+Ran 1 test across 1 file. [62.00ms]

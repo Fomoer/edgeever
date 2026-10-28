@@ -1,0 +1,109 @@
+diff --git a/templates/startDevWorker/ProxyWorker.ts b/templates/startDevWorker/ProxyWorker.ts
+index fc28268c0080789eb143d5444167fd05a09521c1..38a1da13acce7f1ae9022acf93db8686f0410156 100644
+--- a/templates/startDevWorker/ProxyWorker.ts
++++ b/templates/startDevWorker/ProxyWorker.ts
+@@ -12,6 +12,7 @@ import type {
+ 
+ interface Env {
+ 	PROXY_CONTROLLER: Fetcher;
++	LOCAL_HTTP: Fetcher;
+ 	PROXY_CONTROLLER_AUTH_SECRET: string;
+ 	DURABLE_OBJECT: DurableObjectNamespace;
+ }
+@@ -155,8 +156,15 @@ export class ProxyWorker implements DurableObject {
+ 				}
+ 			}
+ 
+-			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly + synchronously
+-			void fetch(userWorkerUrl, new Request(request, { headers }))
++			// Use Node's non-pooled HTTP transport only for ordinary local forwarding.
++			// Native fetch keeps remote previews and WebSocket upgrades unchanged.
++			const forwarded = new Request(request, { headers });
++			const response = userWorkerUrl.protocol === "http:" &&
++				["127.0.0.1", "localhost", "[::1]"].includes(userWorkerUrl.hostname) &&
++				!headers.has("Upgrade")
++				? this.env.LOCAL_HTTP.fetch(new Request(userWorkerUrl, forwarded))
++				: fetch(userWorkerUrl, forwarded);
++			void response
+ 				.then(async (res) => {
+ 					res = new Response(res.body, res);
+ 					rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
+@@ -187,7 +195,7 @@ export class ProxyWorker implements DurableObject {
+ 						this.proxyData && urlFromParts(this.proxyData.userWorkerUrl);
+ 
+ 					// only report errors if the downstream proxy has NOT changed
+-					if (userWorkerUrl.href === newUserWorkerUrl?.href) {
++					if (userWorkerUrl.origin === newUserWorkerUrl?.origin) {
+ 						void sendMessageToProxyController(this.env, {
+ 							type: "error",
+ 							error: {
+diff --git a/wrangler-dist/ProxyWorker.js b/wrangler-dist/ProxyWorker.js
+index 274b5d17ed4fb22f33efafca76efaa9f85279fbd..b164e92c1327978d1fff6c4e35950299762bbc32 100644
+--- a/wrangler-dist/ProxyWorker.js
++++ b/wrangler-dist/ProxyWorker.js
+@@ -131,7 +131,12 @@ var ProxyWorker = class {
+           headers.set(key, value);
+         }
+       }
+-      void fetch(userWorkerUrl, new Request(request, { headers })).then(async (res) => {
++      // Keep remote/Upgrade requests native; local HTTP uses Node without pooling.
++      const forwarded = new Request(request, { headers });
++      const response = userWorkerUrl.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(userWorkerUrl.hostname) && !headers.has("Upgrade")
++        ? this.env.LOCAL_HTTP.fetch(new Request(userWorkerUrl, forwarded))
++        : fetch(userWorkerUrl, forwarded);
++      void response.then(async (res) => {
+         res = new Response(res.body, res);
+         rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
+         await checkForPreviewTokenError(res, this.env, proxyData);
+@@ -146,7 +151,7 @@ var ProxyWorker = class {
+         deferredResponse.resolve(res);
+       }).catch((error) => {
+         const newUserWorkerUrl = this.proxyData && urlFromParts(this.proxyData.userWorkerUrl);
+-        if (userWorkerUrl.href === newUserWorkerUrl?.href) {
++        if (userWorkerUrl.origin === newUserWorkerUrl?.origin) {
+           void sendMessageToProxyController(this.env, {
+             type: "error",
+             error: {
+diff --git a/wrangler-dist/cli.js b/wrangler-dist/cli.js
+index b47f45933ae3a366f425f426545f53213dcc9d2a..a2c2680e1de7203d7b5de193ff1e25095afc4125 100644
+--- a/wrangler-dist/cli.js
++++ b/wrangler-dist/cli.js
+@@ -213736,6 +213736,7 @@ var init_ProxyController = __esm({
+       }
+       ready = createDeferred();
+       localServerReady = createDeferred();
++      localHttpDispatcher = new (require_undici().Agent)({ pipelining: 0 });
+       proxyWorker;
+       proxyWorkerOptions;
+       inspectorProxyWorkerWebSocket;
+@@ -213776,6 +213777,22 @@ var init_ProxyController = __esm({
+               // However, the proxy worker only makes outgoing requests to the user Worker Miniflare instance, which _should_ receive CF-Connecting-IP
+               stripCfConnectingIp: false,
+               serviceBindings: {
++                // Avoid workerd's idle-close race without replaying non-idempotent requests.
++                LOCAL_HTTP: async (req) => {
++                  const headers = new (require_undici().Headers)(req.headers);
++                  headers.delete("connection");
++                  // Miniflare encodes loopback responses, so use fetch's decoded body.
++                  const response = await require_undici().fetch(req.url, {
++                    method: req.method,
++                    headers,
++                    body: req.body,
++                    signal: req.signal,
++                    duplex: "half",
++                    dispatcher: this.localHttpDispatcher,
++                    redirect: "manual"
++                  });
++                  return new miniflare.Response(response.body, response);
++                },
+                 PROXY_CONTROLLER: /* @__PURE__ */ __name(async (req) => {
+                   const message = await req.json();
+                   this.onProxyWorkerMessage(message);
+@@ -214144,6 +214161,7 @@ var init_ProxyController = __esm({
+         const { proxyWorker } = this;
+         this.proxyWorker = void 0;
+         await Promise.all([
++          this.localHttpDispatcher.destroy(),
+           proxyWorker?.dispose(),
+           this.inspectorProxyWorkerWebSocket?.promise.then((ws) => ws.close()).catch(() => {
+           })
