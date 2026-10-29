@@ -17,6 +17,7 @@ import {
   MAX_ATTACHMENT_UPLOAD_BYTES,
   MAX_IMAGE_UPLOAD_BYTES,
   normalizeFilename,
+  validateRestoredResourceMimeType,
   validateAttachmentUpload,
   validateImageUpload,
 } from "./resource-service";
@@ -185,6 +186,8 @@ export const initiateResourceRestoreUpload = async (
   if (!Number.isSafeInteger(metadata.byteSize) || metadata.byteSize <= 0 || metadata.byteSize > maxBytes) {
     throw new AppError("upload_too_large", "Backup resource size is invalid.", 413);
   }
+  const mimeType = metadata.mimeType?.trim() || "application/octet-stream";
+  validateRestoredResourceMimeType(metadata.kind, metadata.mimeType ?? mimeType, metadata.byteSize);
 
   const workspaceId = getWorkspaceId(context);
   const memo = await context.env.storage.db.prepare(
@@ -207,7 +210,6 @@ export const initiateResourceRestoreUpload = async (
 
   const uploadId = createId("upload");
   const filename = normalizeFilename(metadata.filename || "") || `${metadata.kind}-${metadata.id}`;
-  const mimeType = metadata.mimeType?.trim() || "application/octet-stream";
   const objectKey = `workspaces/${workspaceId}/restores/${metadata.memoId}/${metadata.id}/${Date.now()}-${filename}`;
   const destination = await resolveObjectStorage(context.env);
   const multipart = await destination.store.createMultipartUpload(
@@ -300,11 +302,7 @@ export const uploadResourcePart = async (
   return { partNumber: part.partNumber, byteSize };
 };
 
-const completeRestoredResourceUpload = async (
-  context: AppContext,
-  upload: ResourceUploadRow,
-  actor: AuditActor,
-): Promise<Resource> => {
+const parseRestoredResourceMetadata = (upload: ResourceUploadRow): JsonBackupResource => {
   let metadataInput: unknown;
   try {
     metadataInput = JSON.parse(upload.restore_metadata_json ?? "null");
@@ -316,6 +314,18 @@ const completeRestoredResourceUpload = async (
     throw new AppError("invalid_restore_resource", "Restore resource metadata is invalid.", 400);
   }
   const metadata = parsed.data as JsonBackupResource;
+  validateRestoredResourceMimeType(
+    metadata.kind, metadata.mimeType ?? upload.mime_type, upload.byte_size,
+  );
+  return metadata;
+};
+
+const completeRestoredResourceUpload = async (
+  context: AppContext,
+  upload: ResourceUploadRow,
+  actor: AuditActor,
+  metadata: JsonBackupResource,
+): Promise<Resource> => {
   const originalMemo = metadata.originalMemoId
     ? await context.env.storage.db.prepare(
       "SELECT id FROM memos WHERE id = ? AND workspace_id = ? LIMIT 1",
@@ -430,12 +440,14 @@ export const completeResourceUpload = async (
     throw new AppError("upload_incomplete", "Resource upload size does not match the expected file size.", 409);
   }
 
+  // Revalidate sessions persisted by an older server before assembling any bytes.
+  const restoredMetadata = upload.restore_metadata_json ? parseRestoredResourceMetadata(upload) : null;
   const destination = await resolveObjectStorage(context.env, upload.storage_config_id);
   const multipart = destination.store.resumeMultipartUpload(upload.object_key, upload.provider_upload_id);
   await multipart.complete(parts);
 
-  if (upload.restore_metadata_json) {
-    return completeRestoredResourceUpload(context, upload, actor);
+  if (restoredMetadata) {
+    return completeRestoredResourceUpload(context, upload, actor, restoredMetadata);
   }
 
   const now = isoNow();

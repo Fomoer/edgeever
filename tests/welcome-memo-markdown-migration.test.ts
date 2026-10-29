@@ -57,8 +57,12 @@ describe("welcome Markdown repair", () => {
     const path = join(directory, "old.sqlite");
     const old = new Database(path);
     try {
-      for (const migration of migrations.filter((file) => file < repairPath)) old.exec(readFileSync(migration, "utf8"));
-      old.exec("UPDATE memos SET updated_at = '2020-01-01T00:00:00.000Z' WHERE id = 'memo_welcome'");
+      // Build the persisted fixture without an fsync for every seed statement.
+      old.exec("PRAGMA foreign_keys = ON");
+      old.transaction(() => {
+        for (const migration of migrations.filter((file) => file < repairPath)) old.exec(readFileSync(migration, "utf8"));
+        old.exec("UPDATE memos SET updated_at = '2020-01-01T00:00:00.000Z' WHERE id = 'memo_welcome'");
+      })();
       expect(content(old).content_markdown).toContain("\\n\\n");
     } finally {
       old.close();

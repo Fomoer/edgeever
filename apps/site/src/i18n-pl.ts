@@ -55,7 +55,7 @@ export const plSiteCopy = {
     heading: "Zbudowany od nowa z myślą o samodzielnym hostingu wiedzy i pracy z AI",
     subheading:
       "Bez reklam, limitów urządzeń i drogich subskrypcji. Każdy szczegół służy szybkiemu, otwartemu i prywatnemu „drugiemu mózgowi”.",
-    showcaseCta: "Zobacz 17 praktycznych scenariuszy i zrzutów ekranu",
+    showcaseCta: "Zobacz 19 praktycznych scenariuszy i zrzutów ekranu",
     card1: {
       badge: "Klasyczny interfejs",
       title: "Klasyczny układ trzech paneli – szybszy i lżejszy",
@@ -273,7 +273,7 @@ export const plSiteCopy = {
         cta: "Przeczytaj poradnik migracji",
       },
       {
-        title: "17 praktycznych scenariuszy",
+        title: "19 praktycznych scenariuszy",
         summary: "Wizualny przegląd pisania w trzech panelach, wycinania treści, diagramów i tabel AI, lokalnych agentów ACP i plakatów.",
         href: "/guides/best-practices",
         cta: "Zobacz przykłady",

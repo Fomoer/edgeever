@@ -31,7 +31,7 @@ Desktop Settings → Data and backup uses one “Backup and restore” card inst
 | Automatic backups | Initially off; enabling a valid configuration schedules the first run |
 | Frequency | Daily, weekly, every two weeks, or monthly; weekly by default |
 | Destination | `EdgeEver Backups` under the OS Documents directory; change through the native directory picker |
-| Keep recent | 3, 5, 10, or 20 archives; 5 by default |
+| Keep recent | 1, 3, or 5 archives; 1 by default. Existing 10- and 20-archive settings remain valid and are displayed as a disabled option until changed |
 | Password encryption | Optional and initially off; enabling it requires entering and confirming a separate backup password |
 
 The top actions are “Back up now,” “Restore from file,” and “Open folder.” Below them, show the last actual successful archive, latest check result, and next scheduled check or automatic-off state. Running tasks can be cancelled. Manual runs allow an editable filename and one-off plain/encrypted output, using the saved destination and retention without changing automatic settings; they remain available when scheduling is off.

@@ -9,14 +9,9 @@ interface MermaidRenderFallbackOptions {
 }
 
 export const renderMermaidWithFallback = async ({
-  source = "",
   renderBeautiful,
   renderOfficial,
 }: MermaidRenderFallbackOptions) => {
-  // The compact renderer offsets subgraph nodes without moving their edge endpoints.
-  // It can return a valid SVG with disconnected arrows, so exceptions are insufficient.
-  if (/^\s*subgraph\b/m.test(source)) return renderOfficial();
-
   try {
     return await renderBeautiful();
   } catch {
@@ -40,6 +35,8 @@ export const renderThemedMermaidSvg = (
 ) => renderMermaidWithFallback({
   source,
   renderBeautiful: async () => {
+    // Repository dependency patches preserve CJK group IDs and ELK edge offsets
+    // (upstream PRs #132 and #152). Keep supported subgraphs on this renderer.
     const { renderMermaidSVG, THEMES } = await (compactModule ??= import("beautiful-mermaid"));
     return scaleMermaidSvg(renderMermaidSVG(source, {
       ...THEMES[theme], ...palette, transparent: true, font, padding,

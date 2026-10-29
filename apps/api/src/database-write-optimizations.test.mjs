@@ -137,6 +137,26 @@ describe("database write optimizations", () => {
     sqlite.close();
   });
 
+  test("persists literal tilde ranges through Markdown and JSON updates (#698)", async () => {
+    const { database, sqlite } = createDatabase();
+    try {
+      const memo = getSeedMemo(sqlite);
+      const actor = { actorType: "user", actorId: "user_owner" };
+      const source = "成本 1~2~3 元，10~20, 30~40";
+      const first = await updateMemoRecord(database, memo.workspace_id, memo.id,
+        { contentMarkdown: source }, actor, "owner");
+      expect(first.memo.contentJson.content[0].content).toEqual([{ type: "text", text: source }]);
+      const second = await updateMemoRecord(database, memo.workspace_id, memo.id,
+        { contentJson: first.memo.contentJson }, actor, "owner");
+      const stored = sqlite.query("SELECT content_json, content_markdown FROM memo_contents WHERE memo_id = ?").get(memo.id);
+      expect(JSON.parse(stored.content_json)).toEqual(first.memo.contentJson);
+      expect(markdownToDoc(stored.content_markdown)).toEqual(first.memo.contentJson);
+      expect(second.memo.contentJson).toEqual(first.memo.contentJson);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   test("returns an unchanged memo without revision, audit, or search writes", async () => {
     const { database, sqlite } = createDatabase();
     const memo = getSeedMemo(sqlite);

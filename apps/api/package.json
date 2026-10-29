@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@edgeever/public-network": "workspace:*"
+    "@edgeever/public-network": "workspace:*",
+    "content-type": "3.1.1"
   }
 }

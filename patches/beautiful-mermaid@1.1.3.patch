@@ -1,0 +1,290 @@
+diff --git a/dist/index.js b/dist/index.js
+index e7e087bcb6f29d0d8f36cd558e0183bc0f162fcb..0fff240f51bd750a1f2f231ed8d322ef25f0b11a 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -347,6 +347,13 @@ function parseMermaid(text) {
+   }
+   return parseFlowchart(lines);
+ }
++function stripWrappingQuotes(s) {
++  const t = s.trim();
++  if (t.length >= 2 && (t[0] === '"' && t[t.length - 1] === '"' || t[0] === "'" && t[t.length - 1] === "'")) {
++    return t.slice(1, -1);
++  }
++  return t;
++}
+ function parseFlowchart(lines) {
+   const headerMatch = lines[0].match(/^(?:graph|flowchart)\s+(TD|TB|LR|BT|RL)\s*$/i);
+   if (!headerMatch) {
+@@ -416,15 +423,15 @@ function parseFlowchart(lines) {
+     const subgraphMatch = line.match(/^subgraph\s+(.+)$/);
+     if (subgraphMatch) {
+       const rest = subgraphMatch[1].trim();
+-      const bracketMatch = rest.match(/^([\w-]+)\s*\[(.+)\]$/);
++      const bracketMatch = rest.match(/^([^\s[]+)\s*\[(.+)\]$/);
+       let id;
+       let label;
+       if (bracketMatch) {
+         id = bracketMatch[1];
+-        label = normalizeBrTags(bracketMatch[2]);
++        label = normalizeBrTags(stripWrappingQuotes(bracketMatch[2]));
+       } else {
+-        label = normalizeBrTags(rest);
+-        id = rest.replace(/\s+/g, "_").replace(/[^\w]/g, "");
++        label = normalizeBrTags(stripWrappingQuotes(rest));
++        id = label.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_-]/gu, "");
+       }
+       const sg = { id, label, nodeIds: [], children: [] };
+       subgraphStack.push(sg);
+@@ -6485,7 +6492,9 @@ function calculatePathMidpoint(points) {
+ }
+ function extractEdgesRecursively(elkNode, graph, edges, offsetX, offsetY, margins) {
+   const segments = /* @__PURE__ */ new Map();
+-  collectEdgeSegments(elkNode, segments, 0, 0);
++  const containerOffsets = new Map();
++  collectContainerOffsets(elkNode, containerOffsets, 0, 0);
++  collectEdgeSegments(elkNode, segments, 0, 0, containerOffsets);
+   let marginEdgeIndex = 0;
+   for (const [edgeIndex, seg] of segments) {
+     const originalEdge = graph.edges[edgeIndex];
+@@ -6569,27 +6578,42 @@ function orthogonalizeEdgePoints(points, margins, edgeIndex = 0) {
+   }
+   return result;
+ }
+-function collectEdgeSegments(elkNode, segments, offsetX, offsetY) {
++function collectContainerOffsets(elkNode, offsets, offsetX, offsetY) {
++  offsets.set(elkNode.id, { x: offsetX, y: offsetY });
++  for (const child of elkNode.children ?? []) {
++    collectContainerOffsets(
++      child,
++      offsets,
++      offsetX + (child.x ?? 0),
++      offsetY + (child.y ?? 0)
++    );
++  }
++}
++function collectEdgeSegments(elkNode, segments, offsetX, offsetY, containerOffsets) {
+   if (elkNode.edges) {
+     for (const elkEdge of elkNode.edges) {
+       const isInternal = elkEdge.id.endsWith("_internal");
+       const edgeIndex = parseInt(elkEdge.id.substring(1), 10);
+       if (isNaN(edgeIndex)) continue;
++      const container = elkEdge.container;
++      const containerOffset = container ? containerOffsets.get(container) : void 0;
++      const edgeOffsetX = containerOffset?.x ?? offsetX;
++      const edgeOffsetY = containerOffset?.y ?? offsetY;
+       const points = [];
+       if (elkEdge.sections && elkEdge.sections.length > 0) {
+         const section = elkEdge.sections[0];
+         points.push({
+-          x: section.startPoint.x + offsetX,
+-          y: section.startPoint.y + offsetY
++          x: section.startPoint.x + edgeOffsetX,
++          y: section.startPoint.y + edgeOffsetY
+         });
+         if (section.bendPoints) {
+           for (const bp of section.bendPoints) {
+-            points.push({ x: bp.x + offsetX, y: bp.y + offsetY });
++            points.push({ x: bp.x + edgeOffsetX, y: bp.y + edgeOffsetY });
+           }
+         }
+         points.push({
+-          x: section.endPoint.x + offsetX,
+-          y: section.endPoint.y + offsetY
++          x: section.endPoint.x + edgeOffsetX,
++          y: section.endPoint.y + edgeOffsetY
+         });
+       }
+       let labelPosition;
+@@ -6597,8 +6621,8 @@ function collectEdgeSegments(elkNode, segments, offsetX, offsetY) {
+         const label = elkEdge.labels[0];
+         if (label.x != null && label.y != null) {
+           labelPosition = {
+-            x: label.x + (label.width ?? 0) / 2 + offsetX,
+-            y: label.y + (label.height ?? 0) / 2 + offsetY
++            x: label.x + (label.width ?? 0) / 2 + edgeOffsetX,
++            y: label.y + (label.height ?? 0) / 2 + edgeOffsetY
+           };
+         }
+       }
+@@ -6623,7 +6647,13 @@ function collectEdgeSegments(elkNode, segments, offsetX, offsetY) {
+   }
+   if (elkNode.children) {
+     for (const child of elkNode.children) {
+-      collectEdgeSegments(child, segments, offsetX + (child.x ?? 0), offsetY + (child.y ?? 0));
++      collectEdgeSegments(
++        child,
++        segments,
++        offsetX + (child.x ?? 0),
++        offsetY + (child.y ?? 0),
++        containerOffsets
++      );
+     }
+   }
+ }
+diff --git a/src/layout-engine.ts b/src/layout-engine.ts
+index 8557308223e16670db3d126d9c55673b6e946598..8b0cb71f26e674922e425bd23c49659de751f375 100644
+--- a/src/layout-engine.ts
++++ b/src/layout-engine.ts
+@@ -710,7 +710,9 @@ function extractEdgesRecursively(
+ ): void {
+   // First pass: collect all edge segments
+   const segments = new Map<number, { external?: EdgeSegment; incoming?: EdgeSegment; outgoing?: EdgeSegment }>()
+-  collectEdgeSegments(elkNode, segments, 0, 0)
++  const containerOffsets = new Map<string, Point>()
++  collectContainerOffsets(elkNode, containerOffsets, 0, 0)
++  collectEdgeSegments(elkNode, segments, 0, 0, containerOffsets)
+ 
+   // Track margin-routed edge count for spacing offsets
+   let marginEdgeIndex = 0
+@@ -789,6 +791,24 @@ function extractEdgesRecursively(
+   }
+ }
+ 
++/** Build absolute root-coordinate offsets for every ELK container. */
++function collectContainerOffsets(
++  elkNode: ElkNode,
++  offsets: Map<string, Point>,
++  offsetX: number,
++  offsetY: number
++): void {
++  offsets.set(elkNode.id, { x: offsetX, y: offsetY })
++  for (const child of elkNode.children ?? []) {
++    collectContainerOffsets(
++      child,
++      offsets,
++      offsetX + (child.x ?? 0),
++      offsetY + (child.y ?? 0),
++    )
++  }
++}
++
+ /**
+  * Post-process edge points to ensure all segments are purely orthogonal.
+  *
+@@ -863,7 +883,8 @@ function collectEdgeSegments(
+   elkNode: ElkNode,
+   segments: Map<number, { external?: EdgeSegment; incoming?: EdgeSegment; outgoing?: EdgeSegment }>,
+   offsetX: number,
+-  offsetY: number
++  offsetY: number,
++  containerOffsets: Map<string, Point>
+ ): void {
+   if (elkNode.edges) {
+     for (const elkEdge of elkNode.edges) {
+@@ -872,22 +893,31 @@ function collectEdgeSegments(
+       const edgeIndex = parseInt(elkEdge.id.substring(1), 10)
+       if (isNaN(edgeIndex)) continue
+ 
++      // ELK may retain a cross-hierarchy edge in an ancestor's `edges` array
++      // while reporting sections and labels in the coordinate space named by
++      // `edge.container`. Prefer that container's accumulated root offset;
++      // edges without a container retain the owning-array behavior.
++      const container = (elkEdge as ElkExtendedEdge & { container?: string }).container
++      const containerOffset = container ? containerOffsets.get(container) : undefined
++      const edgeOffsetX = containerOffset?.x ?? offsetX
++      const edgeOffsetY = containerOffset?.y ?? offsetY
++
+       // Extract points
+       const points: Point[] = []
+       if (elkEdge.sections && elkEdge.sections.length > 0) {
+         const section = elkEdge.sections[0]!
+         points.push({
+-          x: section.startPoint.x + offsetX,
+-          y: section.startPoint.y + offsetY,
++          x: section.startPoint.x + edgeOffsetX,
++          y: section.startPoint.y + edgeOffsetY,
+         })
+         if (section.bendPoints) {
+           for (const bp of section.bendPoints) {
+-            points.push({ x: bp.x + offsetX, y: bp.y + offsetY })
++            points.push({ x: bp.x + edgeOffsetX, y: bp.y + edgeOffsetY })
+           }
+         }
+         points.push({
+-          x: section.endPoint.x + offsetX,
+-          y: section.endPoint.y + offsetY,
++          x: section.endPoint.x + edgeOffsetX,
++          y: section.endPoint.y + edgeOffsetY,
+         })
+       }
+ 
+@@ -897,8 +927,8 @@ function collectEdgeSegments(
+         const label = elkEdge.labels[0]!
+         if (label.x != null && label.y != null) {
+           labelPosition = {
+-            x: label.x + (label.width ?? 0) / 2 + offsetX,
+-            y: label.y + (label.height ?? 0) / 2 + offsetY,
++            x: label.x + (label.width ?? 0) / 2 + edgeOffsetX,
++            y: label.y + (label.height ?? 0) / 2 + edgeOffsetY,
+           }
+         }
+       }
+@@ -933,7 +963,13 @@ function collectEdgeSegments(
+   // Recurse into children with accumulated offset
+   if (elkNode.children) {
+     for (const child of elkNode.children) {
+-      collectEdgeSegments(child, segments, offsetX + (child.x ?? 0), offsetY + (child.y ?? 0))
++      collectEdgeSegments(
++        child,
++        segments,
++        offsetX + (child.x ?? 0),
++        offsetY + (child.y ?? 0),
++        containerOffsets,
++      )
+     }
+   }
+ }
+diff --git a/src/parser.ts b/src/parser.ts
+index 685835e3f1a9a480370ec8e1ff40b7356a3ed3c1..defc40d3f2ebf56ea097efe058a2ef26fba7a767 100644
+--- a/src/parser.ts
++++ b/src/parser.ts
+@@ -1,6 +1,18 @@
+ import type { MermaidGraph, MermaidNode, MermaidEdge, MermaidSubgraph, Direction, NodeShape, EdgeStyle } from './types.ts'
+ import { normalizeBrTags } from './multiline-utils.ts'
+ 
++/** Remove a single layer of matching wrapping quotes (`"…"` or `'…'`). */
++function stripWrappingQuotes(s: string): string {
++  const t = s.trim()
++  if (
++    t.length >= 2 &&
++    ((t[0] === '"' && t[t.length - 1] === '"') || (t[0] === "'" && t[t.length - 1] === "'"))
++  ) {
++    return t.slice(1, -1)
++  }
++  return t
++}
++
+ // ============================================================================
+ // Mermaid parser — flowcharts and state diagrams
+ //
+@@ -126,18 +138,22 @@ function parseFlowchart(lines: string[]): MermaidGraph {
+     const subgraphMatch = line.match(/^subgraph\s+(.+)$/)
+     if (subgraphMatch) {
+       const rest = subgraphMatch[1]!.trim()
+-      // Check for "subgraph id [Label]" form
+-      // ID can contain hyphens (e.g. "us-east"), so use [\w-]+ not \w+
+-      const bracketMatch = rest.match(/^([\w-]+)\s*\[(.+)\]$/)
++      // Check for `subgraph id [Label]` / `subgraph id ["Label"]` form. The id
++      // may contain non-ASCII chars (e.g. CJK), so match any run of non-space,
++      // non-`[` chars rather than ASCII [\w-]; strip optional quotes wrapping
++      // the title.
++      const bracketMatch = rest.match(/^([^\s[]+)\s*\[(.+)\]$/)
+       let id: string
+       let label: string
+       if (bracketMatch) {
+         id = bracketMatch[1]!
+-        label = normalizeBrTags(bracketMatch[2]!)
++        label = normalizeBrTags(stripWrappingQuotes(bracketMatch[2]!))
+       } else {
+-        // Use the label text as id (slugified)
+-        label = normalizeBrTags(rest)
+-        id = rest.replace(/\s+/g, '_').replace(/[^\w]/g, '')
++        // `subgraph Label` (optionally quoted): the label doubles as the id,
++        // slugified — but preserve unicode letters/numbers so a CJK-only title
++        // doesn't collapse to an empty id (which broke nested layout).
++        label = normalizeBrTags(stripWrappingQuotes(rest))
++        id = label.replace(/\s+/g, '_').replace(/[^\p{L}\p{N}_-]/gu, '')
+       }
+       const sg: MermaidSubgraph = { id, label, nodeIds: [], children: [] }
+       subgraphStack.push(sg)

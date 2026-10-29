@@ -174,6 +174,19 @@ describe("public memo share pages", () => {
     expect(await lockedMarkdown.text()).not.toContain("secret()");
   });
 
+  test("treats the stored default title as untitled in metadata and markdown", async () => {
+    const sqlite = createDatabase();
+    sqlite.query("UPDATE memos SET title = ? WHERE id = 'memo_source'").run("无标题笔记");
+    sqlite.query("UPDATE memo_contents SET content_markdown = ? WHERE memo_id = 'memo_source'").run("Body text\n");
+    const html = await (await render(sqlite, `/share/${token}`)).text();
+    expect(html).not.toContain("无标题笔记");
+    expect(html).toContain("<title>Shared note · EdgeEver</title>");
+    expect(html).toContain('<meta property="og:title" content="Shared note">');
+    expect(html).toContain('<meta name="twitter:title" content="Shared note">');
+    expect(html).toContain("Body text");
+    expect(await (await render(sqlite, `/share/${token}.md`)).text()).toBe("Body text\n");
+  });
+
   test("HEAD keeps the headers and omits the body", async () => {
     const response = await renderPublicMemoSharePage(
       new Request(`https://note.example/share/${token}.md`, { method: "HEAD" }),

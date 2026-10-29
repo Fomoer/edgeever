@@ -29,8 +29,7 @@ const ImageGalleryNodeView = ({ editor, node, selected, updateAttributes }: Node
 
   const setGalleryAttributes = useCallback((attributes: { layout?: ImageGalleryLayout; fit?: ImageGalleryFit }) => {
     updateAttributes(attributes);
-    editor.commands.focus(undefined, { scrollIntoView: false });
-  }, [editor, updateAttributes]);
+  }, [updateAttributes]);
 
   return (
     <NodeViewWrapper
@@ -39,6 +38,7 @@ const ImageGalleryNodeView = ({ editor, node, selected, updateAttributes }: Node
       data-image-count={node.childCount}
       data-image-gallery-layout={layout}
       data-image-gallery-fit={fit}
+      tabIndex={isEditable ? 0 : undefined}
     >
       {isEditable ? (
         <div

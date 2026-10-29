@@ -33,6 +33,7 @@ import { isBrowserOffline } from "@/lib/network-status";
 import { parseTagsText } from "@/lib/utils";
 import { createClientUuid } from "@/lib/client-id";
 import { notebookDeleteIdsFromPayload } from "@/lib/notebook-delete";
+import { acknowledgeNotebookId, hasTemporaryNotebookDependency, notebookRemapTables, repairQueuedNotebookReferences } from "@/lib/notebook-id-remap";
 
 export type { SyncQueueSummary, SyncRunResult } from "@edgeever/shared";
 export type SyncQueueResult = MemoDetail | Notebook | MemoTemplate | Resource | null;
@@ -390,6 +391,7 @@ const runQueuedChanges = async (options: {
   }
 
   const now = new Date();
+  await repairQueuedNotebookReferences(options.scope);
   const candidates = (await localDb.syncQueue.where("status").anyOf("pending", "error").toArray())
     .filter((item) => !item.nextAttemptAt || new Date(item.nextAttemptAt) <= now)
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
@@ -413,6 +415,9 @@ const runQueuedChanges = async (options: {
   }
 
   for (const candidate of items) {
+    // Creates earlier in this batch may have resolved this dependency. Also
+    // repair actions written by another tab since the initial queue snapshot.
+    await repairQueuedNotebookReferences(candidate.scope, candidate.id);
     const item = await claimQueueItem(candidate.id);
     if (!item) {
       continue;
@@ -487,6 +492,8 @@ const claimQueueItem = (id: string) =>
     if (!item || (item.status !== "pending" && item.status !== "error")) {
       return null;
     }
+    if (hasTemporaryNotebookDependency(item)) return null;
+    if (["memo.update", "memo.delete", "memo.restore"].includes(item.kind) && item.memoId.startsWith("local_")) return null;
 
     const claimId = createClientUuid();
     const claimedItem: SyncQueueItem = {
@@ -515,13 +522,18 @@ const deletedMemoIdsFromAction = (item: SyncQueueItem): string[] => {
 };
 
 const acknowledgeClaimedQueueItem = (item: SyncQueueItem, result: SyncQueueResult): Promise<MemoUpdateAcknowledgement> =>
-  localDb.transaction("rw", [localDb.syncQueue, localDb.drafts, localDb.memos], async () => {
+  localDb.transaction("rw", item.kind === "notebook.create"
+    ? [...notebookRemapTables, localDb.drafts]
+    : [localDb.syncQueue, localDb.drafts, localDb.memos], async () => {
     const current = await localDb.syncQueue.get(item.id);
     const memo = result && item.kind === "memo.update" && "contentHash" in result
       ? result as MemoDetail
       : null;
 
     if (current?.claimId === item.claimId && current.status === "syncing") {
+      if (item.kind === "notebook.create" && result && "name" in result && item.scope) {
+        await acknowledgeNotebookId(item.scope, item.memoId, result as Notebook);
+      }
       await localDb.syncQueue.delete(item.id);
       // A successful delete supersedes older conflicted edits to those notes.
       // Keep the draft until the server has confirmed the delete, so a failed

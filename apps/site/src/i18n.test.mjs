@@ -96,7 +96,8 @@ describe("site locale routing", () => {
         collectKeys(bestPracticesPageCopy["zh-CN"]),
       );
       const cases = bestPracticesPageCopy[locale].categories.flatMap((c) => c.cases);
-      expect(cases).toHaveLength(17);
+      // Every configured showcase appears exactly once in each locale.
+      expect(cases.map((item) => item.id).sort()).toEqual(Object.keys(showcaseCaseAssets).sort());
       for (const item of cases) {
         const assets = showcaseCaseAssets[item.id];
         expect(assets).toBeDefined();

@@ -22,7 +22,7 @@ test("publishes only completed jobs, retains registered files and isolates accou
   const f = await fixture();
   try {
     let status = f.manager.status();
-    expect(status.config.enabled).toBe(false); expect(status.config.retention).toBe(5);
+    expect(status.config.enabled).toBe(false); expect(status.config.retention).toBe(1);
     await f.manager.save({ ...status.config, retention: 3 });
     for (let i = 0; i < 4; i++) { await f.manager.run(); await complete(f); }
     status = f.manager.status(); expect(status.history).toHaveLength(3);
@@ -35,6 +35,41 @@ test("publishes only completed jobs, retains registered files and isolates accou
     expect(await readFile(join(folder, "manual.zip"), "utf8")).toBe("keep");
     expect((await readdir(folder)).filter((n) => n.endsWith(".zip"))).toHaveLength(4);
     expect(f.manager.status().lastSuccessAt).toBeNull();
+  } finally { await f.cleanup(); }
+});
+
+test("default retention keeps the latest successful archive through failures and reloads", async () => {
+  const f = await fixture();
+  try {
+    await f.manager.run(); await complete(f);
+    const first = f.manager.status().history[0];
+    await f.manager.run();
+    f.workers.at(-1).emit("message", { type: "error", error: { code: "backup_source_changed", message: "Changed" } });
+    await f.manager.waitForIdle();
+    expect(f.manager.status().history).toEqual([first]);
+    expect(await readFile(join(f.manager.status().actualDirectory, first.name), "utf8")).toBe("complete archive");
+    await f.manager.run(); await complete(f);
+    const status = f.manager.status();
+    expect(status.history).toHaveLength(1);
+    expect(status.history[0].name).not.toBe(first.name);
+    expect((await readdir(status.actualDirectory)).filter((name) => name.endsWith(".zip"))).toEqual([status.history[0].name]);
+    await f.manager.setContext(null);
+    await f.manager.setContext({ baseUrl: "http://localhost:1111", accountId: "a", token: "session-a" });
+    expect(f.manager.status().config.retention).toBe(1);
+    expect(f.manager.status().history).toEqual(status.history);
+  } finally { await f.cleanup(); }
+});
+
+test("loading an existing configuration preserves the previous default of five copies", async () => {
+  const f = await fixture();
+  try {
+    const record = JSON.parse(await readFile(f.manager.statePath(), "utf8"));
+    record.config.retention = 5;
+    await writeFile(f.manager.statePath(), JSON.stringify(record));
+    await f.manager.setContext(null);
+    await f.manager.setContext({ baseUrl: "http://localhost:1111", accountId: "a", token: "session-a" });
+    expect(f.manager.status().config).toEqual(record.config);
+    expect(f.manager.status().error).toBeNull();
   } finally { await f.cleanup(); }
 });
 
@@ -451,6 +486,7 @@ const finishSnapshot = async (f, result = {}) => {
 test('named manual backups preserve formats/settings and never overwrite a collision', async () => {
   const f = await fixture();
   try {
+    await f.manager.save({ ...f.manager.status().config, retention: 5 });
     await f.manager.save({ ...f.manager.status().config, encrypted: true }, 'saved');
     const id = f.manager.status().backupSetId;
     await f.manager.run(undefined, id, undefined, { name: '  Travel.zip  ', encrypted: false });
@@ -481,6 +517,7 @@ test('named manual backups preserve formats/settings and never overwrite a colli
 test('history restore/delete are scoped, reject replacements and remove only the selected file', async () => {
   const f = await fixture();
   try {
+    await f.manager.save({ ...f.manager.status().config, retention: 5 });
     await f.manager.run(); await complete(f);
     await f.manager.run(); await complete(f);
     const s = f.manager.status(); const [first, second] = s.history;
@@ -508,6 +545,7 @@ test('history restore/delete are scoped, reject replacements and remove only the
 test('automatic no-change advances checks, not archive time/retention, and invalidates its baseline correctly', async () => {
   const f = await fixture();
   try {
+    await f.manager.save({ ...f.manager.status().config, retention: 5 });
     await f.manager.save({ ...f.manager.status().config, enabled: true, interval: 'daily' });
     await f.manager.run(); await finishSnapshot(f);
     const first = f.manager.status(); const due = Date.parse(first.nextDueAt);

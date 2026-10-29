@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Mermaid viewer regression #704</title>
+<style>body { font: 14px system-ui; } section { margin: 24px 0; } img { max-width: 100%; }</style>
+<h1>Mermaid viewer regression #704</h1>
+<pre id="result" data-state="running">Running</pre>
+<button id="open-viewer" disabled>Open reported diagram</button>
+<div id="viewer"></div>
+<div id="cases"></div>
+<script type="module">
+  // /@fs fixtures bypass Vite's HTML transform, so initialize React refresh.
+  import RefreshRuntime from "/@react-refresh";
+  RefreshRuntime.injectIntoGlobalHook(window);
+  window.$RefreshReg$ = () => {};
+  window.$RefreshSig$ = () => (type) => type;
+  window.__vite_plugin_react_preamble_installed__ = true;
+</script>
+<script type="module" src="./mermaid-viewer.js"></script>

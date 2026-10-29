@@ -1,9 +1,9 @@
 export const BACKUP_INTERVALS = ["daily", "weekly", "biweekly", "monthly"];
-export const BACKUP_RETENTION = [3, 5, 10, 20];
+export const BACKUP_RETENTION = [1, 3, 5, 10, 20];
 export const backupError = (code, message) => Object.assign(new Error(message), { code });
 
 export const normalizeBackupConfig = (input, directory) => {
-  if (input === undefined) return { enabled: false, interval: "weekly", retention: 5, directory, encrypted: false };
+  if (input === undefined) return { enabled: false, interval: "weekly", retention: 1, directory, encrypted: false };
   if (!input || typeof input.enabled !== "boolean" || typeof input.encrypted !== "boolean"
     || !BACKUP_INTERVALS.includes(input.interval) || !BACKUP_RETENTION.includes(input.retention)
     || typeof input.directory !== "string" || !input.directory) throw backupError("backup_invalid_configuration", "The backup configuration is invalid.");

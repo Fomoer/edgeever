@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent, type Pointer
 import { mergeAttributes } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
 import { NodeViewWrapper, ReactNodeViewRenderer, useEditorState, type NodeViewProps } from "@tiptap/react";
-import { AlignLeft, AlignCenter, AlignRight, Maximize2 } from "lucide-react";
+import { AlignLeft, AlignCenter, AlignRight, Maximize2, MoveHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getImageReferrerPolicy, IMAGE_GALLERY_NODE_TYPE, imageAlignmentMargins, parseImageAlignment, type ImageAlignment } from "@edgeever/shared";
 import {
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { isImageInGallery } from "./image-editing-context";
 import { createImageSelectionPlugin, imageSelectionKey } from "./image-selection";
+import { createImageDragPlugin } from "./image-drag";
 
 export type ImageMenuRequestDetail = {
   element: HTMLElement;
@@ -292,7 +293,8 @@ const ResizableImageNodeView = ({
         ref={imageRef}
         src={src}
         alt={alt}
-        draggable={false}
+        draggable={editable}
+        data-drag-handle={editable ? "" : undefined}
         referrerPolicy={getImageReferrerPolicy(src)}
         onClick={(event) => {
           // A positioned figure does not occupy the full block wrapper. Select
@@ -349,6 +351,19 @@ const ResizableImageNodeView = ({
                       <TooltipContent side="top">{t(`editor.imageAlignments.${value}`)}</TooltipContent>
                     </Tooltip>
                   ))}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="edgeever-image-resize-handle"
+                        aria-label={t("editor.resizeImage")}
+                        onPointerDown={startResize}
+                      >
+                        <MoveHorizontal aria-hidden="true" className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">{t("editor.resizeImage")}</TooltipContent>
+                  </Tooltip>
                 </div>
               </TooltipProvider>
               {canGroupAdjacentImages ? (
@@ -362,19 +377,6 @@ const ResizableImageNodeView = ({
                   <span>{t("editor.imageGallery.group")}</span>
                 </button>
               ) : null}
-              <TooltipProvider delayDuration={0} skipDelayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="edgeever-image-resize-handle"
-                      aria-label={t("editor.resizeImage")}
-                      onPointerDown={startResize}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent side="top">{t("editor.resizeImage")}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             </>)}
           </div>
           <div ref={actionsRef} className="edgeever-image-resource-actions" />
@@ -391,7 +393,7 @@ const ResizableImageNodeView = ({
 
 export const ResizableImage = Image.extend({
   addProseMirrorPlugins() {
-    return [...(this.parent?.() ?? []), createImageSelectionPlugin()];
+    return [...(this.parent?.() ?? []), createImageSelectionPlugin(), createImageDragPlugin()];
   },
   addPasteRules() {
     return [createMarkdownImagePasteRule(this.type)];

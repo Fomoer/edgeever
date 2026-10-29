@@ -1,5 +1,5 @@
 import { Extension, type Editor } from "@tiptap/core";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { type EditorState, Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { SUPPORTED_PASTE_IMAGE_TYPES } from "./editor-pane-helpers";
 
@@ -223,3 +223,8 @@ export const waitForImageSourceReady = async (source: string, timeoutMs = 4_000)
     if (image.complete) finish();
   });
 };
+
+/** Resolve an upload anchor after all edits made since the file was dropped. */
+export const getImageUploadPlaceholderPosition = (state: EditorState, id: string): number | null =>
+  IMAGE_UPLOAD_PLACEHOLDER_PLUGIN_KEY.getState(state)
+    ?.find(undefined, undefined, (spec) => spec.id === id)[0]?.from ?? null;

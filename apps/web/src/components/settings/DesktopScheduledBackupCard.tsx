@@ -105,7 +105,8 @@ export const DesktopScheduledBackupCard = () => {
                 <label className="grid gap-1.5 text-xs font-medium text-slate-700">
                   <span>{t("desktopBackup.retention")}</span>
                   <select className="h-8 rounded-md border border-input bg-card px-2.5 text-xs text-slate-800 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900" value={config.retention} onChange={(event) => patch({ retention: Number(event.target.value) as DesktopBackupConfig["retention"] })}>
-                    {([3, 5, 10, 20] as const).map((count) => <option key={count} value={count}>{t("desktopBackup.copies", { count })}</option>)}
+                    {(config.retention === 10 || config.retention === 20) ? <option value={config.retention} disabled>{t("desktopBackup.copies", { count: config.retention })}</option> : null}
+                    {([1, 3, 5] as const).map((count) => <option key={count} value={count}>{t("desktopBackup.copies", { count })}</option>)}
                   </select>
                 </label>
               </div>

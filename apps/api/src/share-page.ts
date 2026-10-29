@@ -1,3 +1,4 @@
+import { getMemoDisplayTitle } from "@edgeever/shared/memo-title";
 import { isValidMemoShareSlug } from "@edgeever/shared/share-slug";
 import { PUBLIC_PAGE_HEADERS, PUBLIC_PAGE_ROBOTS } from "@edgeever/shared/public-page-headers";
 import type { DatabaseAdapter } from "./storage-contract";
@@ -80,7 +81,8 @@ export const PUBLIC_SHARE_MARKDOWN_PASSWORD = "This shared note requires a passw
 
 /** Markdown body for a public note. A title already used as the first heading is kept once. */
 export const publicShareMarkdown = (title: string | null, body: string) => {
-  const heading = (title ?? "").replace(/[\r\n]+/g, " ").trim();
+  // The stored zh-CN default title means "untitled"; it is not a heading.
+  const heading = getMemoDisplayTitle(title, "").replace(/[\r\n]+/g, " ").trim();
   if (!heading) return body;
   const firstLine = body.split(/\r?\n/, 1)[0] ?? "";
   if (firstLine.replace(/^#\s+/, "").trim() === heading) return body;
@@ -153,7 +155,7 @@ export const renderPublicMemoSharePage = async (
     return new Response(request.method === "HEAD" ? null : publicShareMarkdown(row.title, body), { status: 200, headers });
   }
 
-  const title = readable ? (row?.title?.replace(/[\r\n]+/g, " ").trim() || "Shared note") : "Shared note";
+  const title = readable ? (getMemoDisplayTitle(row?.title, "").replace(/[\r\n]+/g, " ").trim() || "Shared note") : "Shared note";
   const description = readable
     ? describeNote(body)
     : locked

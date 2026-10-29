@@ -18,6 +18,10 @@ import zhihuClipImg from "../../../../docs/assets/best-practices/original-image/
 import zhihuInNoteImg from "../../../../docs/assets/best-practices/original-image/web-clipper/zhihu/zhihu-in-note.png";
 import redditClipImg from "../../../../docs/assets/best-practices/original-image/web-clipper/reddit/reddit.png";
 import redditInNoteImg from "../../../../docs/assets/best-practices/original-image/web-clipper/reddit/reddit-in-note.png";
+import insClipImg from "../../../../docs/assets/best-practices/original-image/web-clipper/instgram/ins.png";
+import insInNoteImg from "../../../../docs/assets/best-practices/original-image/web-clipper/instgram/ins-in-note.png";
+import githubClipImg from "../../../../docs/assets/best-practices/original-image/web-clipper/github/github.png";
+import githubInNoteImg from "../../../../docs/assets/best-practices/original-image/web-clipper/github/github-in-note.png";
 import aiMindmapImg from "../../../../docs/assets/best-practices/original-image/ai-diagram/ai-mindmap.png";
 import aiFlowchartImg from "../../../../docs/assets/best-practices/original-image/ai-diagram/ai-flowchart.png";
 import aiArchitectureImg from "../../../../docs/assets/best-practices/original-image/ai-diagram/ai-architecture.png";
@@ -46,6 +50,8 @@ export type ShowcaseCaseId =
   | "twitter"
   | "zhihu"
   | "reddit"
+  | "instagram"
+  | "github"
   | "ai-diagrams"
   | "ai-infographics"
   | "ai-database"
@@ -95,6 +101,14 @@ export const showcaseCaseAssets: Record<ShowcaseCaseId, ShowcaseCaseAssetConfig>
   reddit: {
     layout: "stack",
     images: [redditClipImg, redditInNoteImg],
+  },
+  instagram: {
+    layout: "stack",
+    images: [insClipImg, insInNoteImg],
+  },
+  github: {
+    layout: "stack",
+    images: [githubClipImg, githubInNoteImg],
   },
   "ai-diagrams": {
     layout: "stack",
@@ -350,6 +364,45 @@ const zhCnCategories: ShowcaseCategoryCopy[] = [
           },
         ],
       },
+      {
+        id: "instagram",
+        number: "09",
+        title: "Instagram 帖子与轮播多图剪藏",
+        lead: "使用 EdgeEver Web Clipper 插件在 Instagram 帖子或轮播页面右键点击「保存帖子到 EdgeEver」。",
+        bullets: [
+          "提取作者账号、正文描述、发布时间与原文链接，保留话题标签与提及元数据。",
+          "多图轮播（Carousel）内容完整提取并自动排版为多栏画廊。",
+        ],
+        media: [
+          {
+            caption: "1. 右键保存 Instagram 帖子",
+            alt: "右键保存 Instagram 帖子到 EdgeEver",
+          },
+          {
+            caption: "2. 包含完整图集与元数据的笔记效果",
+            alt: "EdgeEver 剪藏后的 Instagram 帖子笔记效果",
+          },
+        ],
+      },
+      {
+        id: "github",
+        number: "10",
+        title: "GitHub 仓库元数据剪藏",
+        lead: "在 GitHub 仓库页面右键点击「保存仓库信息到 EdgeEver」。",
+        bullets: [
+          "提取仓库名称（Owner/Repo）、简介、官方主页、编程语言、许可证与话题标签，生成结构化技术卡片。",
+        ],
+        media: [
+          {
+            caption: "1. 右键保存仓库信息",
+            alt: "右键保存 GitHub 仓库信息到 EdgeEver",
+          },
+          {
+            caption: "2. 结构化仓库卡片预览",
+            alt: "EdgeEver 剪藏后的 GitHub 仓库卡片笔记",
+          },
+        ],
+      },
     ],
   },
   {
@@ -360,7 +413,7 @@ const zhCnCategories: ShowcaseCategoryCopy[] = [
     cases: [
       {
         id: "ai-diagrams",
-        number: "09",
+        number: "11",
         title: "AI 对话生成思维导图、流程图与架构图",
         lead: "在 AI 伴随助手（或连接的本地 Agent）中输入自然语言指令，在笔记内直接生成可交互图表。",
         bullets: [
@@ -383,7 +436,7 @@ const zhCnCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "ai-infographics",
-        number: "10",
+        number: "12",
         title: "AI 生成结构化信息图（时间线、对比矩阵、象限图等）",
         lead: "利用内置模板库，在 AI 助手对话中描述要呈现的主题与重点，快速生成结构化视觉笔记。",
         bullets: [
@@ -403,7 +456,7 @@ const zhCnCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "ai-database",
-        number: "11",
+        number: "13",
         title: "AI 对话构建多维表格",
         lead: "在 AI 助手中发送自然语言指令（如“生成自媒体选题库”或“生成员工信息登记表”），自动搭建多维数据表。",
         bullets: [
@@ -423,7 +476,7 @@ const zhCnCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "database-form",
-        number: "12",
+        number: "14",
         title: "多维表格生成公开收集表单",
         lead: "在多维表格顶部点击「表单收集」，将当前数据表转为公开在线表单。",
         bullets: [
@@ -443,7 +496,7 @@ const zhCnCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "acp-agent",
-        number: "13",
+        number: "15",
         title: "连接本机 Agent (ACP) 实现笔记协同",
         lead: "EdgeEver 支持 ACP (Agent Client Protocol) 协议，允许桌面端连接本机运行的各类 AI Agent（如 Codex、Claude Code、DeepSeek Harness、Antigravity 等）。",
         bullets: [
@@ -471,7 +524,7 @@ const zhCnCategories: ShowcaseCategoryCopy[] = [
     cases: [
       {
         id: "note-export-image",
-        number: "14",
+        number: "16",
         title: "笔记导出多主题长图与代码卡片",
         lead: "使用「分享为图片」功能，将笔记排版为高分辨率长图或卡片。",
         bullets: [
@@ -491,7 +544,7 @@ const zhCnCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "poster-studio",
-        number: "15",
+        number: "17",
         title: "笔记制作社交媒体海报与封面",
         lead: "在笔记操作菜单中选择「制作海报」（或通过「新建 → 海报」），将笔记标题与要点导入海报设计工作台。",
         bullets: [
@@ -507,7 +560,7 @@ const zhCnCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "wechat-mp-copy",
-        number: "16",
+        number: "18",
         title: "复制笔记至微信公众号排版",
         lead: "在笔记菜单中选择「复制到公众号 / 博客」，将笔记转换为内联 CSS 样式的富文本。",
         bullets: [
@@ -534,7 +587,7 @@ const zhCnCategories: ShowcaseCategoryCopy[] = [
     cases: [
       {
         id: "plugin-ecosystem",
-        number: "17",
+        number: "19",
         title: "开放插件 API 与自定义插件开发",
         lead: "EdgeEver 内置插件扩展管理，支持通过 GitHub 仓库或 Manifest 地址一键安装，配置在 Web 与桌面端跨设备隔离同步。",
         bullets: [
@@ -745,6 +798,45 @@ const enUsCategories: ShowcaseCategoryCopy[] = [
           },
         ],
       },
+      {
+        id: "instagram",
+        number: "09",
+        title: "Instagram Post & Carousel Clipping",
+        lead: "Right-click any Instagram post or carousel and select \"Save Post to EdgeEver\" with EdgeEver Web Clipper.",
+        bullets: [
+          "Extracts author handle, caption text, timestamp, and source URL while preserving hashtags and mention metadata.",
+          "Captures full multi-image carousel sets, formatted automatically into a clean multi-column gallery layout.",
+        ],
+        media: [
+          {
+            caption: "1. Right-Click Save Instagram Post",
+            alt: "Right-click save Instagram post to EdgeEver",
+          },
+          {
+            caption: "2. Note with Metadata & Multi-Image Gallery",
+            alt: "Instagram post clipped into EdgeEver note",
+          },
+        ],
+      },
+      {
+        id: "github",
+        number: "10",
+        title: "GitHub Repository Metadata Clipping",
+        lead: "Right-click anywhere on the GitHub repository page and select \"Save Repository Info to EdgeEver\".",
+        bullets: [
+          "Extracts repository name (Owner/Repo), description, homepage, language, license, and topic tags into a technical card note.",
+        ],
+        media: [
+          {
+            caption: "1. Right-Click Save Repository Info",
+            alt: "Right-click save GitHub repo info to EdgeEver",
+          },
+          {
+            caption: "2. Structured Repository Card Note",
+            alt: "EdgeEver clipped GitHub repository card note effect",
+          },
+        ],
+      },
     ],
   },
   {
@@ -755,7 +847,7 @@ const enUsCategories: ShowcaseCategoryCopy[] = [
     cases: [
       {
         id: "ai-diagrams",
-        number: "09",
+        number: "11",
         title: "AI Conversational Generation of Mind Maps, Flowcharts & Architecture Diagrams",
         lead: "Prompt the AI Co-pilot (or connected local Agent) with natural language to create editable diagrams directly in notes.",
         bullets: [
@@ -778,7 +870,7 @@ const enUsCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "ai-infographics",
-        number: "10",
+        number: "12",
         title: "AI Generation of Structured Infographics (Timelines, Matrices & Quadrants)",
         lead: "Use built-in infographic templates (timelines, comparison matrices, quadrants, and hierarchy charts) by prompting the AI Co-pilot with your topic.",
         bullets: [
@@ -798,7 +890,7 @@ const enUsCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "ai-database",
-        number: "11",
+        number: "13",
         title: "AI Conversational Database Table Generation",
         lead: "Send a prompt to the AI Co-pilot (e.g., \"Create a database table for social media content planning\" or \"Generate an employee onboarding tracker\") to construct complete data tables.",
         bullets: [
@@ -818,7 +910,7 @@ const enUsCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "database-form",
-        number: "12",
+        number: "14",
         title: "Public Online Form Collection from Database Tables",
         lead: "Click \"Form Collection\" at the top of any database table to generate a public online data entry form.",
         bullets: [
@@ -838,7 +930,7 @@ const enUsCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "acp-agent",
-        number: "13",
+        number: "15",
         title: "Connecting Local Agents via ACP for Note Interaction",
         lead: "EdgeEver natively supports ACP (Agent Client Protocol), allowing desktop clients to connect with local AI agent environments (such as Codex, Claude Code, DeepSeek Harness, Antigravity, etc.).",
         bullets: [
@@ -866,7 +958,7 @@ const enUsCategories: ShowcaseCategoryCopy[] = [
     cases: [
       {
         id: "note-export-image",
-        number: "14",
+        number: "16",
         title: "Note Export to Long Image & Code Cards",
         lead: "Use the \"Share as Image\" feature to render notes into high-resolution long images or cards.",
         bullets: [
@@ -886,7 +978,7 @@ const enUsCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "poster-studio",
-        number: "15",
+        number: "17",
         title: "Social Media Poster & Cover Design from Notes",
         lead: "Click \"Create Poster\" in any note's action menu (or via \"New → Poster\") to load key takeaways and titles into the Poster Design Studio.",
         bullets: [
@@ -902,7 +994,7 @@ const enUsCategories: ShowcaseCategoryCopy[] = [
       },
       {
         id: "wechat-mp-copy",
-        number: "16",
+        number: "18",
         title: "Copying Notes to WeChat Official Account & Blogs",
         lead: "Select \"Copy to Official Account / Blog\" from the note menu to convert notes into rich text with inline CSS.",
         bullets: [
@@ -929,7 +1021,7 @@ const enUsCategories: ShowcaseCategoryCopy[] = [
     cases: [
       {
         id: "plugin-ecosystem",
-        number: "17",
+        number: "19",
         title: "Open Plugin API & Custom Plugin Development",
         lead: "EdgeEver features an extension manager supporting one-click installation via GitHub repository URLs or Manifest links, with cross-device workspace synchronization between Web and Desktop.",
         bullets: [
@@ -968,7 +1060,7 @@ const enUsCategories: ShowcaseCategoryCopy[] = [
 export const bestPracticesPageCopy: Record<SiteLocale, BestPracticesPageLocaleCopy> = {
   "zh-CN": {
     eyebrow: "BEST PRACTICES & SHOWCASE",
-    title: "EdgeEver 17 个真机场景与实操指南",
+    title: "EdgeEver 19 个真机场景与实操指南",
     description:
       "涵盖三栏沉浸写作、微信与全渠道结构化剪藏、AI 对话生成导图/信息图/多维表格、本机 ACP Agent 协同、海报与长图分享及开放插件生态的完整实机演示。",
     zoomHint: "点击任意截图可放大查看高清细节",
@@ -981,7 +1073,7 @@ export const bestPracticesPageCopy: Record<SiteLocale, BestPracticesPageLocaleCo
   },
   "en-US": {
     eyebrow: "BEST PRACTICES & SHOWCASE",
-    title: "17 Real-World EdgeEver Workflows & Showcase",
+    title: "19 Real-World EdgeEver Workflows & Showcase",
     description:
       "A visual walkthrough of core EdgeEver workflows across desktop and mobile: three-pane writing, omnichannel clipping, AI diagrams & databases, local ACP agents, poster studio, and open plugins.",
     zoomHint: "Click any screenshot to inspect full-resolution details",
@@ -994,7 +1086,7 @@ export const bestPracticesPageCopy: Record<SiteLocale, BestPracticesPageLocaleCo
   },
   ja: {
     eyebrow: "BEST PRACTICES & SHOWCASE",
-    title: "EdgeEver 17 の実機デモとベストプラクティス",
+    title: "EdgeEver 19 の実機デモとベストプラクティス",
     description:
       "クラシックな三ペイン執筆、マルチチャネル Web クリッピング、AI による図解・インフォグラフィック・多次元テーブル生成、ローカル ACP Agent 連携、ポスター作成、プラグイン拡張までの実機ワークフロー集です。",
     zoomHint: "スクリーンショットをクリックすると拡大表示できます",
@@ -1007,7 +1099,7 @@ export const bestPracticesPageCopy: Record<SiteLocale, BestPracticesPageLocaleCo
   },
   pl: {
     eyebrow: "BEST PRACTICES & SHOWCASE",
-    title: "17 praktycznych scenariuszy i prezentacja EdgeEver",
+    title: "19 praktycznych scenariuszy i prezentacja EdgeEver",
     description:
       "Wizualny przewodnik po najważniejszych przepływach pracy w EdgeEver na komputerze i telefonie: pisanie w trzech panelach, wycinanie treści z sieci, diagramy i bazy danych AI, lokalni agenci ACP, studio plakatów i wtyczki.",
     zoomHint: "Kliknij dowolny zrzut ekranu, aby powiększyć",

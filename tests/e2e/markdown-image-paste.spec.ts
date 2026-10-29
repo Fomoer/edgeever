@@ -65,7 +65,8 @@ test("converts a pasted Markdown image line in the main Web editor", async ({ pa
     const image = editor.locator(`img[src="${source}"]`);
     await expect(image).toHaveCount(1);
     await expect(image).toHaveAttribute("alt", "图片");
-    await expect(image).toHaveAttribute("title", "Issue 229");
+    // Filenames/titles stay in the document model, not native hover tooltips.
+    await expect(image).not.toHaveAttribute("title");
     await expect(editor).not.toContainText(markdown);
 
     const imageNode = editor.locator(".edgeever-image-node");
@@ -90,6 +91,8 @@ test("converts a pasted Markdown image line in the main Web editor", async ({ pa
       const body = await response.json() as { memo: { contentJson: unknown } };
       return JSON.stringify(body.memo.contentJson);
     }, { timeout: 20_000 }).toContain(source);
+    const saved = await (await page.request.get(`/api/v1/memos/${memo.id}`)).json();
+    expect(JSON.stringify(saved.memo.contentJson)).toContain('"title":"Issue 229"');
   } finally {
     await deleteMemo(page, memo.id);
   }

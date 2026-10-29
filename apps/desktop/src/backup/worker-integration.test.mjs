@@ -209,6 +209,7 @@ test("manager creates named files, restores from history and deletes only the se
   });
   cleanups.push(() => manager.close());
   await manager.setContext({ baseUrl: source.baseUrl, accountId: "local", token: "" });
+  await manager.save({ ...manager.status().config, retention: 3 });
   const id = manager.status().backupSetId;
   for (const encrypted of [false, true]) {
     await manager.run(encrypted ? "fixture password" : undefined, id, undefined, { name: encrypted ? "Encrypted snapshot.zip" : "Plain snapshot", encrypted });

@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./diagram-canvas": "./src/diagram-canvas.ts",
     "./public-demo": "./src/public-demo.ts",
+    "./memo-title": "./src/memo-title.ts",
     "./share-slug": "./src/share-slug.ts",
     "./ai-generation": "./src/ai-generation.ts",
     "./diagram-layout": "./src/diagram-layout.ts",
@@ -62,6 +63,7 @@
     "@zip.js/zip.js": "2.24.0",
     "js-base64": "3.9.3",
     "katex": "0.18.2",
+    "marked": "17.0.6",
     "yaml": "2.8.3",
     "zod": "4.6.6"
   }

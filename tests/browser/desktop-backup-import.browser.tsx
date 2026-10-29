@@ -12,7 +12,7 @@ import "../../apps/web/src/styles/globals.css";
 const i18n = i18next.createInstance();
 await i18n.init({ lng: "zh-CN", resources: { "zh-CN": { translation: zhCN } }, interpolation: { escapeValue: false }, initAsync: false });
 const status: DesktopBackupStatus = {
-  config: { enabled: false, interval: "weekly", retention: 5, directory: "/test/Backups", encrypted: false },
+  config: { enabled: false, interval: "weekly", retention: 1, directory: "/test/Backups", encrypted: false },
   backupSetId: "fixture-backup-set", actualDirectory: "/test/Backups/fixture-backup-set", blocked: false,
   passwordSet: false, secureStorageAvailable: true, lastAttemptAt: null, lastSuccessAt: "2026-10-25T03:00:00.000Z",
   lastCheck: { at: "2026-10-26T03:00:00.000Z", result: "unchanged" }, lastRestoreAt: null, nextDueAt: null, pendingPublication: null, target: { baseUrl: "http://test-instance", accountId: "test-account" },

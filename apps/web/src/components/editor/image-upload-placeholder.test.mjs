@@ -7,6 +7,7 @@ import {
   createFileUploadPlaceholder,
   createImageUploadPlaceholderPlugin,
   createResourceUploadPlaceholder,
+  getImageUploadPlaceholderPosition,
   removeImageUploadPlaceholder,
   updateImageUploadPlaceholder,
 } from "./image-upload-placeholder.ts";
@@ -128,6 +129,7 @@ describe("resource upload placeholder", () => {
       ?.find(undefined, undefined, (spec) => spec.id === placeholder.id) ?? [];
     expect(initialDecorations).toHaveLength(1);
     expect(initialDecorations[0]?.from).toBe(1);
+    expect(getImageUploadPlaceholderPosition(editor.state, placeholder.id)).toBe(1);
 
     editor.view.dispatch(editor.state.tr.insertText("A", 1));
     const mappedDecorations = IMAGE_UPLOAD_PLACEHOLDER_PLUGIN_KEY
@@ -135,8 +137,48 @@ describe("resource upload placeholder", () => {
       ?.find(undefined, undefined, (spec) => spec.id === placeholder.id) ?? [];
     expect(mappedDecorations).toHaveLength(1);
     expect(mappedDecorations[0]?.from).toBe(2);
+    expect(getImageUploadPlaceholderPosition(editor.state, placeholder.id)).toBe(2);
 
     removeImageUploadPlaceholder(editor, placeholder);
     expect(IMAGE_UPLOAD_PLACEHOLDER_PLUGIN_KEY.getState(editor.state)?.find()).toHaveLength(0);
+    expect(getImageUploadPlaceholderPosition(editor.state, placeholder.id)).toBeNull();
+  });
+});
+
+// #709: dropped files use a mapped point, never the previous replacement selection.
+describe("drop upload anchors", () => {
+  const makeEditor = () => {
+    const schema = new Schema({ nodes: {
+      doc: { content: "block+" },
+      paragraph: { content: "inline*", group: "block" },
+      text: { group: "inline" },
+    } });
+    const editor = {
+      state: EditorState.create({ schema,
+        doc: schema.node("doc", null, [schema.node("paragraph", null, schema.text("before after"))]),
+        plugins: [createImageUploadPlaceholderPlugin()],
+      }),
+      view: { dispatch(tr) { editor.state = editor.state.apply(tr); } },
+    };
+    return editor;
+  };
+
+  test("retains distinct queued drop points through edits before and between them", () => {
+    const editor = makeEditor();
+    addImageUploadPlaceholder(editor, { ...placeholder, id: "first" }, 5);
+    addImageUploadPlaceholder(editor, { ...placeholder, id: "second" }, 10);
+    editor.view.dispatch(editor.state.tr.insertText("ABC", 1));
+    expect(getImageUploadPlaceholderPosition(editor.state, "first")).toBe(8);
+    expect(getImageUploadPlaceholderPosition(editor.state, "second")).toBe(13);
+    editor.view.dispatch(editor.state.tr.insertText("XY", 9));
+    expect(getImageUploadPlaceholderPosition(editor.state, "first")).toBe(8);
+    expect(getImageUploadPlaceholderPosition(editor.state, "second")).toBe(15);
+  });
+
+  test("does not revive an anchor whose containing content was deleted", () => {
+    const editor = makeEditor();
+    addImageUploadPlaceholder(editor, placeholder, 5);
+    editor.view.dispatch(editor.state.tr.delete(2, 8));
+    expect(getImageUploadPlaceholderPosition(editor.state, placeholder.id)).toBeNull();
   });
 });

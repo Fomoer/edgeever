@@ -127,12 +127,21 @@ export const normalizeMermaidSvgForViewer = (
 ) => {
   if (typeof DOMParser === "undefined" || typeof XMLSerializer === "undefined") return svg;
 
-  const document = new DOMParser().parseFromString(svg, "image/svg+xml");
-  const root = document.documentElement;
-  if (root.tagName.toLowerCase() !== "svg" || document.querySelector("parsererror")) return svg;
+  const parser = new DOMParser();
+  const document = parser.parseFromString(svg, "image/svg+xml");
+  let root: Element | null = document.documentElement;
+  if (document.querySelector("parsererror")) {
+    // Official Mermaid labels can contain HTML void tags such as <br>. Inline
+    // SVG accepts them, but a standalone SVG image requires well-formed XML.
+    // Parse in an inert HTML document, then serialize the SVG with XHTML
+    // namespaces and closed void tags before handing it to the image viewer.
+    root = parser.parseFromString(svg, "text/html").body.firstElementChild;
+    if (root?.namespaceURI !== "http://www.w3.org/2000/svg") return svg;
+  }
+  if (root?.tagName.toLowerCase() !== "svg") return svg;
 
   // Mermaid emits width="100%", which gives Blob-backed images incorrect intrinsic dimensions.
   root.setAttribute("width", String(presentation.width));
   root.setAttribute("height", String(presentation.height));
-  return new XMLSerializer().serializeToString(document);
+  return new XMLSerializer().serializeToString(root);
 };

@@ -14,6 +14,7 @@ import { EmptyExternalLink } from "./empty-external-link";
 import { EdgeEverLink } from "./editor-link";
 import { createEdgeEverTaskItem } from "./task-item-input";
 import { MathCodeFence } from "./mathematics-markdown";
+import { createEdgeEverMarked } from "./markdown-options";
 
 export type CreateEdgeEverDocumentExtensionsOptions = {
   mathematics: AnyExtension[];
@@ -59,6 +60,6 @@ export const createEdgeEverDocumentExtensions = (
   ...options.mathematics,
   MathCodeFence,
   ...(options.markdown
-    ? [Markdown.configure({ markedOptions: { gfm: true } })]
+    ? [Markdown.configure({ marked: createEdgeEverMarked(), markedOptions: { gfm: true } })]
     : []),
 ];

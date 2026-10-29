@@ -207,7 +207,7 @@ export const JsonBackupResourceMetadataSchema = JsonBackupMemoSchema.shape.resou
 export type DesktopBackupConfig = {
   enabled: boolean;
   interval: "daily" | "weekly" | "biweekly" | "monthly";
-  retention: 3 | 5 | 10 | 20;
+  retention: 1 | 3 | 5 | 10 | 20;
   directory: string;
   encrypted: boolean;
 };

@@ -25,6 +25,7 @@ import {
   MAX_IMAGE_UPLOAD_BYTES,
   mapResource,
   normalizeFilename,
+  validateRestoredResourceMimeType,
   type ResourceRow,
 } from "./resource-service";
 import { getWorkspaceId, requireScopes, requireUser } from "./request-auth";
@@ -489,6 +490,9 @@ export const registerBackupRoutes = (
       return apiError(context, "upload_too_large", "Backup resource size is invalid.", 413);
     }
 
+    const mimeType = metadata.mimeType ?? file.type ?? "application/octet-stream";
+    validateRestoredResourceMimeType(metadata.kind, mimeType, file.size);
+
     const filename = normalizeFilename(metadata.filename || file.name) || `${metadata.kind}-${metadata.id}`;
     const objectKey = `workspaces/${workspaceId}/restores/${metadata.memoId}/${metadata.id}/${Date.now()}-${filename}`;
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -511,7 +515,7 @@ export const registerBackupRoutes = (
 
     const destination = await resolveObjectStorage(context.env);
     await destination.store.put(objectKey, bytes, {
-      httpMetadata: { contentType: metadata.mimeType ?? file.type ?? "application/octet-stream" },
+      httpMetadata: { contentType: mimeType },
       customMetadata: { memoId: metadata.memoId, resourceId: metadata.id, restored: "true" },
     });
 
@@ -547,7 +551,7 @@ export const registerBackupRoutes = (
         objectKey,
         destination.configId,
         metadata.kind,
-        metadata.mimeType ?? file.type ?? null,
+        mimeType,
         filename,
         bytes.byteLength,
         await dependencies.sha256Bytes(bytes),

@@ -1,4 +1,5 @@
 import type { Editor } from "@tiptap/core";
+import { NodeSelection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import {
   BLOCK_MATH_NODE_TYPE,
   INLINE_MATH_NODE_TYPE,
@@ -36,14 +37,40 @@ export const resolveMathFormulaTarget = (editor: Editor, pos?: number): MathForm
   return null;
 };
 
+/**
+ * Puts the caret right after the formula at `formulaPos`, so the next key
+ * continues the text instead of landing in front of it or replacing it. A
+ * display formula continues in an empty paragraph after it, so typing does not
+ * join the following text either.
+ */
+const placeCaretAfterFormula = (tr: Transaction, formulaPos: number) => {
+  const node = tr.doc.nodeAt(formulaPos);
+  if (!node) return;
+  const after = formulaPos + node.nodeSize;
+  if (node.type.name !== BLOCK_MATH_NODE_TYPE) {
+    tr.setSelection(TextSelection.create(tr.doc, after));
+    return;
+  }
+  const next = tr.doc.resolve(after).nodeAfter;
+  if (next?.type.name !== "paragraph" || next.content.size > 0) {
+    tr.insert(after, tr.doc.type.schema.nodes.paragraph!.create());
+  }
+  tr.setSelection(TextSelection.create(tr.doc, after + 1));
+};
+
 export const applyMathFormula = (editor: Editor, draft: MathFormulaDraft) => {
   const latex = draft.latex.trim();
   if (!latex) return false;
 
   if (typeof draft.pos === "number") {
-    return draft.kind === "inline"
-      ? editor.commands.updateInlineMath({ latex, pos: draft.pos })
-      : editor.commands.updateBlockMath({ latex, pos: draft.pos });
+    const pos = draft.pos;
+    const chain = editor.chain();
+    return (draft.kind === "inline" ? chain.updateInlineMath({ latex, pos }) : chain.updateBlockMath({ latex, pos }))
+      .command(({ tr }) => {
+        placeCaretAfterFormula(tr, tr.mapping.map(pos));
+        return true;
+      })
+      .run();
   }
 
   const from = draft.from ?? editor.state.selection.from;
@@ -52,7 +79,18 @@ export const applyMathFormula = (editor: Editor, draft: MathFormulaDraft) => {
     ? { type: INLINE_MATH_NODE_TYPE, attrs: { latex } }
     : { type: BLOCK_MATH_NODE_TYPE, attrs: { latex } };
 
-  return editor.chain().insertContentAt(from === to ? from : { from, to }, content).run();
+  return editor.chain()
+    .insertContentAt(from === to ? from : { from, to }, content)
+    .command(({ tr }) => {
+      // An inline formula already leaves the caret after it; a display formula
+      // is left selected as a node.
+      const { selection } = tr;
+      if (selection instanceof NodeSelection && selection.node.type.name === BLOCK_MATH_NODE_TYPE) {
+        placeCaretAfterFormula(tr, selection.from);
+      }
+      return true;
+    })
+    .run();
 };
 
 export const deleteMathFormula = (editor: Editor, target: Pick<MathFormulaTarget, "kind" | "pos">) => {

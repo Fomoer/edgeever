@@ -145,7 +145,7 @@ export const siteCopy = {
       eyebrow: "WHY EDGEEVER",
       heading: "重新定义自托管知识工作区",
       subheading: "告别商业笔记的臃肿广告、设备限制与昂贵订阅。每一个设计细节，都旨在打造流畅、开放、隐私可控且原生支持 AI 的第二大脑。",
-      showcaseCta: "查看 17 个真机案例演示与最佳实践",
+      showcaseCta: "查看 19 个真机案例演示与最佳实践",
       card1: {
         badge: "经典重现",
         title: "经典三栏与专注模式，熟悉更轻快",
@@ -362,7 +362,7 @@ export const siteCopy = {
           cta: "查看迁移指南",
         },
         {
-          title: "17 个真机场景与实操指南",
+          title: "19 个真机场景与实操指南",
           summary: "浏览三栏写作、微信与全渠道剪藏、AI 导图/信息图/多维表格、本机 ACP 协同及海报排版实机演示。",
           href: "/guides/best-practices",
           cta: "查看实机案例",
@@ -428,7 +428,7 @@ export const siteCopy = {
       eyebrow: "WHY EDGEEVER",
       heading: "Rebuilt for Self-Hosted Knowledge & AI Workflows",
       subheading: "Say goodbye to ads, device caps, and expensive subscriptions. Every detail is crafted for a fast, open, and private second brain.",
-      showcaseCta: "Explore 17 real-world workflows & screenshots",
+      showcaseCta: "Explore 19 real-world workflows & screenshots",
       card1: {
         badge: "Classic UI",
         title: "Classic Three-Pane Layout, Faster & Lighter",
@@ -645,7 +645,7 @@ export const siteCopy = {
           cta: "Read migration guide",
         },
         {
-          title: "17 Real-World Workflows",
+          title: "19 Real-World Workflows",
           summary: "Visual walkthrough of three-pane editing, omnichannel clipping, AI diagrams & databases, local ACP agents, and poster design.",
           href: "/guides/best-practices",
           cta: "View showcase",

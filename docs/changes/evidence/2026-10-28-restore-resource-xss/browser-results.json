@@ -1,0 +1,72 @@
+{
+  "engine": "Chromium via ego-browser",
+  "content": "Synthetic local data; no script payloads or credentials",
+  "results": [
+    {
+      "id": "bad_image",
+      "sourceMime": "image/png; charset=utf-8, text/html",
+      "status": 200,
+      "contentType": "application/octet-stream",
+      "disposition": "attachment; filename=\"image.bin\"; filename*=UTF-8''image.bin",
+      "csp": null,
+      "download": {
+        "filename": "image.bin",
+        "failure": null
+      }
+    },
+    {
+      "id": "bad_audio",
+      "sourceMime": "audio/mpeg; ignored=x, text/html",
+      "status": 200,
+      "contentType": "application/octet-stream",
+      "disposition": "attachment; filename=\"audio.bin\"; filename*=UTF-8''audio.bin",
+      "csp": null,
+      "download": {
+        "filename": "audio.bin",
+        "failure": null
+      }
+    },
+    {
+      "id": "bad_video",
+      "sourceMime": "video/mp4; ignored=x, application/xhtml+xml",
+      "status": 200,
+      "contentType": "application/octet-stream",
+      "disposition": "attachment; filename=\"video.bin\"; filename*=UTF-8''video.bin",
+      "csp": null,
+      "download": {
+        "filename": "video.bin",
+        "failure": null
+      }
+    },
+    {
+      "id": "quoted_svg",
+      "sourceMime": "IMAGE/SVG+XML; charset=\"utf-16le\"; note=\"a,b; text/html\"",
+      "status": 200,
+      "contentType": "image/svg+xml; charset=utf-16le; note=\"a,b; text/html\"",
+      "disposition": "inline; filename=\"encoded.svg\"; filename*=UTF-8''encoded.svg",
+      "csp": "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; sandbox",
+      "document": {
+        "contentType": "image/svg+xml",
+        "namespace": "http://www.w3.org/2000/svg",
+        "svgText": "旧备份",
+        "marker": false,
+        "imageWidth": null
+      }
+    },
+    {
+      "id": "quoted_png",
+      "sourceMime": "IMAGE/PNG; note=\"a,b; text/html\"",
+      "status": 200,
+      "contentType": "image/png; note=\"a,b; text/html\"",
+      "disposition": "inline; filename=\"pixel.png\"; filename*=UTF-8''pixel.png",
+      "csp": null,
+      "document": {
+        "contentType": "image/png",
+        "namespace": "http://www.w3.org/1999/xhtml",
+        "svgText": null,
+        "marker": false,
+        "imageWidth": 1
+      }
+    }
+  ]
+}

@@ -10,7 +10,7 @@ const GANTT_SOURCE = `gantt
   Compatibility fallback :fallback, 2026-07-30, 1d`;
 
 describe("Mermaid renderer fallback", () => {
-  test("routes the reported subgraph to Mermaid even when the compact renderer would succeed", async () => {
+  test("keeps the reported Chinese subgraph on the compact renderer", async () => {
     const source = `flowchart LR
       subgraph 日志开启建议
         A[生产环境] -->|不开启| B[查询日志]
@@ -31,12 +31,12 @@ describe("Mermaid renderer fallback", () => {
       source,
       renderBeautiful: () => {
         compactRenderCount += 1;
-        return renderMermaidSVG(source);
+        return compactRender.stdout;
       },
       renderOfficial: () => '<svg data-renderer="mermaid"></svg>',
     });
-    expect(compactRenderCount).toBe(0);
-    expect(svg).toContain('data-renderer="mermaid"');
+    expect(compactRenderCount).toBe(1);
+    expect(svg).toBe(compactRender.stdout);
   });
 
   test("does not route a comment mentioning subgraphs to the official renderer", async () => {

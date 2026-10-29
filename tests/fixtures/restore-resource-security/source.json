@@ -1,0 +1,158 @@
+{
+  "release": "v2.12.0",
+  "commit": "eeaab088f41d0417fbce2266f58ff4adde7f5d76",
+  "notebooks": [
+    {
+      "id": "nb_release",
+      "parentId": null,
+      "name": "Released backup",
+      "slug": "released-backup",
+      "icon": "notebook",
+      "color": "#07130B",
+      "textColor": null,
+      "colorTarget": "icon",
+      "isBold": false,
+      "iconInverted": false,
+      "rowInverted": false,
+      "sortOrder": 0,
+      "memoCount": 1,
+      "lastMemoUpdatedAt": "2026-08-31T00:00:00.000Z",
+      "createdAt": "2026-08-31T00:00:00.000Z",
+      "updatedAt": "2026-08-31T00:00:00.000Z"
+    }
+  ],
+  "memos": [
+    {
+      "id": "memo_release",
+      "notebookId": "nb_release",
+      "title": "Previous release backup",
+      "excerpt": "Preserved note",
+      "tags": [
+        "old-release"
+      ],
+      "isPinned": true,
+      "isArchived": false,
+      "isDeleted": false,
+      "revision": 1,
+      "createdAt": "2026-08-31T00:00:00.000Z",
+      "updatedAt": "2026-08-31T00:00:00.000Z",
+      "deletedAt": null,
+      "contentJson": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Preserved note"
+              }
+            ]
+          }
+        ]
+      },
+      "contentMarkdown": "Preserved note\n\n![image](/api/v1/resources/res_release_png/blob)",
+      "contentText": "Preserved note",
+      "contentHash": "bce07e2da68d4fd2551bee0658f91f21c5fea020be1c015e2d14ecab29cc4c7c",
+      "sourceMemoIds": [],
+      "mergeSourceCount": 0,
+      "mergedIntoMemoId": null
+    }
+  ],
+  "revisions": [
+    {
+      "id": "rev_release",
+      "memoId": "memo_release",
+      "revision": 0,
+      "title": "Previous release backup",
+      "tags": [
+        "old-release"
+      ],
+      "contentJson": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Original revision"
+              }
+            ]
+          }
+        ]
+      },
+      "contentMarkdown": "Original revision",
+      "contentText": "Original revision",
+      "contentHash": "29a61d05034d02dcc6a8808c45edafb2260211fa520813742e04e5a202c37e10",
+      "createdBy": "user",
+      "createdAt": "2026-08-31T00:00:00.000Z"
+    }
+  ],
+  "resources": [
+    {
+      "id": "res_release_png",
+      "memoId": "memo_release",
+      "originalMemoId": null,
+      "kind": "image",
+      "mimeType": "image/png",
+      "filename": "image.png",
+      "byteSize": 68,
+      "sha256": null,
+      "width": 1,
+      "height": 1,
+      "createdAt": "2026-08-31T00:00:00.000Z",
+      "updatedAt": "2026-08-31T00:00:00.000Z",
+      "url": "/api/v1/resources/res_release_png/blob",
+      "bytesBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII="
+    },
+    {
+      "id": "res_release_svg",
+      "memoId": "memo_release",
+      "originalMemoId": null,
+      "kind": "image",
+      "mimeType": "image/svg+xml",
+      "filename": "diagram.svg",
+      "byteSize": 95,
+      "sha256": null,
+      "width": 1,
+      "height": 1,
+      "createdAt": "2026-08-31T00:00:00.000Z",
+      "updatedAt": "2026-08-31T00:00:00.000Z",
+      "url": "/api/v1/resources/res_release_svg/blob",
+      "bytesBase64": "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48L3N2Zz4="
+    },
+    {
+      "id": "res_release_html",
+      "memoId": "memo_release",
+      "originalMemoId": null,
+      "kind": "attachment",
+      "mimeType": "text/html",
+      "filename": "document.html",
+      "byteSize": 43,
+      "sha256": null,
+      "width": null,
+      "height": null,
+      "createdAt": "2026-08-31T00:00:00.000Z",
+      "updatedAt": "2026-08-31T00:00:00.000Z",
+      "url": "/api/v1/resources/res_release_html/blob",
+      "bytesBase64": "PCFkb2N0eXBlIGh0bWw+PHA+RG93bmxvYWRhYmxlIGRvY3VtZW50PC9wPg=="
+    },
+    {
+      "id": "res_release_unknown",
+      "memoId": "memo_release",
+      "originalMemoId": null,
+      "kind": "image",
+      "mimeType": null,
+      "filename": "unknown.bin",
+      "byteSize": 68,
+      "sha256": null,
+      "width": 1,
+      "height": 1,
+      "createdAt": "2026-08-31T00:00:00.000Z",
+      "updatedAt": "2026-08-31T00:00:00.000Z",
+      "url": "/api/v1/resources/res_release_unknown/blob",
+      "bytesBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII="
+    }
+  ]
+}

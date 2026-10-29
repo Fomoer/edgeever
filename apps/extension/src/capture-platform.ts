@@ -6,6 +6,7 @@ import { readXiaoyuzhou } from "./xiaoyuzhou-clip";
 import { readBoss } from "./boss-clip";
 import { readXueqiu } from "./xueqiu-clip";
 import { readXueqiuFeedPost } from "./xueqiu-feed";
+import { readInstagramDetail } from "./instagram-clip";
 import { readArticle } from "./article-clip";
 import { readJike, jikeExpandButton, jikePostCard } from "./jike-clip";
 import { readDouban } from "./douban-clip";
@@ -68,6 +69,9 @@ import { platformHtmlMarkdown, platformTarget, type PlatformLabels, type Platfor
     }
     if(expected.platform === "xueqiu" && !platformTarget(location.href)) return readXueqiuFeedPost(document,expected,sourceUrl);
     const initial = read();
+    if (expected.platform === "instagram" && !initial.ok && (initial.reason === "unreadable" || initial.reason === "incomplete")) {
+      return readInstagramDetail(document, expected, sourceUrl, samePage);
+    }
     if (!initial.ok && initial.reason === "incomplete" && ["facebook", "linkedin", "jike"].includes(expected.platform)) {
       const card = expected.platform === "jike" ? jikePostCard(document,expected,location.href) : socialPostCard(document,expected);
       const expand = expected.platform === "jike" ? jikeExpandButton(document,card) : expected.platform === "facebook" ? facebookExpandButton(card) : linkedinExpandButton(card);

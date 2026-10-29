@@ -1,4 +1,5 @@
 import { mergeAttributes, Node } from "@tiptap/core";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { openBlockSource } from "./markdown-block-start";
 import type { TiptapDoc, TiptapNode, TiptapTextNode } from "./content";
 import { parseImageAlignment } from "./image-alignment";
@@ -32,6 +33,10 @@ export const ImageGallery = Node.create({
   content: "image+",
   defining: true,
   isolating: true,
+
+  addProseMirrorPlugins() {
+    return [createImageGalleryCleanupPlugin()];
+  },
 
   addAttributes() {
     return {
@@ -153,6 +158,33 @@ const hasUsableImageSource = (node: TiptapNode | TiptapTextNode) =>
   "attrs" in node &&
   typeof node.attrs?.src === "string" &&
   node.attrs.src.trim().length > 0;
+
+/** Keep node-view, keyboard and range deletions in the same undoable edit. */
+export const createImageGalleryCleanupPlugin = () => new Plugin({
+  key: new PluginKey("edgeever-image-gallery-cleanup"),
+  appendTransaction(transactions, _oldState, state) {
+    if (!transactions.some((transaction) => transaction.docChanged)) return null;
+
+    const emptyGalleries: Array<{ from: number; to: number }> = [];
+    state.doc.descendants((node, position) => {
+      if (node.type.name !== IMAGE_GALLERY_NODE_TYPE) return;
+      // image+ makes ProseMirror insert an image with src=null when its last
+      // child is deleted. Remove that shell from the live document as well as
+      // saved snapshots. Pending uploads have a nonempty src and stay intact.
+      if (!node.content.content.some((image) =>
+        typeof image.attrs.src === "string" && image.attrs.src.trim().length > 0
+      )) {
+        emptyGalleries.push({ from: position, to: position + node.nodeSize });
+      }
+      return false;
+    });
+    if (!emptyGalleries.length) return null;
+
+    const transaction = state.tr;
+    for (const { from, to } of emptyGalleries.reverse()) transaction.delete(from, to);
+    return transaction;
+  },
+});
 
 type NormalizedNodes = {
   changed: boolean;
