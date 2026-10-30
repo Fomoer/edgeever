@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { AppConfirmDialog } from "@/components/dialogs/ConfirmDialogs";
 import { describeDesktopBackupError, useDesktopBackup } from "@/lib/desktop-backup";
+import { formatBytes } from "@/lib/format-bytes";
 import { DesktopBackupImport } from "./DesktopBackupImport";
 import { DesktopBackupRunDialog } from "./DesktopBackupRunDialog";
 import { SETTINGS_CARD_DESCRIPTION_CLASSNAME, SETTINGS_CARD_HEADER_CLASSNAME, SETTINGS_CARD_ICON_CLASSNAME, SETTINGS_CARD_TITLE_CLASSNAME } from "./settings-ui";
@@ -37,6 +38,7 @@ export const DesktopScheduledBackupCard = () => {
   if (!bridge?.backup || !status || !config) return null;
   if (status.blocked) return <Card className="shadow-none"><CardHeader className={SETTINGS_CARD_HEADER_CLASSNAME}><CardTitle className={SETTINGS_CARD_TITLE_CLASSNAME}><HardDriveDownload className={SETTINGS_CARD_ICON_CLASSNAME} />{t("desktopBackup.title")}</CardTitle></CardHeader><CardContent className="p-4 pt-0 sm:px-5"><p className="text-sm text-destructive" role="alert">{describeDesktopBackupError(t, status.error)}</p></CardContent></Card>;
   const busy = Boolean(status.task);
+  const lastBackup = status.history.find((item) => item.completedAt === status.lastSuccessAt);
   const pending = status.pendingPublication;
   const dirty = JSON.stringify(config) !== configKey || Boolean(password);
   const passwordNeeded = config.encrypted && status.secureStorageAvailable && (!status.passwordSet || changePassword);
@@ -71,6 +73,7 @@ export const DesktopScheduledBackupCard = () => {
         </div>
         <div className="grid gap-1.5 rounded-md bg-muted/40 p-3 text-xs" aria-live="polite" data-backup-status>
           <p className="font-medium text-slate-800">{t("desktopBackup.lastSuccess", { time: date(status.lastSuccessAt) })}</p>
+          {lastBackup ? <p className="text-slate-700">{t("desktopBackup.lastBackupSize", { size: formatBytes(lastBackup.size) })}</p> : null}
           {status.task ? <p className="flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" />{t(`desktopBackup.phases.${status.task.phase}`)}{status.task.total > 0 ? ` ${status.task.completed} / ${status.task.total}` : ""}</p> : status.lastCheck ? <p className="text-slate-700">{t(`desktopBackup.checkResults.${status.lastCheck.result}`)}</p> : null}
           <p className="text-muted-foreground">{t("desktopBackup.lastCheck", { time: status.lastCheck ? date(status.lastCheck.at) : t("desktopBackup.notChecked") })}</p>
           <p className="text-muted-foreground">{status.config.enabled ? t("desktopBackup.nextDue", { time: status.nextDueAt ? date(status.nextDueAt) : t("desktopBackup.whenReady") }) : t("desktopBackup.autoOff")}</p>
@@ -126,7 +129,7 @@ export const DesktopScheduledBackupCard = () => {
         <section className="grid gap-2.5 border-t pt-3" aria-label={t("desktopBackup.history", { count: status.history.length })}>
           <h3 className="text-xs font-medium text-slate-700">{t("desktopBackup.history", { count: status.history.length })}</h3>
           {status.history.length ? <ul className="divide-y divide-slate-100">{[...status.history].reverse().map((item) => <li key={item.name} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2.5 first:pt-0 last:pb-0">
-            <div className="min-w-0 flex-1 basis-60 space-y-0.5"><p className="break-all font-mono text-xs text-slate-800">{item.name}</p><p className="text-xs text-muted-foreground">{date(item.completedAt)} · {(item.size / 1048576).toFixed(1)} MiB · {t(item.encrypted ? "desktopBackup.encrypted" : "desktopBackup.plain")}</p></div>
+            <div className="min-w-0 flex-1 basis-60 space-y-0.5"><p className="break-all font-mono text-xs text-slate-800">{item.name}</p><p className="text-xs text-muted-foreground">{date(item.completedAt)} · <span className="whitespace-nowrap tabular-nums">{formatBytes(item.size)}</span> · {t(item.encrypted ? "desktopBackup.encrypted" : "desktopBackup.plain")}</p></div>
             <div className="flex shrink-0 gap-1"><Button size="sm" variant="outline" className="h-7 text-xs font-normal" disabled={restoreDisabled} onClick={() => restore(item.name)}>{t("desktopBackup.restore")}</Button><Button size="sm" variant="ghost" className="h-7 text-xs font-normal text-destructive hover:text-destructive" disabled={busy || saving} onClick={() => { setDeleteError(null); setDeleting(item.name); }}>{t("common.delete")}</Button></div>
           </li>)}</ul> : <p className="text-xs text-muted-foreground">{t("desktopBackup.emptyHistory")}</p>}
         </section>

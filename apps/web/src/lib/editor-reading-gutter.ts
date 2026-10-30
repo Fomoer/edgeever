@@ -28,26 +28,24 @@ export const editorColumnFitsDesktopReadingGutters = ({
   columnWidth >= articleMaxWidth + reservedBesideArticle + EDITOR_DESKTOP_READING_GUTTER_PX * 2;
 
 /**
- * While the companion sidebar is open, yield the 6rem reading gutters as soon
- * as the column can no longer hold the chosen article width, the outline, and
- * those gutters. The shared `lg:` gutter stays 6rem for every other width.
+ * Yield the 6rem gutters whenever the editor column cannot fit the article
+ * and outline at their preferred widths. The floating AI launcher overlays
+ * either surface; it must not require a dedicated strip beside the outline.
  */
 export const shouldCompactEditorReadingGutter = ({
-  aiAssistantOpen,
   desktopColumn,
   columnWidth,
   articleMaxWidth,
   reservedBesideArticle = 0,
   focusRow = false,
 }: {
-  aiAssistantOpen: boolean;
   desktopColumn: boolean;
   columnWidth: number;
   articleMaxWidth: number;
   reservedBesideArticle?: number;
   focusRow?: boolean;
 }) => {
-  if (!aiAssistantOpen || !desktopColumn || columnWidth <= 0) return false;
+  if (!desktopColumn || columnWidth <= 0) return false;
   if (!Number.isFinite(articleMaxWidth) || articleMaxWidth <= 0) return false;
   const available = focusRow ? Math.min(columnWidth, EDITOR_FOCUS_ROW_MAX_PX) : columnWidth;
   return !editorColumnFitsDesktopReadingGutters({

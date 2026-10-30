@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ShortcutAction, ShortcutBinding, ShortcutSettings } from "@/lib/app-helpers";
 import {
@@ -12,6 +12,7 @@ import {
   shortcutBindingsEqual,
 } from "@/lib/app-helpers";
 import { Button } from "@/components/ui/button";
+import { ButtonTooltip } from "@/components/ui/button-tooltip";
 import { cn } from "@/lib/utils";
 import { SETTINGS_ITEM_TITLE_CLASSNAME } from "./settings-ui";
 
@@ -67,11 +68,17 @@ const globalBindingMatchesLocal = (global: DesktopGlobalShortcutBinding, local: 
     && global.shift === local.shift;
 };
 
+const devPreviewGlobalShortcutState = (): DesktopGlobalShortcutState | null => (
+  import.meta.env.DEV && typeof window !== "undefined" && !window.edgeeverDesktop?.globalShortcut
+    ? { binding: null, registered: false, screenshot: null, screenshotRegistered: false }
+    : null
+);
+
 export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChange }: ShortcutSettingsItemProps) => {
   const { t } = useTranslation();
   const [recordingAction, setRecordingAction] = useState<ShortcutAction | null>(null);
   const [captureMessage, setCaptureMessage] = useState("");
-  const [globalShortcut, setGlobalShortcut] = useState<DesktopGlobalShortcutState | null>(null);
+  const [globalShortcut, setGlobalShortcut] = useState<DesktopGlobalShortcutState | null>(devPreviewGlobalShortcutState);
   const [recordingTarget, setRecordingTarget] = useState<GlobalShortcutTarget | null>(null);
   const [globalBusy, setGlobalBusy] = useState(false);
   const [globalMessage, setGlobalMessage] = useState("");
@@ -80,11 +87,13 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
 
   useEffect(() => {
     let active = true;
-    void window.edgeeverDesktop?.globalShortcut().then((state) => {
-      if (active) setGlobalShortcut(state);
-    }).catch(() => {
-      if (active) setGlobalMessage(t("shortcuts.global.saveFailed"));
-    });
+    if (window.edgeeverDesktop?.globalShortcut) {
+      void window.edgeeverDesktop.globalShortcut().then((state) => {
+        if (active) setGlobalShortcut(state);
+      }).catch(() => {
+        if (active) setGlobalMessage(t("shortcuts.global.saveFailed"));
+      });
+    }
     return () => { active = false; };
   }, [t]);
 
@@ -92,7 +101,9 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
 
   const beginRecording = async (action: ShortcutAction | GlobalShortcutTarget) => {
     try {
-      await window.edgeeverDesktop?.captureGlobalShortcut(true);
+      if (window.edgeeverDesktop?.captureGlobalShortcut) {
+        await window.edgeeverDesktop.captureGlobalShortcut(true);
+      }
       if (action === "window" || action === "screenshot") {
         setRecordingTarget(action);
         setGlobalMessage("");
@@ -142,12 +153,23 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
       finishRecording();
       setGlobalBusy(true);
       void (async () => {
-        await window.edgeeverDesktop?.captureGlobalShortcut(false);
+        if (window.edgeeverDesktop?.captureGlobalShortcut) {
+          await window.edgeeverDesktop.captureGlobalShortcut(false);
+        }
         const setter = target === "screenshot" ? window.edgeeverDesktop?.setScreenshotShortcut : window.edgeeverDesktop?.setGlobalShortcut;
-        const state = await setter?.(binding);
-        if (state) {
-          setGlobalShortcut(state);
-          setGlobalMessage(state.error ? t(`shortcuts.global.${state.error}`) : "");
+        if (setter) {
+          const state = await setter(binding);
+          if (state) {
+            setGlobalShortcut(state);
+            setGlobalMessage(state.error ? t(`shortcuts.global.${state.error}`) : "");
+          }
+        } else if (import.meta.env.DEV) {
+          setGlobalShortcut((prev) => ({
+            binding: target === "window" ? binding : (prev?.binding ?? null),
+            registered: true,
+            screenshot: target === "screenshot" ? binding : (prev?.screenshot ?? null),
+            screenshotRegistered: true,
+          }));
         }
       })().catch(() => setGlobalMessage(t("shortcuts.global.saveFailed"))).finally(() => setGlobalBusy(false));
     };
@@ -219,104 +241,152 @@ export const ShortcutSettingsItem = ({ shortcutSettings, onShortcutSettingsChang
   const disableGlobalShortcut = (target: GlobalShortcutTarget) => {
     setGlobalBusy(true);
     const setter = target === "screenshot" ? window.edgeeverDesktop?.setScreenshotShortcut : window.edgeeverDesktop?.setGlobalShortcut;
-    void setter?.(null).then((state) => {
-      if (state) {
-        setGlobalShortcut(state);
-        setGlobalMessage(state.error ? t(`shortcuts.global.${state.error}`) : "");
-      }
-    }).catch(() => setGlobalMessage(t("shortcuts.global.saveFailed"))).finally(() => setGlobalBusy(false));
+    if (setter) {
+      void setter(null).then((state) => {
+        if (state) {
+          setGlobalShortcut(state);
+          setGlobalMessage(state.error ? t(`shortcuts.global.${state.error}`) : "");
+        }
+      }).catch(() => setGlobalMessage(t("shortcuts.global.saveFailed"))).finally(() => setGlobalBusy(false));
+    } else if (import.meta.env.DEV) {
+      setGlobalShortcut((prev) => ({
+        binding: target === "window" ? null : (prev?.binding ?? null),
+        registered: target === "window" ? false : Boolean(prev?.registered),
+        screenshot: target === "screenshot" ? null : (prev?.screenshot ?? null),
+        screenshotRegistered: target === "screenshot" ? false : Boolean(prev?.screenshotRegistered),
+      }));
+      setGlobalBusy(false);
+    }
   };
 
-  const globalRows: Array<{ target: GlobalShortcutTarget; label: string; description: string; binding: DesktopGlobalShortcutBinding | null | undefined; registered: boolean }> = [
+  const globalRows: Array<{
+    target: GlobalShortcutTarget;
+    label: string;
+    binding: DesktopGlobalShortcutBinding | null | undefined;
+    registered: boolean;
+  }> = [
     {
       target: "window",
       label: t("shortcuts.global.label"),
-      description: t("shortcuts.global.description"),
       binding: globalShortcut?.binding,
       registered: Boolean(globalShortcut?.registered),
     },
     {
       target: "screenshot",
       label: t("shortcuts.screenshot.label"),
-      description: t("shortcuts.screenshot.description"),
       binding: globalShortcut?.screenshot,
       registered: Boolean(globalShortcut?.screenshotRegistered),
     },
   ];
 
+  const hasUnregisteredGlobal = globalRows.some((row) => row.binding && !row.registered);
+  const isGlobalShortcutAvailable = Boolean(window.edgeeverDesktop?.isAvailable || import.meta.env.DEV);
+
   return (
-    <div className="grid gap-4">
-      {window.edgeeverDesktop?.isAvailable ? (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-card">
-          {globalRows.map((row, index) => {
-            const recording = recordingTarget === row.target;
-            return (
-              <div key={row.target} className={cn(index > 0 && "border-t border-slate-100")}>
-                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                  <div>
-                    <div className={SETTINGS_ITEM_TITLE_CLASSNAME}>{row.label}</div>
-                    <p className="mt-1 text-xs text-slate-500">{row.description}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" className="h-8 min-w-24 px-3 font-mono text-xs font-normal" disabled={!globalShortcut || globalBusy || Boolean(recordingAction) || (Boolean(recordingTarget) && !recording)} onClick={() => { void beginRecording(row.target); }}>
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-card">
+      {isGlobalShortcutAvailable ? (
+        <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-2.5">
+          <span className="text-xs font-medium text-slate-700">{t("shortcuts.appSectionTitle")}</span>
+        </div>
+      ) : null}
+      <div className="grid grid-cols-1 gap-px bg-slate-100 sm:grid-cols-2">
+        {shortcutActionOptions.map((item, index) => {
+          const recording = recordingAction === item.value;
+          const lastAlone = index === shortcutActionOptions.length - 1 && shortcutActionOptions.length % 2 === 1;
+
+          return (
+            <div
+              key={item.value}
+              className={cn(
+                "flex h-12 items-center justify-between gap-3 bg-card px-4",
+                lastAlone && "sm:col-span-2",
+              )}
+            >
+              <div className={cn("min-w-0 truncate", SETTINGS_ITEM_TITLE_CLASSNAME)}>{item.label}</div>
+              <Button
+                ref={recording ? captureButtonRef : null}
+                type="button"
+                variant={recording ? "solid" : "outline"}
+                className={cn("h-8 min-w-24 shrink-0 px-3 font-mono text-xs font-normal", !recording && "bg-card")}
+                onClick={() => { void beginRecording(item.value); }}
+                disabled={Boolean(recordingTarget) || globalBusy}
+              >
+                {recording ? t("shortcuts.recording") : formatShortcutBinding(shortcutSettings[item.value])}
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+      {captureMessage ? (
+        <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-700">
+          {captureMessage}
+        </div>
+      ) : null}
+
+      {isGlobalShortcutAvailable ? (
+        <div>
+          <div className="border-b border-t border-slate-100 bg-slate-50/70 px-4 py-2.5">
+            <span className="text-xs font-medium text-slate-700">{t("shortcuts.globalSectionTitle")}</span>
+          </div>
+          <div className="grid grid-cols-1 gap-px bg-slate-100 sm:grid-cols-2">
+            {globalRows.map((row) => {
+              const recording = recordingTarget === row.target;
+              return (
+                <div
+                  key={row.target}
+                  className="flex h-12 items-center justify-between gap-3 bg-card px-4"
+                >
+                  <div className={cn("min-w-0 truncate", SETTINGS_ITEM_TITLE_CLASSNAME)}>{row.label}</div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant={recording ? "solid" : "outline"}
+                      className={cn(
+                        "h-8 min-w-24 shrink-0 px-3 font-mono text-xs font-normal",
+                        !recording && "bg-card",
+                      )}
+                      disabled={!globalShortcut || globalBusy || Boolean(recordingAction) || (Boolean(recordingTarget) && !recording)}
+                      onClick={() => { void beginRecording(row.target); }}
+                    >
                       {recording ? t("shortcuts.recording") : row.binding ? formatGlobalBinding(row.binding) : t("shortcuts.global.disabled")}
                     </Button>
                     {row.binding ? (
-                      <Button type="button" variant="outline" className="h-8 px-3 text-xs font-normal" disabled={globalBusy || Boolean(recordingTarget) || Boolean(recordingAction)} onClick={() => disableGlobalShortcut(row.target)}>
-                        {t("shortcuts.global.disable")}
-                      </Button>
+                      <ButtonTooltip title={t("shortcuts.global.disable")}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="h-8 w-8 text-slate-400 hover:bg-slate-100 hover:text-rose-600"
+                          aria-label={t("shortcuts.global.disable")}
+                          disabled={globalBusy || Boolean(recordingTarget) || Boolean(recordingAction)}
+                          onClick={() => disableGlobalShortcut(row.target)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </ButtonTooltip>
                     ) : null}
                   </div>
                 </div>
-                {row.binding && !row.registered && !globalMessage ? (
-                  <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">{t("shortcuts.global.unavailable")}</div>
-                ) : null}
-              </div>
-            );
-          })}
-          {globalMessage ? <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">{globalMessage}</div> : null}
+              );
+            })}
+          </div>
+          {globalMessage ? (
+            <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-700">
+              {globalMessage}
+            </div>
+          ) : hasUnregisteredGlobal ? (
+            <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-700">
+              {t("shortcuts.global.unavailable")}
+            </div>
+          ) : null}
         </div>
       ) : null}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-card">
-        <div className="grid grid-cols-1 gap-px bg-slate-100 sm:grid-cols-2">
-          {shortcutActionOptions.map((item, index) => {
-            const recording = recordingAction === item.value;
-            const lastAlone = index === shortcutActionOptions.length - 1 && shortcutActionOptions.length % 2 === 1;
 
-            return (
-              <div
-                key={item.value}
-                className={cn(
-                  "flex h-12 items-center justify-between gap-3 bg-card px-4",
-                  lastAlone && "sm:col-span-2",
-                )}
-              >
-                <div className={cn("min-w-0 truncate", SETTINGS_ITEM_TITLE_CLASSNAME)}>{item.label}</div>
-                <Button
-                  ref={recording ? captureButtonRef : null}
-                  type="button"
-                  variant={recording ? "solid" : "outline"}
-                  className={cn("h-8 min-w-24 shrink-0 px-3 font-mono text-xs font-normal", !recording && "bg-card")}
-                  onClick={() => { void beginRecording(item.value); }}
-                  disabled={Boolean(recordingTarget) || globalBusy}
-                >
-                  {recording ? t("shortcuts.recording") : formatShortcutBinding(shortcutSettings[item.value])}
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-        {captureMessage ? (
-          <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-700">
-            {captureMessage}
-          </div>
-        ) : null}
-        <div className="flex justify-end border-t border-slate-100 px-4 py-3">
-          <Button type="button" variant="outline" className="h-9 px-3 text-xs font-normal" onClick={handleResetShortcuts}>
-            <RotateCcw className="h-4 w-4" />
-            {t("shortcuts.reset")}
-          </Button>
-        </div>
+      <div className="flex justify-end border-t border-slate-100 px-4 py-3">
+        <Button type="button" variant="outline" className="h-9 px-3 text-xs font-normal" onClick={handleResetShortcuts}>
+          <RotateCcw className="h-4 w-4" />
+          {t("shortcuts.reset")}
+        </Button>
       </div>
     </div>
   );

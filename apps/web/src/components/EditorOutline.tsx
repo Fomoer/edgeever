@@ -320,7 +320,7 @@ export const EditorOutline = ({ editor, memoId, editingMemoIdRef, scrollContaine
           "select-none overflow-x-hidden",
           collapsed
             ? "pointer-events-auto absolute inset-0 overflow-hidden"
-            : "sticky top-6 h-fit max-h-[calc(100vh-8rem)] shrink-0 overflow-y-auto py-2"
+            : "sticky top-6 h-fit max-h-[calc(100vh-8rem)] shrink-0 overflow-y-auto pt-2 pb-16"
         )}
         style={!collapsed ? { width: EDITOR_OUTLINE_WIDTH } : undefined}
         aria-label={t("editor.outline")}

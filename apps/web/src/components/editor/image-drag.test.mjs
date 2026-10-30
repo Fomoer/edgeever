@@ -4,7 +4,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { EditorState } from "@tiptap/pm/state";
 import { history, undo, redo } from "@tiptap/pm/history";
-import { ImageGallery } from "@edgeever/shared";
+import { ImageGallery, createImageGalleryCleanupPlugin } from "@edgeever/shared";
 import { createImageDragPlugin, imageDragKey, moveImage } from "./image-drag";
 
 const schema = getSchema([StarterKit, Image.extend({ addAttributes() {
@@ -52,6 +52,22 @@ describe("existing image dragging (#708)", () => {
     expect(next.doc.childCount).toBe(1);
     expect(sources(next.doc)).toEqual(["B", "A", "C"]);
   });
+  test("moving one image out of a two-image gallery leaves the other standalone (#728)", () => {
+    // The editor runs the gallery cleanup plugin alongside dragging.
+    const before = EditorState.create({
+      doc: schema.nodes.doc.create(null, [gallery("A", "B"), paragraph("text")]),
+      plugins: [history(), createImageDragPlugin(), createImageGalleryCleanupPlugin()],
+    });
+    let next = move(before, 2, before.doc.content.size);
+    const moved = next.doc.toJSON();
+    expect(moved).toEqual(schema.nodes.doc.create(null, [image("A"), paragraph("text"), image("B")]).toJSON());
+    expect(next.doc.firstChild).toBe(before.doc.firstChild.firstChild);
+    expect(next.selection.node.attrs.src).toBe("B");
+    expect(undo(next, (tr) => { next = next.applyTransaction(tr).state; })).toBe(true);
+    expect(next.doc.toJSON()).toEqual(before.doc.toJSON());
+    expect(redo(next, (tr) => { next = next.applyTransaction(tr).state; })).toBe(true);
+    expect(next.doc.toJSON()).toEqual(moved);
+  });
   test("one undo restores the original document; redo repeats the move", () => {
     const before = state(gallery("A"), paragraph("text"), gallery("B", "C"));
     let next = move(before, 1, 11);
@@ -94,4 +110,26 @@ describe("existing image dragging (#708)", () => {
     next = next.apply(next.tr.delete(8, 9));
     expect(imageDragKey.getState(next)).toBeNull();
   });
+});
+
+describe("dragging out of a two-image gallery (#728)", () => {
+  for (const from of [1, 2]) {
+    test(`moving image ${from} preserves attributes, selection and one-step undo`, () => {
+      const before = EditorState.create({
+        doc: schema.nodes.doc.create(null, [gallery("A", "B"), paragraph("text")]),
+        plugins: [history(), createImageDragPlugin(), createImageGalleryCleanupPlugin()],
+      });
+      const moved = before.doc.nodeAt(from);
+      const survivor = before.doc.firstChild.child(from === 1 ? 1 : 0);
+      let next = move(before, from, before.doc.content.size);
+      expect(next.doc.firstChild).toBe(survivor);
+      expect(next.doc.lastChild).toBe(moved);
+      expect(next.selection.node).toBe(moved);
+      const after = next.doc;
+      expect(undo(next, tr => { next = next.applyTransaction(tr).state; })).toBe(true);
+      expect(next.doc.eq(before.doc)).toBe(true);
+      expect(redo(next, tr => { next = next.applyTransaction(tr).state; })).toBe(true);
+      expect(next.doc.eq(after)).toBe(true);
+    });
+  }
 });
