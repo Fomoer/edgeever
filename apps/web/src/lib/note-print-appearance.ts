@@ -4,7 +4,7 @@ import {
   type NoteProsePaletteChoice,
   type ResolvedNoteProse,
 } from "@edgeever/shared";
-import { isRemoteNoteImageFont } from "@edgeever/shared/font-catalog-data";
+import { catalogCodeFontStack, isRemoteNoteImageFont } from "@edgeever/shared/font-catalog-data";
 import { LEGACY_BODY_FONTS } from "@edgeever/shared/font-defaults";
 import type { BodyFontId } from "@edgeever/shared/font-loader";
 import type { MermaidThemeName } from "@/components/ThemeProvider";
@@ -82,6 +82,8 @@ export const notePrintAppearanceCss = (appearance: NotePrintAppearance) => {
   if (appearance.fontFamily && CSS_DECLARATION_VALUE.test(appearance.fontFamily)) {
     declarations.push(`--editor-body-font-family: ${appearance.fontFamily}`);
   }
+  const codeStack = catalogCodeFontStack(appearance.fontId);
+  if (codeStack) declarations.push(`--editor-code-font-family: ${codeStack}`);
   return [`:root { ${declarations.join("; ")}; }`, paletteRules(appearance.palette), appearance.customCss]
     .filter(Boolean)
     .join("\n");

@@ -1,6 +1,6 @@
 import { learnCompanionPreferences, refreshCompanionPreferences, applicableMemories } from "./companion-learning";
 import { selectCompanionMemories } from "./companion-memory-context";
-import { CompanionDiscoveryOutputSchema, type CompanionDiscoveryOutput, type CompanionDiscoveryItem, type CompanionDiscoverySettings,
+import { CompanionDiscoveryOutputSchema, companionTurnLocale, type CompanionDiscoveryOutput, type CompanionDiscoveryItem, type CompanionDiscoverySettings,
   type CompanionDiscoverySettingsInput, type MemoDetail } from "@edgeever/shared";
 import type { DatabaseAdapter } from "./storage-contract";
 import type { CompanionScope } from "./companion-service";
@@ -228,7 +228,7 @@ export async function startDiscoveryCheck(db: DatabaseAdapter, scope: CompanionS
     if (inputHash === settings.last_input_hash) { await finish("quiet"); return null; }
     const modelId = await options.loadModelId();
     turn = await beginCompanionTurn(db, scope, { id: turnId, threadId: turnId, message: "Quiet discovery", useMemory: settings.recall_enabled === 1,
-      allowNotes: true, locale: options.locale === "zh-CN" ? "zh-CN" : "en-US" }, modelId);
+      allowNotes: true, locale: companionTurnLocale(options.locale) }, modelId);
     const session: DiscoverySession = {
       generationInput, inputHash, cursor, settingsVersion: settings.version, memoryRevision,
       recallEnabled: settings.recall_enabled === 1, now,

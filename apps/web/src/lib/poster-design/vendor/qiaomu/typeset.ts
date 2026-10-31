@@ -38,6 +38,7 @@ const TEMPLATE_FACES: Record<string, string[]> = {
   keyword: ['得意黑', '优设标题黑'],
   riso: ['站酷快乐体', '站酷庆科黄油体'],
   newspaper: ['思源宋体 Heavy'],
+  'paper-list': ['思源宋体 Heavy'],
   mag: ['思源宋体 Heavy', '朱雀仿宋'],
   notes: ['霞鹜文楷'],
   numeral: ['未来荧黑', '阿里妈妈数黑体'],
@@ -48,7 +49,7 @@ const TEMPLATE_FACES: Record<string, string[]> = {
 };
 
 const MOOD_OF: Record<string, Mood> = {
-  minimal: 'heavy', editorial: 'serif', bold: 'punch', dark: 'tech', poster: 'heavy', split: 'heavy', sticker: 'warm', gradient: 'trend', center: 'punch',
+  'paper-list': 'serif', minimal: 'heavy', editorial: 'serif', bold: 'punch', dark: 'tech', poster: 'heavy', split: 'heavy', sticker: 'warm', gradient: 'trend', center: 'punch',
   checklist: 'warm', number: 'tech', impact: 'punch', photo: 'heavy', bili: 'punch', compare: 'punch', neo: 'punch', soft: 'serif', swiss: 'heavy',
   acid: 'trend', collage: 'warm', mega: 'heavy', ticker: 'tech', memo: 'warm', pop: 'trend', mag: 'serif', print: 'heavy', glass: 'heavy', bento: 'heavy',
   neon: 'tech', calm: 'serif', seal: 'brush', quote: 'serif', cinema: 'serif',

@@ -113,7 +113,7 @@ export function CompanionChat({
     let cancelled = false;
     const timer = window.setTimeout(() => {
       void Promise.all([
-        api.listMemos({ q: query, trash: false, sort: "updated-desc", limit: 8 }),
+        api.listMemos({ q: query, trash: false, sort: "updated-desc", limit: 8, includeTotal: false }),
         api.listNotebooks(),
         api.listTags(),
       ]).then(([memos, notebooks, tags]) => {

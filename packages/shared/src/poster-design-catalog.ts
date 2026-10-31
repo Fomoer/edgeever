@@ -2,6 +2,15 @@
 // in the existing Qiaomu Design implementation (MIT).
 export const POSTER_DESIGN_TEMPLATES = [
   {
+    "id": "paper-list",
+    "zh": "书页清单",
+    "en": "Bookish list",
+    "fit": ["xhs", "portrait", "vertical", "xhs-square", "square"],
+    "zhUse": "纸张纹理、淡背景文字、宋体大标题、编号与细横线；适合读书笔记、知识盘点。按空行分条，首行作书名，第二行可用“副标题：”添加副题，其余作正文",
+    "enUse": "Textured ivory paper, faint background lettering, serif headlines, large numbers and fine rules; reading notes and knowledge lists. Separate entries with blank lines: book title first, optional second line starting with “Subtitle:”, then body text",
+    "available": true
+  },
+  {
     "id": "minimal",
     "zh": "简约白",
     "en": "Minimal",

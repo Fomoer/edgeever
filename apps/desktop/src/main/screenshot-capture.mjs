@@ -3,6 +3,7 @@ import { readFile, stat, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { desktopDialogCopy, formatDesktopCopy } from "./desktop-copy.mjs";
 
 const execFileAsync = promisify(execFileCallback);
 const MAC_SCREENCAPTURE = "/usr/sbin/screencapture";
@@ -84,16 +85,13 @@ export const createScreenshotCaptureGuard = ({
   };
 };
 
-export const isChineseDesktopLocale = (locale) =>
-  typeof locale === "string" && locale.toLowerCase().startsWith("zh");
-
 const pad2 = (value) => String(value).padStart(2, "0");
 
 export const screenshotStamp = (date = new Date()) =>
   `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 
 export const screenshotNoteTitle = (locale, date = new Date()) =>
-  isChineseDesktopLocale(locale) ? `截图 ${screenshotStamp(date)}` : `Screenshot ${screenshotStamp(date)}`;
+  formatDesktopCopy(desktopDialogCopy(locale).screenshotTitle, { stamp: screenshotStamp(date) });
 
 export const screenshotFileName = (date = new Date()) =>
   `screenshot-${date.getFullYear()}${pad2(date.getMonth() + 1)}${pad2(date.getDate())}-${pad2(date.getHours())}${pad2(date.getMinutes())}${pad2(date.getSeconds())}.png`;

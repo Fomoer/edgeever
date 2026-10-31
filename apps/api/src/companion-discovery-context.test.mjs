@@ -69,3 +69,14 @@ test("actual SDK uses compact input and translates its output before leaving the
   for (const note of candidates) expect(prompt).not.toContain(note.id);
   expect(prompt).toContain("untrusted DATA");
 });
+
+test("asks for the reply in the interface language, falling back to English", () => {
+  const reply = (locale) => discoveryContext({ ...input, locale }).instructions.match(/Reply in ([A-Za-z ]+)\./)?.[1];
+  expect(reply("zh-CN")).toBe("Simplified Chinese");
+  expect(reply("en-US")).toBe("English");
+  expect(reply("ja")).toBe("Japanese");
+  expect(reply("pl-PL")).toBe("Polish");
+  expect(reply("ru")).toBe("Russian");
+  expect(reply("de")).toBe("English");
+  expect(reply("")).toBe("English");
+});

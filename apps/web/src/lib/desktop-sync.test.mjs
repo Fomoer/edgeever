@@ -76,9 +76,11 @@ test("desktop creates notebooks before notes and rereads remapped queue versions
   const originalCreateNotebook = api.createNotebook;
   const originalCreateMemo = api.createMemo;
   const calls = [];
+  const createdPayloads = [];
+  const contentJson = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "body 2" }] }] };
   let queue = [
     { id: 1, version: 1, kind: "notebook.create", entityId: "nb_local_parent", payload: { name: "对对对" } },
-    ...[2, 3].map((id) => ({ id, version: 1, kind: "memo.create", entityId: `memo_local_${id}`, payload: { notebookId: "nb_local_parent", contentMarkdown: `body ${id}` } })),
+    ...[2, 3].map((id) => ({ id, version: 1, kind: "memo.create", entityId: `memo_local_${id}`, payload: { notebookId: "nb_local_parent", contentMarkdown: `body ${id}`, ...(id === 2 ? { contentJson } : {}) } })),
   ];
   globalThis.window = {
     dispatchEvent: () => true,
@@ -109,6 +111,7 @@ test("desktop creates notebooks before notes and rereads remapped queue versions
   };
   api.createMemo = async (payload) => {
     expect(payload.notebookId).toBe("nb_cloud");
+    createdPayloads.push(payload);
     calls.push(payload.contentMarkdown);
     return { memo: { id: `memo_cloud_${calls.length}`, contentMarkdown: payload.contentMarkdown, contentJson: { type: "doc", content: [] } } };
   };
@@ -117,6 +120,8 @@ test("desktop creates notebooks before notes and rereads remapped queue versions
     expect(result.failed).toBe(0);
     expect(result.synced).toBe(3);
     expect(calls).toEqual(["notebook", "body 2", "body 3"]);
+    expect(createdPayloads[0].contentJson).toEqual(contentJson);
+    expect(createdPayloads[1].contentJson).toBeUndefined();
     expect(queue).toEqual([]);
   } finally {
     api.createNotebook = originalCreateNotebook;

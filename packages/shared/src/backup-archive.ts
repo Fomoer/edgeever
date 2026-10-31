@@ -37,7 +37,7 @@ type JsonBackupPage = {
   memos: MemoDetail[];
   resources: Resource[];
   revisions: JsonBackupRevision[];
-  totalCount: number;
+  totalCount?: number;
   nextOffset: number | null;
 };
 
@@ -134,7 +134,7 @@ export const createEdgeEverZipStream = async (
       while (true) {
         abort.signal.throwIfAborted();
         const page = await source.getPage(offset, 25);
-        total = page.totalCount;
+        total = page.totalCount ?? Math.max(total, completed + page.memos.length);
         onProgress?.({ completed, total });
         for (const memo of page.memos) {
           const notebookPath = notebookPaths.get(memo.notebookId) ?? "Unfiled";

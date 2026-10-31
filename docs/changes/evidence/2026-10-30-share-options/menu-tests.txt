@@ -1,0 +1,2 @@
+Command: bun test tests/note-sharing-menu.test.ts
+Result: 4 pass, 0 fail; 24 assertions.

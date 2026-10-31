@@ -114,6 +114,7 @@ describe("client-side note media preparation", () => {
   test.each([
     ["default English", undefined, "speech-service-check.en-US.mp3"],
     ["Chinese", "zh-CN", "speech-service-check.zh-CN.mp3"],
+    ["English for Polish UI", "pl", "speech-service-check.en-US.mp3"],
   ])("connection check selects %s sample and sends it from the client", async (_label, sampleLocale, filename) => {
     const bytes = await readFile(fileURLToPath(new URL(`./fixtures/${filename}`, import.meta.url)));
     const requests = [];

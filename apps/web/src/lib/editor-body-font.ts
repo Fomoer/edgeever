@@ -1,4 +1,4 @@
-import { FONT_IDS, isRemoteNoteImageFont, catalogFontStack } from "@edgeever/shared/font-catalog-data";
+import { FONT_IDS, isRemoteNoteImageFont, catalogFontStack, catalogCodeFontStack } from "@edgeever/shared/font-catalog-data";
 import { LEGACY_BODY_FONTS } from "@edgeever/shared/font-defaults";
 import type { BodyFontId } from "@edgeever/shared/font-loader";
 import { watchEditorCatalogFont } from "./editor-catalog-fonts";
@@ -6,7 +6,7 @@ import { watchEditorCatalogFont } from "./editor-catalog-fonts";
 export const EDITOR_BODY_FONT_STORAGE_KEY = "edgeever.editorBodyFont";
 export const EDITOR_BODY_FONT_CUSTOM_STORAGE_KEY = "edgeever.editorBodyFontCustom";
 
-// Legacy choices remain readable, but new selections use the common 23-font directory.
+// Legacy choices remain readable, but new selections use the shared font directory.
 export const LEGACY_EDITOR_BODY_FONT_CHOICES = ["wenkai-screen", "neo-zhi-song", "source-serif"] as const;
 export const EDITOR_BODY_FONT_CHOICES = ["system", ...FONT_IDS, ...LEGACY_EDITOR_BODY_FONT_CHOICES, "custom"] as const;
 
@@ -97,6 +97,14 @@ export const applyEditorBodyFontPreference = (preference = readEditorBodyFontPre
   watchEditorCatalogFont(isRemoteNoteImageFont(preference.choice) || preference.choice in LEGACY_BODY_FONTS ? preference.choice as BodyFontId : undefined);
   const root = document.documentElement;
   const stack = resolveEditorBodyFontStack(preference);
+  const codeStack = catalogCodeFontStack(preference.choice);
+  if (codeStack) {
+    root.dataset.editorCodeFont = preference.choice;
+    root.style.setProperty("--editor-code-font-family", codeStack);
+  } else {
+    delete root.dataset.editorCodeFont;
+    root.style.removeProperty("--editor-code-font-family");
+  }
   if (!stack) {
     delete root.dataset.editorBodyFont;
     root.style.removeProperty("--editor-body-font-family");

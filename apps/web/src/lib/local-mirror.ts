@@ -34,6 +34,9 @@ import { createClientUuid } from "@/lib/client-id";
 
 export type LocalMemoListParams = {
   notebookId?: string | null;
+  includeTotal?: boolean;
+  /** Remote continuation token; local mirrors use offset instead. */
+  cursor?: string | null;
   notebookIds?: string[];
   q?: string;
   tag?: string;
@@ -46,7 +49,7 @@ export type LocalMemoListParams = {
 
 export type LocalMemoListResponse = {
   memos: MemoSummary[];
-  totalCount: number;
+  totalCount?: number;
   nextCursor: string | null;
 };
 
@@ -277,7 +280,7 @@ export const listLocalMemos = async (scope: string, params: LocalMemoListParams)
   const page = memos.slice(offset, offset + (params.limit ?? 50));
   return {
     memos: page.map(toSummary),
-    totalCount,
+    ...(params.includeTotal === false ? {} : { totalCount }),
     nextCursor: offset + page.length < totalCount ? String(offset + page.length) : null,
   };
 };

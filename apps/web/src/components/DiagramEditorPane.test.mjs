@@ -392,7 +392,7 @@ describe("diagram editor canvas surface", () => {
   test("does not rebuild the visible diagram after its own autosave", () => {
     expect(source).toContain("incomingSnapshot !== canvasSnapshot");
     expect(source).toContain("setGraphReloadVersion((current) => current + 1)");
-    expect(source).toContain("graphReloadVersion, memo.id, readOnly");
+    expect(source).toContain("graphReloadVersion, editorInstanceMemoKey, readOnly");
     expect(source).not.toContain("dismissFlowQuickCreate, memo.contentHash, memo.id, readOnly");
   });
 

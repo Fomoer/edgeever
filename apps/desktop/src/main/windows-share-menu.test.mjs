@@ -18,6 +18,8 @@ describe("Windows share menu", () => {
     expect(windowsShareMenuLabel("zh-TW")).toBe("发送到 EdgeEver");
     expect(windowsShareMenuLabel("ja-JP")).toBe("EdgeEver に送る");
     expect(windowsShareMenuLabel("en-US")).toBe("Send to EdgeEver");
+    expect(windowsShareMenuLabel("pl-PL")).toBe("Wyślij do EdgeEver");
+    expect(windowsShareMenuLabel("ru-RU")).toBe("Отправить в EdgeEver");
   });
 
   test("passes one quoted path to the installed executable", () => {

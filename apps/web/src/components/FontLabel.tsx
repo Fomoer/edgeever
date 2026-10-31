@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { FontLoadIcon } from "./FontLoadFeedback";
 import type { FontLoadStatus } from "@/lib/font-load-state";
 import { useTranslation } from "react-i18next";
-import { FONT_CATALOG, isRemoteNoteImageFont } from "@edgeever/shared/font-catalog";
+import { FONT_CATALOG, isRemoteNoteImageFont, shouldLoadFontPreview } from "@edgeever/shared/font-catalog";
 import { LEGACY_BODY_FONTS } from "@edgeever/shared/font-resources";
 import { loadCatalogFont, loadBodyFont, type BodyFontId } from "@edgeever/shared/font-loader";
 
@@ -25,8 +25,9 @@ export const FontLabel = ({ label, fontId, fontFamily, registrationFamily, enabl
   const [readyKey, setReadyKey] = useState("");
   const family = fontFamily ?? (fontId ? `"${registrationFamily ?? (isRemoteNoteImageFont(fontId) ? FONT_CATALOG[fontId].family : LEGACY_BODY_FONTS[fontId].family)}", "EdgeEver Offline Sans", sans-serif` : undefined);
   const key = `${fontId ?? ""}:${family ?? ""}:${label}:${retryKey}`;
+  const canLoad = enabled && shouldLoadFontPreview(fontId, !visibleOnly);
   useEffect(() => {
-    if (!enabled) return;
+    if (!canLoad) return;
     let active = true;
     let started = false;
     const load = () => {
@@ -44,9 +45,9 @@ export const FontLabel = ({ label, fontId, fontFamily, registrationFamily, enabl
       observer.observe(ref.current);
     } else load();
     return () => { active = false; observer?.disconnect(); };
-  }, [enabled, visibleOnly, fontId, registrationFamily, label, key, loadFont]);
+  }, [canLoad, visibleOnly, fontId, registrationFamily, label, key, loadFont]);
   const ownStatus = progress.key === key ? progress.status : "idle";
-  useEffect(() => { if (enabled) onStatusChange?.(ownStatus === "idle" ? "loading" : ownStatus); }, [enabled, onStatusChange, ownStatus]);
+  useEffect(() => { if (canLoad) onStatusChange?.(ownStatus === "idle" ? "loading" : ownStatus); }, [canLoad, onStatusChange, ownStatus]);
   const displayStatus = status === "error" || ownStatus === "error" ? "error"
     : status === "loading" || ownStatus === "loading" ? "loading" : status ?? ownStatus;
   return <span ref={ref} className="inline-flex items-center gap-1.5 text-sm leading-6" aria-busy={displayStatus === "loading"}>

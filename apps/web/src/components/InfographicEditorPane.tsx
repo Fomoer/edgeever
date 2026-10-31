@@ -20,6 +20,7 @@ import { MemoEditorFocusModeButton, MemoEditorTopRowLeading } from "@/components
 import { MEMO_EDITOR_METADATA_ROW_CLASS_NAME, MEMO_EDITOR_TOP_ROW_CLASS_NAME, nextTitleStatusClearance } from "@/components/MemoEditorChromeDensity";
 import { MemoEditorToolbarDivider } from "@/components/MemoEditorToolbarChrome";
 import { MemoTitleInput } from "@/components/MemoTitleInput";
+import { createEditorInstanceMemoIdentity, reconcileEditorInstanceMemoIdentity, remapEditorInstanceMemoIdentity } from "@/components/editor/editor-instance-identity";
 import { api } from "@/lib/api";
 import { readAiSidebarAdapter, readAiSidebarSource } from "@/lib/desktop-acp";
 import { buildInfographicLocalAgentContext, collectInfographicLocalAgentText, infographicLocalAgentErrorKey, parseInfographicLocalReply } from "@/lib/infographic-local-agent";
@@ -30,6 +31,8 @@ import { infographicSessionHistory, infographicSessionStamp, infographicSessionT
 import { canvasToPngBlob, downloadBlob, frameInfographicExportSvg, infographicExportBasename, rasterizeInfographicSvg, readInfographicSheetColor } from "@/lib/infographic-image-export";
 import { buildInfographicSyntax, buildOfficialInfographicSyntax, infographicAgentCandidates, infographicNoteTitleIsAutomatic, infographicSyntaxTitle, INFOGRAPHIC_TEMPLATES, nextInfographicNoteTitle, parseGeneratedOfficialData, type InfographicItem } from "@/lib/infographic-generation";
 import { statusSettleMotion } from "@/lib/motion";
+import { advanceInfographicSyncBase, classifyInfographicUpdate, infographicEditorSnapshot, infographicMemoSnapshot } from "@/lib/infographic-sync";
+import { MEMO_ID_REMAPPED_EVENT, MEMO_SYNC_ACKNOWLEDGED_EVENT } from "@/lib/sync-events";
 import type { EdgeEverRepository } from "@/lib/repository";
 import { cn, parseTagsText } from "@/lib/utils";
 
@@ -192,7 +195,21 @@ const applyOfficialVisualTextChange = (syntax: string, payload: VisualTextChange
   return buildOfficialInfographicSyntax(parsed.options.template, data, editable.dark);
 };
 
-export default function InfographicEditorPane({
+export default function InfographicEditorPane(props: Props) {
+  const identity = useRef(createEditorInstanceMemoIdentity(props.memo.id));
+  identity.current = reconcileEditorInstanceMemoIdentity(identity.current, props.memo.id);
+  useLayoutEffect(() => {
+    const remap = (event: Event) => {
+      identity.current = remapEditorInstanceMemoIdentity(identity.current, (event as CustomEvent<ReadonlyMap<string, string>>).detail);
+    };
+    window.addEventListener(MEMO_ID_REMAPPED_EVENT, remap);
+    return () => window.removeEventListener(MEMO_ID_REMAPPED_EVENT, remap);
+  }, []);
+  // A real note switch resets state; a temporary ID receiving its durable ID does not.
+  return <InfographicEditorSession key={identity.current.instanceKey} {...props} />;
+}
+
+function InfographicEditorSession({
   memo,
   notebooks,
   repository,
@@ -232,7 +249,7 @@ export default function InfographicEditorPane({
   const [renderError, setRenderError] = useState<string | null>(null);
   const [previewReady, setPreviewReady] = useState(false);
   const [ready, setReady] = useState(false);
-  const [savedSnapshot, setSavedSnapshot] = useState(JSON.stringify([memo.title ?? "", parsed?.syntax ?? "", parsed?.history ?? [], initialTags, parsed?.activeSessionId ?? null]));
+  const [savedSnapshot, setSavedSnapshot] = useState(() => infographicMemoSnapshot(memo) ?? "");
   const [savedHistorySnapshot, setSavedHistorySnapshot] = useState(JSON.stringify(parsed?.history ?? []));
   const [galleryDialogOpen, setGalleryDialogOpen] = useState(false);
   const [mobileNotebookSheetOpen, setMobileNotebookSheetOpen] = useState(false);
@@ -246,17 +263,80 @@ export default function InfographicEditorPane({
   const generationControllerRef = useRef<AbortController | null>(null);
   const handledAiAssistantOpenTokenRef = useRef(aiAssistantOpenToken);
   const memoRef = useRef(memo);
+  const mountedRef = useRef(true);
+  const savingRef = useRef(false);
+  const savedSnapshotRef = useRef(savedSnapshot);
+  const acknowledgedMemoRef = useRef<MemoDetail | null>(null);
+  const deferredBaselineRef = useRef<string | null>(null);
+  const [visualEditing, setVisualEditing] = useState(false);
   const tagsRef = useRef(initialTags);
   const saveRef = useRef<() => boolean | Promise<boolean>>(() => false);
   const snapshotSessionId = readOnly ? (parsed?.activeSessionId ?? null) : activeSessionId;
-  const snapshot = JSON.stringify([title, syntax, history, tagsText, snapshotSessionId]);
+  const snapshot = infographicEditorSnapshot(title, { schemaVersion: 1, syntax, history, ...(snapshotSessionId ? { activeSessionId: snapshotSessionId } : {}) }, parseTagsText(tagsText));
   const notebookOptions = useMemo(() => getNotebookMoveOptions(notebooks), [notebooks]);
   const dirty = snapshot !== savedSnapshot;
   const historyDirty = JSON.stringify(history) !== savedHistorySnapshot;
 
   useEffect(() => {
+    mountedRef.current = true;
+    const remap = (event: Event) => {
+      const mappings = (event as CustomEvent<ReadonlyMap<string, string>>).detail;
+      const id = mappings.get(memoRef.current.id);
+      if (!id) return;
+      memoRef.current = { ...memoRef.current, id };
+      if (sessionRef.current) sessionRef.current = { ...sessionRef.current, id: `local-edit:${id}`, memoId: id };
+    };
+    const acknowledged = (event: Event) => {
+      const receipt = (event as CustomEvent<MemoDetail>).detail;
+      const advanced = advanceInfographicSyncBase(memoRef.current, receipt);
+      if (advanced !== memoRef.current) acknowledgedMemoRef.current = receipt;
+      memoRef.current = advanced;
+    };
+    window.addEventListener(MEMO_ID_REMAPPED_EVENT, remap);
+    window.addEventListener(MEMO_SYNC_ACKNOWLEDGED_EVENT, acknowledged);
+    return () => {
+      mountedRef.current = false;
+      window.removeEventListener(MEMO_ID_REMAPPED_EVENT, remap);
+      window.removeEventListener(MEMO_SYNC_ACKNOWLEDGED_EVENT, acknowledged);
+    };
+  }, []);
+
+  useEffect(() => {
+    // A locally saved draft that deferred a remote change still owns its old
+    // conflict base. Becoming locally clean must not authorize a remote rebase.
+    const deferred = deferredBaselineRef.current;
+    const hasDraft = snapshot !== savedSnapshotRef.current || generating || visualEditing
+      || (deferred !== null && snapshot !== deferred);
+    const update = classifyInfographicUpdate(memo, memoRef.current, savedSnapshotRef.current, hasDraft, savingRef.current, acknowledgedMemoRef.current);
+    if (update === "ignore") return;
+    if (update === "defer") {
+      deferredBaselineRef.current ??= savedSnapshotRef.current;
+      return;
+    }
+    if (update === "rebase") {
+      memoRef.current = advanceInfographicSyncBase(memoRef.current, memo);
+      deferredBaselineRef.current = null;
+      return;
+    }
+    const incoming = parseInfographicDocument(memo.contentMarkdown)!;
+    const nextSnapshot = infographicMemoSnapshot(memo)!;
     memoRef.current = memo;
-  }, [memo]);
+    deferredBaselineRef.current = null;
+    savedSnapshotRef.current = nextSnapshot;
+    tagsRef.current = memo.tags.join(", ");
+    setTitle(memo.title ?? "");
+    setTagsText(tagsRef.current);
+    setSyntax(incoming.syntax);
+    setHistory(incoming.history ?? []);
+    setActiveSessionId(incoming.activeSessionId ?? null);
+    setSavedSnapshot(nextSnapshot);
+    setSavedHistorySnapshot(JSON.stringify(incoming.history ?? []));
+    setPreviousGeneration(null);
+    titleEditedByUserRef.current = !infographicNoteTitleIsAutomatic({
+      noteTitle: memo.title ?? "", graphicTitle: infographicSyntaxTitle(incoming.syntax),
+      defaultTitle: t("infographic.name"), earlierTitles: (incoming.history ?? []).map((turn) => turn.resultTitle),
+    });
+  }, [memo, snapshot, generating, visualEditing, saving, t]);
 
   useEffect(() => () => generationControllerRef.current?.abort(), []);
 
@@ -275,16 +355,17 @@ export default function InfographicEditorPane({
   useEffect(() => {
     if (readOnly) return;
     let cancelled = false;
-    if (requiresLocalEditSession(memo)) {
-      sessionRef.current = createLocalEditSession(memo);
+    const currentMemo = memoRef.current;
+    if (requiresLocalEditSession(currentMemo)) {
+      sessionRef.current = createLocalEditSession(currentMemo);
       setReady(true);
       return;
     }
-    void api.createMemoEditSession(memo.id).then(({ editSession }) => {
+    void api.createMemoEditSession(currentMemo.id).then(({ editSession }) => {
       if (!cancelled) { sessionRef.current = editSession; setReady(true); }
     }).catch(() => { if (!cancelled) setError(t("infographic.sessionError")); });
     return () => { cancelled = true; };
-  }, [memo.id, readOnly, t]);
+  }, [memo.id, memo.contentHash, memo.revision, readOnly, t]);
 
   useEffect(() => {
     setPreviewReady(false);
@@ -398,7 +479,7 @@ export default function InfographicEditorPane({
   };
 
   const save = async () => {
-    if (readOnly || saving || !dirty || !ready || !sessionRef.current) return false;
+    if (readOnly || savingRef.current || !dirty || !ready || !sessionRef.current || visualEditing) return false;
     if (syntax.trim() && (renderError || !previewReady || !instanceRef.current)) {
       setError(renderError ?? t("infographic.invalidSyntax"));
       return false;
@@ -406,6 +487,7 @@ export default function InfographicEditorPane({
     const currentMemo = memoRef.current;
     const currentSnapshot = snapshot;
     const document: InfographicDocument = { schemaVersion: 1, syntax, ...(history.length ? { history } : {}), ...(activeSessionId ? { activeSessionId } : {}) };
+    savingRef.current = true;
     setSaving(true); setError(null);
     try {
       const result = await repository.updateMemo(currentMemo, {
@@ -417,15 +499,24 @@ export default function InfographicEditorPane({
         contentMarkdown: serializeInfographicDocument(document),
         tags: parseTagsText(tagsRef.current),
       });
-      memoRef.current = result.memo;
+      if (!mountedRef.current) {
+        await onSaved(result.memo);
+        return true;
+      }
+      const savedMemo = { ...result.memo, id: memoRef.current.id };
+      const acknowledgedBase = memoRef.current;
+      memoRef.current = acknowledgedBase.revision > savedMemo.revision
+        ? { ...savedMemo, revision: acknowledgedBase.revision, contentHash: acknowledgedBase.contentHash, updatedAt: acknowledgedBase.updatedAt }
+        : savedMemo;
+      savedSnapshotRef.current = currentSnapshot;
       setSavedSnapshot(currentSnapshot);
       setSavedHistorySnapshot(JSON.stringify(history));
-      await onSaved(result.memo);
+      await onSaved(memoRef.current);
       return true;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("infographic.saveError"));
+      if (mountedRef.current) setError(caught instanceof Error ? caught.message : t("infographic.saveError"));
       return false;
-    } finally { setSaving(false); }
+    } finally { savingRef.current = false; if (mountedRef.current) setSaving(false); }
   };
   saveRef.current = () => save();
 
@@ -453,10 +544,17 @@ export default function InfographicEditorPane({
   };
 
   useEffect(() => {
-    if (!dirty || !ready || readOnly || saving || generating || renderError || (syntax.trim() && !previewReady)) return;
+    if (!dirty || !ready || readOnly || saving || generating || visualEditing || renderError || (syntax.trim() && !previewReady)) return;
     const timer = window.setTimeout(() => saveRef.current(), historyDirty ? 0 : 1200);
     return () => window.clearTimeout(timer);
-  }, [dirty, ready, readOnly, saving, generating, renderError, previewReady, snapshot, syntax, historyDirty]);
+  }, [dirty, ready, readOnly, saving, generating, visualEditing, renderError, previewReady, snapshot, syntax, historyDirty]);
+
+  useEffect(() => {
+    if (readOnly || (!dirty && !visualEditing)) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, readOnly, visualEditing]);
 
   useLayoutEffect(() => {
     const titleSlot = headerTitleSlot;
@@ -628,7 +726,7 @@ export default function InfographicEditorPane({
   };
 
   const previewUsesLightSheet = Boolean(syntax.trim()) && syntax.split("\n")[1] !== "theme dark";
-  const saveStatus = saving ? "saving" : dirty ? "unsaved" : "saved";
+  const saveStatus = saving ? "saving" : dirty || visualEditing ? "unsaved" : "saved";
   const saveLabel = t(`editor.saveState.${saveStatus}`);
   const saveStatusClassName = saveStatus === "saved" ? "text-slate-400" : "bg-slate-100 text-slate-700";
   const viewingSessionId = resolveInfographicSessionId(history, activeSessionId);
@@ -654,7 +752,16 @@ export default function InfographicEditorPane({
     },
   };
 
-  return <div className="relative flex h-full min-h-0 min-w-0 bg-card text-foreground">
+  return <div className="relative flex h-full min-h-0 min-w-0 bg-card text-foreground"
+    onFocusCapture={(event) => {
+      if (containerRef.current?.contains(event.target) && event.target.closest('[contenteditable="true"]')) setVisualEditing(true);
+    }}
+    onBlurCapture={() => {
+      queueMicrotask(() => {
+        if (mountedRef.current) setVisualEditing(Boolean(containerRef.current?.querySelector('[contenteditable="true"]')));
+      });
+    }}
+  >
     <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col">
     <header className="shrink-0 border-b border-slate-200 bg-card">
       <div className={cn(MEMO_EDITOR_TOP_ROW_CLASS_NAME, "border-b-0")}>

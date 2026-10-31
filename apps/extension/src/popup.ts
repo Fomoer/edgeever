@@ -10,3 +10,10 @@ export async function captureCurrentPage(settings: ExtensionSettings): Promise<s
   if (!response?.ok) throw new Error(response?.message || t("saveFailed"));
   return typeof response.message === "string" && response.message ? response.message : t("savedToEdgeEver");
 }
+
+export async function startRegionClip(settings: ExtensionSettings): Promise<void> {
+  if (!settings.instanceUrl || !settings.token) throw new Error(t("completePluginConfiguration"));
+  await requestInstancePermission(settings.instanceUrl);
+  const response = await chrome.runtime.sendMessage({ type: "startRegionClip" });
+  if (!response?.ok) throw new Error(response?.message || t("saveFailed"));
+}

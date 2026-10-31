@@ -98,7 +98,7 @@ export const GAODING: Template[] = [
       const ty = (h - tagH - th - subH - rowH - (rowH ? 40 * u : 0)) / 2 + tagH; const last = lines[lines.length - 1] ?? '';
       const ray = (k: number): Line => { const a = (-150 - k * 28) * Math.PI / 180; const cx = x0 + tagS * 0.2, cy = ty - tagH * 0.55; const r0 = tagS * 0.9, r1 = tagS * 1.6; return mark(new Line([cx + Math.cos(a) * r0, cy + Math.sin(a) * r0, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1], { stroke: p.ink, strokeWidth: Math.max(3, 5 * u), strokeLineCap: 'round' }), 'mark-title'); };
       const rowY = ty + th + 40 * u;
-      const row = flow.flatMap(({ t, x, y }) => { const cx = x0 + x, cy = rowY + y; return [dot(cx + cs * 0.5, cy + cs * 0.62, cs * 0.5, p.accent), textbox('✓', cx + cs * 0.1, cy + cs * 0.06, cs * 0.8, { fontSize: cs * 0.9, fill: p.ink, fontWeight: 'bold', textAlign: 'center', lineHeight: 1 }), textbox(t, cx + cs * 1.3, cy, lineW(t, cs, 'bold', 0) + cs, { fontSize: cs, fill: p.ink, fontWeight: 'bold', lineHeight: 1.1 })]; });
+      const row = flow.flatMap(({ t, x, y }, index) => { const cx = x0 + x, cy = rowY + y; return [dot(cx + cs * 0.5, cy + cs * 0.62, cs * 0.5, p.accent), textbox('✓', cx + cs * 0.1, cy + cs * 0.06, cs * 0.8, { fontSize: cs * 0.9, fill: p.ink, fontWeight: 'bold', textAlign: 'center', lineHeight: 1 }), Object.assign(textbox(t, cx + cs * 1.3, cy, lineW(t, cs, 'bold', 0) + cs, { fontSize: cs, fill: p.ink, fontWeight: 'bold', lineHeight: 1.1 }), { qcName: `poster:item:${index}` })]; });
       return { background: solid(p.bg), objects: keep<FabricObject>(
         grain(w, h, 0.04, 163),
         brushBlock(x0 - size * 0.1, ty + (lines.length - 1) * step + size * 0.22, Math.min(w - x0, lineW(last, size) + size * 0.25), size * 0.95, p.accent, lines.length),

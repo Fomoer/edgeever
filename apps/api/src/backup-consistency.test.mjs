@@ -75,6 +75,93 @@ describe("consistent backup reads across a real schema upgrade", () => {
     expect((await db.request("/api/v1/backups/json")).status).toBe(200);
   });
 
+  test("counts the source only for snapshots, never for each backup page", async () => {
+    const db = await installation();
+    const queries = [];
+    const prepare = db.storage.db.prepare.bind(db.storage.db);
+    db.storage.db.prepare = (sql) => { queries.push(sql); return prepare(sql); };
+    const state = await (await db.request("/api/v1/backups/state")).json();
+    const isFullCount = (sql) => /COUNT\s*\(/i.test(sql) && /backup_revision/.test(sql);
+    expect(queries.filter(isFullCount)).toHaveLength(1);
+    queries.length = 0;
+    for (const kind of ["memos", "notebooks", "prompts"]) {
+      let after = "";
+      let count = 0;
+      do {
+        const response = await db.request(pageUrl(state, kind, after));
+        expect(response.status).toBe(200);
+        const page = await response.json();
+        count += page[kind].length;
+        after = page.nextCursor;
+      } while (after !== null);
+      expect(count).toBe(state.counts[kind]);
+    }
+    expect(queries.filter(isFullCount)).toHaveLength(0);
+    const final = await (await db.request("/api/v1/backups/state")).json();
+    expect(final).toEqual(state);
+    expect(queries.filter(isFullCount)).toHaveLength(1);
+  });
+
+  for (const endpoint of ["backups/json", "exports/markdown"]) test(`${endpoint} can traverse continuation pages without recounting or leaking lookahead resources`, async () => {
+    const db = await installation();
+    const memos = db.sqlite.query("SELECT id FROM memos WHERE workspace_id = 'ws_default' AND is_deleted = 0 ORDER BY created_at, id").all();
+    for (const [index, memo] of memos.entries()) {
+      db.sqlite.query("INSERT INTO resources (id,memo_id,object_key,kind,byte_size) VALUES (?,?,?,'attachment',4)").run(`resource-${index}`, memo.id, `object-${index}`);
+    }
+    const queries = [];
+    const prepare = db.storage.db.prepare.bind(db.storage.db);
+    db.storage.db.prepare = (sql) => { queries.push(sql); return prepare(sql); };
+    let offset = 0;
+    const ids = [];
+    const resourceIds = [];
+    do {
+      const response = await db.request(`/api/v1/${endpoint}?limit=1&offset=${offset}&includeTotal=0`);
+      expect(response.status).toBe(200);
+      const page = await response.json();
+      if (offset === 0) expect(page.totalCount).toBe(memos.length);
+      else expect(page.totalCount).toBeUndefined();
+      expect(page.memos).toHaveLength(1);
+      expect(page.resources.every((resource) => resource.memoId === page.memos[0].id)).toBe(true);
+      ids.push(...page.memos.map((memo) => memo.id));
+      resourceIds.push(...page.resources.map((resource) => resource.id));
+      offset = page.nextOffset;
+    } while (offset !== null);
+    expect(ids).toEqual(memos.map((memo) => memo.id));
+    expect(new Set(resourceIds).size).toBe(memos.length);
+    expect(queries.filter((sql) => /COUNT\s*\(/i.test(sql))).toHaveLength(1);
+    const legacy = await (await db.request(`/api/v1/${endpoint}?limit=1&offset=1`)).json();
+    expect(legacy.totalCount).toBe(memos.length);
+  });
+
+  for (const change of ["revision", "identity"]) test(`rejects a ${change} change while assembling a page`, async () => {
+    const db = await installation();
+    const state = await (await db.request("/api/v1/backups/state")).json();
+    const prepare = db.storage.db.prepare.bind(db.storage.db);
+    let checks = 0;
+    db.storage.db.prepare = (sql) => {
+      const statement = prepare(sql);
+      if (!/FROM workspaces/.test(sql)) return statement;
+      const bind = statement.bind.bind(statement);
+      statement.bind = (...values) => {
+        const bound = bind(...values);
+        const first = bound.first.bind(bound);
+        bound.first = async (...args) => {
+          if (++checks === 2) {
+            if (change === "revision") db.sqlite.query("UPDATE memo_contents SET content_markdown = 'Changed during read' WHERE memo_id = ?").run(db.note.id);
+            else db.sqlite.exec("UPDATE workspaces SET created_at = 'replacement-instance' WHERE id = 'ws_default'");
+          }
+          return first(...args);
+        };
+        return bound;
+      };
+      return statement;
+    };
+    const response = await db.request(pageUrl(state));
+    expect(checks).toBe(2);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: { code: "backup_source_changed" } });
+  });
+
   test("covers content, revisions, resources, prompts and deletions in their transaction", async () => {
     const db = await installation();
     const changes = [

@@ -120,6 +120,28 @@ describe("editor body font preference", () => {
     expect(style.has("--editor-body-font-family")).toBe(false);
   });
 
+  test("only known monospace fonts follow the body choice into code, and switching restores the fallback", () => {
+    const style = new Map();
+    const dataset = {};
+    globalThis.document = {
+      documentElement: { dataset, style: {
+        setProperty: (key, value) => style.set(key, value),
+        removeProperty: key => style.delete(key),
+      } },
+    };
+    for (const id of ["maple-mono-cn", "jetbrains"]) {
+      applyEditorBodyFontPreference({ choice: id, customFamily: "" });
+      expect(dataset.editorCodeFont).toBe(id);
+      expect(style.get("--editor-code-font-family")).toContain(FONT_CATALOG[id].family);
+      expect(style.get("--editor-code-font-family")).toEndWith("monospace");
+      for (const next of ["wenkai", "source-han-serif", "heavy", "custom", "system"]) {
+        applyEditorBodyFontPreference({ choice: next, customFamily: "Arial" });
+        expect(dataset.editorCodeFont).toBeUndefined();
+        expect(style.has("--editor-code-font-family")).toBe(false);
+      }
+    }
+  });
+
   test("returns font preview stacks for bundled choices", () => {
     expect(getFontChoicePreviewStack("system")).toBeUndefined();
     expect(getFontChoicePreviewStack("custom")).toBeUndefined();

@@ -15,6 +15,11 @@ describe("AI assistant interaction model", () => {
     expect(getDefaultAiAction(false)).toBe("custom");
     expect(getDefaultTargetLanguage("zh-CN")).toBe("en");
     expect(getDefaultTargetLanguage("en-US")).toBe("zh-CN");
+    expect(getDefaultTargetLanguage("zh_TW")).toBe("en");
+    expect(getDefaultTargetLanguage("ja")).toBe("ja");
+    expect(getDefaultTargetLanguage("pl-PL")).toBe("en");
+    expect(getDefaultTargetLanguage("ru")).toBe("en");
+    expect(getDefaultTargetLanguage(undefined)).toBe("zh-CN");
   });
 
   test("sends the visible instruction with the semantic action key", () => {

@@ -6,6 +6,8 @@ import { Circle, FabricObject, getEnv, Gradient, Line, Polygon, Rect, Shadow, Te
 import { Background } from './model';
 import { GAODING } from './gaoding';
 import { toContrast } from './quality';
+import { paperListPaper } from '../../paper-list-artwork';
+import { parsePaperListRow } from '../../paper-list-content';
 
 /** Colours a template reads. An assistant (or the user) can override any of them without touching layout. */
 export interface Palette { bg: string; bg2: string; ink: string; sub: string; accent: string; accentInk: string }
@@ -175,6 +177,105 @@ const shadowSoft = (u: number): Shadow => new Shadow({ color: 'rgba(0,0,0,0.25)'
 const shadowHard = (u: number, c = '#000000', d = 8): Shadow => new Shadow({ color: c, blur: 0, offsetX: d * u, offsetY: d * u });
 
 export const TEMPLATES: Template[] = [
+  {
+    ...posterDesignTemplate("paper-list"),
+    build(i) {
+      const p = palette(i, { bg: '#f4f3ee', bg2: '#f4f3ee', ink: '#080907', sub: '#272923', accent: '#080907', accentInk: '#f4f3ee' });
+      const { u, w, h } = metrics(i);
+      const bookText = (...args: Parameters<typeof textbox>) => {
+        const box = textbox(...args);
+        if (!hasCjk(box.text)) {
+          const lines = wrapLines(args[0], box.width * 0.98, box.fontSize, String(box.fontWeight), box.charSpacing, box.fontFamily);
+          if (lines.length > 1 && /^\S{1,3}$/.test(lines.at(-1)!)) {
+            const previous = lines.at(-2)!.split(' ');
+            const last = `${previous.at(-1)} ${lines.at(-1)}`;
+            if (previous.length > 1 && measure(last, box.fontSize, String(box.fontWeight), box.fontFamily) < box.width * 0.98) {
+              previous.pop();
+              lines[lines.length - 2] = previous.join(' ');
+              lines[lines.length - 1] = last;
+            }
+          }
+          Object.assign(box, { qcWrapped: true, qcSource: args[0] });
+          box.set({ text: lines.join('\n') });
+          box.initDimensions();
+        }
+        return box;
+      };
+      const margin = Math.min(w, h) * 0.065;
+      const inner = w * 0.855;
+      const headingFace = typeFor('title', SERIF, 'bold');
+      const rows = (i.points?.length ? i.points : i.subtitle.split(/\n\s*\n/)).map(value => value.trim()).filter(Boolean);
+      const label = i.badge?.trim() ? bookText(i.badge, margin, margin * 0.6, inner, { qcRole: 'badge', fontSize: 17 * u, fill: p.sub }) : undefined;
+      const titleTop = label ? label.top + label.height + 16 * u : margin * 0.92;
+      const titleWeight = headingFace.fontWeight ?? 'bold';
+      const oneLineSize = inner * 0.99 / Math.max(1, measure(i.title, 1, titleWeight));
+      const titleSize = !i.title.includes('\n') && oneLineSize >= 64 * u
+        ? Math.min(116 * u, oneLineSize)
+        : Math.min(116 * u, fitTitle(i.title, inner, h * 0.23, 116 * u, 22 * u, 1.06));
+      const title = bookText(i.title, w * 0.057, titleTop, inner, { qcRole: 'title', fontSize: titleSize, fill: p.ink, fontFamily: SERIF, fontWeight: 'bold', lineHeight: 1.06 });
+      const start = title.top + title.height + 14 * u;
+      const objects: FabricObject[] = [title, rule(w * 0.078, start, w * 0.824, p.ink, Math.max(1, 2.7 * u))];
+      if (label) objects.push(label);
+      // Actual Fabric heights keep headings and paragraphs together at every aspect ratio.
+      // All supplied entries survive; fit the entire list instead of truncating it.
+      const numberWidth = Math.min(w * 0.15, 156 * u);
+      const headingX = w * 0.195;
+      const subheadingX = w * 0.225;
+      const columnX = w * 0.185;
+      const columnWidth = w * 0.71;
+      const ruleX = w * 0.202;
+      const renderRows = (scale: number) => {
+        const result: FabricObject[] = [];
+        let y = start + 22 * u;
+        rows.forEach((row, index) => {
+          const { heading, subtitle, body: bodyText } = parsePaperListRow(row);
+          const head = bookText(heading!, headingX, y + 39 * u * scale, w * 0.66, { fontSize: 66 * u * scale, fill: p.ink, fontFamily: SERIF, fontWeight: 'bold', lineHeight: 1.12, ...headingFace });
+          Object.assign(head, { qcName: `paper-list:row:${index}:heading` });
+          const numberText = `${index + 1}.`;
+          const numeralSize = 167 * u * scale;
+          const number = bookText(numberText, margin, y + 5 * u * scale, numberWidth, { fontSize: numeralSize * Math.min(1, numberWidth * 0.98 / measure(numberText, numeralSize, 'normal', '思源宋体')), fill: p.ink, fontFamily: '思源宋体', lineHeight: 1 });
+          const plusSize = 36 * u * scale;
+          const plusX = w * 0.865 - plusSize / 2;
+          result.push(number, head,
+            rule(plusX, y + 110 * u * scale, plusSize, p.ink, Math.max(1, 1.5 * u)),
+            rule(plusX + plusSize / 2, y + 110 * u * scale - plusSize / 2, plusSize, p.ink, Math.max(1, 1.5 * u), true));
+          let bottom = Math.max(head.top + head.height, number.top + number.height);
+          if (subtitle) {
+            const subhead = bookText(subtitle, subheadingX, head.top + head.height + 7 * u * scale, w * 0.63, { fontSize: 45 * u * scale, fill: p.ink, fontFamily: SERIF, fontWeight: 'bold', lineHeight: 1.1, ...headingFace });
+            Object.assign(subhead, { qcName: `paper-list:row:${index}:subtitle` });
+            result.push(subhead);
+            bottom = Math.max(bottom, subhead.top + subhead.height);
+          }
+          const ruleY = bottom + 10 * u * scale;
+          result.push(rule(ruleX, ruleY, w * 0.7, p.ink, Math.max(1, 2.4 * u)));
+          if (bodyText) {
+            let paragraphY = ruleY + (index === 0 ? 56 : 32) * u * scale;
+            bodyText.split('\n').forEach((paragraph, paragraphIndex) => {
+              const body = bookText(paragraph, columnX, paragraphY, columnWidth, { fontSize: 31 * u * scale, fill: p.sub, lineHeight: 1.45, fontFamily: i.zh ? '思源黑体' : 'Inter' });
+              Object.assign(body, { qcName: paragraphIndex === 0 ? `paper-list:row:${index}:body` : `paper-list:row:${index}:paragraph:${paragraphIndex}` });
+              result.push(body);
+              bottom = body.top + body.height;
+              paragraphY = bottom + 26 * u * scale;
+            });
+          } else bottom = ruleY;
+          y = bottom + 14 * u * scale;
+        });
+        return { objects: result, bottom: y - 14 * u * scale };
+      };
+      let scale = 1;
+      let list = renderRows(scale);
+      for (let pass = 0; list.bottom > h - Math.min(margin, h * 0.01) && pass < 80; pass++) {
+        scale *= 0.96;
+        list = renderRows(scale);
+      }
+      const watermarks = [
+        bookText('… a few notes from the reading room', -w * 0.23, h * 0.54, w * 1.45, { fontSize: 68 * u, fill: p.ink, fontFamily: '思源宋体', fontStyle: 'italic', angle: 19, opacity: 0.055 }),
+        bookText('of the pages we keep returning to …', -w * 0.09, h * 0.89, w * 1.42, { fontSize: 59 * u, fill: p.ink, fontFamily: '思源宋体', fontStyle: 'italic', angle: -15, opacity: 0.045 }),
+      ];
+      watermarks.forEach(mark => Object.assign(mark, { qcName: 'paper-list:watermark' }));
+      return { background: solid(p.bg), objects: [...paperListPaper(w, h, p.ink), ...watermarks, ...objects, ...list.objects] };
+    },
+  },
   {
     ...posterDesignTemplate("minimal"),
     build(i) {
@@ -630,7 +731,7 @@ const PREMIUM: Template[] = [
         : [[gx, gy, gw, gh * 0.46 - gap / 2], [gx, gy + gh * 0.46 + gap / 2, gw / 2 - gap / 2, gh * 0.54 - gap / 2], [gx + gw / 2 + gap / 2, gy + gh * 0.46 + gap / 2, gw / 2 - gap / 2, gh * 0.54 - gap / 2]];
       const cards = items.flatMap((label, k) => { const [sx, sy, sw, sh] = slots[k]! as [number, number, number, number]; const big = k === 0;
         return [rect(sx, sy, sw, sh, colors[k]!, { rx: 40 * u, ry: 40 * u }), textbox(String(k + 1).padStart(2, '0'), sx + 28 * u, sy + 22 * u, sw - 50 * u, { fontSize: Math.max(40, (big ? 120 : 88) * u), fill: 'rgba(0,0,0,0.28)', fontWeight: 'bold', lineHeight: 1, charSpacing: -30 }),
-          textbox(label, sx + 28 * u, sy + sh - 28 * u - Math.max(36, (big ? 64 : 48) * u) * 2.4, sw - 56 * u, { fontSize: Math.max(26, (big ? 60 : 46) * u), fill: p.ink, fontWeight: 'bold', lineHeight: 1.12 })]; });
+          Object.assign(textbox(label, sx + 28 * u, sy + sh - 28 * u - Math.max(36, (big ? 64 : 48) * u) * 2.4, sw - 56 * u, { fontSize: Math.max(26, (big ? 60 : 46) * u), fill: p.ink, fontWeight: 'bold', lineHeight: 1.12 }), { qcName: `poster:item:${k}` })]; });
       return { background: solid(p.bg), objects: keep<FabricObject>(
         grain(w, h, 0.06, 43),
         rect(x0, y0, hw, hh, '#141414', { rx: 40 * u, ry: 40 * u }),
@@ -792,14 +893,14 @@ const PREMIUM: Template[] = [
       const polyA = wide ? [{ x: 0, y: py }, { x: w / 2 + slant, y: py }, { x: w / 2 - slant, y: h }, { x: 0, y: h }] : [{ x: 0, y: py }, { x: w, y: py }, { x: w, y: py + ph / 2 - slant }, { x: 0, y: py + ph / 2 + slant }];
       const polyB = wide ? [{ x: w / 2 + slant, y: py }, { x: w, y: py }, { x: w, y: h }, { x: w / 2 - slant, y: h }] : [{ x: 0, y: py + ph / 2 + slant }, { x: w, y: py + ph / 2 - slant }, { x: w, y: h }, { x: 0, y: h }];
       const aBox = wide ? { x: m, y: py + ph * 0.3, w: w / 2 - slant - m * 1.4 } : { x: m, y: py + ph * 0.12, w: tw }; const bBox = wide ? { x: w / 2 + slant + m * 0.6, y: py + ph * 0.3, w: w / 2 - slant - m * 1.4 } : { x: m, y: py + ph * 0.62, w: tw };
-      const lab = (txt: string, box: { x: number; y: number; w: number }, color: string, mark: string): FabricObject[] => { const sz = fitTitle(txt, box.w, ph * (wide ? 0.4 : 0.2), 130 * u, 30, 1.05); return [textbox(mark, box.x, box.y - 70 * u, box.w, { fontSize: Math.max(24, 40 * u), fill: color, fontWeight: 'bold', charSpacing: 200 }), textbox(txt, box.x, box.y, box.w, { fontSize: sz, fill: color, fontWeight: 'bold', lineHeight: 1.05, charSpacing: -14 })]; };
+      const lab = (txt: string, box: { x: number; y: number; w: number }, color: string, mark: string, index: number): FabricObject[] => { const sz = fitTitle(txt, box.w, ph * (wide ? 0.4 : 0.2), 130 * u, 30, 1.05); return [textbox(mark, box.x, box.y - 70 * u, box.w, { fontSize: Math.max(24, 40 * u), fill: color, fontWeight: 'bold', charSpacing: 200 }), Object.assign(textbox(txt, box.x, box.y, box.w, { fontSize: sz, fill: color, fontWeight: 'bold', lineHeight: 1.05, charSpacing: -14 }), { qcName: `poster:compare:${index}` })]; };
       return { background: solid(p.bg), objects: keep<FabricObject>(
         new Polygon(polyA, { fill: dull, originX: 'left', originY: 'top' }), ...dotGrid(m * 0.4, py + 20 * u, 12, 14, 70 * u, 6 * u, '#9a9387', 0.35),
         new Polygon(polyB, { fill: p.accent, originX: 'left', originY: 'top' }), rays(wide ? w * 0.78 : w * 0.7, wide ? h * 0.7 : py + ph * 0.8, Math.max(w, h), 16, '#ffffff', 0.18), sparkle(w - m * 1.2, py + (wide ? ph * 0.15 : ph * 0.58), 70 * u, '#111111', 10),
         grain(w, h, 0.08, 51), rect(0, 0, w, barH, '#111111'),
         ...badge(i.badge, m, m * 0.6, { ...p, accent: p.accent, accentInk: p.accentInk }, Math.max(18, 24 * u)),
         textbox(i.title, m, (barH - th) / 2 + (i.badge?.trim() ? 14 * u : 0), tw, { qcRole: 'title', fontSize: size, fill: '#ffffff', fontWeight: 'bold', lineHeight: 1.04, textAlign: 'center', charSpacing: -10 }),
-        ...lab(A, aBox, dullInk, '✕  BEFORE'), ...lab(B, bBox, '#111111', '✓  AFTER'),
+        ...lab(A, aBox, dullInk, '✕  BEFORE', 0), ...lab(B, bBox, '#111111', '✓  AFTER', 1),
         burst(wide ? w / 2 : w / 2, wide ? py + ph / 2 : py + ph / 2, 92 * u, '#111111', 12, 8), textbox('VS', (wide ? w / 2 : w / 2) - 60 * u, (wide ? py + ph / 2 : py + ph / 2) - 34 * u, 120 * u, { fontSize: 62 * u, fill: p.accent, fontWeight: 'bold', textAlign: 'center', angle: 8 }),
         ...(caption ? [textbox(caption, m, h - m * 0.9 - 40 * u, tw, { qcRole: 'subtitle', fontSize: Math.max(22, 30 * u), fill: '#111111', fontWeight: 'bold', textAlign: 'center' })] : []),
       ) };
@@ -939,18 +1040,21 @@ const STUDIO: Template[] = [
     build(i) {
       const p = palette(i, { bg: '#fbfaf6', bg2: '#fbfaf6', ink: '#1c1c1e', sub: '#7c7c80', accent: '#e2a300', accentInk: '#ffffff' });
       const { u, m, w, h, wide } = metrics(i); const x0 = m; const inner = w - m * 2; const bar = Math.max(26, 44 * u); const dateS = Math.max(18, 26 * u);
-      const list = (i.points ?? []).map(t => t.trim()).filter(Boolean).slice(0, 4); const twoCol = wide && list.length >= 2;
+      const fromPoints = Boolean(i.points?.length);
+      const parsed = (fromPoints ? i.points! : i.subtitle.split(/[\n,，、；;]/)).map(t => t.trim()).filter(Boolean);
+      const list = (fromPoints || parsed.length >= 2 ? parsed : []).slice(0, 4); const twoCol = wide && list.length >= 2;
+      const showSub = fromPoints ? Boolean(i.subtitle.trim()) : list.length < 2 && Boolean(i.subtitle.trim());
       const tw = twoCol ? inner * 0.56 : inner; const top = m * 0.8 + bar * 1.6 + dateS * 3;
       const size = fitTitle(i.title, tw, h * (wide ? 0.5 : 0.36), 190 * u, 36, 1.12); const th = textHeight(i.title, tw, size, 1.12);
-      const subSize = Math.max(26, size * 0.32); const subH = i.subtitle.trim() ? textHeight(i.subtitle, tw, subSize, 1.25) + 30 * u : 0;
+      const subSize = Math.max(26, size * 0.32); const subH = showSub ? textHeight(i.subtitle, tw, subSize, 1.25) + 30 * u : 0;
       const ls = Math.max(26, Math.min(46 * u, size * 0.4)); const lx = twoCol ? x0 + tw + m : x0; const lw = twoCol ? inner - tw - m : inner; const ly0 = twoCol ? top + 8 * u : top + th + subH + 44 * u;
-      const rows = list.length >= 2 ? list.flatMap((t, k) => { const y = ly0 + k * ls * 2.1; return [new Circle({ left: lx, top: y + ls * 0.12, radius: ls * 0.44, fill: k === 0 ? p.accent : 'rgba(0,0,0,0)', stroke: p.accent, strokeWidth: Math.max(2, 3 * u), originX: 'left', originY: 'top' }), textbox(t, lx + ls * 1.4, y, lw - ls * 1.4, { fontSize: ls, fill: p.ink, lineHeight: 1.1 })]; }) : [];
+      const rows = list.length >= 2 ? list.flatMap((t, k) => { const y = ly0 + k * ls * 2.1; return [new Circle({ left: lx, top: y + ls * 0.12, radius: ls * 0.44, fill: k === 0 ? p.accent : 'rgba(0,0,0,0)', stroke: p.accent, strokeWidth: Math.max(2, 3 * u), originX: 'left', originY: 'top' }), Object.assign(textbox(t, lx + ls * 1.4, y, lw - ls * 1.4, { fontSize: ls, fill: p.ink, lineHeight: 1.1 }), { qcName: `poster:item:${k}` })]; }) : [];
       return { background: solid(p.bg), objects: keep<FabricObject>(
         textbox('‹ ' + (i.zh ? '备忘录' : 'Notes'), x0, m * 0.8, inner * 0.5, { fontSize: bar, fill: p.accent, fontWeight: 'bold' }),
         textbox(i.zh ? '完成' : 'Done', x0 + inner * 0.5, m * 0.8, inner * 0.5, { fontSize: bar, fill: p.accent, fontWeight: 'bold', textAlign: 'right' }),
         textbox(i.badge?.trim() || (i.zh ? '今天 · 笔记' : 'Today'), x0, m * 0.8 + bar * 1.6 + dateS * 0.8, inner, { qcRole: 'badge', fontSize: dateS, fill: p.sub, textAlign: 'center' }),
         textbox(i.title, x0, top, tw, { qcRole: 'title', fontSize: size, fill: p.ink, fontWeight: 'bold', lineHeight: 1.12 }),
-        ...sub(i, x0, top + th + 30 * u, tw, subSize, p.sub), ...rows,
+        ...(showSub ? sub(i, x0, top + th + 30 * u, tw, subSize, p.sub) : []), ...rows,
       ) };
     },
   },
@@ -1177,7 +1281,7 @@ for (let k = TEMPLATES.length - 1; k >= 0; k--) if (RETIRED.has(TEMPLATES[k]!.id
 const MOODY = new Set(['neon', 'cinema', 'quote']); // dark by nature: still available, but never the first thing a new user sees
 TEMPLATES.unshift(...GAODING, ...STUDIO.filter(t => !MOODY.has(t.id)), ...PREMIUM.filter(t => !MOODY.has(t.id)), ...PREMIUM.filter(t => MOODY.has(t.id)), ...STUDIO.filter(t => MOODY.has(t.id)));
 // The first screen of the gallery alternates quiet and loud, paper and colour, so the range is visible without scrolling.
-const LEAD = ['folio', 'brush', 'keyword', 'regeng', 'highlight', 'frame', 'sage', 'notes', 'interview', 'riso', 'kicker', 'numeral', 'calendar', 'ticket', 'corner', 'polaroid', 'serial', 'chat', 'window', 'newspaper', 'stack', 'bili', 'pop'];
+const LEAD = ['paper-list', 'folio', 'brush', 'keyword', 'regeng', 'highlight', 'frame', 'sage', 'notes', 'interview', 'riso', 'kicker', 'numeral', 'calendar', 'ticket', 'corner', 'polaroid', 'serial', 'chat', 'window', 'newspaper', 'stack', 'bili', 'pop'];
 // Looks built on mesh gradients and soft glows read as generic in a feed, so they are offered last.
 const GRADIENT_LED = new Set(['acid', 'glass']); TEMPLATES.sort((x, y) => (LEAD.indexOf(x.id) + 1 || (GRADIENT_LED.has(x.id) ? 199 : 99)) - (LEAD.indexOf(y.id) + 1 || (GRADIENT_LED.has(y.id) ? 199 : 99)));
 

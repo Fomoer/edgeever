@@ -25,6 +25,7 @@ enum NoteImageFontCatalog {
         (id: "dmserif", zh: "DM Serif Display", en: "DM Serif Display"),
         (id: "bebas", zh: "Bebas Neue", en: "Bebas Neue"),
         (id: "spacegrotesk", zh: "Space Grotesk", en: "Space Grotesk"),
+        (id: "maple-mono-cn", zh: "Maple Mono CN", en: "Maple Mono CN"),
         (id: "jetbrains", zh: "JetBrains Mono", en: "JetBrains Mono"),
     ]
     static let templateLabels: [String: (zh: String, en: String, ja: String, pl: String)] = [

@@ -205,7 +205,7 @@ export const registerScheduledTaskRoutes = (app: Hono<AppEnv>) => {
          LIMIT ? OFFSET ?`,
       ).bind(workspaceId, limit, offset).all<ScheduledTaskRunHistoryRow>(),
       c.env.storage.db.prepare(
-        "SELECT COUNT(*) AS total_count FROM scheduled_task_runs WHERE workspace_id = ?",
+        "SELECT scheduled_run_count AS total_count FROM workspaces WHERE id = ?",
       ).bind(workspaceId).first<{ total_count: number }>(),
     ]);
     const totalCount = Number(countRow?.total_count ?? 0);
@@ -416,7 +416,7 @@ export const registerScheduledTaskRoutes = (app: Hono<AppEnv>) => {
          LIMIT ? OFFSET ?`,
       ).bind(id, workspaceId, limit, offset).all<ScheduledTaskRunRow>(),
       c.env.storage.db.prepare(
-        "SELECT COUNT(*) AS total_count FROM scheduled_task_runs WHERE task_id = ? AND workspace_id = ?",
+        "SELECT run_count AS total_count FROM scheduled_tasks WHERE id = ? AND workspace_id = ?",
       ).bind(id, workspaceId).first<{ total_count: number }>(),
     ]);
     const totalCount = Number(countRow?.total_count ?? 0);

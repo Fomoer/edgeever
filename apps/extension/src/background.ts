@@ -114,7 +114,7 @@ type CapturedPage = {
   url: string;
   markdown: string;
   plainText?: string;
-  kind?: "page" | "selection";
+  kind?: "page" | "selection" | "region";
   platform?: "medium" | "substack";
   author?: string;
   publishedAt?: PublishedTime;
@@ -1865,7 +1865,41 @@ const currentPageCaptureRoute = (pageUrl: string) => {
   return { kind:/^https?:\/\//i.test(pageUrl) ? 'page' : 'unavailable' };
 };
 
-chrome.runtime.onMessage.addListener((message: { type?: string; page?: unknown; requestId?: string; result?: unknown }, _sender: unknown, sendResponse: (response: unknown) => void) => {
+chrome.runtime.onMessage.addListener((message: { type?: string; page?: unknown; requestId?: string; result?: unknown }, _sender: { id?: string; tab?: { id?: number }; frameId?: number; url?: string }, sendResponse: (response: unknown) => void) => {
+  if (message.type === "startRegionClip") {
+    void (async () => {
+      try {
+        await ensureClipperReady();
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab?.id) throw new Error(t("currentPageNotFound"));
+        if (!/^https?:\/\//i.test(tab.url || "")) throw new Error(t("pageAccessDenied"));
+        try { await chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, files: ["assets/region-clip.js"] }); }
+        catch (error) { throw new Error(describeCaptureError(error)); }
+        sendResponse({ ok: true });
+      } catch (error) { sendResponse({ ok: false, message: error instanceof Error ? error.message : t("saveFailed") }); }
+    })();
+    return true;
+  }
+  if (message.type === "saveRegionClip") {
+    void (async () => {
+      try {
+        const tabId = _sender.tab?.id;
+        const page = message.page;
+        if (_sender.id !== chrome.runtime.id || _sender.frameId !== 0 || typeof tabId !== "number"
+          || !isCapturedPage(page) || page.kind !== "region" || !page.markdown.trim()
+          || page.url !== _sender.url || !/^https?:\/\//i.test(page.url)) throw new Error(t("regionEmpty"));
+        const settings = await ensureClipperReady();
+        const images = await enqueueClip(() => createMemo(settings, page, tabId, page.url));
+        const feedback = clipImageFeedback(images);
+        await showFeedback(tabId, 0, feedback, "success");
+        sendResponse({ ok: true, message: feedback });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "";
+        sendResponse({ ok: false, message: message === t("regionEmpty") || message === t("platformPageChanged") ? message : describeSelectionError(error) });
+      }
+    })();
+    return true;
+  }
   if (message.type === 'getCurrentPageCaptureMode') {
     void (async()=>{
       const [tab]=await chrome.tabs.query({active:true,currentWindow:true});

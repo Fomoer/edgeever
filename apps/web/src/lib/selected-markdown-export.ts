@@ -57,7 +57,7 @@ export const exportSelectedMemosAsMarkdownZip = async ({
     listNotebooks,
     getPage: async (offset, limit) => {
       const page = await getPage(offset, limit, exportable);
-      exported = page.totalCount;
+      exported += page.memos.length;
       return page;
     },
     getResourceBlob,

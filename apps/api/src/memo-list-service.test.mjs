@@ -38,6 +38,19 @@ const createDatabase = ({ rows = [], totalCount = rows.length } = {}) => {
 };
 
 describe("memo list service", () => {
+  for (const query of [undefined, "hello", "hello world", "%"]) test(`skips exact counts for opted-in ${query ?? "unfiltered"} result pages, while retaining lookahead cursors`, async () => {
+    const database = createDatabase({ rows: [memoRow("memo_1"), memoRow("memo_2"), memoRow("memo_3")] });
+    const result = await listMemos(database, { workspaceId: "ws_1", query, limit: 2, includeTotal: false });
+    expect(result.memos.map((memo) => memo.id)).toEqual(["memo_1", "memo_2"]);
+    expect(result.totalCount).toBeUndefined();
+    expect(result.nextCursor).toBeString();
+    expect(database.calls).toHaveLength(1);
+    expect(database.calls[0].sql).not.toMatch(/COUNT\s*\(/i);
+    const end = await listMemos(createDatabase({ rows: [memoRow("memo_3")] }), { workspaceId: "ws_1", query, limit: 2, includeTotal: false, cursor: result.nextCursor });
+    expect(end.memos.map((memo) => memo.id)).toEqual(["memo_3"]);
+    expect(end.nextCursor).toBeNull();
+  });
+
   test("identifies diagram notes without exposing their source as the note type", () => {
     const content_markdown = serializeDiagramDocument(createDefaultDiagramDocument("architecture"));
 

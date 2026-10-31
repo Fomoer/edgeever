@@ -2,6 +2,15 @@ export const supportedLocales = ["zh-CN", "en-US", "ja", "pl", "ru"] as const;
 
 export type SupportedLocale = (typeof supportedLocales)[number];
 
+/** English names for instructions to AI models, such as "Reply in Polish". */
+export const localeEnglishNames: Record<SupportedLocale, string> = {
+  "zh-CN": "Simplified Chinese",
+  "en-US": "English",
+  ja: "Japanese",
+  pl: "Polish",
+  ru: "Russian",
+};
+
 /** Used when there is no locale evidence (legacy callers, missing headers). */
 export const defaultLocale: SupportedLocale = "zh-CN";
 

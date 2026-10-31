@@ -102,7 +102,8 @@ export const applyOptimisticMemoToCache = (queryClient: QueryClient, previousMem
     const flattened = data.pages.flatMap((page) => page.memos);
     const withoutMemo = flattened.filter((memo) => memo.id !== nextMemo.id && memo.id !== previousMemo.id);
     const nextMemos = nextMatches ? sortMemoSummaries([nextMemo, ...withoutMemo], query.queryKey[5]) : withoutMemo;
-    const totalCount = Math.max(0, data.pages[0].totalCount + (nextMatches ? 1 : 0) - (previouslyMatched ? 1 : 0));
+    const previousTotal = data.pages[0].totalCount;
+    const totalCount = previousTotal === undefined ? undefined : Math.max(0, previousTotal + (nextMatches ? 1 : 0) - (previouslyMatched ? 1 : 0));
     let cursor = 0;
     const pages = data.pages.map((page, index) => {
       const pageSize = index === data.pages.length - 1 ? Math.min(page.memos.length, Math.max(0, nextMemos.length - cursor)) : page.memos.length;

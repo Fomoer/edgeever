@@ -352,7 +352,7 @@ struct MobileSyncBootstrapPage: Codable, Sendable {
     var memos: [MemoDetail]
     var snapshotCursor: Int
     var syncIdentity: String?
-    var totalCount: Int
+    var totalCount: Int?
     var nextAfterId: String?
 }
 

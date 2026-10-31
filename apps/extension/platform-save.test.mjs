@@ -129,7 +129,7 @@ const harness = (options = {}) => {
         await options.captureGate?.(target.tabId);
         runInContext(pageCaptureScript, scriptContext);
       }
-      else if (!["assets/capture-image.js", "assets/clip-feedback.js"].includes(files?.[0])) throw new Error(`Unexpected generic fallback: ${files}`);
+      else if (!["assets/capture-image.js", "assets/clip-feedback.js", "assets/region-clip.js"].includes(files?.[0])) throw new Error(`Unexpected generic fallback: ${files}`);
 
       return [];
     } },
@@ -155,6 +155,9 @@ const harness = (options = {}) => {
     calls,
     toolbar: () => new Promise((resolve) => onMessage({ type: "captureCurrentPage" }, { id: chrome.runtime.id }, resolve)),
     mode: () => new Promise((resolve) => onMessage({ type: "getCurrentPageCaptureMode" }, { id: chrome.runtime.id }, resolve)),
+    message: (message, sender = { id: chrome.runtime.id, tab: { id: 7 }, frameId: 0, url: pageUrl }) => new Promise(resolve => {
+      if (!onMessage(message, sender, resolve)) resolve({ ignored: true });
+    }),
     menu: () => new Promise((resolve) => { menuDone = resolve; onClick({ menuItemId: `save-${platform}`, pageUrl, frameId: 0 }, { id: 7, url: pageUrl }); }),
     selectionMenu: () => new Promise((resolve) => {
       menuDone = resolve;
@@ -164,6 +167,42 @@ const harness = (options = {}) => {
     }),
   };
 };
+
+test("starting the region picker only injects its explicit script and writes nothing", async () => {
+  const h = harness();
+  expect(await h.message({ type: "startRegionClip" })).toMatchObject({ ok: true });
+  expect(h.calls.injections).toEqual([{ target: { tabId: 7, frameIds: [0] }, files: ["assets/region-clip.js"] }]);
+  expect(h.calls.requests).toHaveLength(0);
+  const denied = harness({ denyScripting: true });
+  expect(await denied.message({ type: "startRegionClip" })).toMatchObject({ ok: false, message: "pageAccessDenied" });
+  expect(denied.calls.requests).toHaveLength(0);
+});
+
+test("a selected region uses the memo and image-localization pipeline without whole-page capture", async () => {
+  const h = harness();
+  const page = { title: "Selected section", url: urls["hacker-news"], markdown: "## Chosen\n\nOnly this paragraph.\n\n![Selected](https://example.test/photo.png)", kind: "region" };
+  expect(await h.message({ type: "saveRegionClip", page })).toMatchObject({ ok: true });
+  expect(h.calls.creates).toHaveLength(1);
+  expect(h.calls.creates[0].notebookId).toBe("nb_inbox");
+  expect(h.calls.creates[0].contentMarkdown).toContain("Only this paragraph.");
+  expect(h.calls.uploads).toHaveLength(1);
+  expect(h.calls.saves[0].contentMarkdown).toContain("/api/v1/resources/res_1/blob");
+  expect(h.calls.injections.some(call => call.files?.includes("assets/capture.js"))).toBe(false);
+});
+
+for (const failure of ["wrong-frame", "no-tab", "wrong-extension", "changed-url", "empty", "not-region"]) test(`region ${failure} cannot create a note`, async () => {
+  const h = harness();
+  const page = { title: "Selected", url: urls["hacker-news"], markdown: "Chosen content", kind: "region" };
+  const sender = { id: "extension-under-test", tab: { id: 7 }, frameId: 0, url: page.url };
+  if (failure === "wrong-frame") sender.frameId = 1;
+  if (failure === "no-tab") delete sender.tab;
+  if (failure === "wrong-extension") sender.id = "another-extension";
+  if (failure === "changed-url") page.url += "&different=1";
+  if (failure === "empty") page.markdown = "   ";
+  if (failure === "not-region") page.kind = "page";
+  expect(await h.message({ type: "saveRegionClip", page }, sender)).toMatchObject({ ok: false });
+  expect(h.calls.creates).toHaveLength(0);
+});
 
 test("Android without desktop menu/window APIs can initialize and save from the popup", async () => {
   const h = harness({ withoutDesktopApis: true });

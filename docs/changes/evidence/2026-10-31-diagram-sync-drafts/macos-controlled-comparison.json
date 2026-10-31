@@ -1,0 +1,122 @@
+{
+  "scenario": "An earlier autosave response arrives while a newer mind-map node/title draft is waiting for its autosave",
+  "responseGate": "The real API stores the first PATCH and returns its original response only after the newer draft is visible",
+  "autosaveMs": 1200,
+  "advanceAfterAcknowledgmentMs": 1400,
+  "sharedRuntime": "Unmodified v2.16.0 Electron host, locally compiled Rust sidecar and real Bun API with SQLite; each variant uses isolated fresh data",
+  "captures": "Original native-window screenshots, cropped to the same editor area; canvas scrolling only for visibility",
+  "observations": {
+    "baseline": {
+      "variant": "baseline",
+      "runtime": {
+        "platform": "darwin",
+        "electron": "44.7.0",
+        "packaged": false,
+        "version": "2.16.0"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "clip": {
+        "x": 600,
+        "y": 0,
+        "width": 840,
+        "height": 720
+      },
+      "previousTitle": "上次自动保存的标题",
+      "newTitle": "刚输入的新标题（不能丢）",
+      "nodeLabel": "【新增】回执返回也不能丢",
+      "before": {
+        "title": "刚输入的新标题（不能丢）",
+        "nodeCount": 9,
+        "hasNewNode": true,
+        "saveStatus": "未保存"
+      },
+      "after": {
+        "title": "上次自动保存的标题",
+        "nodeCount": 9,
+        "hasNewNode": true,
+        "saveStatus": "已同步",
+        "originalGraphConnected": true
+      },
+      "persisted": {
+        "server": {
+          "title": "上次自动保存的标题",
+          "nodeCount": 8,
+          "hasNewNode": false
+        },
+        "local": {
+          "title": "上次自动保存的标题",
+          "hasNewNode": false
+        }
+      },
+      "reopened": {
+        "title": "上次自动保存的标题",
+        "nodeCount": 8,
+        "hasNewNode": false,
+        "saveStatus": "已同步"
+      },
+      "pageErrors": [],
+      "sourceCommit": "01422910520633b00ad59afbde56c91d8e189915",
+      "nativeEntry": "standard local development entry",
+      "reopenedAfter": "full native application exit and restart on the same SQLite profile"
+    },
+    "fixed": {
+      "variant": "fixed",
+      "runtime": {
+        "platform": "darwin",
+        "electron": "44.7.0",
+        "packaged": false,
+        "version": "2.16.0"
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "clip": {
+        "x": 600,
+        "y": 0,
+        "width": 840,
+        "height": 720
+      },
+      "previousTitle": "上次自动保存的标题",
+      "newTitle": "刚输入的新标题（不能丢）",
+      "nodeLabel": "【新增】回执返回也不能丢",
+      "before": {
+        "title": "刚输入的新标题（不能丢）",
+        "nodeCount": 9,
+        "hasNewNode": true,
+        "saveStatus": "未保存"
+      },
+      "after": {
+        "title": "刚输入的新标题（不能丢）",
+        "nodeCount": 9,
+        "hasNewNode": true,
+        "saveStatus": "未保存",
+        "originalGraphConnected": true
+      },
+      "persisted": {
+        "server": {
+          "title": "刚输入的新标题（不能丢）",
+          "nodeCount": 9,
+          "hasNewNode": true
+        },
+        "local": {
+          "title": "刚输入的新标题（不能丢）",
+          "hasNewNode": true
+        }
+      },
+      "reopened": {
+        "title": "刚输入的新标题（不能丢）",
+        "nodeCount": 9,
+        "hasNewNode": true,
+        "saveStatus": "已同步"
+      },
+      "pageErrors": [],
+      "sourceCommit": "e0e1b6787d1452661ddeaad95cd26c65f88ee5d9",
+      "nativeEntry": "standard local development entry",
+      "reopenedAfter": "full native application exit and restart on the same SQLite profile"
+    }
+  }
+}

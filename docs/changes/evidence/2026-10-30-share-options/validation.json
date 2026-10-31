@@ -1,0 +1,51 @@
+{
+  "status": "passed",
+  "commands": [
+    {
+      "command": "bun test apps/api/src/share-routes.test.mjs apps/api/src/share-page.test.mjs apps/api/src/notebook-share-routes.test.mjs packages/shared/src/sharing.test.mjs apps/web/src/components/dialogs/ShareMemoDialog.test.mjs tests/note-sharing-menu.test.ts",
+      "exitCode": 0,
+      "result": "81 pass, 0 fail",
+      "output": "share-tests.txt"
+    },
+    {
+      "command": "bun test packages/shared/src/i18n/catalog.test.mjs packages/shared/src/i18n/locales.test.mjs",
+      "exitCode": 0,
+      "result": "5 pass, 0 fail"
+    },
+    {
+      "command": "bun test apps/web/src/components/settings/PreferenceCard.test.mjs",
+      "exitCode": 0,
+      "result": "6 pass, 0 fail; upstream font-regression correction included"
+    },
+    {
+      "command": "bun run typecheck",
+      "exitCode": 0
+    },
+    {
+      "command": "bun run typecheck:mobile",
+      "exitCode": 0
+    },
+    {
+      "command": "bun run build:web",
+      "exitCode": 0
+    },
+    {
+      "command": "bun run lint",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check upstream/main",
+      "exitCode": 0
+    },
+    {
+      "command": "bun docs/changes/evidence/2026-10-30-share-options/cross-version.mjs",
+      "exitCode": 0,
+      "output": "cross-version.json"
+    }
+  ],
+  "presentationBrowser": "presentation-browser.json",
+  "reusedChecks": [
+    "Custom-password failure/pending-save behavior: password-controls-regression.json; SharePasswordControls and its calling password mutation are unchanged"
+  ],
+  "ubuntuCI": "https://github.com/tianma-if/edgeever/pull/735/checks"
+}

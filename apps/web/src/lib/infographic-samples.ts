@@ -1,3 +1,5 @@
+import { prefersChineseContent } from "./bilingual-content-locale";
+
 export type InfographicSampleCategory =
   | "sequence"
   | "compare"
@@ -633,8 +635,7 @@ data
 ];
 
 export function getSampleSyntax(sample: InfographicSample, lang?: string): string {
-  if (lang && lang.toLowerCase().startsWith("zh")) return sample.syntaxZh;
-  return sample.syntaxEn;
+  return prefersChineseContent(lang) ? sample.syntaxZh : sample.syntaxEn;
 }
 
 export function getSampleTitle(sample: InfographicSample, lang?: string): string {

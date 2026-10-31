@@ -417,6 +417,30 @@ describe("companion client-direct HTTP contracts", () => {
     loadCredentials: async () => credentials,
   });
 
+  test("discovery prepare asks for the reply in the requested interface language", async () => {
+    const replyLanguage = async (query) => {
+      const setup = fixture({ loadCredentials: async () => credentials });
+      setup.sqlite.query("INSERT INTO notebooks(id, name, workspace_id) VALUES ('nb_ideas', 'Ideas', ?)").run(scope.workspaceId);
+      await createMemoRecord(setup.db, scope.workspaceId, {
+        notebookId: "nb_ideas", title: "Idea A", contentMarkdown: "First unedited thought", tags: [],
+      }, { actorType: "user", actorId: scope.ownerId }, scope.ownerId);
+      expect((await setup.request("discovery/settings", "PUT", { enabled: true, version: 0 })).status).toBe(200);
+      const response = await setup.request(`discovery/check/prepare${query}`, "POST");
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.quiet).toBe(false);
+      return body.instructions.match(/Reply in ([A-Za-z ]+)\./)?.[1];
+    };
+    expect(await replyLanguage("?locale=ja")).toBe("Japanese");
+    expect(await replyLanguage("?locale=pl")).toBe("Polish");
+    expect(await replyLanguage("?locale=ru")).toBe("Russian");
+    expect(await replyLanguage("?locale=zh-CN")).toBe("Simplified Chinese");
+    expect(await replyLanguage("?locale=en-US")).toBe("English");
+    // A missing or unknown locale keeps the previous English default.
+    expect(await replyLanguage("")).toBe("English");
+    expect(await replyLanguage("?locale=de")).toBe("English");
+  });
+
   test("prepare returns model credentials and does not invoke the proxy stream", async () => {
     let streamed = 0;
     const { request } = fixture({

@@ -86,6 +86,8 @@ describe("screenshot capture helpers", () => {
     const date = new Date(2026, 8, 14, 11, 8, 3);
     expect(screenshotNoteTitle("zh-CN", date)).toBe("截图 2026-09-14 11:08");
     expect(screenshotNoteTitle("en-US", date)).toBe("Screenshot 2026-09-14 11:08");
+    expect(screenshotNoteTitle("pl", date)).toBe("Zrzut ekranu 2026-09-14 11:08");
+    expect(screenshotNoteTitle("ru-RU", date)).toBe("Снимок экрана 2026-09-14 11:08");
     expect(screenshotFileName(date)).toBe("screenshot-20260914-110803.png");
   });
 

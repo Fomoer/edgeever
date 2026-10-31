@@ -1,13 +1,9 @@
 import { join } from "node:path";
+import { desktopDialogCopy } from "./desktop-copy.mjs";
 
 export const WINDOWS_SHARE_MENU_KEY = "HKCU\\Software\\Classes\\*\\shell\\EdgeEver";
 
-export const windowsShareMenuLabel = (locale) => {
-  const value = String(locale || "").toLowerCase();
-  if (value.startsWith("zh")) return "发送到 EdgeEver";
-  if (value.startsWith("ja")) return "EdgeEver に送る";
-  return "Send to EdgeEver";
-};
+export const windowsShareMenuLabel = (locale) => desktopDialogCopy(locale).shareMenuLabel;
 
 export const windowsShareCommand = (exePath) => `"${exePath}" --share-file "%1"`;
 

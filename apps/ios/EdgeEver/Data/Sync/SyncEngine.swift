@@ -29,6 +29,7 @@ actor SyncEngine {
             var afterId: String?
             var loaded = 0
             var snapshotCursor = 0
+            var snapshotTotalCount = 0
             var snapshotIdentity = "legacy"
             var firstPage = true
 
@@ -39,6 +40,7 @@ actor SyncEngine {
                 )
                 if firstPage {
                     snapshotCursor = page.snapshotCursor
+                    snapshotTotalCount = page.totalCount ?? 0
                     snapshotIdentity = page.syncIdentity ?? "legacy"
                     firstPage = false
                 }
@@ -53,7 +55,7 @@ actor SyncEngine {
                         memos: batch
                     )
                     loaded += batch.count
-                    onBootstrapProgress?(BootstrapProgress(loadedCount: loaded, totalCount: page.totalCount))
+                    onBootstrapProgress?(BootstrapProgress(loadedCount: loaded, totalCount: page.totalCount ?? snapshotTotalCount))
                 }
                 guard let next = page.nextAfterId else { break }
                 afterId = next

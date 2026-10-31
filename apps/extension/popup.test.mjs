@@ -3,6 +3,21 @@ import { captureCurrentPage } from "./src/popup";
 import { testConnection } from "./src/extension";
 
 const settings = { instanceUrl: "https://example.com", token: "token", notebookId: "" };
+
+test("area selection requests permission in the click and starts the picker without capturing the page", async () => {
+  const { startRegionClip } = await import("./src/popup");
+  let insideClick = true;
+  const messages = [];
+  await withChrome({
+    permissions: { request: async () => { expect(insideClick).toBe(true); return true; } },
+    runtime: { sendMessage: async message => { messages.push(message); return { ok: true }; } },
+  }, async () => {
+    const starting = startRegionClip(settings);
+    insideClick = false;
+    await starting;
+    expect(messages).toEqual([{ type: "startRegionClip" }]);
+  });
+});
 async function withChrome(overrides, run) {
   const previous = globalThis.chrome;
   globalThis.chrome = { i18n: { getMessage: key => key }, ...overrides };

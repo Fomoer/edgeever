@@ -74,7 +74,7 @@ describe("desktop update flow", () => {
   test("pushes update status and shows a native restart prompt after download", () => {
     expect(mainSource).toContain('mainWindow.webContents.send("desktop:update-status-changed"');
     expect(mainSource).toContain("promptForDownloadedUpdate(downloadedUpdateVersion)");
-    expect(mainSource).toContain('title: isChinese ? "EdgeEver 更新已就绪" : "EdgeEver update ready"');
+    expect(mainSource).toContain("title: copy.updateReadyTitle");
     expect(preloadSource).toContain('ipcRenderer.on("desktop:update-status-changed"');
     expect(noticeSource).toContain("bridge.onUpdateStatus");
     expect(noticeSource).toContain('role="alert"');

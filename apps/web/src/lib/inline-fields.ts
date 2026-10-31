@@ -1,4 +1,5 @@
-export type InlineFieldLanguage = "en" | "zh";
+/** Resolves a catalog key such as `inlineField.label.due` in the current UI locale. */
+export type InlineFieldTranslate = (catalogKey: string) => string;
 
 export type InlineFieldMatch = {
   from: number;
@@ -7,32 +8,23 @@ export type InlineFieldMatch = {
   value: string;
 };
 
-const FIELD_LABELS: Record<string, Record<InlineFieldLanguage, string>> = {
-  due: { en: "Due", zh: "截止" },
-  scheduled: { en: "Scheduled", zh: "计划" },
-  start: { en: "Start", zh: "开始" },
-  completion: { en: "Done", zh: "完成" },
-  created: { en: "Created", zh: "创建" },
-  cancelled: { en: "Cancelled", zh: "取消" },
-  priority: { en: "Priority", zh: "优先级" },
-  repeat: { en: "Repeat", zh: "重复" },
-  id: { en: "ID", zh: "ID" },
-  dependsOn: { en: "Depends", zh: "依赖" },
-  onCompletion: { en: "On completion", zh: "完成后" },
-};
+const FIELD_LABEL_KEYS = new Set([
+  "due",
+  "scheduled",
+  "start",
+  "completion",
+  "created",
+  "cancelled",
+  "priority",
+  "repeat",
+  "id",
+  "dependsOn",
+  "onCompletion",
+]);
 
-const PRIORITY_VALUES: Record<string, Record<InlineFieldLanguage, string>> = {
-  highest: { en: "Highest", zh: "最高" },
-  high: { en: "High", zh: "高" },
-  medium: { en: "Medium", zh: "中" },
-  low: { en: "Low", zh: "低" },
-  lowest: { en: "Lowest", zh: "最低" },
-};
+const PRIORITY_VALUE_KEYS = new Set(["highest", "high", "medium", "low", "lowest"]);
 
 export const INLINE_FIELD_PATTERN = /\[([A-Za-z][A-Za-z0-9_-]*)::\s*([^\]]+?)\]/g;
-
-export const languageFromLocale = (locale: string): InlineFieldLanguage =>
-  locale.toLowerCase().startsWith("zh") ? "zh" : "en";
 
 export const findInlineFields = (text: string): InlineFieldMatch[] => {
   const fields: InlineFieldMatch[] = [];
@@ -49,10 +41,11 @@ export const findInlineFields = (text: string): InlineFieldMatch[] => {
   return fields;
 };
 
-export const formatInlineFieldChip = (key: string, value: string, language: InlineFieldLanguage) => {
-  const label = FIELD_LABELS[key]?.[language] ?? key;
-  const displayValue = key === "priority"
-    ? (PRIORITY_VALUES[value.toLowerCase()]?.[language] ?? value)
+export const formatInlineFieldChip = (key: string, value: string, translate: InlineFieldTranslate) => {
+  const label = FIELD_LABEL_KEYS.has(key) ? translate(`inlineField.label.${key}`) : key;
+  const priority = value.toLowerCase();
+  const displayValue = key === "priority" && PRIORITY_VALUE_KEYS.has(priority)
+    ? translate(`inlineField.priority.${priority}`)
     : value;
   return `${label} ${displayValue}`;
 };

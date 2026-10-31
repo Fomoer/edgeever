@@ -1,7 +1,7 @@
 /* Font files are registered from editor-body-font-faces.ts so Vite emits
  * desktop-safe asset URLs. These rules only apply the chosen stack.
  * Missing glyphs fall through to the system CJK fonts in that stack.
- * Code, pre, and formula faces keep their own monospace families.
+ * Verified monospace choices also apply to code; formulas retain their own faces.
  */
 html[data-editor-body-font] .edgeever-editor .ProseMirror,
 html[data-editor-body-font] .edgeever-editor textarea[data-edgeever-mobile-editor="plain-textarea"],
@@ -13,6 +13,16 @@ html[data-editor-body-font] .edgeever-mobile-tiptap-content {
 html[data-editor-body-font] .edgeever-editor[data-editor-theme] .ProseMirror :is(h1, h2, h3, h4, h5, h6, p, li, blockquote, th, td),
 html[data-editor-body-font] .edgeever-mobile-tiptap-content :is(h1, h2, h3, h4, h5, h6, p, li, blockquote, th, td) {
   font-family: var(--editor-body-font-family);
+}
+
+
+/* Explicit monospace choices win over editor themes without restyling math,
+ * diagram labels, toolbar controls, or code in the AI sidebar. */
+html[data-editor-code-font] .edgeever-editor .ProseMirror :is(code, pre, .edgeever-code-source),
+html[data-editor-code-font] .edgeever-editor[data-editor-theme] .ProseMirror :is(code, pre, .edgeever-code-source),
+html[data-editor-code-font] .edgeever-mobile-tiptap-content :is(code, pre, .edgeever-code-source),
+html[data-editor-code-font] .edgeever-editor textarea[data-edgeever-mobile-editor="plain-textarea"] {
+  font-family: var(--editor-code-font-family);
 }
 
 /* Interface font is the device chrome. A system note stays on the product

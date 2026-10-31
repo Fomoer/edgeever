@@ -101,6 +101,7 @@ describe("desktop release workflow", () => {
     expect(step("Verify packaged macOS cross-version startup")).toContain("verify:desktop-cross-version-startup");
     expect(step("Verify packaged macOS first launch")).not.toContain("if: matrix.shared_validation");
     expect(step("Verify packaged macOS private protocol file flows")).toContain("verify:desktop-protocol-e2e");
+    expect(step("Verify packaged macOS note windows")).toContain("verify:desktop-note-window-e2e");
   });
 
   test("limits the Apple HTTP/3 workaround to hosted Intel packaging", () => {
@@ -138,6 +139,7 @@ describe("desktop release workflow", () => {
     expect(workflow).toContain("name: Verify packaged Windows first launch");
     expect(workflow).toContain("verify:packaged-desktop-startup");
     expect(step("Verify packaged Windows private protocol file flows")).toContain("verify:desktop-protocol-e2e");
+    expect(step("Verify packaged Windows note windows")).toContain("verify:desktop-note-window-e2e");
     expect(protocolE2eVerifier).toContain('origin !== "edgeever-app://app"');
     expect(protocolE2eVerifier).toContain('fetch("edgeever-staged://" + pending.id)');
     expect(protocolE2eVerifier).toContain('const url = "edgeever-resource://resource/${cachedResourceId}"');
@@ -183,6 +185,7 @@ describe("desktop release workflow", () => {
     expect(workflow).toContain("name: Verify packaged Linux first launch");
     expect(workflow).toContain("xvfb-run -a bun run verify:packaged-desktop-startup");
     expect(step("Verify packaged Linux private protocol file flows")).toContain("xvfb-run -a bun run verify:desktop-protocol-e2e");
+    expect(step("Verify packaged Linux note windows")).toContain("xvfb-run -a bun run verify:desktop-note-window-e2e");
     expect(workflow).toContain("SHA256SUMS-linux.txt");
     expect(workflow).toContain("latest-linux.yml");
     expect(workflow).toContain("verify-linux-update-release.mjs");

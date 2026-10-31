@@ -289,6 +289,7 @@ const performMobileLocalMirrorSync = async (
     let afterId: string | null = null;
     let loadedCount = 0;
     let snapshotCursor = 0;
+    let snapshotTotalCount = 0;
     let snapshotIdentity = "legacy";
     await db.withExclusiveTransactionAsync(async (tx) => {
       await tx.runAsync(`DELETE FROM mobile_notebooks WHERE scope = ?`, scope);
@@ -301,6 +302,7 @@ const performMobileLocalMirrorSync = async (
       const page = await client.getMobileSyncBootstrapPage(afterId, BOOTSTRAP_PAGE_SIZE);
       if (afterId === null) {
         snapshotCursor = page.snapshotCursor;
+        snapshotTotalCount = page.totalCount ?? 0;
         snapshotIdentity = page.syncIdentity || "legacy";
       }
       const writeBatches = splitSyncBootstrapWriteBatches(page.memos, BOOTSTRAP_WRITE_BATCH_SIZE);
@@ -316,7 +318,7 @@ const performMobileLocalMirrorSync = async (
           }
         });
         loadedCount += memos.length;
-        await options.onBootstrapProgress?.({ loadedCount, totalCount: page.totalCount });
+        await options.onBootstrapProgress?.({ loadedCount, totalCount: page.totalCount ?? snapshotTotalCount });
       }
       if (page.nextAfterId === null) {
         break;

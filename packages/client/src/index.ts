@@ -146,7 +146,7 @@ export type ListNotebooksResponse = {
 
 export type ListMemosResponse = {
   memos: MemoSummary[];
-  totalCount: number;
+  totalCount?: number;
   nextCursor: string | null;
 };
 
@@ -276,7 +276,7 @@ export type ResourceUploadResponse = {
 export type MarkdownExportPage = {
   memos: MemoDetail[];
   resources: Resource[];
-  totalCount: number;
+  totalCount?: number;
   nextOffset: number | null;
 };
 
@@ -1143,7 +1143,10 @@ export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
 
     syncBootstrap: (params?: { afterId?: string | null; limit?: number }) => {
       const search = new URLSearchParams();
-      if (params?.afterId) search.set("afterId", params.afterId);
+      if (params?.afterId) {
+        search.set("afterId", params.afterId);
+        search.set("includeMetadata", "0");
+      }
       if (params?.limit) search.set("limit", String(params.limit));
       const suffix = search.toString() ? `?${search.toString()}` : "";
       return request<SyncBootstrapResponse>(`/api/v1/sync/bootstrap${suffix}`);
@@ -1159,6 +1162,7 @@ export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
       const search = new URLSearchParams({ limit: String(limit) });
       if (afterId) {
         search.set("afterId", afterId);
+        search.set("includeMetadata", "0");
       }
       return request<MobileSyncBootstrapPage>(`/api/v1/sync/bootstrap?${search.toString()}`);
     },
@@ -1216,6 +1220,7 @@ export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
 
     listMemos: (params: {
       notebookId?: string | null;
+      includeTotal?: boolean;
       includeDescendants?: boolean;
       q?: string;
       tag?: string;
@@ -1263,6 +1268,7 @@ export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
         search.set("limit", String(params.limit));
       }
 
+      if (params.includeTotal === false) search.set("includeTotal", "0");
       return request<ListMemosResponse>(`/api/v1/memos?${search.toString()}`);
     },
 
@@ -1460,7 +1466,7 @@ export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
         body: JSON.stringify({}),
       }),
 
-    updateMemoShare: (memoId: string, payload: { passwordProtected?: boolean; slug?: string | null }) =>
+    updateMemoShare: (memoId: string, payload: { passwordProtected?: boolean; password?: string; slug?: string | null; showUpdatedAt?: boolean; showBranding?: boolean }) =>
       request<{ share: MemoShare }>(`/api/v1/memos/${memoId}/share`, {
         method: "PATCH",
         body: JSON.stringify(payload),
@@ -1549,11 +1555,12 @@ export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
       if (memoIds && memoIds.length > 0) {
         search.set("ids", memoIds.join(","));
       }
+      if (offset > 0) search.set("includeTotal", "0");
       return request<MarkdownExportPage>(`/api/v1/exports/markdown?${search.toString()}`);
     },
 
     getJsonBackupPage: (offset = 0, limit = 25) =>
-      request<JsonBackupPage>(`/api/v1/backups/json?offset=${offset}&limit=${limit}`),
+      request<JsonBackupPage>(`/api/v1/backups/json?offset=${offset}&limit=${limit}${offset > 0 ? "&includeTotal=0" : ""}`),
 
     restoreJsonNotebooks: (notebooks: JsonBackupNotebook[]) =>
       request<{ ok: true }>("/api/v1/restores/json/notebooks", {

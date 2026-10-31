@@ -18,7 +18,8 @@ export type SyncBootstrapResponse = {
   memos: MemoDetail[];
   snapshotCursor: number;
   syncIdentity?: string;
-  totalCount: number;
+  /** Omitted on continuation pages requested with includeMetadata=0. */
+  totalCount?: number;
   nextAfterId: string | null;
 };
 

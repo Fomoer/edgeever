@@ -89,6 +89,31 @@ const createSyncIntegrationFixture = () => {
 };
 
 describe("sync route contracts", () => {
+  test("opted-in continuation pages skip global counts and notebook aggregation, retaining the cursor and identity", async () => {
+    const fixture = createSyncIntegrationFixture();
+    try {
+      const queries = [];
+      const prepare = fixture.storage.db.prepare.bind(fixture.storage.db);
+      fixture.storage.db.prepare = (sql) => { queries.push(sql); return prepare(sql); };
+      const request = (query) => fixture.app.request(`/api/v1/sync/bootstrap?${query}`, {}, { storage: fixture.storage });
+      const first = await (await request("limit=1&includeMetadata=0")).json();
+      expect(first.totalCount).toBe(1);
+      expect(first.notebooks.length).toBeGreaterThan(0);
+      queries.length = 0;
+      const page = await (await request("afterId=memo_0&limit=1&includeMetadata=0")).json();
+      expect(page.memos.map((memo) => memo.id)).toEqual(["memo_trashed"]);
+      expect(page.totalCount).toBeUndefined();
+      expect(page.notebooks).toEqual([]);
+      expect(page.syncIdentity).toBe(first.syncIdentity);
+      expect(page.snapshotCursor).toBe(first.snapshotCursor);
+      expect(page.nextAfterId).toBeNull();
+      expect(queries.some((sql) => /COUNT\s*\(|GROUP BY/i.test(sql))).toBe(false);
+      const legacy = await (await request("afterId=memo_0&limit=1")).json();
+      expect(legacy.totalCount).toBe(1);
+      expect(legacy.notebooks).toEqual(first.notebooks);
+    } finally { fixture.sqlite.close(); }
+  });
+
   test("keeps bootstrap references inside the active notebook snapshot", async () => {
     const fixture = createSyncIntegrationFixture();
     try {

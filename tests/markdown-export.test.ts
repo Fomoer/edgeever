@@ -104,4 +104,19 @@ describe("Markdown export", () => {
       "![diagram](%E9%A1%B9%E7%9B%AE%E7%AC%94%E8%AE%B0.assets/%E8%AE%BE%E8%AE%A1%20%E5%9B%BE.png)"
     );
   });
+
+  test("retains the initial total when continuation pages omit counts", async () => {
+    const progress: { completed: number; total: number }[] = [];
+    const blob = await createMarkdownExport({
+      listNotebooks: async () => ({ notebooks: [notebook({ id: "nb_child", name: "Notes" })] }),
+      getPage: async (offset) => ({
+        memos: [memo({ id: `memo_${offset}`, title: `Note ${offset}`, contentMarkdown: "body" })],
+        resources: [], ...(offset === 0 ? { totalCount: 2 } : {}), nextOffset: offset === 0 ? 1 : null,
+      }),
+      getResourceBlob: async () => new Blob(),
+    }, (value) => progress.push(value));
+    expect(Object.keys(unzipSync(new Uint8Array(await blob.arrayBuffer())))).toHaveLength(2);
+    expect(progress.every((value) => value.total === 2)).toBe(true);
+    expect(progress.at(-1)?.completed).toBe(2);
+  });
 });

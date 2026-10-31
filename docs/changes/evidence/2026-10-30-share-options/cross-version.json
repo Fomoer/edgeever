@@ -1,0 +1,13 @@
+{
+  "baseline": "e052ac3b54bdcba4b2c452e6b06c091b1e2c70f4",
+  "checks": [
+    "Baseline routes and schema create and unlock a generated-password share before migration 0082",
+    "Migrations 0082/0083 preserve every old row value; new routes accept the pre-upgrade unlock and enable both presentation settings by default",
+    "Changing only presentation preserves password and existing unlock",
+    "Invalid lengths leave the entire share unchanged; lengths 4/64 and trimmed Chinese passwords unlock",
+    "Custom password replacement invalidates the old password and cookie for both body and attachment; new unlock works",
+    "Password-protected raw Markdown remains blocked and password storage is not plaintext",
+    "Baseline application reads new custom passwords and regenerates after migration; old-style disable restores public Markdown without changing presentation"
+  ],
+  "status": "passed"
+}

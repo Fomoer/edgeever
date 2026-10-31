@@ -34,6 +34,7 @@ import { api, getOrCreateClientDeviceId } from "@/lib/api";
 import { BETA_BADGE_CLASSNAME } from "@/lib/workspace-ui";
 import { ScheduledTaskRunHistoryDialog } from "@/components/execution/ScheduledTaskRunHistoryDialog";
 import { AppConfirmDialog } from "@/components/dialogs/ConfirmDialogs";
+import { prefersChineseContent } from "@/lib/bilingual-content-locale";
 import {
   acknowledgePluginTrustWarning,
   hasAcknowledgedPluginTrustWarning,
@@ -303,10 +304,10 @@ export const PluginManagerCard = ({
 }) => {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
-  const developerDocsUrl = i18n.resolvedLanguage?.startsWith("zh")
+  const developerDocsUrl = prefersChineseContent(i18n.resolvedLanguage)
     ? "https://github.com/tianma-if/edgeever/blob/main/docs/plugin-development.zh-CN.md"
     : "https://github.com/tianma-if/edgeever/blob/main/docs/plugin-development.md";
-  const communityReadmeUrl = i18n.resolvedLanguage?.startsWith("zh")
+  const communityReadmeUrl = prefersChineseContent(i18n.resolvedLanguage)
     ? `${COMMUNITY_PLUGINS_REPOSITORY_URL}/blob/main/README.zh-CN.md`
     : COMMUNITY_PLUGINS_README_URL;
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);

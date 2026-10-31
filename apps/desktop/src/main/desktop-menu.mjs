@@ -1,3 +1,5 @@
+import { resolveDesktopLocale } from "./desktop-copy.mjs";
+
 const menuCopy = {
   en: {
     about: "About EdgeEver",
@@ -14,6 +16,7 @@ const menuCopy = {
     minimize: "Minimize",
     newMemo: "New Note",
     newNotebook: "New Notebook",
+    openNoteWindow: "Open Note in New Window",
     paste: "Paste",
     pasteAsPlainText: "Paste as Plain Text",
     quit: "Quit EdgeEver",
@@ -48,6 +51,7 @@ const menuCopy = {
     minimize: "最小化",
     newMemo: "新建笔记",
     newNotebook: "新建笔记本",
+    openNoteWindow: "在新窗口打开笔记",
     paste: "粘贴",
     pasteAsPlainText: "粘贴为纯文本",
     quit: "退出 EdgeEver",
@@ -82,6 +86,7 @@ const menuCopy = {
     minimize: "Minimalizuj",
     newMemo: "Nowa notatka",
     newNotebook: "Nowy notatnik",
+    openNoteWindow: "Otwórz notatkę w nowym oknie",
     paste: "Wklej",
     pasteAsPlainText: "Wklej jako zwykły tekst",
     quit: "Zakończ EdgeEver",
@@ -101,14 +106,82 @@ const menuCopy = {
     zoomIn: "Powiększ",
     zoomOut: "Pomniejsz",
   },
+  ja: {
+    about: "EdgeEver について",
+    addToDictionary: "辞書に追加",
+    close: "ウインドウを閉じる",
+    copy: "コピー",
+    copyLinkAddress: "リンクのアドレスをコピー",
+    cut: "カット",
+    edit: "編集",
+    file: "ファイル",
+    focusSearch: "検索に移動",
+    front: "すべてを手前に移動",
+    hide: "EdgeEver を非表示",
+    minimize: "しまう",
+    newMemo: "新規ノート",
+    newNotebook: "新規ノートブック",
+    openNoteWindow: "新しいウインドウでノートを開く",
+    paste: "ペースト",
+    pasteAsPlainText: "プレーンテキストとしてペースト",
+    quit: "EdgeEver を終了",
+    resetZoom: "実際のサイズ",
+    restartToUpdate: "再起動してアップデート",
+    screenshotFailed: "スクリーンショットを撮れませんでした。初めての場合は、システム設定で EdgeEver の画面収録を許可してください。",
+    screenshotToNote: "画面をノートに取り込む",
+    selectAll: "すべてを選択",
+    show: "EdgeEver を表示",
+    toggleFocusMode: "集中モードの切り替え",
+    toggleFullScreen: "フルスクリーンの切り替え",
+    undo: "取り消す",
+    redo: "やり直す",
+    view: "表示",
+    window: "ウインドウ",
+    zoom: "拡大/縮小",
+    zoomIn: "拡大",
+    zoomOut: "縮小",
+  },
+  ru: {
+    about: "О программе EdgeEver",
+    addToDictionary: "Добавить в словарь",
+    close: "Закрыть окно",
+    copy: "Копировать",
+    copyLinkAddress: "Копировать адрес ссылки",
+    cut: "Вырезать",
+    edit: "Правка",
+    file: "Файл",
+    focusSearch: "Перейти к поиску",
+    front: "Все окна — на передний план",
+    hide: "Скрыть EdgeEver",
+    minimize: "Свернуть",
+    newMemo: "Новая заметка",
+    newNotebook: "Новый блокнот",
+    openNoteWindow: "Открыть заметку в новом окне",
+    paste: "Вставить",
+    pasteAsPlainText: "Вставить как простой текст",
+    quit: "Завершить EdgeEver",
+    resetZoom: "Сбросить масштаб",
+    restartToUpdate: "Перезапустить для обновления",
+    screenshotFailed: "Не удалось сделать снимок экрана. Если вы делаете это впервые, разрешите EdgeEver запись экрана в Системных настройках.",
+    screenshotToNote: "Снимок экрана в заметку",
+    selectAll: "Выбрать все",
+    show: "Показать EdgeEver",
+    toggleFocusMode: "Режим фокусировки",
+    toggleFullScreen: "Полноэкранный режим",
+    undo: "Отменить",
+    redo: "Повторить",
+    view: "Вид",
+    window: "Окно",
+    zoom: "Изменить масштаб окна",
+    zoomIn: "Увеличить",
+    zoomOut: "Уменьшить",
+  },
 };
 
-export const desktopMenuCopy = (locale) => {
-  const normalized = typeof locale === "string" ? locale.toLowerCase() : "";
-  if (normalized.startsWith("zh")) return menuCopy.zh;
-  if (normalized === "pl" || normalized.startsWith("pl-")) return menuCopy.pl;
-  return menuCopy.en;
-};
+// Same locale resolution as the dialogs; keys stay short so other branches merge cleanly.
+const copyKeyByLocale = { "zh-CN": "zh", "en-US": "en", ja: "ja", pl: "pl", ru: "ru" };
+
+export const desktopMenuCopy = (locale) => menuCopy[copyKeyByLocale[resolveDesktopLocale(locale)]];
 
 const regionCopy = {
   en: {
@@ -138,11 +211,4 @@ const regionCopy = {
   },
 };
 
-export const screenshotRegionCopy = (locale) => {
-  const normalized = typeof locale === "string" ? locale.toLowerCase() : "";
-  if (normalized.startsWith("zh")) return regionCopy.zh;
-  if (normalized === "pl" || normalized.startsWith("pl-")) return regionCopy.pl;
-  if (normalized === "ja" || normalized.startsWith("ja-")) return regionCopy.ja;
-  if (normalized === "ru" || normalized.startsWith("ru-")) return regionCopy.ru;
-  return regionCopy.en;
-};
+export const screenshotRegionCopy = (locale) => regionCopy[copyKeyByLocale[resolveDesktopLocale(locale)]];

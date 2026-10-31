@@ -4,6 +4,7 @@ import { FILE_ATTACHMENT_NODE_TYPE } from "./file-attachment";
 import { PDF_ATTACHMENT_NODE_TYPE } from "./pdf-attachment";
 import { PLUGIN_EMBED_NODE_TYPE } from "./plugin-embed";
 import { EMPTY_EXTERNAL_LINK_NODE_TYPE } from "./empty-external-link";
+import type { SupportedLocale } from "./i18n/locales";
 
 export const UNSUPPORTED_BLOCK_NODE_TYPE = "edgeeverUnsupportedBlock" as const;
 export const UNSUPPORTED_INLINE_NODE_TYPE = "edgeeverUnsupportedInline" as const;
@@ -71,17 +72,22 @@ const isTextNode = (node: TiptapNode | TiptapTextNode): node is TiptapTextNode =
 const getOriginalType = (attrs: Record<string, unknown> | undefined) =>
   typeof attrs?.originalType === "string" ? attrs.originalType : "unknown";
 
-const getFallbackLabel = (type: string, locale?: "zh-CN" | "en-US" | "ja" | "pl" | "ru") => {
-  if (locale === "zh-CN") return `暂不支持的内容：${type}`;
-  if (locale === "ja") return `未対応のコンテンツ: ${type}`;
-  if (locale === "pl") return `Nieobsługiwana zawartość: ${type}`;
-  if (locale === "ru") return `Неподдерживаемое содержимое: ${type}`;
-  return `Unsupported content: ${type}`;
+// Placeholder text is stored in node attrs by the native editors, which cannot load the
+// lazily bundled web catalogs here, so the prefixes are keyed by locale code instead.
+const UNSUPPORTED_CONTENT_PREFIX: Record<SupportedLocale, string> = {
+  "zh-CN": "暂不支持的内容：",
+  "en-US": "Unsupported content: ",
+  ja: "未対応のコンテンツ: ",
+  pl: "Nieobsługiwana zawartość: ",
+  ru: "Неподдерживаемое содержимое: ",
 };
+
+const getFallbackLabel = (type: string, locale?: SupportedLocale) =>
+  `${UNSUPPORTED_CONTENT_PREFIX[locale ?? "en-US"]}${type}`;
 
 const fallbackAttrs = (
   node: TiptapNode | TiptapTextNode,
-  locale?: "zh-CN" | "en-US" | "ja" | "pl" | "ru",
+  locale?: SupportedLocale,
 ) => ({
   originalType: node.type,
   originalJson: JSON.stringify(node),
@@ -229,7 +235,7 @@ const prepareTextNode = (node: TiptapTextNode): TiptapTextNode => {
  */
 export const prepareNativeEditorContent = (
   doc: TiptapDoc,
-  locale?: "zh-CN" | "en-US" | "ja" | "pl" | "ru",
+  locale?: SupportedLocale,
 ): TiptapDoc => {
   const visit = (
     node: TiptapNode | TiptapTextNode,

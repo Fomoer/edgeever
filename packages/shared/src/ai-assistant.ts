@@ -1,3 +1,5 @@
+import { matchSupportedLocale, type SupportedLocale } from "./i18n/locales";
+
 export const AI_ACTIONS = [
   "summarize",
   "extract-key-points",
@@ -106,13 +108,17 @@ export const resolveAiAssistantOpenAction = ({
   prompts,
 });
 
+const DEFAULT_AI_TARGET_LANGUAGE_BY_UI_LOCALE: Record<SupportedLocale, AiTargetLanguage> = {
+  "zh-CN": "en",
+  "en-US": "zh-CN",
+  ja: "ja",
+  pl: "en",
+  ru: "en",
+};
+
 export const getDefaultAiTargetLanguage = (locale: string | undefined): AiTargetLanguage => {
-  const normalized = locale?.toLowerCase() ?? "";
-  if (normalized.startsWith("zh")) return "en";
-  if (normalized.startsWith("ja")) return "ja";
-  if (normalized.startsWith("pl")) return "en";
-  if (normalized.startsWith("ru")) return "en";
-  return "zh-CN";
+  const uiLocale = matchSupportedLocale(locale);
+  return uiLocale ? DEFAULT_AI_TARGET_LANGUAGE_BY_UI_LOCALE[uiLocale] : "zh-CN";
 };
 
 export const AI_ASSISTANT_LAST_ACTION_STORAGE_KEY = "edgeever.aiAssistant.lastAction";

@@ -787,5 +787,38 @@
   },
   "modelDirectDenied": {
     "message": "Model access was not granted."
+  },
+  "regionSelect": {
+    "message": "Wybierz obszar"
+  },
+  "regionPickerTitle": {
+    "message": "Wybierz obszar do zapisania"
+  },
+  "regionPickHint": {
+    "message": "Wskaż i kliknij blok treści. Esc anuluje wybór."
+  },
+  "regionSelected": {
+    "message": "Obszar wybrany"
+  },
+  "regionAdjustHint": {
+    "message": "← → Większy / mniejszy · ↑ ↓ Sąsiedni obszar · Enter zapisuje"
+  },
+  "regionExpand": {
+    "message": "Większy"
+  },
+  "regionShrink": {
+    "message": "Mniejszy"
+  },
+  "regionReselect": {
+    "message": "Wybierz ponownie"
+  },
+  "regionSave": {
+    "message": "Zapisz w EdgeEver"
+  },
+  "regionCancel": {
+    "message": "Anuluj"
+  },
+  "regionEmpty": {
+    "message": "Ten obszar jest pusty lub już niedostępny. Wybierz inny."
   }
 }

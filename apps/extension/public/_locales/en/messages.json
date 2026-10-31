@@ -787,5 +787,38 @@
   },
   "modelDirectDenied": {
     "message": "Model access was not granted."
+  },
+  "regionSelect": {
+    "message": "Select area"
+  },
+  "regionPickerTitle": {
+    "message": "Select an area to clip"
+  },
+  "regionPickHint": {
+    "message": "Move over the page and click a content block. Esc to cancel."
+  },
+  "regionSelected": {
+    "message": "Area selected"
+  },
+  "regionAdjustHint": {
+    "message": "← → Larger / smaller · ↑ ↓ Adjacent area · Enter to save"
+  },
+  "regionExpand": {
+    "message": "Larger"
+  },
+  "regionShrink": {
+    "message": "Smaller"
+  },
+  "regionReselect": {
+    "message": "Reselect"
+  },
+  "regionSave": {
+    "message": "Save to EdgeEver"
+  },
+  "regionCancel": {
+    "message": "Cancel"
+  },
+  "regionEmpty": {
+    "message": "This area is empty or no longer available. Select another area."
   }
 }

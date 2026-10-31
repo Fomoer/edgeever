@@ -106,9 +106,22 @@ describe("desktop edit context menu", () => {
     expect(desktopMenuCopy("plx").file).toBe("File");
   });
 
+  test("resolves Japanese and Russian menu copy", () => {
+    expect(desktopMenuCopy("ja-JP").file).toBe("ファイル");
+    expect(desktopMenuCopy("ja").pasteAsPlainText).toBe("プレーンテキストとしてペースト");
+    expect(desktopMenuCopy("ru").file).toBe("Файл");
+    expect(desktopMenuCopy("ru-RU").edit).toBe("Правка");
+  });
+
   test("every locale defines the same menu keys", () => {
     const keys = Object.keys(desktopMenuCopy("en")).sort();
     expect(Object.keys(desktopMenuCopy("zh")).sort()).toEqual(keys);
-    expect(Object.keys(desktopMenuCopy("pl")).sort()).toEqual(keys);
+    for (const locale of ["zh", "pl", "ja", "ru"]) {
+      const copy = desktopMenuCopy(locale);
+      expect(Object.keys(copy).sort()).toEqual(keys);
+      expect(Object.values(copy).every((value) => typeof value === "string" && value.trim() !== "")).toBe(true);
+    }
+    expect(desktopMenuCopy("ja")).not.toBe(desktopMenuCopy("en"));
+    expect(desktopMenuCopy("ru")).not.toBe(desktopMenuCopy("en"));
   });
 });

@@ -49,6 +49,9 @@ describe("infographic gallery samples", () => {
 
     expect(getSampleSyntax(sample, "zh-CN")).toBe(sample.syntaxZh);
     expect(getSampleSyntax(sample, "en-US")).toBe(sample.syntaxEn);
+    expect(getSampleSyntax(sample, "zh")).toBe(sample.syntaxZh);
+    expect(getSampleSyntax(sample, "pl")).toBe(sample.syntaxEn);
+    expect(getSampleSyntax(sample)).toBe(sample.syntaxEn);
 
     expect(getSampleDesc(sample, "zh-CN")).toBe(sample.descZh);
     expect(getSampleDesc(sample, "en-US")).toBe(sample.descEn);

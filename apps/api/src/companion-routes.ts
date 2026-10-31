@@ -1,6 +1,6 @@
 import { AiAttachmentSchema, CompanionDiscoveryCompleteSchema, CompanionDiscoverySettingsInputSchema, CompanionIdSchema, CompanionMemoryImportSchema, CompanionMemoryInputSchema, CompanionMemoryUpdateSchema,
   CompanionToolExecuteSchema, CompanionTurnCheckpointSchema, CompanionTurnCompleteSchema,
-  CompanionTurnInputSchema, CompanionTurnResumeSchema, type CompanionSource, type CompanionToolCall } from "@edgeever/shared";
+  CompanionTurnInputSchema, CompanionTurnResumeSchema, companionTurnLocale, type CompanionSource, type CompanionToolCall } from "@edgeever/shared";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
@@ -80,7 +80,7 @@ export const registerCompanionRoutes = (parent: Hono<AppEnv>, dependencies: {
     const stop = new AbortController();
     const timeout = setTimeout(() => stop.abort(), 60_000);
     try {
-      const locale = c.req.query("locale") === "zh-CN" ? "zh-CN" : "en-US";
+      const locale = companionTurnLocale(c.req.query("locale"));
       const db = c.env.storage.db;
       const scope = scopeFor(c);
       let credentials: Awaited<ReturnType<typeof loadDefaultAiModelCredentials>> | undefined;

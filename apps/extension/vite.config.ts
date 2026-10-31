@@ -54,6 +54,15 @@ export default defineConfig({
           .map((item) => item.type === "asset" ? typeof item.source === "string" ? item.source : new TextDecoder().decode(item.source) : "")
           .join("\n");
         if (!themeStyles) throw new Error("Missing compiled extension theme for shadow notifications");
+        const region = await buildStandaloneScript({
+          entryPoints: [fileURLToPath(new URL("./src/region-clip.ts", import.meta.url))],
+          bundle: true, format: "iife", platform: "browser", target: "es2022", minify: true, write: false,
+          jsx: "automatic",
+          define: { "process.env.NODE_ENV": '"production"', __CLIP_REGION_CSS__: JSON.stringify(themeStyles) },
+          legalComments: "eof",
+        });
+        this.emitFile({ type: "asset", fileName: "assets/region-clip.js", source: region.outputFiles[0].contents });
+        this.emitFile({ type: "asset", fileName: "THIRD_PARTY_NOTICES.txt", source: await readFile(new URL("./THIRD_PARTY_NOTICES.md", import.meta.url), "utf8") });
         const feedback = await buildStandaloneScript({
           entryPoints: [fileURLToPath(new URL("./src/ui/clip-feedback.tsx", import.meta.url))],
           bundle: true, format: "iife", platform: "browser", target: "es2022", minify: true, write: false,

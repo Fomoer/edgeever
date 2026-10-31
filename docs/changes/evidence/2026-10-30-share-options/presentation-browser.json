@@ -1,0 +1,75 @@
+{
+  "runtime": "Local workerd and Vite Web/desktop renderer in Chromium",
+  "data": "Isolated demo fixture",
+  "combinations": [
+    {
+      "showUpdatedAt": true,
+      "showBranding": true,
+      "titleAndBodyPreserved": true,
+      "headerBrandingRemoved": true,
+      "footer": {
+        "href": "https://edgeever.org/",
+        "position": "static",
+        "fontSize": "12px",
+        "afterBody": true
+      },
+      "screenshot": "presentation-both.png"
+    },
+    {
+      "showUpdatedAt": false,
+      "showBranding": true,
+      "titleAndBodyPreserved": true,
+      "headerBrandingRemoved": true,
+      "footer": {
+        "href": "https://edgeever.org/",
+        "position": "static",
+        "fontSize": "12px",
+        "afterBody": true
+      },
+      "screenshot": "presentation-branding.png"
+    },
+    {
+      "showUpdatedAt": false,
+      "showBranding": false,
+      "titleAndBodyPreserved": true,
+      "headerBrandingRemoved": true,
+      "footer": null,
+      "screenshot": "presentation-hidden.png"
+    },
+    {
+      "showUpdatedAt": true,
+      "showBranding": false,
+      "titleAndBodyPreserved": true,
+      "headerBrandingRemoved": true,
+      "footer": null,
+      "screenshot": "presentation-time.png"
+    }
+  ],
+  "persistenceAfterReopening": {
+    "showUpdatedAt": true,
+    "showBranding": false,
+    "passed": true
+  },
+  "passwordProtected": {
+    "wrongPasswordRejected": true,
+    "customPasswordUnlocks": true,
+    "presentationChangesPreserveUnlock": true,
+    "rawMarkdownBlocked": true
+  },
+  "saveFailure": {
+    "settingsAndPasswordPreserved": true,
+    "unhandledRejections": 0
+  },
+  "pendingSave": {
+    "bothSwitchesAndPasswordDisabled": true
+  },
+  "notebookSharing": {
+    "standaloneSettingsIgnored": true,
+    "timeRemainsVisible": true,
+    "noNewArticleFooter": true
+  },
+  "status": "passed",
+  "limits": [
+    "Installed native desktop apps and production Cloudflare/Docker deployments were not exercised"
+  ]
+}

@@ -85,7 +85,10 @@ actor APIClient {
 
     func getMobileSyncBootstrapPage(afterId: String?, limit: Int = 200) async throws -> MobileSyncBootstrapPage {
         var items: [URLQueryItem] = [.init(name: "limit", value: String(limit))]
-        if let afterId { items.append(.init(name: "afterId", value: afterId)) }
+        if let afterId, !afterId.isEmpty {
+            items.append(.init(name: "afterId", value: afterId))
+            items.append(.init(name: "includeMetadata", value: "0"))
+        }
         return try await request(path: "/api/v1/sync/bootstrap", query: items)
     }
 

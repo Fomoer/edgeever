@@ -3,7 +3,7 @@ import { Node, mergeAttributes } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
 import { EditorContent, useEditor, ReactNodeViewRenderer } from "@tiptap/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Clock3, FileText, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Clock3, FileText, LoaderCircle, LockKeyhole } from "lucide-react";
 import { lazy, Suspense, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
@@ -326,14 +326,13 @@ export const PublicShareArticle = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const openSearch = useContext(NotebookSiteSearchContext);
   const publishedBodyFont = parsePublishedNoteBodyFont(share.bodyFont);
+  const showUpdatedAt = layout === "site" || share.showUpdatedAt !== false;
+  const showBranding = layout === "standalone" && share.showBranding !== false;
 
   useEffect(() => {
     if (publishedBodyFont === undefined) return undefined;
     if (!publishedBodyFont) {
-      delete document.documentElement.dataset.editorBodyFont;
-      document.documentElement.style.removeProperty(
-        "--editor-body-font-family",
-      );
+      applyEditorBodyFontPreference({ choice: "system", customFamily: "" });
     } else {
       applyEditorBodyFontPreference({
         choice: publishedBodyFont,
@@ -369,28 +368,6 @@ export const PublicShareArticle = ({
               : "border-b border-slate-200 py-6 sm:py-8",
           )}
         >
-          <div
-            className={cn(
-              "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-slate-500",
-              layout === "site" ? "order-2 mt-4" : "mb-5",
-            )}
-          >
-            {layout === "standalone" && (
-              <span className="flex shrink-0 items-center gap-1.5 font-semibold text-slate-700">
-                <ShieldCheck className="h-4 w-4" /> EdgeEver ·{" "}
-                {t("sharing.readOnly")}
-              </span>
-            )}
-            <span className="flex items-center gap-1.5">
-              <Clock3 className="h-4 w-4" />
-              {t("sharing.publicUpdated", {
-                time: new Intl.DateTimeFormat(
-                  i18n.resolvedLanguage || i18n.language,
-                  { dateStyle: "medium", timeStyle: "short" },
-                ).format(new Date(share.updatedAt)),
-              })}
-            </span>
-          </div>
           <h1
             className={cn(
               "break-words text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl",
@@ -399,6 +376,24 @@ export const PublicShareArticle = ({
           >
             {getMemoDisplayTitle(share.title, t("common.untitledMemo"))}
           </h1>
+          {showUpdatedAt ? (
+            <div
+              className={cn(
+                "mt-4 flex items-center gap-1.5 text-xs text-slate-500",
+                layout === "site" && "order-2",
+              )}
+            >
+              <Clock3 className="h-4 w-4" />
+              <time dateTime={share.updatedAt}>
+                {t("sharing.publicUpdated", {
+                  time: new Intl.DateTimeFormat(
+                    i18n.resolvedLanguage || i18n.language,
+                    { dateStyle: "medium", timeStyle: "short" },
+                  ).format(new Date(share.updatedAt)),
+                })}
+              </time>
+            </div>
+          ) : null}
           {share.tags.length > 0 ? (
             <div
               className={cn(
@@ -442,6 +437,18 @@ export const PublicShareArticle = ({
             site={layout === "site"}
           />
         </div>
+        {showBranding ? (
+          <footer className="px-5 pb-6 pt-2 text-center text-xs text-slate-500 sm:px-10 sm:pb-8">
+            <a
+              href="https://edgeever.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-sm transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            >
+              {t("sharing.publishedWith")}
+            </a>
+          </footer>
+        ) : null}
       </article>
       {layout === "site" && <NotebookSiteArticleTools containerRef={containerRef} token={token} memoUrls={access?.memoUrls ?? {}} />}
     </div>

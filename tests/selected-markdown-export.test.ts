@@ -60,6 +60,17 @@ const resource: Resource = {
 };
 
 describe("selected Markdown ZIP export", () => {
+  test("reports the actual selected export count when continuation totals are omitted", async () => {
+    const notes = [memo({ id: "memo_first", title: "First" }), memo({ id: "memo_second", title: "Second" })];
+    const result = await exportSelectedMemosAsMarkdownZip({
+      memoIds: notes.map((note) => note.id),
+      listNotebooks: async () => ({ notebooks: [notebook({ id: "nb_root", name: "Root" })] }),
+      getPage: async (offset) => ({ memos: [notes[offset]], resources: [], ...(offset === 0 ? { totalCount: 2 } : {}), nextOffset: offset === 0 ? 1 : null }),
+      getResourceBlob: async () => new Blob(), save: () => {},
+    });
+    expect(result).toEqual({ status: "ok", exported: 2, skippedLocal: 0 });
+  });
+
   test("drops unsynced local ids before talking to the export API", () => {
     expect(partitionExportableMemoIds(["memo_1", "local_draft", "memo_1", "local_other"])).toEqual({
       exportable: ["memo_1"],

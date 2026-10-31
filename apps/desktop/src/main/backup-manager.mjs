@@ -317,6 +317,8 @@ export class BackupManager {
             status: detail.status,
             code: sanitizeDesktopDiagnosticText(detail.code),
             message: sanitizeDesktopDiagnosticText(detail.message),
+            ...(Array.isArray(detail.causeCodes) ? { causeCodes: detail.causeCodes.filter((code) => typeof code === "string" && /^[A-Z][A-Z0-9_]{0,63}$/.test(code)).slice(0, 8) } : {}),
+            ...(Number.isFinite(detail.elapsedMs) && detail.elapsedMs >= 0 ? { elapsedMs: detail.elapsedMs } : {}),
           })).catch(() => {});
         } catch { /* Diagnostic output must not change the task result. */ }
       }

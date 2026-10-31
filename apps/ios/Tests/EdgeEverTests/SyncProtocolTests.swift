@@ -2,6 +2,19 @@ import XCTest
 @testable import EdgeEver
 
 final class SyncProtocolTests: XCTestCase {
+    func testBootstrapDecodesLegacyAndMetadataFreeContinuation() throws {
+        let legacy = try EdgeEverJSON.decoder.decode(MobileSyncBootstrapPage.self, from: Data("""
+        {"notebooks":[],"memos":[],"snapshotCursor":42,"syncIdentity":"workspace","totalCount":200,"nextAfterId":"memo_1"}
+        """.utf8))
+        XCTAssertEqual(legacy.totalCount, 200)
+        let continuation = try EdgeEverJSON.decoder.decode(MobileSyncBootstrapPage.self, from: Data("""
+        {"notebooks":[],"memos":[],"snapshotCursor":42,"syncIdentity":"workspace","nextAfterId":null}
+        """.utf8))
+        XCTAssertNil(continuation.totalCount)
+        XCTAssertEqual(continuation.snapshotCursor, legacy.snapshotCursor)
+        XCTAssertEqual(continuation.syncIdentity, legacy.syncIdentity)
+    }
+
     func testCursorRewound() {
         XCTAssertTrue(SyncProtocol.hasCursorRewound(localCursor: 10, serverCursor: 3))
         XCTAssertFalse(SyncProtocol.hasCursorRewound(localCursor: 10, serverCursor: 10))

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isAiTextAttachment, type AiAttachmentMediaType } from "./ai-assistant";
+import { localeEnglishNames, matchSupportedLocale } from "./i18n/locales";
 
 export const COMPANION_MATH_FORMAT_INSTRUCTION = String.raw`In user-facing replies, write inline LaTeX as \(...\) and display LaTeX as $$...$$ on separate lines. Write monetary amounts with ordinary dollar signs, such as $5 and $10. Do not use $...$ for inline math. Preserve quoted source text and note content exactly when the task requires it.`;
 
@@ -36,7 +37,7 @@ export const CompanionTurnInputSchema = z.object({
   useMemory: z.boolean().default(true),
   allowNotes: z.boolean().default(false),
   allowWrites: z.boolean().optional(),
-  locale: z.enum(["zh-CN", "en-US", "ja", "pl"]).default("en-US"),
+  locale: z.enum(["zh-CN", "en-US", "ja", "pl", "ru"]).default("en-US"),
   focus: CompanionTurnFocusSchema.optional(),
   mentions: z.array(CompanionMentionSchema).max(8).optional(),
   attachmentIds: z.array(z.string().uuid()).max(4).optional(),
@@ -44,6 +45,10 @@ export const CompanionTurnInputSchema = z.object({
 export type CompanionTurnInput = z.infer<typeof CompanionTurnInputSchema>;
 
 type ConversationLanguage = CompanionTurnInput["locale"];
+
+/** A UI locale as a companion turn locale; unknown values fall back to English. */
+export const companionTurnLocale = (locale?: string | null): ConversationLanguage =>
+  matchSupportedLocale(locale) ?? "en-US";
 
 const requestText = (message: string) =>
   // The request normally precedes pasted or quoted source text.
@@ -53,9 +58,10 @@ const messageLanguage = (message: string): ConversationLanguage | "latin" | null
   const request = requestText(message);
   // Sidebar translation actions generate localized prompts. Their wording is
   // interface text, not evidence of the user's conversation language.
-  if (/^(?:请翻译我正在看的内容|请翻译下面这段文字|Translate what I'm looking at|Translate the passage below|今見ている内容を翻訳|下の文章を|Przetłumacz to, na co patrzę|Przetłumacz poniższy fragment)/iu.test(request)) return null;
+  if (/^(?:请翻译我正在看的内容|请翻译下面这段文字|请把下面这段翻译成|Translate what I'm looking at|Translate the passage below|今見ている内容を翻訳|下の文章を|Przetłumacz to, na co patrzę|Przetłumacz poniższy fragment|Переведи то, что я сейчас смотрю|Переведи отрывок ниже)/iu.test(request)) return null;
   if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(request)) return "ja";
   if (/\p{Script=Han}/u.test(request)) return "zh-CN";
+  if (/\p{Script=Cyrillic}/u.test(request)) return "ru";
   if (/[ąćęłńśźżĄĆĘŁŃŚŹŻ]/u.test(request)) return "pl";
   if (/[A-Za-z]{2,}/u.test(request)) return "latin";
   return null;
@@ -108,7 +114,7 @@ export const conversationLanguage = (
 export const translationTargetInstruction = (
   language: ReturnType<typeof conversationLanguage>,
 ): string => {
-  const name = language.locale === "zh-CN" ? "Simplified Chinese" : language.locale === "ja" ? "Japanese" : language.locale === "pl" ? "Polish" : "English";
+  const name = localeEnglishNames[language.locale];
   return `For a translation request without an explicit target language, use the language of the current user request, then recent user messages, and only then the interface language. The best available signal for this turn is ${name} (${language.source}). If the source text is mainly in another language, translate into ${name} without asking. If the source is already mainly in ${name}, use an explicit target from this same translation task; otherwise ask which other language the user wants. An explicit target for this text always takes precedence; an older request about different text does not.`;
 };
 

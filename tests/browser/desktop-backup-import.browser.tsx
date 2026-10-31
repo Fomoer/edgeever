@@ -28,6 +28,7 @@ let encrypted = true;
 let holdHandshake = false;
 let runError = false;
 let deleteError = false;
+const saveError = new URLSearchParams(location.search).has("save-error");
 let finish: (() => void) | undefined;
 Object.defineProperty(window, "edgeeverDesktop", {
   configurable: true,
@@ -41,6 +42,8 @@ Object.defineProperty(window, "edgeeverDesktop", {
         status.history.push({ name: option.name.replace(/(?:\.edgeever\.enc|\.zip)$/i, "") + (option.encrypted ? ".edgeever.enc" : ".zip"), directory: status.config.directory, completedAt: at, size: 149755, encrypted: option.encrypted });
         status.lastSuccessAt = at; status.lastCheck = { at, result: "success" }; emit();
       }
+      if (action === "save" && saveError) throw Object.assign(new Error("Denied"), { code: "backup_directory_unavailable" });
+      if (action === "choose-directory") return "/test/SelectedBackups";
       if (action === "save") { status.config = value!.config!; if (value?.password) status.passwordSet = true; emit(); }
       if (action === "delete-history") {
         if (deleteError) throw Object.assign(new Error("Denied"), { code: "EACCES" });

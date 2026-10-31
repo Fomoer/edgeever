@@ -1154,6 +1154,7 @@ export class EdgeEverPluginHost {
           assertPermission(manifest, "notes:read");
           const result = await this.repository.listMemos({
             notebookId: input.notebookId,
+            includeTotal: true,
             q: input.text,
             sort: input.sort,
             limit: Math.min(Math.max(input.limit ?? 50, 1), 200),
@@ -1163,12 +1164,14 @@ export class EdgeEverPluginHost {
             .filter((note) => !input.tags?.length || input.tags.every((tag) => note.tags.includes(tag)))
             .map(toPluginNoteSummary);
           const offset = Math.max(input.offset ?? 0, 0);
+          if (result.totalCount === undefined) throw new Error("note_query_total_missing");
           return { notes, totalCount: result.totalCount, nextOffset: result.nextCursor ? offset + result.memos.length : null };
         },
         queryContent: async (input = {}) => {
           assertPermission(manifest, "notes:read");
           const result = await this.repository.listMemos({
             notebookId: input.notebookId,
+            includeTotal: true,
             q: input.text,
             sort: input.sort,
             limit: Math.min(Math.max(input.limit ?? 50, 1), 200),
@@ -1180,6 +1183,7 @@ export class EdgeEverPluginHost {
           const notes = await Promise.all(summaries.map(async (note) =>
             toPluginNote((await this.repository.getMemo(note.id)).memo)));
           const offset = Math.max(input.offset ?? 0, 0);
+          if (result.totalCount === undefined) throw new Error("note_query_total_missing");
           return { notes, totalCount: result.totalCount, nextOffset: result.nextCursor ? offset + result.memos.length : null };
         },
         get: async (noteId) => {

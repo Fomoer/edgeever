@@ -1,6 +1,7 @@
 import React, { type ErrorInfo, type ReactNode } from "react";
 import { markRendererRecoveryRequired } from "@/lib/renderer-recovery";
 import { reportDesktopRendererReadyAfterPaint } from "@/lib/desktop-renderer-ready";
+import { errorScreenText as t } from "@/lib/error-screen-copy";
 
 type RendererErrorDetails = {
   kind: "react-error";
@@ -13,8 +14,6 @@ type State = {
   error: RendererErrorDetails | null;
   reporting: boolean;
 };
-
-const isChineseInterface = () => navigator.language.toLowerCase().startsWith("zh");
 
 export class DesktopRendererErrorBoundary extends React.Component<{ children: ReactNode }, State> {
   override state: State = { error: null, reporting: false };
@@ -58,22 +57,15 @@ export class DesktopRendererErrorBoundary extends React.Component<{ children: Re
 
   override render() {
     if (!this.state.error) return this.props.children;
-    const zh = isChineseInterface();
     const desktop = Boolean(window.edgeeverDesktop?.isAvailable);
 
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6 text-slate-900">
         <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-card p-6 shadow-sm" role="alert">
           <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-rose-50 text-xl text-rose-700">!</div>
-          <h1 className="text-lg font-semibold">{zh ? "EdgeEver 页面出现异常" : "EdgeEver encountered a page error"}</h1>
+          <h1 className="text-lg font-semibold">{t("pageTitle")}</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            {desktop
-              ? (zh
-                  ? "问题已经记录到这台设备。重新加载后会进入安全启动模式，不再自动打开刚才的笔记。"
-                  : "The problem was recorded on this device. Reloading will enter safe startup mode instead of reopening the previous note.")
-              : (zh
-                  ? "安全重新加载后不会自动打开刚才的笔记。如果问题仍然出现，请检查浏览器控制台。"
-                  : "A safe reload will avoid reopening the previous note. If the problem persists, check the browser console.")}
+            {desktop ? t("pageRecordedBody") : t("pageReloadBody")}
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <button
@@ -81,7 +73,7 @@ export class DesktopRendererErrorBoundary extends React.Component<{ children: Re
               type="button"
               onClick={() => window.location.reload()}
             >
-              {zh ? "安全重新加载" : "Reload safely"}
+              {t("reloadSafely")}
             </button>
             {desktop ? (
               <button
@@ -90,9 +82,7 @@ export class DesktopRendererErrorBoundary extends React.Component<{ children: Re
                 disabled={this.state.reporting}
                 onClick={() => void this.report()}
               >
-                {this.state.reporting
-                  ? (zh ? "正在打开…" : "Opening…")
-                  : (zh ? "报告到 GitHub" : "Report to GitHub")}
+                {this.state.reporting ? t("opening") : t("reportToGithub")}
               </button>
             ) : null}
           </div>

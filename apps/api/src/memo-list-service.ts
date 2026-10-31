@@ -45,6 +45,7 @@ type MemoListCursor = {
 
 export type ListMemosInput = {
   workspaceId: string;
+  includeTotal?: boolean;
   notebookId?: string;
   includeNotebookDescendants?: boolean;
   query?: string;
@@ -58,7 +59,7 @@ export type ListMemosInput = {
 
 export type ListMemosResult = {
   memos: MemoSummary[];
-  totalCount: number;
+  totalCount?: number;
   nextCursor: string | null;
 };
 
@@ -244,7 +245,7 @@ export const listMemos = async (
     const page = rows.slice(0, limit);
     return {
       memos: page.map(mapMemoSummary),
-      totalCount: totalCount ?? page.length,
+      ...(input.includeTotal === false ? {} : { totalCount: totalCount ?? page.length }),
       nextCursor: rows.length > limit
         ? encodeMemoListCursor(page[page.length - 1], sort, includeTrash)
         : null,
@@ -287,7 +288,7 @@ export const listMemos = async (
            ORDER BY ${getOrderBy()}
            LIMIT ?`,
         ).bind(...searchPrefix, ...cursorBinds, pageLimit).all<MemoSummaryRow>(),
-        database.prepare(
+        input.includeTotal === false ? Promise.resolve(null) : database.prepare(
           `WITH raw_matches(memo_id) AS (
              SELECT memo_id
              FROM memos_fts
@@ -332,7 +333,7 @@ export const listMemos = async (
          ORDER BY ${getOrderBy()}
          LIMIT ?`,
       ).bind(...searchCursorBinds, pageLimit).all<MemoSummaryRow>(),
-      database.prepare(
+      input.includeTotal === false ? Promise.resolve(null) : database.prepare(
         `SELECT COUNT(*) AS count
          FROM memos m
          INNER JOIN memo_contents mc ON mc.memo_id = m.id
@@ -353,7 +354,7 @@ export const listMemos = async (
        ORDER BY ${getOrderBy()}
        LIMIT ?`,
     ).bind(...cursorBinds, pageLimit).all<MemoSummaryRow>(),
-    database.prepare(
+    input.includeTotal === false ? Promise.resolve(null) : database.prepare(
       `SELECT COUNT(*) AS count
        FROM memos m
        WHERE ${baseConditions.join(" AND ")}`,

@@ -122,7 +122,7 @@
     },
     "apps/extension": {
       "name": "@edgeever/extension",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "dependencies": {
         "@joplin/turndown-plugin-gfm": "1.0.68",
         "@mixmark-io/domino": "2.2.0",

@@ -12,6 +12,9 @@ export type MemoShare = {
   createdAt: string;
   updatedAt: string;
   passwordProtected: boolean;
+  /** Independent standalone-page controls; both default to visible. */
+  showUpdatedAt: boolean;
+  showBranding: boolean;
   /** Plaintext is returned only immediately after the owner enables or regenerates a password. */
   password?: string;
 };
@@ -79,6 +82,9 @@ export type PublicMemoShare = {
   bodyFont: PublishedNoteBodyFont | null;
   /** Account reading settings for the article body. Column width stays on the author's editor. */
   prose: PublicNoteProse;
+  /** Older servers and notebook shares may omit these; omission means visible. */
+  showUpdatedAt?: boolean;
+  showBranding?: boolean;
 };
 
 const RESOURCE_URL_PATTERN =

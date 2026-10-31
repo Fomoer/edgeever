@@ -5,6 +5,7 @@ export { pl } from "./pl";
 export { ru } from "./ru";
 export {
   defaultLocale,
+  localeEnglishNames,
   matchSupportedLocale,
   parseAcceptLanguage,
   resolveSupportedLocale,

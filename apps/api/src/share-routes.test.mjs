@@ -49,9 +49,10 @@ class SqliteD1Database {
 const sourceToken = "s".repeat(43);
 const targetToken = "t".repeat(43);
 
-const createDatabaseEnvironment = () => {
+const createDatabaseEnvironment = ({ presentationMigration = true } = {}) => {
   const sqlite = new Database(":memory:");
   for (const migration of globSync("migrations/*.sql").sort()) {
+    if (!presentationMigration && migration.endsWith("0083_memo_share_presentation.sql")) continue;
     sqlite.exec(readFileSync(migration, "utf8"));
   }
   sqlite.query("INSERT INTO workspaces (id, name, is_personal) VALUES (?, ?, 1)")
@@ -103,6 +104,69 @@ describe("public memo shares", () => {
       share: { memoShareTokens: { memo_target: targetToken }, bodyFont: null },
     });
     sqlite.close();
+  });
+
+  test("defaults both presentation settings on for migrated shares and new shares", async () => {
+    const { sqlite, environment } = createDatabaseEnvironment({ presentationMigration: false });
+    try {
+      sqlite.exec("UPDATE memo_shares SET show_details = 0");
+      const before = sqlite.query("SELECT * FROM memo_shares ORDER BY id").all();
+      sqlite.exec(readFileSync("migrations/0083_memo_share_presentation.sql", "utf8"));
+      expect(sqlite.prepare("SELECT * FROM memo_shares ORDER BY id").all()).toEqual(
+        before.map((row) => ({ ...row, show_updated_at: 1, show_branding: 1 })),
+      );
+      const app = createShareApp(environment);
+      for (const path of ["/api/v1/memos/memo_source/share", `/api/public/shares/${sourceToken}`]) {
+        const share = (await (await app.request(path, {}, environment)).json()).share;
+        expect(share).toMatchObject({ showUpdatedAt: true, showBranding: true });
+        expect(share).not.toHaveProperty("showDetails");
+      }
+      const created = await app.request("/api/v1/memos/memo_private/share", { method: "POST" }, environment);
+      expect(created.status).toBe(201);
+      expect((await created.json()).share).toMatchObject({ showUpdatedAt: true, showBranding: true });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("persists all four time/branding combinations independently without changing passwords", async () => {
+    const { sqlite, environment } = createDatabaseEnvironment();
+    const app = createShareApp(environment);
+    const path = "/api/v1/memos/memo_source/share";
+    const patch = (body) => app.request(path, {
+      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    }, environment);
+    try {
+      const protectedShare = (await (await patch({ password: "custom-password-714" })).json()).share;
+      const unlocked = await app.request(`/api/public/shares/${sourceToken}/unlock`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: protectedShare.password }),
+      }, environment);
+      const headers = { Cookie: unlocked.headers.get("Set-Cookie").split(";")[0] };
+      const passwordBefore = sqlite.query("SELECT password_hash, password_encrypted FROM memo_shares WHERE token = ?").get(sourceToken);
+      for (const [payload, expected] of [
+        [{ showUpdatedAt: true, showBranding: true }, { showUpdatedAt: true, showBranding: true }],
+        [{ showUpdatedAt: false }, { showUpdatedAt: false, showBranding: true }],
+        [{ showBranding: false }, { showUpdatedAt: false, showBranding: false }],
+        [{ showUpdatedAt: true }, { showUpdatedAt: true, showBranding: false }],
+      ]) {
+        const response = await patch(payload);
+        expect(response.status).toBe(200);
+        expect((await response.json()).share).toMatchObject({ ...expected, password: protectedShare.password });
+        expect((await (await app.request(path, {}, environment)).json()).share).toMatchObject(expected);
+        const listed = (await (await app.request("/api/v1/memo-shares", {}, environment)).json()).shares;
+        expect(listed.find((share) => share.memoId === "memo_source")).toMatchObject(expected);
+        const publicResponse = await app.request(`/api/public/shares/${sourceToken}`, { headers }, environment);
+        expect(publicResponse.status).toBe(200);
+        expect((await publicResponse.json()).share).toMatchObject(expected);
+        expect(sqlite.query("SELECT show_updated_at, show_branding FROM memo_shares WHERE token = ?").get(sourceToken))
+          .toEqual({ show_updated_at: Number(expected.showUpdatedAt), show_branding: Number(expected.showBranding) });
+        expect(sqlite.query("SELECT password_hash, password_encrypted FROM memo_shares WHERE token = ?").get(sourceToken))
+          .toEqual(passwordBefore);
+      }
+    } finally {
+      sqlite.close();
+    }
   });
 
   test("reads existing fonts and new catalog choices through the same stored preference", async () => {
@@ -429,6 +493,55 @@ describe("memo share management", () => {
 });
 
 describe("password-protected memo shares", () => {
+  test("accepts an owner-chosen password, trims it, and keeps the password gate", async () => {
+    const { sqlite, environment } = createDatabaseEnvironment();
+    const app = createShareApp(environment);
+    const path = "/api/v1/memos/memo_source/share";
+
+    const enabled = await app.request(path, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "  custom-pass  " }),
+    }, environment);
+    expect(enabled.status).toBe(200);
+    expect((await enabled.json()).share).toMatchObject({ passwordProtected: true, password: "custom-pass" });
+    const stored = sqlite.query("SELECT password_hash, password_encrypted FROM memo_shares WHERE memo_id = ?").get("memo_source");
+    expect(stored.password_hash).not.toContain("custom-pass");
+    expect(stored.password_encrypted).not.toContain("custom-pass");
+
+    expect((await app.request(`/api/public/shares/${sourceToken}`, {}, environment)).status).toBe(403);
+    const unlocked = await app.request(`/api/public/shares/${sourceToken}/unlock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "custom-pass" }),
+    }, environment);
+    expect(unlocked.status).toBe(200);
+
+    const rotated = await app.request(path, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passwordProtected: true, password: "new-pass" }),
+    }, environment);
+    expect((await rotated.json()).share.password).toBe("new-pass");
+    sqlite.close();
+  });
+
+  test("rejects custom passwords outside the supported length", async () => {
+    const { sqlite, environment } = createDatabaseEnvironment();
+    const app = createShareApp(environment);
+    const path = "/api/v1/memos/memo_source/share";
+    for (const password of ["   ", "abc", "x".repeat(65)]) {
+      const response = await app.request(path, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      }, environment);
+      expect(response.status).toBe(400);
+    }
+    expect((await (await app.request(path, {}, environment)).json()).share.passwordProtected).toBe(false);
+    sqlite.close();
+  });
+
   test("keeps existing shares public until a password is enabled", async () => {
     const { sqlite, environment } = createDatabaseEnvironment();
     const app = createShareApp(environment);
@@ -512,7 +625,7 @@ describe("password-protected memo shares", () => {
     sqlite.close();
   });
 
-  test("clearing the password makes the existing link public again", async () => {
+  test("clearing the password ignores a supplied value and makes the existing link public again", async () => {
     const { sqlite, environment } = createDatabaseEnvironment();
     sqlite.query("UPDATE memo_shares SET password_hash = ? WHERE token = ?")
       .run(await hashPassword("secretPwd"), sourceToken);
@@ -521,7 +634,7 @@ describe("password-protected memo shares", () => {
     const cleared = await app.request(`/api/v1/memos/memo_source/share`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ passwordProtected: false }),
+      body: JSON.stringify({ passwordProtected: false, password: "ignored-value" }),
     }, environment);
     expect(cleared.status).toBe(200);
     const clearedBody = await cleared.json();

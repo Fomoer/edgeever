@@ -147,6 +147,13 @@ type BackupStateRow = {
   prompts: number;
 };
 
+// Page checks need only the transactional revision. Recounting every table here
+// makes a full backup quadratic in source size and can exhaust D1's daily reads.
+const readBackupVersion = (database: DatabaseAdapter, workspaceId: string) => database.prepare(
+  `SELECT created_at AS identity, CAST(backup_revision AS TEXT) AS backup_revision
+   FROM workspaces WHERE id = ?`,
+).bind(workspaceId).first<Pick<BackupStateRow, "identity" | "backup_revision">>();
+
 const readBackupState = (database: DatabaseAdapter, workspaceId: string) => database.prepare(
   `SELECT w.created_at AS identity, CAST(w.backup_revision AS TEXT) AS backup_revision,
      (SELECT COUNT(*) FROM notebooks WHERE workspace_id = w.id AND is_deleted = 0) AS notebooks,
@@ -181,16 +188,17 @@ const listBackupPage = async (
   workspaceId: string,
   limit: number,
   offset: number,
+  includeTotal = true,
 ) => Promise.all([
   database.prepare(
     `${MEMO_EXPORT_SELECT_SQL}
      WHERE m.workspace_id = ? AND m.is_deleted = 0
      ORDER BY m.created_at ASC, m.id ASC
      LIMIT ? OFFSET ?`,
-  ).bind(workspaceId, limit, offset).all<BackupMemoDetailRow>(),
-  database.prepare(
+  ).bind(workspaceId, includeTotal ? limit : limit + 1, offset).all<BackupMemoDetailRow>(),
+  includeTotal ? database.prepare(
     `SELECT COUNT(*) AS count FROM memos WHERE workspace_id = ? AND is_deleted = 0`,
-  ).bind(workspaceId).first<{ count: number }>(),
+  ).bind(workspaceId).first<{ count: number }>() : Promise.resolve(null),
 ]);
 
 const emptyMarkdownExportPage = async () => [
@@ -204,13 +212,14 @@ const listMarkdownExportPage = async (
   limit: number,
   offset: number,
   memoIds: string[] | null,
+  includeTotal = true,
 ) => {
   if (memoIds && memoIds.length === 0) {
     return emptyMarkdownExportPage();
   }
 
   if (!memoIds) {
-    return listBackupPage(database, workspaceId, limit, offset);
+    return listBackupPage(database, workspaceId, limit, offset, includeTotal);
   }
 
   // json_each keeps the D1 bound-parameter count fixed (workspace + JSON + limit/offset).
@@ -222,12 +231,12 @@ const listMarkdownExportPage = async (
          AND m.id IN (SELECT value FROM json_each(?))
        ORDER BY m.created_at ASC, m.id ASC
        LIMIT ? OFFSET ?`,
-    ).bind(workspaceId, memoIdsJson, limit, offset).all<BackupMemoDetailRow>(),
-    database.prepare(
+    ).bind(workspaceId, memoIdsJson, includeTotal ? limit : limit + 1, offset).all<BackupMemoDetailRow>(),
+    includeTotal ? database.prepare(
       `SELECT COUNT(*) AS count FROM memos
        WHERE workspace_id = ? AND is_deleted = 0
          AND id IN (SELECT value FROM json_each(?))`,
-    ).bind(workspaceId, memoIdsJson).first<{ count: number }>(),
+    ).bind(workspaceId, memoIdsJson).first<{ count: number }>() : Promise.resolve(null),
   ]);
 };
 
@@ -275,7 +284,7 @@ export const registerBackupRoutes = (
     const workspaceId = getWorkspaceId(context);
     const database = context.env.storage.db;
     const unchanged = async () => {
-      const state = await readBackupState(database, workspaceId);
+      const state = await readBackupVersion(database, workspaceId);
       return state?.identity === identity && state.backup_revision === revision;
     };
     const changed = () => conflict(context, "backup_source_changed", "The source changed during backup. Try again when it is idle.");
@@ -315,6 +324,7 @@ export const registerBackupRoutes = (
     const limit = dependencies.clampNumber(Number(context.req.query("limit") ?? 50), 1, 100);
     const offset = dependencies.clampNumber(Number(context.req.query("offset") ?? 0), 0, 1_000_000);
     const parsedIds = parseMarkdownExportMemoIds(context.req.query("ids"));
+    const includeTotal = offset === 0 || context.req.query("includeTotal") !== "0";
     if (parsedIds.error === "too_many") {
       return badRequest(context, `Export at most ${MAX_MARKDOWN_EXPORT_MEMO_IDS} notes at a time.`);
     }
@@ -325,8 +335,10 @@ export const registerBackupRoutes = (
       limit,
       offset,
       parsedIds.ids,
+      includeTotal,
     );
-    const memoIds = memoRows.results.map((row) => row.id);
+    const page = memoRows.results.slice(0, limit);
+    const memoIds = page.map((row) => row.id);
     let resources: Resource[] = [];
 
     if (memoIds.length > 0) {
@@ -341,13 +353,13 @@ export const registerBackupRoutes = (
       resources = resourceRows.results.map(mapResource);
     }
 
-    const totalCount = totalRow?.count ?? memoRows.results.length;
+    const totalCount = totalRow?.count ?? page.length;
     return context.json({
-      memos: memoRows.results.map(dependencies.mapMemoDetail),
+      memos: page.map(dependencies.mapMemoDetail),
       resources,
-      totalCount,
-      nextOffset: offset + memoRows.results.length < totalCount
-        ? offset + memoRows.results.length
+      ...(includeTotal ? { totalCount } : {}),
+      nextOffset: (includeTotal ? offset + page.length < totalCount : memoRows.results.length > limit)
+        ? offset + page.length
         : null,
     });
   });
@@ -359,8 +371,10 @@ export const registerBackupRoutes = (
     const limit = dependencies.clampNumber(Number(context.req.query("limit") ?? 25), 1, 50);
     const offset = dependencies.clampNumber(Number(context.req.query("offset") ?? 0), 0, 1_000_000);
     const workspaceId = getWorkspaceId(context);
-    const [memoRows, totalRow] = await listBackupPage(context.env.storage.db, workspaceId, limit, offset);
-    const memoIds = memoRows.results.map((row) => row.id);
+    const includeTotal = offset === 0 || context.req.query("includeTotal") !== "0";
+    const [memoRows, totalRow] = await listBackupPage(context.env.storage.db, workspaceId, limit, offset, includeTotal);
+    const page = memoRows.results.slice(0, limit);
+    const memoIds = page.map((row) => row.id);
     let resources: Resource[] = [];
     let revisions: JsonBackupRevision[] = [];
 
@@ -386,14 +400,14 @@ export const registerBackupRoutes = (
       revisions = revisionRows.results.map(mapJsonBackupRevision);
     }
 
-    const totalCount = totalRow?.count ?? memoRows.results.length;
+    const totalCount = totalRow?.count ?? page.length;
     return context.json({
-      memos: memoRows.results.map(dependencies.mapMemoDetail),
+      memos: page.map(dependencies.mapMemoDetail),
       resources,
       revisions,
-      totalCount,
-      nextOffset: offset + memoRows.results.length < totalCount
-        ? offset + memoRows.results.length
+      ...(includeTotal ? { totalCount } : {}),
+      nextOffset: (includeTotal ? offset + page.length < totalCount : memoRows.results.length > limit)
+        ? offset + page.length
         : null,
     });
   });

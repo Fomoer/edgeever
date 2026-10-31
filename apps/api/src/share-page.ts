@@ -10,6 +10,9 @@ type SharePageRow = {
   title: string | null;
   content_markdown: string | null;
   password_hash: string | null;
+  updated_at: string;
+  show_updated_at: number;
+  show_branding: number;
 };
 
 export type PublicMemoSharePageTarget = {
@@ -90,7 +93,7 @@ export const publicShareMarkdown = (title: string | null, body: string) => {
 };
 
 const loadShare = (db: DatabaseAdapter, token: string) => db.prepare(
-  `SELECT m.title, mc.content_markdown, ms.password_hash
+  `SELECT m.title, mc.content_markdown, ms.password_hash, m.updated_at, ms.show_updated_at, ms.show_branding
    FROM memo_shares ms
    INNER JOIN memos m ON m.id = ms.memo_id AND m.workspace_id = ms.workspace_id
    INNER JOIN memo_contents mc ON mc.memo_id = m.id
@@ -161,8 +164,14 @@ export const renderPublicMemoSharePage = async (
     : locked
       ? "This shared note requires a password."
       : "Read a shared note on EdgeEver.";
+  const updatedTime = readable && row && row.show_updated_at !== 0
+    ? `<p style="font-size:.75rem;color:#64748b">Updated <time datetime="${escapeHtml(row.updated_at)}">${escapeHtml(new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(row.updated_at)))} UTC</time></p>`
+    : "";
+  const branding = readable && row && row.show_branding !== 0
+    ? `<footer style="margin-top:2rem;font-size:.75rem;text-align:center;color:#64748b"><a href="https://edgeever.org/" style="color:inherit">Published with EdgeEver</a></footer>`
+    : "";
   const article = readable
-    ? `<article id="edgeever-shared-note" style="max-width:44rem;margin:1.5rem auto;padding:0 1rem"><h1>${escapeHtml(title)}</h1><pre style="white-space:pre-wrap;font:inherit">${escapeHtml(body)}</pre></article>`
+    ? `<article id="edgeever-shared-note" style="max-width:44rem;margin:1.5rem auto;padding:0 1rem"><h1>${escapeHtml(title)}</h1>${updatedTime}<pre style="white-space:pre-wrap;font:inherit">${escapeHtml(body)}</pre>${branding}</article>`
     : "";
   const metadata = `<title>${escapeHtml(`${title} · EdgeEver`)}</title>
 <meta name="description" content="${escapeHtml(description)}">

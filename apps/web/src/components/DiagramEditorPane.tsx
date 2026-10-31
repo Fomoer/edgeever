@@ -4,6 +4,7 @@ import { formatMindMapOutline, projectMindMapOutline, updateMindMapOutlineDraft,
 import { MindMapOutlineEditor } from "@/components/MindMapOutlineEditor";
 import { focusArchitectureRelations } from "@/lib/architecture-relations";
 import { MemoTitleInput } from "@/components/MemoTitleInput";
+import { createEditorInstanceMemoIdentity, reconcileEditorInstanceMemoIdentity, remapEditorInstanceMemoIdentity } from "@/components/editor/editor-instance-identity";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { Dom, Export, Graph, History, Keyboard, Scroller, Selection, type Edge, type Node } from "@antv/x6";
 import * as m from "motion/react-m";
@@ -190,7 +191,9 @@ import { DIAGRAM_ZOOM_SCALE_MAX, DIAGRAM_ZOOM_SCALE_MIN } from "@/lib/diagram-zo
 import { resolveDiagramPalette, type DiagramAppearance } from "@/lib/diagram-theme";
 import { isLocalMemoId } from "@/lib/local-mirror";
 import { isBrowserOffline } from "@/lib/network-status";
+import { shouldAcceptRemoteMemoDetail } from "@/lib/memo-detail-freshness";
 import { statusSettleMotion } from "@/lib/motion";
+import { MEMO_ID_REMAPPED_EVENT, MEMO_SYNC_ACKNOWLEDGED_EVENT } from "@/lib/sync-events";
 import type { EdgeEverRepository } from "@/lib/repository";
 import { cn, parseTagsText } from "@/lib/utils";
 
@@ -1761,9 +1764,13 @@ export const DiagramEditorPane = ({
   const insertNodeRef = useRef<(relation: MindMapInsertRelation, baseNodeId?: string) => void>(() => undefined);
   const openFlowQuickCreateRef = useRef<(node: Node) => void>(() => undefined);
   const memoRef = useRef(memo);
+  const memoIdentityRef = useRef(createEditorInstanceMemoIdentity(memo.id));
+  memoIdentityRef.current = reconcileEditorInstanceMemoIdentity(memoIdentityRef.current, memo.id);
+  const editorInstanceMemoKey = memoIdentityRef.current.instanceKey;
   const editSessionRef = useRef<MemoEditSession | null>(null);
   const saveRef = useRef<() => void>(() => undefined);
-  const document = parseDiagramDocument(memo.contentMarkdown);
+  const savingRef = useRef(false);
+  const document = parseDiagramDocument(memoIdentityRef.current.aliases.has(memoRef.current.id) ? memoRef.current.contentMarkdown : memo.contentMarkdown);
   const denseArchitecture = document?.kind === "architecture"
     && document.edges.length >= 16
     && document.edges.length / Math.max(1, document.nodes.filter((node) => node.shape !== "boundary").length) >= 1.1;
@@ -1794,6 +1801,8 @@ export const DiagramEditorPane = ({
   const [tagsDirty, setTagsDirty] = useState(false);
   const [dirtyVersion, setDirtyVersion] = useState(0);
   const [graphReloadVersion, setGraphReloadVersion] = useState(0);
+  const [memoReconcileVersion, setMemoReconcileVersion] = useState(0);
+  const deferredMemoBaselineRef = useRef<{ snapshot: string; tags: string } | null>(null);
   const [outlineMode, setOutlineMode] = useState(false);
   const [outlineDraft, setOutlineDraft] = useState<MindMapOutlineDraft | null>(null);
   const [outlineError, setOutlineError] = useState<MindMapOutlineError | null>(null);
@@ -1809,7 +1818,7 @@ export const DiagramEditorPane = ({
     setOutlineDraft(null);
     setOutlineError(null);
     setOutlinePendingBulk(null);
-  }, [memo.id]);
+  }, [editorInstanceMemoKey]);
   const [saving, setSaving] = useState(false);
   const [editSessionReady, setEditSessionReady] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -1846,13 +1855,16 @@ export const DiagramEditorPane = ({
   const flowQuickCreateRef = useRef<FlowQuickCreateState | null>(null);
   const flowPointerDragRef = useRef<FlowPointerDragState | null>(null);
   const nodeEditorRef = useRef<NodeEditorState | null>(null);
-  const editorDirty = dirty || tagsDirty || Boolean(outlineError) || Boolean(outlinePendingBulk);
+  const pendingOutlineRef = useRef(false);
+  pendingOutlineRef.current = Boolean(outlineError || outlinePendingBulk);
+  const editorDirty = dirty || tagsDirty || Boolean(outlineError) || Boolean(outlinePendingBulk)
+    || Boolean(nodeEditor && nodeEditor.value !== nodeEditor.originalValue);
 
   spacePanActiveRef.current = spacePanActive;
 
   useEffect(() => {
     setPendingArchitectureItem(null);
-  }, [memo.id]);
+  }, [editorInstanceMemoKey]);
 
   useEffect(() => {
     const isTextInput = (target: EventTarget | null) => target instanceof HTMLElement
@@ -1938,50 +1950,156 @@ export const DiagramEditorPane = ({
     if (graph && pending.restoreHistory) graph.enableHistory();
   }, []);
 
-  useEffect(() => {
-    setSelectedNodeId(null);
-    setSelectedNodeLabel("");
-    setSelectedEdgeId(null);
-    setSelectedEdgeLabel("");
-    setHasSelection(false);
-    flowQuickCreateRef.current = null;
-    setFlowQuickCreate(null);
-    nodeEditorRef.current = null;
-    setNodeEditor(null);
-    setTheme(documentTheme);
-    themeRef.current = documentTheme;
-    setStructure(documentStructure);
-    structureRef.current = documentStructure;
-    setHistoryOpen(false);
-    setShareOpen(false);
-    setMemoIdCopyNotice(null);
-  }, [documentStructure, documentTheme, memo.id]);
-
   useEffect(() => () => {
     if (memoIdCopyTimerRef.current !== null) window.clearTimeout(memoIdCopyTimerRef.current);
   }, []);
 
   useEffect(() => {
-    memoRef.current = memo;
+    const remapped = (event: Event) => {
+      const mappings = (event as CustomEvent<ReadonlyMap<string, string>>).detail;
+      const previousIdentity = memoIdentityRef.current;
+      const nextIdentity = remapEditorInstanceMemoIdentity(previousIdentity, mappings);
+      if (nextIdentity === previousIdentity) return;
+      memoIdentityRef.current = nextIdentity;
+      if (previousIdentity.aliases.has(memoRef.current.id)) {
+        memoRef.current = { ...memoRef.current, id: nextIdentity.memoId! };
+      }
+      const session = editSessionRef.current;
+      if (session && previousIdentity.aliases.has(session.memoId)) {
+        editSessionRef.current = { ...session, id: `local-edit:${nextIdentity.memoId}`, memoId: nextIdentity.memoId! };
+      }
+    };
+    window.addEventListener(MEMO_ID_REMAPPED_EVENT, remapped);
+    return () => window.removeEventListener(MEMO_ID_REMAPPED_EVENT, remapped);
+  }, []);
+
+  const advanceSyncBase = useCallback((syncedMemo: MemoDetail) => {
+    const currentMemo = memoRef.current;
+    if (syncedMemo.id !== currentMemo.id || syncedMemo.revision < currentMemo.revision) return;
+    memoRef.current = {
+      ...currentMemo,
+      revision: syncedMemo.revision,
+      contentHash: syncedMemo.contentHash,
+      updatedAt: syncedMemo.updatedAt,
+    };
+    if (editSessionRef.current?.memoId === syncedMemo.id) {
+      editSessionRef.current = {
+        ...editSessionRef.current,
+        baseRevision: syncedMemo.revision,
+        baseContentHash: syncedMemo.contentHash,
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    const acknowledged = (event: Event) => advanceSyncBase((event as CustomEvent<MemoDetail>).detail);
+    window.addEventListener(MEMO_SYNC_ACKNOWLEDGED_EVENT, acknowledged);
+    return () => window.removeEventListener(MEMO_SYNC_ACKNOWLEDGED_EVENT, acknowledged);
+  }, [advanceSyncBase]);
+
+  useEffect(() => {
+    const incomingDocument = parseDiagramDocument(memo.contentMarkdown);
+    const incomingSnapshot = incomingDocument ? diagramEditorSnapshot(memo.title ?? "", incomingDocument) : "";
+    const currentMemo = memoRef.current;
+    const graph = graphRef.current;
+    const sameMemo = memoIdentityRef.current.aliases.has(currentMemo.id) && Boolean(graph);
+    if (!sameMemo) deferredMemoBaselineRef.current = null;
+    const canvasSnapshot = graph && document ? diagramEditorSnapshot(
+      titleRef.current,
+      graphToDocument(graph, document.kind, themeRef.current, structureRef.current),
+    ) : "";
+    if (sameMemo && !readOnly) {
+      if (!shouldAcceptRemoteMemoDetail(currentMemo, memo)) return;
+      const savedTags = currentMemo.tags.join("\u0000");
+      const hasDraft = canvasSnapshot !== savedSnapshotRef.current
+        || parseTagsText(tagsRef.current).join("\u0000") !== savedTags
+        || nodeEditorRef.current !== null || flowQuickCreateRef.current !== null
+        || pendingOutlineRef.current || savingRef.current;
+      if (hasDraft) {
+        // An echo of our saved snapshot may advance its base, never its draft.
+        // A different remote document keeps the old base for conflict handling.
+        if (incomingSnapshot === savedSnapshotRef.current && memo.tags.join("\u0000") === savedTags) {
+          advanceSyncBase(memo);
+        } else if (!deferredMemoBaselineRef.current) {
+          deferredMemoBaselineRef.current = { snapshot: savedSnapshotRef.current, tags: savedTags };
+        }
+        return;
+      }
+    }
+    deferredMemoBaselineRef.current = null;
+    memoRef.current = memo.id === memoIdentityRef.current.memoId ? memo : { ...memo, id: memoIdentityRef.current.memoId! };
     setTitle(memo.title ?? "");
     titleRef.current = memo.title ?? "";
     setTagsText(memo.tags.join(", "));
     tagsRef.current = memo.tags.join(", ");
-    savedSnapshotRef.current = document ? diagramEditorSnapshot(memo.title ?? "", document) : "";
+    savedSnapshotRef.current = incomingSnapshot;
     setDirty(false);
     setTagsDirty(false);
     setMobileNotebookSheetOpen(false);
     setSaveError(null);
     setSaveFailed(false);
-    editSessionRef.current = null;
-    setEditSessionReady(false);
-    if (readOnly || isLocalMemoId(memo.id) || isBrowserOffline() || window.edgeeverDesktop?.isAvailable) {
-      editSessionRef.current = createLocalEditSession(memo);
+
+    if (!sameMemo || incomingSnapshot !== canvasSnapshot) {
+      setSelectedNodeId(null);
+      setSelectedNodeLabel("");
+      setSelectedEdgeId(null);
+      setSelectedEdgeLabel("");
+      setHasSelection(false);
+      flowQuickCreateRef.current = null;
+      setFlowQuickCreate(null);
+      nodeEditorRef.current = null;
+      setNodeEditor(null);
+      const nextTheme = incomingDocument?.kind === "architecture"
+        ? resolveDiagramTheme(incomingDocument.theme ?? "brand")
+        : incomingDocument?.kind === "flowchart"
+          ? resolveFlowchartTheme(incomingDocument.theme)
+          : resolveDiagramTheme(incomingDocument?.theme);
+      const nextStructure = resolveDiagramStructure(incomingDocument?.structure);
+      setTheme(nextTheme);
+      themeRef.current = nextTheme;
+      setStructure(nextStructure);
+      structureRef.current = nextStructure;
+      setHistoryOpen(false);
+      setShareOpen(false);
+      setMemoIdCopyNotice(null);
+      if (sameMemo && outlineMode && incomingDocument?.kind === "mind-map") {
+        setOutlineDraft(formatMindMapOutline(incomingDocument));
+      }
+      if (sameMemo) setGraphReloadVersion((current) => current + 1);
+    }
+  }, [advanceSyncBase, memo, memoReconcileVersion, readOnly]);
+
+  useEffect(() => {
+    const deferred = deferredMemoBaselineRef.current;
+    const graph = graphRef.current;
+    if (!deferred || !graph || !document || savingRef.current || pendingOutlineRef.current
+      || nodeEditorRef.current || flowQuickCreateRef.current) return;
+    // A canceled input or undo may release a deferred remote update. A newly
+    // saved local draft must still keep its old base for conflict handling.
+    if (savedSnapshotRef.current !== deferred.snapshot || memoRef.current.tags.join("\u0000") !== deferred.tags
+      || parseTagsText(tagsRef.current).join("\u0000") !== deferred.tags) return;
+    const currentSnapshot = diagramEditorSnapshot(
+      titleRef.current,
+      graphToDocument(graph, document.kind, themeRef.current, structureRef.current),
+    );
+    if (currentSnapshot !== deferred.snapshot) return;
+    deferredMemoBaselineRef.current = null;
+    setMemoReconcileVersion((current) => current + 1);
+  }, [dirty, dirtyVersion, editorInstanceMemoKey, flowQuickCreate, nodeEditor, outlineError, outlinePendingBulk, saving, tagsDirty]);
+
+  useEffect(() => {
+    const currentMemo = memoRef.current;
+    if (editSessionRef.current?.memoId !== currentMemo.id) {
+      editSessionRef.current = null;
+      setEditSessionReady(false);
+    }
+    if (readOnly || isLocalMemoId(currentMemo.id) || isBrowserOffline() || window.edgeeverDesktop?.isAvailable) {
+      editSessionRef.current = createLocalEditSession(currentMemo);
       setEditSessionReady(true);
       return;
     }
     let cancelled = false;
-    void api.createMemoEditSession(memo.id).then(({ editSession }) => {
+    void api.createMemoEditSession(currentMemo.id).then(({ editSession }) => {
       if (!cancelled) {
         editSessionRef.current = editSession;
         setEditSessionReady(true);
@@ -2024,19 +2142,6 @@ export const DiagramEditorPane = ({
     nodeEditorRef.current = nextEditor;
     setNodeEditor(nextEditor);
   }, [resolvedTheme, document?.kind]);
-
-  useEffect(() => {
-    const graph = graphRef.current;
-    if (!graph || !document) return;
-    const incomingSnapshot = diagramEditorSnapshot(memo.title ?? "", document);
-    const canvasSnapshot = diagramEditorSnapshot(
-      titleRef.current,
-      graphToDocument(graph, document.kind, themeRef.current, structureRef.current),
-    );
-    if (incomingSnapshot !== canvasSnapshot) {
-      setGraphReloadVersion((current) => current + 1);
-    }
-  }, [memo.contentHash]);
 
   useEffect(() => {
     if (!containerRef.current || !document) return;
@@ -2610,7 +2715,7 @@ export const DiagramEditorPane = ({
       graphRef.current = null;
       graph.dispose();
     };
-  }, [beginNodeEdit, dismissFlowQuickCreate, graphReloadVersion, memo.id, readOnly]);
+  }, [beginNodeEdit, dismissFlowQuickCreate, graphReloadVersion, editorInstanceMemoKey, readOnly]);
 
   useEffect(() => {
     if (!editorDirty) return;
@@ -3191,7 +3296,7 @@ export const DiagramEditorPane = ({
     const graph = graphRef.current;
     const currentMemo = memoRef.current;
     const editSession = editSessionRef.current;
-    if (!graph || !document || !editSession || readOnly || saving || outlineError || outlinePendingBulk) return false;
+    if (!graph || !document || !editSession || readOnly || savingRef.current || outlineError || outlinePendingBulk) return false;
     if (
       savedSnapshotRef.current === diagramEditorSnapshot(titleRef.current, graphToDocument(graph, document.kind, themeRef.current, structureRef.current))
       && !tagsDirty
@@ -3199,6 +3304,7 @@ export const DiagramEditorPane = ({
       setDirty(false);
       return true;
     }
+    savingRef.current = true;
     setSaving(true);
     setSaveError(null);
     setSaveFailed(false);
@@ -3217,13 +3323,23 @@ export const DiagramEditorPane = ({
         contentMarkdown: markdown,
         tags: nextTags,
       });
-      memoRef.current = result.memo;
+      if (!memoIdentityRef.current.aliases.has(currentMemo.id) || graphRef.current !== graph) {
+        await onSaved(result.memo);
+        return true;
+      }
+      const savedMemo = result.memo.id === memoRef.current.id ? result.memo : { ...result.memo, id: memoRef.current.id };
+      const syncBase = memoRef.current;
+      memoRef.current = syncBase.revision > savedMemo.revision
+        ? { ...savedMemo, revision: syncBase.revision, contentHash: syncBase.contentHash, updatedAt: syncBase.updatedAt }
+        : savedMemo;
       savedSnapshotRef.current = nextSnapshot;
       const currentSnapshot = diagramEditorSnapshot(
         titleRef.current,
         graphToDocument(graph, document.kind, themeRef.current, structureRef.current),
       );
-      const hasNewChanges = currentSnapshot !== nextSnapshot;
+      const hasNewChanges = currentSnapshot !== nextSnapshot
+        || Boolean(nodeEditorRef.current && nodeEditorRef.current.value !== nodeEditorRef.current.originalValue)
+        || pendingOutlineRef.current;
       const hasNewTagChanges = parseTagsText(tagsRef.current).join("\u0000") !== result.memo.tags.join("\u0000");
       setDirty(hasNewChanges);
       setTagsDirty(hasNewTagChanges);
@@ -3232,17 +3348,20 @@ export const DiagramEditorPane = ({
         tagsRef.current = savedTagsText;
         setTagsText(savedTagsText);
       }
-      if (!hasNewChanges && !hasNewTagChanges) {
+      if (!hasNewChanges && !hasNewTagChanges && nodeEditorRef.current === null) {
         graph.cleanHistory();
         setHistoryState({ undo: false, redo: false });
-        await onSaved(result.memo);
+        await onSaved(memoRef.current);
       }
       return true;
     } catch (error) {
-      setSaveFailed(true);
-      setSaveError(error instanceof Error ? error.message : t("diagram.saveError"));
+      if (memoIdentityRef.current.aliases.has(currentMemo.id) && graphRef.current === graph) {
+        setSaveFailed(true);
+        setSaveError(error instanceof Error ? error.message : t("diagram.saveError"));
+      }
       return false;
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -3313,7 +3432,7 @@ export const DiagramEditorPane = ({
     return (graphRef.current?.getNodes() ?? []).filter((node) =>
       (node.getData<NodeData>()?.label ?? "").toLocaleLowerCase().includes(query),
     );
-  }, [dirtyVersion, memo.id, searchOpen, searchQuery]);
+  }, [dirtyVersion, editorInstanceMemoKey, searchOpen, searchQuery]);
 
   const selectSearchMatch = useCallback((index: number) => {
     const graph = graphRef.current;

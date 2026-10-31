@@ -1,0 +1,53 @@
+bun test v1.3.14 (0d9b296a)
+
+apps/api/src/notebook-share-routes.test.mjs:
+(pass) public notebook site controls > old share upgrade preserves scope, token, and password while settings patch is independent [76.90ms]
+(pass) public notebook site controls > exclusion gates every read path, keeps independent shares, and restores idempotently [45.93ms]
+(pass) public notebook site controls > original-note controls list live ancestor sites with independent exclusions and no new shares [37.03ms]
+(pass) public notebook site controls > owner content management filters before paging and reports exclusions beyond the first page [48.21ms]
+(pass) public notebook site controls > body and Chinese search filter before paging and combine with exact tags [33.06ms]
+(pass) public notebook site controls > rejects invalid targets, unknown settings, non-HTTPS URLs and oversized merged settings [35.46ms]
+(pass) public notebook site controls > homepages fall back on exclusion and aliases disclose identity only [42.49ms]
+(pass) public notebook site controls > enabling or rotating passwords disables indexing and clearing does not re-enable it [52.65ms]
+(pass) public notebook site controls > server HTML escapes metadata, preserves protected privacy, and denies excluded aliases [49.25ms]
+(pass) public notebook site controls > Token pages without an alias remain noindex after opting in [39.22ms]
+(pass) live recursive notebook sharing > upgrades existing data without creating individual shares; exposes only the live workspace subtree [36.21ms]
+(pass) live recursive notebook sharing > publishes new and moved-in notes, edits, and moved-in subtrees without changing the token [33.74ms]
+(pass) live recursive notebook sharing > moving a note or subtree out immediately denies its note and resource endpoints [33.48ms]
+(pass) live recursive notebook sharing > deleted notes, resources, ancestors, and roots cannot be read [33.54ms]
+(pass) live recursive notebook sharing > revocation closes every endpoint, keeps independent shares, and recreation gets a fresh token [33.62ms]
+(pass) live recursive notebook sharing > interactive management is workspace scoped and rejects anonymous and API-token callers [33.77ms]
+(pass) live recursive notebook sharing > internal links resolve only within the shared tree, even if an outside note has an independent share [35.19ms]
+(pass) live recursive notebook sharing > resource streaming keeps range, MIME, and no-store behavior [31.33ms]
+(pass) live recursive notebook sharing > independent child notebook shares survive parent revocation [32.94ms]
+(pass) live recursive notebook sharing > even inconsistent cross-workspace notebook references do not grant access [33.46ms]
+(pass) password-protected notebook shares > migrates an existing live link in place and protects directory, descendants and blobs [55.45ms]
+(pass) password-protected notebook shares > rotating rejects previous passwords and cookies; clearing restores the same public link [75.31ms]
+(pass) password-protected notebook shares > limits wrong attempts and resets attempt state when regenerating [114.80ms]
+(pass) password-protected notebook shares > management requires a live share in the interactive user's workspace [44.36ms]
+(pass) password-protected notebook shares > other share links have independent passwords and grants; revocation invalidates all reads [73.21ms]
+(pass) workspace login cannot bypass the notebook password; an unlock grant is still required [55.08ms]
+(pass) notebook share password recovery > upgrades a hash-only share in place without invalidating the old password [62.71ms]
+(pass) notebook share password recovery > recovers on a fresh read, hides from other workspaces/agents, and clears ciphertext [56.37ms]
+(pass) an older server rotating only the hash cannot display stale ciphertext [60.24ms]
+(pass) missing deployment keys reject regeneration without changing the existing password [49.31ms]
+
+apps/api/src/share-page.test.mjs:
+(pass) public memo share pages > recognizes only a single-note share path [0.13ms]
+(pass) public memo share pages > puts the note in the first HTML response and keeps the app shell [32.23ms]
+(pass) public memo share pages > returns markdown for the direct link and for an explicit markdown accept [31.36ms]
+(pass) public memo share pages > omits the body when the share is missing, deleted, or password protected [31.05ms]
+(pass) public memo share pages > serves a custom address like the token and keeps password-protected notes out [29.62ms]
+(pass) public memo share pages > treats the stored default title as untitled in metadata and markdown [38.59ms]
+(pass) public memo share pages > HEAD keeps the headers and omits the body [45.46ms]
+(pass) public memo share pages > production entrypoints serve the share page from the worker [0.45ms]
+
+packages/shared/src/sharing.test.mjs:
+(pass) shared memo resources > rewrites owned images and attachments without touching external links [0.27ms]
+(pass) shared memo resources > rewrites references to publicly shared notes without exposing private targets [0.03ms]
+(pass) notebook shares use their own attachment scope, link within the directory, and disable private memo links [0.04ms]
+
+ 41 pass
+ 0 fail
+ 378 expect() calls
+Ran 41 tests across 3 files. [1.86s]

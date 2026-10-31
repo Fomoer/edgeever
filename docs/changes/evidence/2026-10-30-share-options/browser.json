@@ -1,0 +1,26 @@
+{
+  "runtime": "Local workerd with the production Web bundle in Chromium",
+  "data": "Isolated demo/test fixtures",
+  "status": "passed",
+  "checks": [
+    "Create an unprotected share and see details by default",
+    "Hide details: header label and timestamp disappear; note title, tags and body remain",
+    "Three-character custom password shows validation and leaves protection disabled",
+    "Trimmed Chinese custom password saves; incorrect password rejected; correct password unlocks",
+    "Replace custom password; prior browser unlock no longer grants access; new password unlocks",
+    "Restore details while protected without invalidating the current unlock",
+    "Generated eight-character password unlocks",
+    "Protected raw Markdown returns 403 even after browser unlock; disabling protection restores 200",
+    "Close and reopen management dialog: password protection false and details true persisted"
+  ],
+  "screenshots": [
+    "custom-invalid.png",
+    "details-hidden.png",
+    "details-visible.png",
+    "reopened.png"
+  ],
+  "limits": [
+    "No installed native desktop or production deployment tested"
+  ],
+  "failureAndPendingRegression": "password-controls-regression.json"
+}

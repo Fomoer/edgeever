@@ -787,5 +787,38 @@
   },
   "modelDirectDenied": {
     "message": "未获得模型访问权限。"
+  },
+  "regionSelect": {
+    "message": "选择区域"
+  },
+  "regionPickerTitle": {
+    "message": "选择要剪藏的区域"
+  },
+  "regionPickHint": {
+    "message": "移动鼠标预览，点击选中内容块。Esc 取消。"
+  },
+  "regionSelected": {
+    "message": "已选中区域"
+  },
+  "regionAdjustHint": {
+    "message": "← → 扩大 / 缩小 · ↑ ↓ 相邻区域 · Enter 保存"
+  },
+  "regionExpand": {
+    "message": "扩大"
+  },
+  "regionShrink": {
+    "message": "缩小"
+  },
+  "regionReselect": {
+    "message": "重新选择"
+  },
+  "regionSave": {
+    "message": "保存到 EdgeEver"
+  },
+  "regionCancel": {
+    "message": "取消"
+  },
+  "regionEmpty": {
+    "message": "该区域没有可读内容或已被移除，请重新选择。"
   }
 }

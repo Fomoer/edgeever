@@ -18,7 +18,7 @@ export const removeMobileMemosFromListCache = (
   const pages = current.pages.map((page) => ({
     ...page,
     memos: page.memos.filter((memo) => !removedIds.has(memo.id)),
-    totalCount: Math.max(0, page.totalCount - removedIds.size),
+    totalCount: page.totalCount === undefined ? undefined : Math.max(0, page.totalCount - removedIds.size),
   }));
 
   return { ...current, pages };

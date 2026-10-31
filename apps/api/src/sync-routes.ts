@@ -103,8 +103,11 @@ export const registerSyncRoutes = (
     const workspaceId = getWorkspaceId(context);
     const limit = dependencies.clampNumber(Number(context.req.query("limit") ?? 100), 1, 200);
     const afterId = context.req.query("afterId")?.trim() ?? "";
+    // Initial metadata is needed once; later pages can use the first snapshot.
+    // Keep the historical response for clients that do not opt out.
+    const includeMetadata = !afterId || context.req.query("includeMetadata") !== "0";
     const [notebookRows, memoRows, totalRow, cursorRow] = await Promise.all([
-      context.env.storage.db.prepare(
+      includeMetadata ? context.env.storage.db.prepare(
         `SELECT n.id, ${syncNotebookParentIdSql} AS parent_id, n.name, n.slug, n.icon, n.color, n.text_color, n.color_target, n.is_bold, n.icon_inverted, n.row_inverted, n.sort_order,
                 n.created_at, n.updated_at, COUNT(m.id) AS memo_count, MAX(m.updated_at) AS last_memo_updated_at
          FROM notebooks n
@@ -112,7 +115,7 @@ export const registerSyncRoutes = (
          WHERE n.workspace_id = ? AND n.is_deleted = 0
          GROUP BY n.id, n.parent_id, n.name, n.slug, n.icon, n.color, n.text_color, n.color_target, n.is_bold, n.icon_inverted, n.row_inverted, n.sort_order, n.created_at, n.updated_at
          ORDER BY n.sort_order ASC, n.name ASC`,
-      ).bind(workspaceId).all<NotebookRow>(),
+      ).bind(workspaceId).all<NotebookRow>() : Promise.resolve({ results: [] as NotebookRow[] }),
       context.env.storage.db.prepare(
         `SELECT m.id, ${syncMemoNotebookIdSql} AS notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned,
                 m.is_archived, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, mc.revision,
@@ -124,9 +127,9 @@ export const registerSyncRoutes = (
          ORDER BY m.id ASC
          LIMIT ?`,
       ).bind(workspaceId, afterId, limit + 1).all<SyncMemoDetailRow>(),
-      context.env.storage.db.prepare(
+      includeMetadata ? context.env.storage.db.prepare(
         `SELECT COUNT(*) AS count FROM memos WHERE workspace_id = ?`,
-      ).bind(workspaceId).first<{ count: number }>(),
+      ).bind(workspaceId).first<{ count: number }>() : Promise.resolve(null),
       context.env.storage.db.prepare(
         `SELECT w.created_at AS sync_identity,
                 COALESCE((
@@ -144,7 +147,7 @@ export const registerSyncRoutes = (
       memos: page.map(dependencies.mapMemoDetail),
       snapshotCursor: cursorRow?.cursor ?? 0,
       syncIdentity: cursorRow?.sync_identity,
-      totalCount: totalRow?.count ?? page.length,
+      ...(includeMetadata ? { totalCount: totalRow?.count ?? page.length } : {}),
       nextAfterId: memoRows.results.length > limit ? page.at(-1)?.id ?? null : null,
     });
   });

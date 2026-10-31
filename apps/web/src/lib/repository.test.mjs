@@ -36,6 +36,19 @@ afterEach(async () => {
 });
 
 describe("web repository offline boundaries", () => {
+  test("keeps remote continuation tokens opaque when skipping later-page counts", async () => {
+    const scope = "https://demo.edgeever.org|user-1";
+    const original = api.listMemos;
+    let received;
+    api.listMemos = async (params) => { received = params; return { memos: [], nextCursor: null }; };
+    try {
+      const result = await createWebRepository(scope).listMemos({ cursor: "opaque-continuation", offset: Number.NaN, includeTotal: false });
+      expect(received.cursor).toBe("opaque-continuation");
+      expect(received.includeTotal).toBe(false);
+      expect(result.totalCount).toBeUndefined();
+    } finally { api.listMemos = original; }
+  });
+
   test("empty trash records the removed memo ids for conflict cleanup after sync", async () => {
     const restoreWindow = installTestWindow();
     const scope = "https://demo.edgeever.org|user-1";

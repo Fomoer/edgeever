@@ -475,6 +475,31 @@ test("preserves HTTP status and emits only redacted request diagnostics without 
   } finally { await f.cleanup(); }
 });
 
+test("records bounded transport cause codes without changing the backup failure", async () => {
+  const f = await fixture();
+  try {
+    await f.manager.run();
+    const worker = f.workers.at(-1);
+    const events = [];
+    f.manager.onDiagnostic = (event, details) => events.push({ event, ...details });
+    worker.emit("message", { type: "request-error", result: {
+      method: "GET", path: "/api/v1/resources/res_fixture/blob?token=private-query",
+      code: "backup_network_failed", message: "Backup network request failed.",
+      causeCodes: ["UND_ERR_SOCKET", "ECONNRESET", "token=private-token", null, "https://private.example.com"], elapsedMs: 123,
+      headers: { Authorization: "private-header" }, stack: "private-stack",
+    } });
+    expect(events).toEqual([{
+      event: "backup.request-failed", kind: "export", phase: "exporting", method: "GET",
+      path: "/api/v1/resources/res_fixture/blob", code: "backup_network_failed", message: "Backup network request failed.",
+      causeCodes: ["UND_ERR_SOCKET", "ECONNRESET"], elapsedMs: 123,
+    }]);
+    worker.emit("message", { type: "error", error: { code: "backup_failed", message: "fetch failed" } });
+    await f.manager.waitForIdle();
+    expect(f.manager.status().error).toEqual({ code: "backup_failed", message: "fetch failed" });
+    expect(f.manager.status().history).toEqual([]);
+  } finally { await f.cleanup(); }
+});
+
 const sourceState = { identity: 'instance-a', workspaceId: 'workspace-a', backupRevision: '8' };
 const finishSnapshot = async (f, result = {}) => {
   const worker = f.workers.at(-1);

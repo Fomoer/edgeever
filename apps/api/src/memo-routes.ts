@@ -141,6 +141,7 @@ export const registerMemoRoutes = (
 
     return context.json(await dependencies.listMemos(context.env.storage.db, {
       workspaceId: getWorkspaceId(context),
+      includeTotal: context.req.query("includeTotal") !== "0",
       notebookId: context.req.query("notebookId"),
       includeNotebookDescendants: context.req.query("includeDescendants") === "1",
       query: context.req.query("q"),

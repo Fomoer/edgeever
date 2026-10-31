@@ -128,6 +128,10 @@ test("the injected page capture is a standalone classic script", async () => {
     const capture = await readFile(join(outDir, "assets/capture.js"), "utf8");
     expect(() => new Script(capture)).not.toThrow();
     expect(capture).toContain("capturedPage");
+    const region = await readFile(join(outDir, "assets/region-clip.js"), "utf8");
+    expect(() => new Script(region)).not.toThrow();
+    expect(region).toContain("saveRegionClip");
+    expect(await readFile(join(outDir, "THIRD_PARTY_NOTICES.txt"), "utf8")).toContain("Copyright (c) 2018 Mika");
     const platform = await readFile(join(outDir, "assets/capture-platform.js"), "utf8");
     expect(() => new Script(platform)).not.toThrow();
     expect(platform).toContain("pagePlatformRead");

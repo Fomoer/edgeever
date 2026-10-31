@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { DOMProps } from "expo/dom";
-import { isRemoteNoteImageFont } from "@edgeever/shared/font-catalog";
+import { isRemoteNoteImageFont, shouldLoadFontPreview } from "@edgeever/shared/font-catalog";
 import { resolveNoteImageTypography, type NoteImageFontStyle, type NoteImageTheme } from "@edgeever/shared/note-image-card";
 import { prepareNoteImageAssets } from "@edgeever/shared/note-image-fonts";
 import { getMobileNoteImageFontLabel, MOBILE_FONT_OPTIONS, type NoteImageFontLabels } from "../lib/note-image-font-options";
@@ -44,6 +44,7 @@ export default function MobileNoteImageFontPicker({ selected, theme, chinese, co
         if (!entry.isIntersecting) continue;
         observer.unobserve(entry.target);
         const id = entry.target.getAttribute("data-font") as NoteImageFontStyle;
+        if (!shouldLoadFontPreview(id, id === selected)) continue;
         const text = chinese && !LATIN_FONTS.has(id) ? "记录此刻的灵感" : "Capture a little inspiration";
         void prepareNoteImageAssets({ theme, fontStyle: id, text, urls: noteImageAssetUrls, embed: false })
           .then(() => { if (active) setPreviews(previous => ({ ...previous, [id]: "ready" })); })
@@ -76,6 +77,7 @@ export default function MobileNoteImageFontPicker({ selected, theme, chinese, co
           const loaded = previews[item.id] === "ready";
           const failed = previews[item.id] === "error";
           const needsFont = item.id === "auto" || isRemoteNoteImageFont(item.id);
+          const previewEnabled = shouldLoadFontPreview(item.id, item.id === selected);
           return (
             <button
               key={item.id}
@@ -93,8 +95,8 @@ export default function MobileNoteImageFontPicker({ selected, theme, chinese, co
             >
               <span className="font-option-copy">
                 <span className="font-name">{label}</span>
-                {loaded || !needsFont ? (
-                  <span className="font-sample" style={{ fontFamily: resolveNoteImageTypography(theme, item.id).bodyFamily }}>{sampleFor(item.id)}</span>
+                {loaded || !needsFont || !previewEnabled ? (
+                  <span className="font-sample" style={previewEnabled ? { fontFamily: resolveNoteImageTypography(theme, item.id).bodyFamily } : undefined}>{sampleFor(item.id)}</span>
                 ) : (
                   <span className="font-status">{failed
                     ? copy.previewUnavailable

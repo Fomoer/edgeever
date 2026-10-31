@@ -4,14 +4,13 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import {
   findInlineFields,
   formatInlineFieldChip,
-  languageFromLocale,
   rangesOverlap,
-  type InlineFieldLanguage,
+  type InlineFieldTranslate,
 } from "@/lib/inline-fields";
 
 const INLINE_FIELD_PLUGIN_KEY = new PluginKey("edgeever-inline-field");
 
-const collectInlineFieldDecorations = (state: EditorState, language: InlineFieldLanguage) => {
+const collectInlineFieldDecorations = (state: EditorState, translate: InlineFieldTranslate) => {
   const decorations: Decoration[] = [];
   const cursor = state.selection.from;
   state.doc.descendants((node, pos) => {
@@ -27,7 +26,7 @@ const collectInlineFieldDecorations = (state: EditorState, language: InlineField
         const chip = document.createElement("button");
         chip.type = "button";
         chip.className = "ee-inline-field";
-        chip.textContent = formatInlineFieldChip(field.key, field.value, language);
+        chip.textContent = formatInlineFieldChip(field.key, field.value, translate);
         chip.addEventListener("mousedown", (event) => {
           event.preventDefault();
           view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, from + 1)));
@@ -40,15 +39,14 @@ const collectInlineFieldDecorations = (state: EditorState, language: InlineField
   return decorations.length ? DecorationSet.create(state.doc, decorations) : DecorationSet.empty;
 };
 
-export const createInlineFieldExtension = (locale: string) => Extension.create({
+export const createInlineFieldExtension = (translate: InlineFieldTranslate) => Extension.create({
   name: "inlineField",
   addProseMirrorPlugins() {
-    const language = languageFromLocale(locale);
     return [
       new Plugin({
         key: INLINE_FIELD_PLUGIN_KEY,
         props: {
-          decorations: (state) => collectInlineFieldDecorations(state, language),
+          decorations: (state) => collectInlineFieldDecorations(state, translate),
         },
       }),
     ];

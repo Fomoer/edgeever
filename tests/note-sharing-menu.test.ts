@@ -41,7 +41,7 @@ describe("note sharing menu", () => {
     expect(zhCN.sharing.passwordToggle).toBe("访问密码");
     expect(enUS.sharing.passwordToggle).toBe("Access password");
     expect(shareDialogSource).toContain('t("sharing.passwordToggle")');
-    expect(shareDialogSource).toContain("api.updateMemoShare(memoId, { passwordProtected })");
+    expect(shareDialogSource).toContain("api.updateMemoShare(memoId, { passwordProtected, ...(password ? { password } : {}) })");
     expect(publicShareSource).toContain("api.unlockPublicMemoShare");
     expect(publicShareSource).toContain("parsePublishedNoteBodyFont(share.bodyFont)");
     expect(publicShareSource).toContain("applyEditorBodyFontPreference");

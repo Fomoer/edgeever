@@ -21,7 +21,7 @@ const createFontWatcher = (ui = false) => {
       let last = "";
       const refresh = () => {
         if (!active) return;
-        const text = ui ? document.body.textContent ?? "" : Array.from(document.querySelectorAll<HTMLElement>(".edgeever-editor .ProseMirror, .edgeever-mobile-tiptap-content, .edgeever-editor textarea"))
+        const text = ui ? document.body.textContent ?? "" : Array.from(document.querySelectorAll<HTMLElement>(".edgeever-editor .ProseMirror, .edgeever-mobile-tiptap-content, .edgeever-editor textarea, .edgeever-editor .cm-content"))
           .map(node => node instanceof HTMLTextAreaElement ? node.value : node.textContent ?? "").join(" ");
         const characters = Array.from(new Set(Array.from(text))).sort().join("");
         if (characters === last && state.getSnapshot() !== "idle") return;

@@ -291,16 +291,15 @@ const listActiveNotebookTree = async (db: DatabaseAdapter, workspaceId: string, 
   return rows.results;
 };
 
-const countActiveMemosInNotebooks = async (db: DatabaseAdapter, workspaceId: string, notebookIds: string[]) => {
-  let total = 0;
+const hasActiveMemosInNotebooks = async (db: DatabaseAdapter, workspaceId: string, notebookIds: string[]) => {
   for (const chunk of chunkValues(notebookIds, NOTEBOOK_DELETE_ID_CHUNK)) {
     const placeholders = chunk.map(() => "?").join(", ");
     const row = await db.prepare(
-      `SELECT COUNT(*) AS count FROM memos WHERE workspace_id = ? AND is_deleted = 0 AND notebook_id IN (${placeholders})`
-    ).bind(workspaceId, ...chunk).first<{ count: number }>();
-    total += Number(row?.count ?? 0);
+      `SELECT 1 AS found FROM memos WHERE workspace_id = ? AND is_deleted = 0 AND notebook_id IN (${placeholders}) LIMIT 1`
+    ).bind(workspaceId, ...chunk).first<{ found: number }>();
+    if (row) return true;
   }
-  return total;
+  return false;
 };
 
 export const deleteNotebookTree = async (
@@ -332,7 +331,7 @@ export const deleteNotebookTree = async (
   const notebookIds = tree.map((notebook) => notebook.id);
   // Empty child notebooks are removed with the parent. Notes anywhere in the
   // subtree block the whole delete so a parent click cannot orphan them.
-  if (await countActiveMemosInNotebooks(db, workspaceId, notebookIds) > 0) {
+  if (await hasActiveMemosInNotebooks(db, workspaceId, notebookIds)) {
     throw new AppError(
       "notebook_not_empty",
       "Move or delete notes in this notebook and its child notebooks before deleting it.",

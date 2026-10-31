@@ -8,6 +8,24 @@ const jsonResponse = (body, init = {}) => new Response(JSON.stringify(body), {
 });
 
 describe("EdgeEver client HTTP contract", () => {
+  test("requests full metadata initially and opts out only for later sync and export pages", async () => {
+    const calls = [];
+    const client = createEdgeEverClient({ baseUrl: "https://notes.example", fetch: async (input) => { calls.push(new URL(input)); return jsonResponse({}); } });
+    await client.syncBootstrap({ limit: 1 });
+    await client.syncBootstrap({ afterId: "memo_1", limit: 1 });
+    await client.getMobileSyncBootstrapPage(null, 1);
+    await client.getMobileSyncBootstrapPage("memo_1", 1);
+    await client.getJsonBackupPage(0, 1);
+    await client.getJsonBackupPage(1, 1);
+    await client.getMarkdownExportPage(0, 1, ["memo_1", "memo_2"]);
+    await client.getMarkdownExportPage(1, 1, ["memo_1", "memo_2"]);
+    expect(calls.map((url) => url.searchParams.get("includeMetadata"))).toEqual([null, "0", null, "0", null, null, null, null]);
+    expect(calls.map((url) => url.searchParams.get("includeTotal"))).toEqual([null, null, null, null, null, "0", null, "0"]);
+    expect(calls[7].searchParams.get("ids")).toBe("memo_1,memo_2");
+    await client.listMemos({ q: "hello", includeTotal: false });
+    expect(calls.at(-1).searchParams.get("includeTotal")).toBe("0");
+  });
+
   test("companion prepare errors authenticate and never retry on a server generation endpoint", async()=>{
  const paths=[];const client=createEdgeEverClient({baseUrl:"https://notes.example",token:"test-token",fetch:async(url,init)=>{paths.push(url);expect(new Headers(init.headers).get("Authorization")).toBe("Bearer test-token");return Response.json({error:{code:"ai_not_configured",message:"Choose a model"}},{status:409});}});
  await expect(client.streamCompanion({id:"request",message:"hi"},{onEvent(){}})).rejects.toMatchObject({code:"ai_not_configured"});expect(paths).toEqual(["https://notes.example/api/v1/companion/turns/prepare"]);
@@ -50,7 +68,7 @@ describe("EdgeEver client HTTP contract", () => {
     });
 
     await client.getJsonBackupPage(25, 10);
-    expect(calls[0].input).toBe("https://notes.example/api/v1/backups/json?offset=25&limit=10");
+    expect(calls[0].input).toBe("https://notes.example/api/v1/backups/json?offset=25&limit=10&includeTotal=0");
     expect(new Headers(calls[0].init.headers).get("Authorization")).toBe("Bearer secret");
     expect(calls[0].init.credentials).toBe("include");
   });

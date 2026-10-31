@@ -787,5 +787,38 @@
   },
   "modelDirectDenied": {
     "message": "Model access was not granted."
+  },
+  "regionSelect": {
+    "message": "範囲を選択"
+  },
+  "regionPickerTitle": {
+    "message": "クリップする範囲を選択"
+  },
+  "regionPickHint": {
+    "message": "マウスを動かして内容をクリックします。Esc でキャンセル。"
+  },
+  "regionSelected": {
+    "message": "範囲を選択済み"
+  },
+  "regionAdjustHint": {
+    "message": "← → 拡大 / 縮小 · ↑ ↓ 隣の範囲 · Enter で保存"
+  },
+  "regionExpand": {
+    "message": "拡大"
+  },
+  "regionShrink": {
+    "message": "縮小"
+  },
+  "regionReselect": {
+    "message": "選び直す"
+  },
+  "regionSave": {
+    "message": "EdgeEver に保存"
+  },
+  "regionCancel": {
+    "message": "キャンセル"
+  },
+  "regionEmpty": {
+    "message": "この範囲は空か、すでに削除されています。選び直してください。"
   }
 }

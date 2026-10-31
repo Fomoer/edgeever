@@ -107,6 +107,7 @@ import { AiSidebar, readAiSidebarOpen, writeAiSidebarOpen } from "./ai-sidebar/A
 import { AiSidebarErrorBoundary } from "./ai-sidebar/AiSidebarErrorBoundary";
 import { getNotebookMoveOptions } from "@/lib/app-helpers";
 import { parseTagsText } from "@/lib/utils";
+import { prefersChineseContent } from "@/lib/bilingual-content-locale";
 
 const artwork = (document: PosterDocument) =>
   JSON.stringify({ ...document, previewResourceId: undefined });
@@ -141,7 +142,7 @@ export default function PosterEditorPane({
   companionAvailable = false, beforeCompanionApply, onCompanionNotesChanged,
 }: Props) {
   const { t, i18n } = useTranslation();
-  const zh = i18n.language.startsWith("zh");
+  const zh = prefersChineseContent(i18n.language);
   const initial = useMemo(
     () => parsePosterDocument(memo.contentMarkdown),
     [memo.contentMarkdown],
@@ -312,7 +313,7 @@ export default function PosterEditorPane({
       ),
     };
     if ("text" in patch) {
-      const copy = { ...posterCopy(value) };
+      const copy = { ...posterCopy(next) };
       for (const role of ["title", "subtitle", "badge"] as const)
         if (
           value.elements.some(
@@ -757,7 +758,7 @@ export default function PosterEditorPane({
           ? posterElementFromObject(element, objectsRef.current[index])
           : element,
       );
-      const copy = { ...posterCopy(value) };
+      const copy = { ...posterCopy({ ...value, elements }) };
       for (const role of ["title", "subtitle", "badge"] as const)
         if (
           elements.some(
@@ -1218,7 +1219,7 @@ export default function PosterEditorPane({
     const value = current.current.document;
     setTemplateFontsLoading(true);
     try {
-      const built = await applyPosterDesign(value, id, zh, width, height);
+      const built = await applyPosterDesign(value, id, zh, width, height, { title: t("poster.defaultHeading"), subtitle: t("poster.defaultSubtitle") });
       return { ...built, platformId };
     } finally { setTemplateFontsLoading(false); }
   };

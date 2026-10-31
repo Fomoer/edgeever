@@ -200,7 +200,7 @@ export const MobileStandaloneTiptapEditor = ({
     };
   }, [memoId, readLocalDraft]);
 
-  const inlineFieldExtension = useMemo(() => createInlineFieldExtension(locale), [locale]);
+  const inlineFieldExtension = useMemo(() => createInlineFieldExtension(i18n.getFixedT(locale)), [i18n, locale]);
   const editor = useEditor({
     extensions: [
       ...createEdgeEverDocumentExtensions({

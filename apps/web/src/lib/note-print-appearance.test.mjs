@@ -3,6 +3,17 @@ import { resolveNoteProse } from "@edgeever/shared";
 import { notePrintAppearanceCss, notePrintAppearanceFromProse } from "./note-print-appearance.ts";
 
 describe("note print appearance", () => {
+  test("print code follows a selected monospace face but keeps its own fallback for proportional prose", () => {
+    for (const choice of ["maple-mono-cn", "jetbrains", "wenkai", "system"]) {
+      const css = notePrintAppearanceCss(notePrintAppearanceFromProse(
+        resolveNoteProse({}), "github-light", { choice, customFamily: "" },
+      ));
+      if (choice === "maple-mono-cn" || choice === "jetbrains") {
+        expect(css).toContain("--editor-code-font-family:");
+        expect(css).toContain(choice === "jetbrains" ? "EdgeEver Share JetBrains Mono" : "EdgeEver Share Maple Mono CN");
+      } else expect(css).not.toContain("--editor-code-font-family:");
+    }
+  });
   test("keeps native prose on the editor neutrals and passes the account type size", () => {
     const appearance = notePrintAppearanceFromProse(resolveNoteProse({
       fontSize: 18,

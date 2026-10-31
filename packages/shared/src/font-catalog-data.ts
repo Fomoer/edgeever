@@ -27,7 +27,8 @@ export const FONT_CATALOG = {
   "dmserif": {"zh": "DM Serif Display", "en": "DM Serif Display", "posterFamily": "DM Serif Display", "labelKey": "editor.imageShare.fontStyles.dmserif", "family": "EdgeEver Share DM Serif Display", "path": "gh/tianma-if/edgeever@0da78f6ce8a4643b2dfb7afe9f7a5101472c4ffb/apps/web/public/poster-fonts/dmserif.woff2", "weight": "400", "bytes": 27692, "sha256": "c0652f22903b1a547ad50495aa3f5314e4f666e34921e9e953e3f545fdde14ba"},
   "bebas": {"zh": "Bebas Neue", "en": "Bebas Neue", "posterFamily": "Bebas Neue", "labelKey": "editor.imageShare.fontStyles.bebas", "family": "EdgeEver Share Bebas Neue", "path": "gh/tianma-if/edgeever@0da78f6ce8a4643b2dfb7afe9f7a5101472c4ffb/apps/web/public/poster-fonts/bebas.woff2", "weight": "400", "bytes": 15428, "sha256": "83baf2705cd75f7047e8d11dc9aceeb4ee50407a72f1981937b0b909227b1e68"},
   "spacegrotesk": {"zh": "Space Grotesk", "en": "Space Grotesk", "posterFamily": "Space Grotesk", "labelKey": "editor.imageShare.fontStyles.spacegrotesk", "family": "EdgeEver Share Space Grotesk", "path": "gh/tianma-if/edgeever@0da78f6ce8a4643b2dfb7afe9f7a5101472c4ffb/apps/web/public/poster-fonts/spacegrotesk.woff2", "weight": "400", "bytes": 15600, "sha256": "8c3d72df71f151bd549c89d78b146858c25e4d16d3a3bfe79bf93bf37ee2c9ae"},
-  "jetbrains": {"zh": "JetBrains Mono", "en": "JetBrains Mono", "posterFamily": "JetBrains Mono", "labelKey": "editor.imageShare.fontStyles.jetbrains", "family": "EdgeEver Share JetBrains Mono", "path": "gh/tianma-if/edgeever@0da78f6ce8a4643b2dfb7afe9f7a5101472c4ffb/apps/web/public/poster-fonts/jetbrains.woff2", "weight": "400", "bytes": 22516, "sha256": "1d5b5738120473ecb0d758290426d6d4b59873b7f3d4608541989cd0ab5452e3"},
+  "maple-mono-cn": { zh: "Maple Mono CN", en: "Maple Mono CN", posterFamily: "Maple Mono CN", labelKey: "editor.imageShare.fontStyles.mapleMonoCn", family: "EdgeEver Share Maple Mono CN", path: "@chinese-fonts/maple-mono-cn@2.0.0/dist/MapleMono-CN-Regular/result.css", downloadOnSelect: true, monospace: true },
+  "jetbrains": {"monospace": true, "zh": "JetBrains Mono", "en": "JetBrains Mono", "posterFamily": "JetBrains Mono", "labelKey": "editor.imageShare.fontStyles.jetbrains", "family": "EdgeEver Share JetBrains Mono", "path": "gh/tianma-if/edgeever@0da78f6ce8a4643b2dfb7afe9f7a5101472c4ffb/apps/web/public/poster-fonts/jetbrains.woff2", "weight": "400", "bytes": 22516, "sha256": "1d5b5738120473ecb0d758290426d6d4b59873b7f3d4608541989cd0ab5452e3"},
 } as const;
 
 /** The five entries in Qiaomu's approximately 15 MB designer starter pack. */
@@ -40,10 +41,26 @@ export const FONT_IDS = Object.keys(FONT_CATALOG) as RemoteNoteImageFont[];
 
 /** Note-body settings menu only. Poster and image-share lists keep FONT_IDS order. */
 export const NOTE_BODY_FONT_MENU_GROUPS = {
-  chineseReading: ["wenkai", "zhuque", "source-han-serif", "source-han-sans", "puhui"],
+  chineseReading: ["wenkai", "zhuque", "source-han-serif", "source-han-sans", "puhui", "maple-mono-cn"],
   chineseDisplay: ["smiley", "heavy", "puhui-heavy", "youshe", "shuhei", "douyin", "mashan", "jiangcheng", "huangyou", "glow", "kuaile", "source-han-serif-heavy"],
   latin: ["inter", "spacegrotesk", "dmserif", "anton", "bebas", "jetbrains"],
 } as const satisfies Record<"chineseReading" | "chineseDisplay" | "latin", readonly RemoteNoteImageFont[]>;
 export const findCatalogFont = (idOrFamily: string) => FONT_IDS.find(id => id === idOrFamily || FONT_CATALOG[id].family === idOrFamily || FONT_CATALOG[id].posterFamily === idOrFamily);
 export const catalogFontStack = (id: RemoteNoteImageFont) => `"${FONT_CATALOG[id].family}", "${OFFLINE_SANS_FAMILY}", system-ui, sans-serif`;
 export const CATALOG_FONT_STACKS = Object.fromEntries(FONT_IDS.map(id => [id, catalogFontStack(id)])) as Record<RemoteNoteImageFont, string>;
+
+/** Selection-only fonts must not download merely because their menu row is visible. */
+export const shouldLoadFontPreview = (id: string | undefined, selected: boolean) => {
+  if (!id || !isRemoteNoteImageFont(id)) return true;
+  const font = FONT_CATALOG[id];
+  return selected || !("downloadOnSelect" in font && font.downloadOnSelect);
+};
+
+/** Only verified monospace choices can replace a code editor's font. */
+export const catalogCodeFontStack = (id: string | null | undefined): string | null => {
+  if (!id || !isRemoteNoteImageFont(id)) return null;
+  const font = FONT_CATALOG[id];
+  return "monospace" in font && font.monospace
+    ? `"${font.family}", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`
+    : null;
+};

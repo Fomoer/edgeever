@@ -368,6 +368,7 @@ const syncOutboxItem = async (item: DesktopOutboxItem, stagedRewrites: StagedRes
     const data = await api.createMemo({
       notebookId: String(payload.notebookId),
       title: String(payload.title ?? ""),
+      contentJson: payload.contentJson as TiptapDoc | undefined,
       contentMarkdown: typeof payload.contentMarkdown === "string" ? payload.contentMarkdown : undefined,
       tags: Array.isArray(payload.tags) ? payload.tags.filter((tag): tag is string => typeof tag === "string") : [],
       createdAt: typeof payload.createdAt === "string" ? payload.createdAt : undefined,

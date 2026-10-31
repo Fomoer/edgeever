@@ -1,0 +1,122 @@
+$ bun run --cwd apps/extension lint:firefox
+$ web-ext lint --source-dir dist-firefox --output text
+Validation Summary:
+
+errors          0              
+notices         0              
+warnings        10             
+
+WARNINGS:
+
+Code                    Message       Description              File          L
+UNSAFE_VAR_ASSIGNMENT   Unsafe        Due to both security     assets/cap…   2
+                        assignment    and performance          ture.js        
+                        to            concerns, this may not                  
+                        innerHTML     be set using dynamic                    
+                                      values which have not                   
+                                      been adequately                         
+                                      sanitized. This can                     
+                                      lead to security                        
+                                      issues or fairly                        
+                                      serious performance                     
+                                      degradation.                            
+UNSAFE_VAR_ASSIGNMENT   Unsafe        Due to both security     assets/cap…   2
+                        assignment    and performance          ture.js        
+                        to            concerns, this may not                  
+                        innerHTML     be set using dynamic                    
+                                      values which have not                   
+                                      been adequately                         
+                                      sanitized. This can                     
+                                      lead to security                        
+                                      issues or fairly                        
+                                      serious performance                     
+                                      degradation.                            
+UNSAFE_VAR_ASSIGNMENT   Unsafe        Due to both security     assets/cli…   9
+                        assignment    and performance          p-feedback…    
+                        to            concerns, this may not   .js            
+                        innerHTML     be set using dynamic                    
+                                      values which have not                   
+                                      been adequately                         
+                                      sanitized. This can                     
+                                      lead to security                        
+                                      issues or fairly                        
+                                      serious performance                     
+                                      degradation.                            
+UNSAFE_VAR_ASSIGNMENT   Unsafe        Due to both security     assets/cli…   9
+                        assignment    and performance          p-feedback…    
+                        to            concerns, this may not   .js            
+                        innerHTML     be set using dynamic                    
+                                      values which have not                   
+                                      been adequately                         
+                                      sanitized. This can                     
+                                      lead to security                        
+                                      issues or fairly                        
+                                      serious performance                     
+                                      degradation.                            
+UNSAFE_VAR_ASSIGNMENT   Unsafe        Due to both security     assets/mai…   9
+                        assignment    and performance          n-DOlhqLeB…    
+                        to            concerns, this may not   .js            
+                        innerHTML     be set using dynamic                    
+                                      values which have not                   
+                                      been adequately                         
+                                      sanitized. This can                     
+                                      lead to security                        
+                                      issues or fairly                        
+                                      serious performance                     
+                                      degradation.                            
+UNSAFE_VAR_ASSIGNMENT   Unsafe        Due to both security     assets/mai…   9
+                        assignment    and performance          n-DOlhqLeB…    
+                        to            concerns, this may not   .js            
+                        innerHTML     be set using dynamic                    
+                                      values which have not                   
+                                      been adequately                         
+                                      sanitized. This can                     
+                                      lead to security                        
+                                      issues or fairly                        
+                                      serious performance                     
+                                      degradation.                            
+UNSAFE_VAR_ASSIGNMENT   Unsafe call   Due to both security     assets/bac…   6
+                        to            and performance          kground.js     
+                        Nn(n).docu…   concerns, this may not                  
+                        ment().wri…   be set using dynamic                    
+                        te for        values which have not                   
+                        argument 0    been adequately                         
+                                      sanitized. This can                     
+                                      lead to security                        
+                                      issues or fairly                        
+                                      serious performance                     
+                                      degradation.                            
+DANGEROUS_EVAL          The           Evaluation of strings    assets/bac…   1
+                        Function      as code can lead to      kground.js     
+                        constructor   security                                
+                        is eval.      vulnerabilities and                     
+                                      performance issues,                     
+                                      even in the most                        
+                                      innocuous of                            
+                                      circumstances. Please                   
+                                      avoid using `eval` and                  
+                                      the `Function`                          
+                                      constructor when at                     
+                                      all possible.                           
+UNSAFE_VAR_ASSIGNMENT   Unsafe        Due to both security     assets/reg…   9
+                        assignment    and performance          ion-clip.js    
+                        to            concerns, this may not                  
+                        innerHTML     be set using dynamic                    
+                                      values which have not                   
+                                      been adequately                         
+                                      sanitized. This can                     
+                                      lead to security                        
+                                      issues or fairly                        
+                                      serious performance                     
+                                      degradation.                            
+UNSAFE_VAR_ASSIGNMENT   Unsafe        Due to both security     assets/reg…   9
+                        assignment    and performance          ion-clip.js    
+                        to            concerns, this may not                  
+                        innerHTML     be set using dynamic                    
+                                      values which have not                   
+                                      been adequately                         
+                                      sanitized. This can                     
+                                      lead to security                        
+                                      issues or fairly                        
+                                      serious performance                     
+                                      degradation.                            
