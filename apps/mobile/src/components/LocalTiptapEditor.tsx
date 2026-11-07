@@ -73,12 +73,13 @@ import {
   getMobileEditorImageScaleLabel,
   getMobileEditorImageWidthPresetLabel,
   getMobileEditorCopy,
+  type MobileEditorLocale,
   getMobileEditorPlaceholder,
   getMobileEditorToolbarActionLabel,
   getMobileEditorToolbarLabel,
   type MobileEditorToolbarActionId,
 } from "@edgeever/shared/mobile-editor";
-import type { AiDraftIncompleteReason } from "@edgeever/shared/ai-generation";
+import { formatAiPartList, type AiDraftIncompleteReason } from "@edgeever/shared/ai-generation";
 import {
   type NoteImageTheme,
   type NoteImageFontStyle,
@@ -152,7 +153,7 @@ type LocalTiptapEditorSharedProps = {
   onReaderScroll?: (collapsed: boolean) => Promise<void>;
   onImageExportEvent?: (payloadJson: string) => Promise<void>;
   ref: Ref<LocalTiptapEditorRef>;
-  locale: "zh-CN" | "en-US" | "ja" | "pl" | "ru";
+  locale: MobileEditorLocale;
   theme: "light" | "dark";
   /** Live-switchable. The same DomWebView stays mounted across viewer → editor. */
   mode?: "editor" | "viewer";
@@ -239,6 +240,9 @@ type MobileAiPanelState = {
    * A new request starts as "interrupted" and only a clean finish clears it.
    */
   incomplete?: AiDraftIncompleteReason | null;
+  /** The part a long run is working on, and the parts that kept their source text (#652). */
+  progress?: { part: number; parts: number } | null;
+  incompleteParts?: number[];
 };
 
 type MobileAiBridgePayload = {
@@ -440,7 +444,7 @@ const ReadOnlyX6Diagram = ({
   theme,
 }: {
   diagram: DiagramDocument;
-  locale: "zh-CN" | "en-US" | "ja" | "pl" | "ru";
+  locale: MobileEditorLocale;
   theme: "light" | "dark";
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1127,6 +1131,8 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
       ...current,
       output: "",
       incomplete: "interrupted",
+      progress: null,
+      incompleteParts: [],
       error: null,
       generating: true,
       requestId,
@@ -1162,6 +1168,12 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
         if (payload.event.type === "text-delta") {
           return { ...current, output: current.output + payload.event.text };
         }
+        if (payload.event.type === "text-reset") {
+          return { ...current, output: payload.event.text };
+        }
+        if (payload.event.type === "progress") {
+          return { ...current, progress: { part: payload.event.part, parts: payload.event.parts } };
+        }
         if (payload.event.type === "error") {
           // Text that arrived before the error stays an incomplete draft.
           return {
@@ -1174,7 +1186,15 @@ function LocalTiptapEditorImpl(props: LocalTiptapEditorProps) {
           };
         }
         if (payload.event.type === "finish") {
-          return { ...current, generating: false, requestId: null, incomplete: payload.event.truncated ? "truncated" : null };
+          const incompleteParts = payload.event.incompleteParts ?? [];
+          return {
+            ...current,
+            generating: false,
+            requestId: null,
+            progress: null,
+            incompleteParts,
+            incomplete: payload.event.truncated || incompleteParts.length ? "truncated" : null,
+          };
         }
         return current;
       });
@@ -1831,7 +1851,7 @@ const MobileSelectionAiPanel = ({
   panel,
   prompts,
 }: {
-  locale: "zh-CN" | "en-US" | "ja" | "pl" | "ru";
+  locale: MobileEditorLocale;
   onApply: (mode: "append" | "replace") => void;
   onChange: Dispatch<SetStateAction<MobileAiPanelState | null>>;
   onClose: () => void;
@@ -2047,9 +2067,18 @@ const MobileSelectionAiPanel = ({
             </div>
           </label>
         ) : null}
+        {panel.generating && panel.progress ? (
+          <p aria-live="polite" className="edgeever-ai-progress">
+            {getMobileEditorCopy(locale).ai.progressPart
+              .replace("{{part}}", String(panel.progress.part))
+              .replace("{{parts}}", String(panel.progress.parts))}
+          </p>
+        ) : null}
         {panel.incomplete && panel.output && !panel.generating ? (
           <p className="edgeever-ai-error" role="alert">
-            {panel.incomplete === "truncated"
+            {panel.incomplete === "truncated" && panel.incompleteParts?.length
+              ? getMobileEditorCopy(locale).ai.incompleteParts.replace("{{parts}}", formatAiPartList(panel.incompleteParts, locale))
+              : panel.incomplete === "truncated"
               ? getMobileEditorCopy(locale).ai.incompleteTruncated
               : panel.incomplete === "stopped"
                 ? getMobileEditorCopy(locale).ai.incompleteStopped
@@ -2345,7 +2374,7 @@ const renderMobileMermaid = (source: string, theme: "light" | "dark", htmlLabels
 };
 
 const createMobileCodeBlockExtension = (
-  locale: "zh-CN" | "en-US" | "ja" | "pl" | "ru",
+  locale: MobileEditorLocale,
   theme: "light" | "dark",
   hideCopyForVisualDiagram = false,
 ) => CodeBlock.extend({
@@ -2499,7 +2528,7 @@ const createMobileCodeBlockExtension = (
 });
 
 const createMobileImageSizeControls = (
-  locale: "zh-CN" | "en-US" | "ja" | "pl" | "ru",
+  locale: MobileEditorLocale,
   updateWidth: (width: number) => void
 ) => {
   const controls = document.createElement("div");
@@ -2551,7 +2580,7 @@ const createMobileImageSizeControls = (
 
 const createProtectedImageExtension = (
   baseUrl: string,
-  locale: "zh-CN" | "en-US" | "ja" | "pl" | "ru",
+  locale: MobileEditorLocale,
   loadResource: (source: string) => Promise<string | null>,
   options?: {
     readOnly?: boolean | (() => boolean);
@@ -3175,6 +3204,7 @@ const getEditorStyles = (theme: "light" | "dark", options?: { viewer?: boolean }
   .edgeever-ai-refine-row input { min-width: 0; flex: 1; }
   .edgeever-ai-refine-row button, .edgeever-ai-panel-footer button { min-height: 40px; padding: 0 12px; border: 1px solid ${theme === "dark" ? "#475569" : "#cbd5e1"}; border-radius: 9px; background: ${theme === "dark" ? "#111c18" : "#fff"}; color: ${theme === "dark" ? "#f8fafc" : "#0f172a"}; font-weight: 700; }
   .edgeever-ai-panel button:disabled { opacity: 0.42; }
+  .edgeever-ai-progress { margin: 0; color: ${theme === "dark" ? "#a1a1aa" : "#52525b"}; font-size: 13px; line-height: 1.45; }
   .edgeever-ai-error { margin: 0; color: ${theme === "dark" ? "#fda4af" : "#be123c"}; font-size: 13px; line-height: 1.45; }
   .edgeever-ai-panel-footer { display: grid; flex: 0 0 auto; gap: 9px; padding: 10px 12px max(10px, env(safe-area-inset-bottom)); border-top: 1px solid ${theme === "dark" ? "#334155" : "#e2e8f0"}; background: ${theme === "dark" ? "#111c18" : "#fff"}; }
   .edgeever-ai-panel-footer > div { display: flex; gap: 8px; }

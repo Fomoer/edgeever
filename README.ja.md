@@ -15,13 +15,14 @@
     <a href="#スポンサーと支援"><img src="https://img.shields.io/badge/Sponsor-EdgeEver-ea4aaa?logo=github-sponsors" alt="スポンサーと支援" /></a>
   </p>
   <p>
-    <a href="README.zh-CN.md">简体中文</a> | <a href="README.zh-TW.md">繁體中文</a> | <a href="README.md">English</a> | <b>日本語</b> | <a href="README.pl-PL.md">Polski</a>
+    <a href="README.zh-CN.md">简体中文</a> | <a href="README.zh-TW.md">繁體中文</a> | <a href="README.md">English</a> | <a href="README.es.md">Español</a> | <a href="README.de.md">Deutsch</a> | <a href="README.fr.md">Français</a> | <b>日本語</b> | <a href="README.pl-PL.md">Polski</a> | <a href="README.ru.md">Русский</a>
   </p>
   <p>
     <a href="https://t.me/+GvKYnL37feUwOTNl"><img src="assets/readme/community/telegram.svg" alt="Telegram" width="16" height="16" align="absmiddle" /> Telegram グループ</a> &nbsp;|&nbsp;
     <a href="https://demo.edgeever.org">🌐 オンラインデモ</a> &nbsp;|&nbsp;
     <a href="#全プラットフォームクライアントと拡張機能">📱 クライアントと拡張機能</a> &nbsp;|&nbsp;
-    <a href="#features">機能とワークフローマトリクス</a>
+    <a href="#features">機能とワークフローマトリクス</a> &nbsp;|&nbsp;
+    <a href="docs/note-migration-guide.md">📥 ノート移行ガイド</a>
   </p>
   <p align="center">
     <img src="assets/readme/edgeever-hero-v6.png" alt="EdgeEver ワークスペースプレビュー" width="800" />
@@ -112,7 +113,7 @@ GitHub と Cloudflare のオンライン操作だけで EdgeEver を導入して
    （32 文字以上を推奨）。管理者ユーザー名の既定値は `admin` です。
 5. Secret のデプロイ後、同じ Worker の Settings → Builds → Connect で Fork の
    `main` ブランチに接続します。
-6. Settings → Builds → API token でデプロイ用の Cloudflare API トークンを選択または作成し、対象アカウントの D1 読み取り・編集権限を確認します。
+6. 同じ Worker の Settings → Builds → API token でデプロイ用の Cloudflare API トークンを選択または作成し、対象アカウントの D1 読み取り・編集権限を確認します。
 7. Fork の GitHub リポジトリで Actions → Update deployed EdgeEver を開き、必要に応じて有効化して、
    `main` ブランチで Run workflow を選択します。Cloudflare で対応するビルドの成功とデプロイの完了を確認してから、`/api/health` と
    `/api/openapi.json` を確認し、管理者ユーザー名とパスワードでログインを検証します。
@@ -133,7 +134,7 @@ GitHub と Cloudflare のオンライン操作だけで EdgeEver を導入して
 3. **Worker を作成**：Cloudflare Workers & Pages で Create application → Start with Hello World! を選び、`edgeever` という名前でデプロイします。これは仮のサービスで、EdgeEver は手順 7 でデプロイします。
 4. **管理者パスワードを設定**：Worker の Settings → Variables and Secrets で Secret 型の `EDGE_EVER_AUTH_PASSWORD` を追加し、Deploy を選択します。値はログインパスワードで、32 文字以上を推奨します。完了後に Fork へ接続します。
 5. **Fork に接続**：既存 Worker の Settings → Builds → Connect で Fork と本番ブランチ `main` を選びます。
-6. **デプロイ権限を設定**：Settings → Builds → API token でデプロイ用の Cloudflare API トークンを選択または作成し、対象アカウントの D1 読み取り・編集権限を確認します。
+6. **デプロイ権限を設定**：同じ Worker の Settings → Builds → API token でデプロイ用の Cloudflare API トークンを選択または作成し、対象アカウントの D1 読み取り・編集権限を確認します。
 7. **ビルドと確認**：Fork の GitHub リポジトリで Actions → Update deployed EdgeEver を開き、必要に応じて有効化して、 `main` ブランチで Run workflow を選択します。Cloudflare で対応するビルドの成功とデプロイの完了を確認してから、 `/api/health` が `200` を返すこととログインを確認します。以後、このワークフローが安定版と修正を自動で同期します。
 
 > 📖 手順と設定の詳細は [Online Deployment Guide](docs/deploy-cloudflare-button.md) を見てください。
@@ -174,15 +175,13 @@ curl -fsSL https://edgeever.org/install.sh | bash
 日常のバックアップ、インスタンス間のスムーズな移行、既存のノートアプリからの乗り換えなど、EdgeEver は信頼性の高い完全なデータ流通を提供します：
 
 - **EdgeEver ネイティブのバックアップと復元**：アプリ内の **プロフィール** -> **インポートとエクスポート** から、いつでも EdgeEver ZIP アーカイブを書き出し、または取り込めます。解凍後の `notes/` ディレクトリには Markdown ファイルと添付がそのまま保持され、ローカル保管や直接閲覧に利用できます。内部の構造化メタデータにより、異なる EdgeEver インスタンス間でも無劣化で完全復元が可能です。取り込み時は無関係な既存データを残し、同一 ID のノートを自動で上書き更新します。
-- **サードパーティ製ノートからのスムーズな移行**：
-  - **Evernote からの移行**: [docs/evernote-migration-guide.md](docs/evernote-migration-guide.md)
-  - **flomo からの移行**: [docs/flomo-migration-guide.md](docs/flomo-migration-guide.md)
-  - **Memos からの移行**: [docs/memos-migration-guide.md](docs/memos-migration-guide.md)
-  - **Notion からの移行**: [docs/notion-migration-guide.md](docs/notion-migration-guide.md)
+- **サードパーティ製ノートからのスムーズな移行**：Web / デスクトップ版のネイティブなワンクリックインポート（Evernote、Obsidian、Joplin のノート、階層、添付に完全対応）から、AI Agent (MCP) による Notion、flomo、Memos などの移行まで、EdgeEver はシームレスで検証可能なデータ移行を提供します。詳細は [サードパーティ製ノート移行ガイド](docs/note-migration-guide.md) を参照してください。
 
 ### AI と MCP プロトコル連携
 
 **プロフィール** -> **API / MCP** で API トークンを作成し、ワンクリックで Remote MCP 設定をコピーすることで、Claude Code、Cursor、Antigravity、OpenClaw などの AI Agent がアカウント権限の範囲内で知識ベースを安全に管理できます。テキストノート、図のノート（マインドマップ、フローチャート、アーキテクチャ図）、多次元テーブルノート、ネイティブポスターノートの完全な CRUD に対応し、Agent はノートブック階層、タグ、添付ファイル、履歴バージョン、ノートテンプレート、AI 指示の管理も行えます。
+
+クライアントの設定、トークンの権限、トラブルシューティング、エージェント向けルールの例は [Using EdgeEver with MCP clients](docs/mcp-guide.md)（英語）を参照してください。
 
 > 💡 **着想：**
 > AI を知識の整理役と創作の相棒にしてください。構想をインタラクティブなマインドマップ、フローチャート、アーキテクチャ図、多次元テーブルへ瞬時に落とし込み、Agent に私有の文脈を渡せます。EdgeEver のリッチテキストと美しい体裁と組み合わせることで、AI が手伝った内容は、整った、いつでも配布できる高品質な知識資産になります。

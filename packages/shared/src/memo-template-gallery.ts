@@ -31,10 +31,24 @@ const item = (
   ja: MemoTemplateSeedTranslation,
   pl: MemoTemplateSeedTranslation,
   ru: MemoTemplateSeedTranslation,
+  zhTW?: MemoTemplateSeedTranslation,
+  es?: MemoTemplateSeedTranslation,
+  de?: MemoTemplateSeedTranslation,
+  fr?: MemoTemplateSeedTranslation,
 ): MemoTemplateGalleryItem => ({
   key,
   tag: key,
-  translations: { "zh-CN": zhCN, "en-US": enUS, ja, pl, ru },
+  translations: {
+    "zh-CN": zhCN,
+    "zh-TW": zhTW ?? zhCN,
+    "en-US": enUS,
+    es: es ?? enUS,
+    de: de ?? enUS,
+    fr: fr ?? enUS,
+    ja,
+    pl,
+    ru,
+  },
 });
 
 export const MEMO_TEMPLATE_GALLERY: readonly MemoTemplateGalleryItem[] = [

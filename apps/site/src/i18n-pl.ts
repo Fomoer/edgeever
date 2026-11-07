@@ -18,6 +18,7 @@ export const plSiteCopy = {
     dockerDeploy: "Docker",
     selfHostedAlternative: "Alternatywa dla Evernote",
     migration: "Migracja z Evernote",
+    noteMigration: "Przewodnik migracji",
     evernoteMigration: "Migracja z Evernote",
     memosMigration: "Migracja z Memos",
     notionMigration: "Migracja z Notion",
@@ -46,6 +47,8 @@ export const plSiteCopy = {
     clipper: "Web Clipper",
     windows: "Windows",
     linux: "Linux",
+    migrationTitle: "Migracja notatek",
+    migrationSubtitle: "Natywny import z Evernote, Obsidian, Joplin oraz migracja z Notion i flomo",
     imageAlt: "Podgląd EdgeEver",
     badgeText:
       "💡 Wszystkie platformy: macOS, Windows, Linux, iOS, Android, Web Clipper · Natywna współpraca z MCP i ACP · Darmowy plan Cloudflare i Docker",
@@ -267,9 +270,9 @@ export const plSiteCopy = {
         cta: "Przeczytaj poradnik wdrożenia",
       },
       {
-        title: "Migracja z Evernote",
-        summary: "Użyj EdgeEver MCP, evernote-backup i skryptu importu ENEX, aby przenieść starą bibliotekę notatek do własnej instancji.",
-        href: "/blog/evernote-migration-guide",
+        title: "Migracja z innych aplikacji",
+        summary: "Natywny import z Evernote, Obsidian i Joplin jednym kliknięciem lub migracja z Notion, flomo i Memos za pomocą AI Agent (MCP).",
+        href: "/blog/note-migration-guide",
         cta: "Przeczytaj poradnik migracji",
       },
       {

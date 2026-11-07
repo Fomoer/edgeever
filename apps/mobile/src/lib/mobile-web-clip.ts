@@ -27,7 +27,7 @@ export type MobileRenderedWebPage = {
   title?: string;
 };
 
-export type MobileWebClipLocale = "zh-CN" | "en-US" | "ja" | "pl" | "ru";
+export type MobileWebClipLocale = "zh-CN" | "zh-TW" | "en-US" | "es" | "de" | "fr" | "ja" | "pl" | "ru";
 
 const webClipCopy: Record<MobileWebClipLocale, {
   capturedAtLabel: string;
@@ -45,6 +45,14 @@ const webClipCopy: Record<MobileWebClipLocale, {
     imageAlt: "图片",
     separator: "：",
   },
+  "zh-TW": {
+    sourceLabel: "來源",
+    capturedAtLabel: "擷取時間",
+    unavailableBody: "正文暫時無法擷取，來源連結已保留，可稍後重試。",
+    fallbackTitle: "網頁擷取",
+    imageAlt: "圖片",
+    separator: "：",
+  },
   "en-US": {
     sourceLabel: "Source",
     capturedAtLabel: "Captured at",
@@ -52,6 +60,30 @@ const webClipCopy: Record<MobileWebClipLocale, {
     fallbackTitle: "Web clip",
     imageAlt: "Image",
     separator: ": ",
+  },
+  es: {
+    sourceLabel: "Fuente",
+    capturedAtLabel: "Capturado el",
+    unavailableBody: "No se pudo extraer el texto de la página. El enlace de origen se ha guardado para volver a intentarlo más tarde.",
+    fallbackTitle: "Recorte web",
+    imageAlt: "Imagen",
+    separator: ": ",
+  },
+  de: {
+    sourceLabel: "Quelle",
+    capturedAtLabel: "Erfasst am",
+    unavailableBody: "Der Text der Seite konnte nicht extrahiert werden. Der Quelllink wurde gespeichert, sodass Sie es später erneut versuchen können.",
+    fallbackTitle: "Web-Clip",
+    imageAlt: "Bild",
+    separator: ": ",
+  },
+  fr: {
+    sourceLabel: "Source",
+    capturedAtLabel: "Date de capture",
+    unavailableBody: "Impossible d'extraire le texte de la page. Le lien source est conservé pour vous permettre de réessayer ultérieurement.",
+    fallbackTitle: "Capture web",
+    imageAlt: "Image",
+    separator: " : ",
   },
   ja: {
     sourceLabel: "出典",

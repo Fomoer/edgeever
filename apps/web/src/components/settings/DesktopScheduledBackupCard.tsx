@@ -117,34 +117,24 @@ export const DesktopScheduledBackupCard = () => {
           <Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => void attempt(() => bridge.backup("open-folder", { backupSetId: status.backupSetId }))}><FolderOpen className="mr-1.5 h-4 w-4" />{t("desktopBackup.openFolder")}</Button>
         </div>
         <div className="grid gap-2 rounded-lg border border-border/60 bg-muted/30 p-3.5 text-xs" aria-live="polite" data-backup-status>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2">
-            <div className="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-200">
-              {status.task ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                  <span>{t(`desktopBackup.phases.${status.task.phase}`)}{status.task.total > 0 ? ` (${status.task.completed} / ${status.task.total})` : ""}</span>
-                </>
-              ) : status.config.enabled ? (
-                <>
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-600" />
-                  </span>
-                  <span>{t("desktopBackup.autoRunning")}</span>
-                  <span className="font-normal text-muted-foreground">({t(`desktopBackup.intervals.${config.interval}`)} · {t("desktopBackup.copies", { count: config.retention })})</span>
-                </>
-              ) : (
-                <>
-                  <span className="inline-flex h-2 w-2 rounded-full bg-slate-400" />
-                  <span>{t("desktopBackup.autoOff")}</span>
-                </>
-              )}
-            </div>
-            {status.lastCheck?.result === "success" ? (
-              <span className="rounded bg-emerald-100/80 px-1.5 py-0.5 text-[11px] font-normal text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                {t("desktopBackup.statusNormal")}
-              </span>
-            ) : null}
+          <div className="flex flex-wrap items-center gap-2 border-b border-border/40 pb-2 font-medium text-slate-800 dark:text-slate-200">
+            {status.task ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                <span>{t(`desktopBackup.phases.${status.task.phase}`)}{status.task.total > 0 ? ` (${status.task.completed} / ${status.task.total})` : ""}</span>
+              </>
+            ) : status.config.enabled ? (
+              <>
+                <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-emerald-600" />
+                <span>{t("desktopBackup.autoRunning")}</span>
+                <span className="font-normal text-muted-foreground">({t(`desktopBackup.intervals.${config.interval}`)} · {t("desktopBackup.copies", { count: config.retention })})</span>
+              </>
+            ) : (
+              <>
+                <span className="inline-flex h-2 w-2 rounded-full bg-slate-400" />
+                <span>{t("desktopBackup.autoOff")}</span>
+              </>
+            )}
           </div>
 
           <div className="grid gap-1">
@@ -229,21 +219,24 @@ export const DesktopScheduledBackupCard = () => {
           </div>
         </details>
         <DesktopOffsiteSettings status={status} disabled={saving} />
-        <section className="grid gap-2.5 border-t pt-3" aria-label={t("desktopBackup.history", { count: status.history.length })}>
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-medium text-slate-700 dark:text-slate-300">{t("desktopBackup.history", { count: status.history.length })}</h3>
+        <details className="group border-t pt-3">
+          <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-slate-700 select-none transition-colors hover:text-slate-900 list-none [&::-webkit-details-marker]:hidden">
+            <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 text-slate-400 transition-transform duration-200 group-open:rotate-90" />
+            <span>{t("desktopBackup.history", { count: status.history.length })}</span>
+          </summary>
+          <div className="mt-2.5">
+            {status.history.length ? <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-muted/10 px-3">{[...status.history].reverse().map((item) => <li key={item.name} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2.5">
+              <div className="min-w-0 flex-1 basis-60 space-y-1">
+                <p className="break-all font-mono text-xs font-medium text-slate-800 dark:text-slate-200">{item.name}</p>
+                <p className="text-xs text-muted-foreground">{date(item.completedAt)} · <span className="whitespace-nowrap tabular-nums font-mono font-medium">{formatBytes(item.size)}</span> · {t(item.encrypted ? "desktopBackup.encrypted" : "desktopBackup.plain")}</p>
+              </div>
+              <div className="flex shrink-0 gap-1.5">
+                <Button size="sm" variant="outline" className="h-7 text-xs font-normal" disabled={restoreDisabled} onClick={() => restore(item.name)}>{t("desktopBackup.restore")}</Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs font-normal text-destructive hover:text-destructive" disabled={busy || saving} onClick={() => { setDeleteError(null); setDeleting(item.name); }}>{t("common.delete")}</Button>
+              </div>
+            </li>)}</ul> : <div className="rounded-md border border-dashed border-border/60 py-4 text-center"><p className="text-xs text-muted-foreground">{t("desktopBackup.emptyHistory")}</p></div>}
           </div>
-          {status.history.length ? <ul className="divide-y divide-border/40 rounded-md border border-border/40 bg-muted/10 px-3">{[...status.history].reverse().map((item) => <li key={item.name} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2.5">
-            <div className="min-w-0 flex-1 basis-60 space-y-1">
-              <p className="break-all font-mono text-xs font-medium text-slate-800 dark:text-slate-200">{item.name}</p>
-              <p className="text-xs text-muted-foreground">{date(item.completedAt)} · <span className="whitespace-nowrap tabular-nums font-mono font-medium">{formatBytes(item.size)}</span> · {t(item.encrypted ? "desktopBackup.encrypted" : "desktopBackup.plain")}</p>
-            </div>
-            <div className="flex shrink-0 gap-1.5">
-              <Button size="sm" variant="outline" className="h-7 text-xs font-normal" disabled={restoreDisabled} onClick={() => restore(item.name)}>{t("desktopBackup.restore")}</Button>
-              <Button size="sm" variant="ghost" className="h-7 text-xs font-normal text-destructive hover:text-destructive" disabled={busy || saving} onClick={() => { setDeleteError(null); setDeleting(item.name); }}>{t("common.delete")}</Button>
-            </div>
-          </li>)}</ul> : <div className="rounded-md border border-dashed border-border/60 py-4 text-center"><p className="text-xs text-muted-foreground">{t("desktopBackup.emptyHistory")}</p></div>}
-        </section>
+        </details>
       </>}</DesktopBackupImport>
     </CardContent>
     {runOpen ? <DesktopBackupRunDialog key={status.backupSetId} status={status} onRun={runBackup} onClose={() => setRunOpen(false)} /> : null}

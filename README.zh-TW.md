@@ -15,13 +15,14 @@
     <a href="#贊助與支持"><img src="https://img.shields.io/badge/Sponsor-支持專案-ea4aaa?logo=github-sponsors" alt="贊助與支持" /></a>
   </p>
   <p>
-    <a href="README.zh-CN.md">简体中文</a> | <b>繁體中文</b> | <a href="README.md">English</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl-PL.md">Polski</a>
+    <a href="README.zh-CN.md">简体中文</a> | <b>繁體中文</b> | <a href="README.md">English</a> | <a href="README.es.md">Español</a> | <a href="README.de.md">Deutsch</a> | <a href="README.fr.md">Français</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl-PL.md">Polski</a> | <a href="README.ru.md">Русский</a>
   </p>
   <p>
     <a href="#wechat-group"><img src="assets/readme/community/wechat.svg" alt="WeChat" width="16" height="16" align="absmiddle" /> 微信交流群</a> &nbsp;|&nbsp;
     <a href="https://demo.edgeever.org">🌐 線上展示</a> &nbsp;|&nbsp;
     <a href="#全平台用戶端與瀏覽器外掛">📱 用戶端與外掛下載</a> &nbsp;|&nbsp;
-    <a href="#features">核心功能與場景矩陣</a>
+    <a href="#features">核心功能與場景矩陣</a> &nbsp;|&nbsp;
+    <a href="docs/note-migration-guide.md">📥 第三方筆記遷入</a>
   </p>
   <p align="center">
     <img src="assets/readme/edgeever-hero-v6.png" alt="EdgeEver 產品工作區預覽" width="800" />
@@ -112,7 +113,7 @@ Cloudflare 線上部署可以選擇以下兩種方式之一：
    管理員使用者名稱預設為 `admin`。
 5. 確認 Secret 已部署後，在該 Worker 的 Settings → Builds → Connect 中連接 Fork 的
    `main` 分支。
-6. 在 Settings → Builds → API token 中選擇或建立用於部署的
+6. 在該 Worker 的 Settings → Builds → API token 中選擇或建立用於部署的
    Cloudflare API Token，並確認它具備目標帳戶的 D1 讀取及編輯權限。
 7. 在 Fork 的 GitHub 儲存庫中進入 Actions → Update deployed EdgeEver，依提示啟用工作流程，
    選擇 `main` 分支並點選 Run workflow。在 Cloudflare 確認對應建置成功、部署完成後，驗證 `/api/health` 和 `/api/openapi.json`，
@@ -134,7 +135,7 @@ Cloudflare 線上部署可以選擇以下兩種方式之一：
 3. **建立 Worker**：在 Cloudflare Workers & Pages 中選擇 Create application → Start with Hello World!，命名為 `edgeever` 並部署。此時是預留服務，第 7 步才部署 EdgeEver。
 4. **設定管理員密碼**：在該 Worker 的 Settings → Variables and Secrets 中，選擇 Secret 類型，新增 `EDGE_EVER_AUTH_PASSWORD` 並點選 Deploy。值為您指定的登入密碼，建議至少 32 個字元。完成後再連接 Fork。
 5. **連接 Fork**：在既有 Worker 的 Settings → Builds → Connect 中選擇 Fork 和正式環境分支 `main`。
-6. **設定部署權限**：在 Settings → Builds → API token 中選擇或建立用於部署的 Cloudflare API Token，並確認它具備目標帳戶的 D1 讀取及編輯權限。
+6. **設定部署權限**：在該 Worker 的 Settings → Builds → API token 中選擇或建立用於部署的 Cloudflare API Token，並確認它具備目標帳戶的 D1 讀取及編輯權限。
 7. **建置並驗證**：在 Fork 的 GitHub 儲存庫中進入 Actions → Update deployed EdgeEver，依提示啟用工作流程， 選擇 `main` 分支並點選 Run workflow。在 Cloudflare 確認對應建置成功、部署完成後，確認 `/api/health` 回傳 `200`，並驗證登入。後續由該工作流程自動同步正式版本，持續獲得功能更新與問題修復。
 
 > 📖 包含具體參數與建置指令的詳細步驟，請查看 [線上部署完整文件](docs/deploy-cloudflare-button.zh-CN.md)。
@@ -175,15 +176,13 @@ curl -fsSL https://edgeever.org/install.sh | bash
 無論是日常資料備份、跨實例無縫遷移，還是從既有筆記平台遷入，EdgeEver 均提供完整可靠的資料流轉方案：
 
 - **EdgeEver 原生備份與還原**：在應用程式內進入 **個人中心** -> **匯入與匯出**，可隨時匯出或匯入 EdgeEver ZIP 封存檔。解壓縮後的 `notes/` 目錄保留清晰的純文字 Markdown 檔案與附件，可直接用於本機封存或獨立閱讀；內部結構化中繼資料則支援在不同 EdgeEver 實例間無損完整還原。匯入時保留目標實例的既有資料，同 ID 內容自動覆蓋更新。
-- **第三方筆記平滑遷入**：
-  - **Evernote（印象筆記）遷入**：請參考 [docs/evernote-migration-guide.md](docs/evernote-migration-guide.md)
-  - **flomo 筆記遷入**：請参考 [docs/flomo-migration-guide.md](docs/flomo-migration-guide.md)
-  - **Memos 筆記遷入**：請參考 [docs/memos-migration-guide.md](docs/memos-migration-guide.md)
-  - **Notion 筆記遷入**：請參考 [docs/notion-migration-guide.md](docs/notion-migration-guide.md)
+- **第三方筆記平滑遷入**：無論是透過 Web/桌面端圖形介面原生一鍵匯入（支援 Evernote/印象筆記、Obsidian、Joplin 的完整筆記、層級與附件），還是借助 AI Agent (MCP) 協同遷入 Notion、flomo、Memos 等知識庫，EdgeEver 均提供無縫、可驗證的遷移能力。詳見 [第三方筆記平滑遷入 EdgeEver 完整指南](docs/note-migration-guide.md)。
 
 ### AI 與 MCP 協定互聯
 
 在 **個人中心** -> **API / MCP** 中建立 API Token 並一鍵複製 Remote MCP 設定，即可讓 Claude Code、Cursor、Antigravity、OpenClaw 等 AI Agent 在帳號授權範圍內安全管理你的知識庫。系統支援文字筆記、圖表筆記（心智圖、流程圖與架構圖）、多維表格筆記與原生海報筆記的完整增刪改查，Agent 還可管理筆記本目錄、標籤、附件、歷史版本、筆記範本與 AI 指令。
+
+用戶端設定、Token 權限、問題排查與 Agent 工作規則範例，請參閱 [在 MCP 用戶端與 AI Agent 中使用 EdgeEver](docs/mcp-guide.zh-CN.md)（簡體中文）。
 
 > 💡 **情境啟發：**
 > 讓 AI 真正成為你的知識管家與創作外腦——不僅能將方案秒級產生為可互動的心智圖、流程圖、架構圖與多維表格，還能為 AI Agent 提供私有脈絡。憑藉 EdgeEver 強大的富文字編輯與精美排版能力，AI 協同沉澱的不再是冰冷文字，而是結構工整、排版優雅、隨時可一鍵分發的高品質知識資產。
