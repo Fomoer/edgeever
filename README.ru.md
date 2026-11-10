@@ -3,12 +3,12 @@
     <img src="assets/brand/edgeever-icon.svg" alt="Логотип EdgeEver" width="48" align="absmiddle" /> EdgeEver
   </h1>
   <p>
-    <b>AI-native база знаний и альтернатива Evernote/Obsidian с мгновенной синхронизацией и нативной поддержкой MCP. Бесплатно на Cloudflare или с самостоятельным хостингом (self-hosted) через Docker.</b>
+    <b>AI-native база знаний и альтернатива Evernote/Obsidian. Мгновенная синхронизация на всех платформах, мультиформатные заметки (таблицы, ментальные карты, диаграммы, постеры), веб-клиппер и MCP. 100% бесплатно на Cloudflare или через Docker.</b>
   </p>
   <p>
     <a href="https://github.com/tianma-if/edgeever/stargazers"><img src="https://img.shields.io/github/stars/tianma-if/edgeever?style=social" alt="Звёзды на GitHub" /></a>
     <a href="https://github.com/tianma-if/edgeever/network/members"><img src="https://img.shields.io/github/forks/tianma-if/edgeever?style=social" alt="Форки на GitHub" /></a>
-    <a href="https://github.com/tianma-if/edgeever"><img src="https://img.shields.io/badge/Git_Clones-40K%2B%20%2F%2014d-brightgreen?style=social&logo=git" alt="Клонирования Git" /></a>
+    <a href="https://github.com/tianma-if/edgeever/releases"><img src="https://img.shields.io/github/downloads/tianma-if/edgeever/total?style=social&amp;logo=github&amp;label=Release%20Downloads" alt="Загрузки файлов релизов GitHub" /></a>
     <a href="https://github.com/tianma-if/edgeever/pkgs/container/edgeever"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Ftianma-if%2Fedgeever%2Fedgeever&query=downloadCount&style=social&logo=docker&label=Docker%20Pulls" alt="Загрузки Docker" /></a>
     <a href="https://www.producthunt.com/products/edgeever?utm_source=other&utm_medium=social"><img src="https://img.shields.io/badge/Product%20Hunt-ea532a?style=social&logo=product-hunt" alt="Product Hunt" /></a>
     <a href="https://hellogithub.com/repository/tianma-if/edgeever" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=150fee4403f6433880bda91e9576ac06&claim_uid=TWNAjisURpnhL1l&theme=small" alt="Рекомендовано｜HelloGitHub" /></a>
@@ -20,6 +20,7 @@
   <p>
     <a href="https://t.me/+GvKYnL37feUwOTNl"><img src="assets/readme/community/telegram.svg" alt="Telegram" width="16" height="16" align="absmiddle" /> Группа в Telegram</a> &nbsp;|&nbsp;
     <a href="https://demo.edgeever.org">🌐 Онлайн-демо</a> &nbsp;|&nbsp;
+    <a href="https://github.com/users/tianma-if/projects/1">🗺️ План развития</a> &nbsp;|&nbsp;
     <a href="#all-platform-clients--browser-extension">📱 Клиенты и расширение</a> &nbsp;|&nbsp;
     <a href="#features">Матрица возможностей</a> &nbsp;|&nbsp;
     <a href="docs/note-migration-guide.en-US.md">📥 Миграция заметок</a>
