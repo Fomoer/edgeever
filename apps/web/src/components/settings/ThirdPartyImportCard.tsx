@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import flomoLogo from "@/assets/import-logos/flomo.png?url";
 import evernoteLogo from "@/assets/import-logos/evernote.svg?url";
 import joplinLogo from "@/assets/import-logos/joplin.svg?url";
 import obsidianLogo from "@/assets/import-logos/obsidian.svg?url";
@@ -11,6 +12,7 @@ import { SETTINGS_CARD_HEADER_CLASSNAME, SETTINGS_CARD_ICON_CLASSNAME, SETTINGS_
 import { ThirdPartyImportDialog } from "./ThirdPartyImportDialog";
 
 const importSources = [
+  { label: "flomo (.zip)", logo: flomoLogo },
   { label: "Evernote (.enex)", logo: evernoteLogo },
   { label: "Obsidian", logo: obsidianLogo },
   { label: "Joplin (.jex)", logo: joplinLogo },
@@ -28,7 +30,7 @@ export const ThirdPartyImportCard = ({ controller, onOpenMemo }: { controller: N
           <div className="flex flex-wrap gap-1.5 pt-0.5 text-[11px] text-muted-foreground">
             {importSources.map(({ label, logo }) => (
               <span key={label} className="inline-flex items-center gap-1.5 rounded bg-muted px-2 py-0.5 font-mono">
-                <img src={logo} alt="" className="size-3 shrink-0 object-contain" />
+                {logo && <img src={logo} alt="" className="size-3 shrink-0 object-contain" />}
                 {label}
               </span>
             ))}

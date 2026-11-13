@@ -1,4 +1,4 @@
-import type { ImportDocument, ImportFile, ImportFormat, ImportIndex, ImportIssue, ImportNote, ImportNotebook, ImportReference, ImportResource, ImportSummary, SourceEntry } from "./types";
+import type { ImportDocument, ImportFile, ImportFormat, ImportIndex, ImportIssue, ImportNote, ImportNotebook, ImportOptions, ImportReference, ImportResource, ImportSummary, SourceEntry } from "./types";
 import { IMPORT_CHUNK_BYTES } from "./types";
 import { indexItems } from "./index-store";
 import { addIssue, basename, dirname, ImportSources, normalPath, stem } from "./sources";
@@ -31,7 +31,7 @@ export class NoteImportSession {
   private prepared?: ImportDocument;
   private staged = new Set<string>();
   private nextNote = 0;
-  constructor(readonly format: ImportFormat, files: ImportFile[], readonly index: ImportIndex, id: string = crypto.randomUUID()) {
+  constructor(readonly format: ImportFormat, files: ImportFile[], readonly index: ImportIndex, id: string = crypto.randomUUID(), private options: ImportOptions = {}) {
     this.id = id;
     this.sources = new ImportSources(files, index);
   }
@@ -75,7 +75,20 @@ export class NoteImportSession {
       await this.sources.scan(signal, progress);
       for await (const entry of indexItems<SourceEntry>(this.index, "entry")) {
         signal?.throwIfAborted(); progress?.(entry.path);
-        if (this.format === "evernote") {
+        if (this.format === "flomo") {
+          if (!/\.html?$/i.test(entry.path)) continue;
+          await this.notebook("flomo");
+          await this.index.put("alias", `used:${entry.key}`, true);
+          try {
+            const { readFlomo } = await import("./flomo");
+            for await (const doc of readFlomo(await this.sources.text(entry, signal), entry, path => this.index.get<SourceEntry>("entry", path), signal)) {
+              if (doc.error) { await addIssue(this.index, doc.error.split(":")[0]!, doc.note.path, "error", doc.error); continue; }
+              await this.saveNote(doc.note);
+              await this.index.put("raw", `flomo:${doc.note.key}`, doc.contentMarkdown);
+              for (const resource of doc.note.resources) await this.index.put("alias", `used:${resource.entryKey}`, true);
+            }
+          } catch (error) { signal?.throwIfAborted(); await addIssue(this.index, "invalidFlomo", entry.path, "error", String(error)); }
+        } else if (this.format === "evernote") {
           if (/\.notes$/i.test(entry.path)) { await addIssue(this.index, "notesFormat", entry.path); continue; }
           if (!/\.enex$/i.test(entry.path)) continue;
           const notebookKey = await this.notebook(entry.path.replace(/\.enex$/i, ""));
@@ -115,7 +128,7 @@ export class NoteImportSession {
           await this.saveNote({ key: "", path: entry.path, entryKey: entry.key, notebookKey: await this.notebook(dirname(entry.path)), resources: [], ...meta });
         }
       }
-      if (this.format !== "evernote") {
+      if (this.format !== "evernote" && this.format !== "flomo") {
         for await (const note of indexItems<ImportNote>(this.index, "note")) {
           signal?.throwIfAborted();
           const doc = await this.readNote(note.key, signal);
@@ -141,10 +154,22 @@ export class NoteImportSession {
           await this.index.put("note", note.key, note);
         }
       }
-      if (!await this.index.count("note")) await addIssue(this.index, "noNotes", "");
-      if (this.format !== "evernote") for await (const entry of indexItems<SourceEntry>(this.index, "entry")) {
-        if (!/\.(?:md|markdown)$/i.test(entry.path) && !await this.index.get("alias", `used:${entry.key}`)) await addIssue(this.index, "unusedResource", entry.path, "warning");
+      if (this.format === "obsidian" && this.options.includeUnreferencedAttachments !== false) {
+        for await (const entry of indexItems<SourceEntry>(this.index, "entry")) {
+          signal?.throwIfAborted();
+          // Import recognizable user documents/media, never hidden/config/cache files.
+          if (entry.path.split("/").some(part => part.startsWith(".") || /^(?:node_modules|cache|caches|__pycache__)$/i.test(part))) continue;
+          if (!/\.(?:png|jpe?g|gif|webp|svg|avif|bmp|pdf|txt|csv|mp3|mp4|wav|m4a|ogg|webm|mov|docx?|xlsx?|pptx?|epub|zip)$/i.test(entry.path)) continue;
+          if (await this.index.get("alias", `used:${entry.key}`)) continue;
+          const resource: ImportResource = { key: entry.key, entryKey: entry.key, filename: basename(entry.path), mimeType: mimeFromName(entry.path), byteSize: entry.size };
+          const label = resource.filename.replace(/[\\`*_[\]<>!]/g, "\\$&");
+          const href = encodeURIComponent(resource.filename).replace(/[!'()*]/g, char => `%${char.charCodeAt(0).toString(16)}`);
+          const attachmentMarkdown = `${resource.mimeType.startsWith("image/") ? "!" : ""}[${label}](${href})`;
+          const references = findImportReferences(attachmentMarkdown).map(ref => ({ ...ref, resourceKey: resource.key }));
+          await this.saveNote({ key: "", path: entry.path, entryKey: entry.key, notebookKey: await this.notebook(dirname(entry.path)), title: resource.filename, tags: [], resources: [resource], references, attachmentMarkdown });
+        }
       }
+      if (!await this.index.count("note")) await addIssue(this.index, "noNotes", "");
     } catch (error) {
       signal?.throwIfAborted();
       await addIssue(this.index, "invalidArchive", "", "error", error instanceof Error ? error.message : String(error));
@@ -257,6 +282,7 @@ export class NoteImportSession {
     if (this.prepared?.note.key === key) return this.prepared;
     const note = await this.index.get<ImportNote>("note", key);
     if (!note) throw new Error("missingNote");
+    if (note.attachmentMarkdown !== undefined) return { note, contentMarkdown: note.attachmentMarkdown };
     const entry = await this.index.get<SourceEntry>("entry", note.entryKey);
     if (!entry) throw new Error("missingNote");
     if (this.format === "evernote") {
@@ -279,6 +305,11 @@ export class NoteImportSession {
       }
       this.prepared = { note: { ...note, resources: note.resources.map(res => ({ ...res, chunks: raw!.resources.find(item => item.key === res.key)?.chunks ?? 0 })) }, contentMarkdown: "", enml: raw.content };
       return this.prepared;
+    }
+    if (this.format === "flomo") {
+      const contentMarkdown = await this.index.get<string>("raw", `flomo:${key}`);
+      if (contentMarkdown === undefined) throw new Error("missingNote");
+      return { note, contentMarkdown };
     }
     const text = await this.sources.text(entry, signal);
     return { note, contentMarkdown: note.raw ? readRaw(text)!.body : text };
