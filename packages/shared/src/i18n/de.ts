@@ -1229,6 +1229,11 @@ export const de = {
       "fallback": "In EdgeEver speichern",
       "cancel": "Abbrechen",
       "imgbed": {
+        "browserDescription": "Die Web-App verbindet sich direkt mit ImgBed. Verwenden Sie HTTPS und erlauben Sie CORS für diese EdgeEver-Website einschließlich des Authorization-Headers. Für lokale oder private Server wird die Desktop-App empfohlen.",
+        "browserTokenDescription": "Erstellen Sie in ImgBed ein Token mit upload-Berechtigung. Es bleibt in diesem Browser, wird nicht mit anderen Geräten synchronisiert und beim Upload direkt an ImgBed gesendet.",
+        "browserAddress": "Geben Sie eine gültige HTTPS-ImgBed-Adresse ohne Zugangsdaten, Abfrageparameter oder Fragment ein.",
+        "browserNetwork": "Die ImgBed-Antwort konnte nicht gelesen werden. Prüfen Sie Netzwerk, HTTPS-Zertifikat und CORS (diese Website und Authorization-Header erlauben). Das Testbild wurde möglicherweise bereits hochgeladen; ein weiterer Test kann Duplikate erzeugen.",
+        "browserUploadFailed": "Prüfen Sie Adresse, Token, Netzwerk und ImgBed-CORS. Das Bild wurde möglicherweise hochgeladen, aber der Browser konnte das Ergebnis nicht lesen. Ein erneuter Versuch kann Duplikate erzeugen. Sie können auch in EdgeEver speichern oder abbrechen.",
         "option": "CloudFlare ImgBed",
         "description": "Neue Bilder direkt in Ihr selbst gehostetes CloudFlare ImgBed hochladen und den zurückgegebenen Bildlink in die Notiz einfügen.",
         "endpoint": "ImgBed-Adresse",
@@ -1504,6 +1509,7 @@ export const de = {
     }
   },
   "plugins": {
+    secureFeaturesUnavailable: "Plugin-Installation und Integritätsprüfung sind verfügbar. Verschlüsselte geheime Einstellungen und signierte Community-Kataloge erfordern HTTPS oder localhost.",
     "title": "Plugins und Designs",
     "developerDocs": "Plugin-Entwicklung",
     "manifestUrl": "Manifest-URL der Erweiterung",
@@ -1511,6 +1517,7 @@ export const de = {
     "installSource": "GitHub-Repository oder Manifest-URL",
     "sourcePlaceholder": "https://github.com/owner/edgeever-plugin",
     "install": "Installieren",
+    restoreFailed: "Einige Plugins oder Designs konnten nicht wiederhergestellt werden. Prüfe die folgenden Fehler und versuche es erneut.",
     "installing": "Wird installiert…",
     "empty": "In diesem Arbeitsbereich sind noch keine Plugins oder Designs installiert.",
     "syncDescription": "Die Installationsliste folgt diesem Arbeitsbereich im Web und auf dem Desktop. Einstellungen und Geheimnisse verbleiben auf diesem Gerät.",
@@ -4018,6 +4025,7 @@ export const de = {
     "refreshNow": "Jetzt aktualisieren",
     "closeNotice": "Update-Hinweis schließen",
     "sidebarDownloads": "Clients herunterladen",
+    clientsAndExtensions: "Apps und Browser-Erweiterungen",
     "sidebarDownloadsTitle": "EdgeEver-Clients und Browser-Erweiterungen herunterladen",
     "sidebarGroupApps": "Apps & Clients",
     "sidebarGroupClippers": "Browser Web Clipper",

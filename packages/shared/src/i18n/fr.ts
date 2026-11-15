@@ -1229,6 +1229,11 @@ export const fr = {
       fallback: "Enregistrer dans EdgeEver",
       cancel: "Annuler",
       imgbed: {
+        "browserDescription": "L’application web se connecte directement à ImgBed. Utilisez HTTPS et autorisez CORS pour ce site EdgeEver, y compris l’en-tête Authorization. Pour un serveur local ou privé, préférez l’application de bureau.",
+        "browserTokenDescription": "Créez un jeton avec la permission upload dans ImgBed. Il reste dans ce navigateur, sans synchronisation entre appareils, et est envoyé directement à ImgBed lors des téléversements.",
+        "browserAddress": "Saisissez une adresse HTTPS ImgBed valide sans identifiants, paramètres de requête ni fragment.",
+        "browserNetwork": "Impossible de lire la réponse ImgBed. Vérifiez le réseau, le certificat HTTPS et CORS (ce site et l’en-tête Authorization). L’image de test est peut-être déjà téléversée ; un nouveau test peut créer un doublon.",
+        "browserUploadFailed": "Vérifiez l’adresse, le jeton, le réseau et CORS dans ImgBed. L’image est peut-être déjà téléversée, mais le résultat est illisible dans le navigateur. Réessayer peut créer un doublon. Vous pouvez aussi enregistrer dans EdgeEver ou annuler.",
         option: "CloudFlare ImgBed",
         description: "Téléversez les nouvelles images directement vers votre CloudFlare ImgBed auto-hébergé et insérez le lien retourné dans la note.",
         endpoint: "Adresse d'ImgBed",
@@ -1504,6 +1509,7 @@ export const fr = {
     }
   },
   plugins: {
+    secureFeaturesUnavailable: "L’installation et la vérification d’intégrité sont disponibles. Les paramètres secrets chiffrés et les catalogues communautaires signés nécessitent HTTPS ou localhost.",
     title: "Plugins et thèmes",
     developerDocs: "Développement de plugins",
     manifestUrl: "URL du manifeste de l'extension",
@@ -1511,6 +1517,7 @@ export const fr = {
     installSource: "Dépôt GitHub ou URL du manifeste",
     sourcePlaceholder: "https://github.com/owner/edgeever-plugin",
     install: "Installer",
+    restoreFailed: "Certains plugins ou thèmes n’ont pas pu être restaurés. Consultez les erreurs ci-dessous et réessayez.",
     installing: "Installation en cours…",
     empty: "Cet espace de travail n'a encore aucun plugin ni thème installé.",
     syncDescription: "La liste d'installation suit cet espace de travail sur le Web et l'ordinateur. Les paramètres et les secrets restent sur cet appareil.",
@@ -4018,6 +4025,7 @@ export const fr = {
     refreshNow: "Actualiser maintenant",
     closeNotice: "Fermer l'avis de mise à jour",
     sidebarDownloads: "Télécharger les applications",
+    clientsAndExtensions: "Applications et extensions de navigateur",
     sidebarDownloadsTitle: "Télécharger les applications EdgeEver et les extensions pour navigateur",
     sidebarGroupApps: "Applications & clients",
     sidebarGroupClippers: "Web Clipper pour navigateur",

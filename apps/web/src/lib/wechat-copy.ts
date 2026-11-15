@@ -26,6 +26,7 @@ import { renderThemedMermaidSvg } from "@/lib/mermaid-renderer";
 import { normalizeMermaidSvgForViewer } from "@/lib/mermaid-svg";
 import { copyHtmlToClipboard } from "@/lib/clipboard";
 import { parseCustomCssToStyles } from "@/lib/css-sandbox";
+import { readNoteCoverTags } from "@/lib/note-cover-tags";
 import { readNoteProseStylePreference } from "@/lib/note-prose-style-preference";
 
 const PUBLISH_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
@@ -50,6 +51,7 @@ type WeChatMetrics = {
 };
 
 type PublishProseStyle = NoteProseStylePreferences & {
+  coverTags: string;
   showMagazineCover: boolean;
   showChapterNavigation: boolean;
 };
@@ -180,6 +182,7 @@ const applyLegacyWeChatStyles = (
     });
   }
 
+  // Heading styles must not enable a cover independently of the reading-style toggle.
   if (proseStyle.showMagazineCover) {
     root.querySelectorAll<HTMLElement>("h1").forEach((heading) => {
       if (heading.querySelector("[data-ee-cover-card]")) return;
@@ -187,16 +190,15 @@ const applyLegacyWeChatStyles = (
       heading.style.cssText = `margin: 0 0 28px; padding: 0; background: #ffffff; border: 1.5px solid ${divider}; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);`;
       heading.innerHTML = [
         `<section data-ee-publish-chrome="true" data-ee-cover-card="true" style="padding: 28px 24px 22px;">`,
-        `<section data-ee-publish-chrome="true" style="margin-bottom: 18px; font-size: 0;">`,
-        `<span data-ee-publish-chrome="true" style="display: inline-block; width: 6px; height: 6px; background: ${accent}; border-radius: 50%; vertical-align: middle;"><span leaf=""><br></span></span>`,
-        `<span data-ee-publish-chrome="true" style="display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 3px; color: ${accent}; vertical-align: middle; margin-left: 8px;">FEATURED · 深度实测</span>`,
+        ...(proseStyle.coverTags ? [
+          `<section data-ee-cover-tags="true" data-ee-publish-chrome="true" style="margin-bottom: 18px; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; word-break: break-word;">`,
+          `<span data-ee-publish-chrome="true" style="display: inline-block; width: 6px; height: 6px; background: ${accent}; border-radius: 50%; vertical-align: middle;"><span leaf=""><br></span></span>`,
+          `<span data-ee-publish-chrome="true" style="display: inline-block; max-width: calc(100% - 14px); white-space: normal; font-size: 11px; font-weight: 700; letter-spacing: 3px; color: ${accent}; vertical-align: middle; margin-left: 8px;">${escapeHtmlAttribute(proseStyle.coverTags)}</span>`,
+          `</section>`,
+        ] : []),
+        `<p data-ee-publish-chrome="true" style="font-size: ${metrics.fontSize * 1.75}px; font-weight: 900; color: #111827; margin: 0; line-height: 1.2; letter-spacing: -0.5px;">${titleHtml}</p>`,
         `</section>`,
-        `<p data-ee-publish-chrome="true" style="font-size: ${metrics.fontSize * 1.75}px; font-weight: 900; color: #111827; margin: 0 0 14px; line-height: 1.2; letter-spacing: -0.5px;">${titleHtml}</p>`,
-        `<section data-ee-publish-chrome="true" style="width: 48px; height: 3px; background: ${accent}; border-radius: 2px;"><span leaf=""><br></span></section>`,
-        `</section>`,
-        `<section data-ee-publish-chrome="true" style="${colors ? accentGradient : "background: #f3f4f6;"} padding: 10px 24px; font-size: 0;">`,
-        `<span data-ee-publish-chrome="true" style="display: inline-block; font-size: 11px; color: ${colors ? "rgba(255,255,255,0.92)" : "#374151"}; font-weight: 600; letter-spacing: 0.8px; vertical-align: middle;">EDGEEVER · 精选笔记</span>`,
-        `</section>`,
+        `<section data-ee-cover-footer="true" data-ee-publish-chrome="true" style="${colors ? accentGradient : "background: #f3f4f6;"} height: 8px; font-size: 0; line-height: 0;"><span leaf=""><br></span></section>`,
       ].join("");
     });
   }
@@ -219,7 +221,7 @@ const applyLegacyWeChatStyles = (
         const useAccentGradient = isHighlighted && Boolean(colors);
         if (useAccentGradient) {
           return [
-            `<section data-ee-publish-chrome="true" style="display: inline-block; vertical-align: top; width: 136px; flex-shrink: 0; box-sizing: border-box; border: 1px solid transparent; ${accentGradient} border-radius: 12px; padding: 12px; margin: 0 8px 8px 0;">`,
+            `<section data-ee-toc-card="true" data-ee-publish-chrome="true" style="display: inline-block; vertical-align: top; min-width: 0; width: 146px; max-width: 100%; flex: 0 0 auto; box-sizing: border-box; border: 1px solid transparent; ${accentGradient} border-radius: 12px; padding: 12px; margin: 0;">`,
             `<p data-ee-publish-chrome="true" style="font-size: 9px; line-height: 1.4; font-weight: 700; color: rgba(255,255,255,0.72); letter-spacing: 1px; margin: 0 0 5px;">${num}</p>`,
             `<p data-ee-publish-chrome="true" style="font-size: 13px; font-weight: 800; color: #ffffff; margin: 0 0 3px; line-height: 1.3;">${shortTitle}</p>`,
             `<p data-ee-publish-chrome="true" style="font-size: 10px; color: rgba(255,255,255,0.75); margin: 0; line-height: 1.4; word-break: break-word;">${subTitle}</p>`,
@@ -227,7 +229,7 @@ const applyLegacyWeChatStyles = (
           ].join("");
         }
         return [
-          `<section data-ee-publish-chrome="true" style="display: inline-block; vertical-align: top; width: 136px; flex-shrink: 0; box-sizing: border-box; background: ${isHighlighted ? "#f3f4f6" : "#ffffff"}; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin: 0 8px 8px 0;">`,
+          `<section data-ee-toc-card="true" data-ee-publish-chrome="true" style="display: inline-block; vertical-align: top; min-width: 0; width: 146px; max-width: 100%; flex: 0 0 auto; box-sizing: border-box; background: ${isHighlighted ? "#f3f4f6" : "#ffffff"}; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin: 0;">`,
           `<p data-ee-publish-chrome="true" style="font-size: 9px; line-height: 1.4; font-weight: 700; color: #6b7280; letter-spacing: 1px; margin: 0 0 5px;">${num}</p>`,
           `<p data-ee-publish-chrome="true" style="font-size: 13px; font-weight: 800; color: #111827; margin: 0 0 3px; line-height: 1.3;">${shortTitle}</p>`,
           `<p data-ee-publish-chrome="true" style="font-size: 10px; color: #6b7280; margin: 0; line-height: 1.4; word-break: break-word;">${subTitle}</p>`,
@@ -238,7 +240,7 @@ const applyLegacyWeChatStyles = (
         `<section data-ee-publish-chrome="true" style="margin-bottom: 10px;">`,
         `<p data-ee-publish-chrome="true" style="font-size: 10px; color: #9ca3af; margin: 0; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">${h2ListForToc.length} PARTS · 全文导览</p>`,
         `</section>`,
-        `<section data-ee-publish-chrome="true" style="display: flex; flex-wrap: wrap; align-items: stretch; font-size: 0;">${cardsHtml}</section>`,
+        `<section data-ee-publish-chrome="true" style="display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; width: 100%; align-items: stretch; font-size: 0;">${cardsHtml}</section>`,
       ].join("");
       h2ListForToc[0].parentElement?.insertBefore(toc, h2ListForToc[0]);
     }
@@ -1243,6 +1245,7 @@ export const readEditorCopyContext = (from?: HTMLElement | null) => {
     headingStyle: parseNoteProseHeadingStyle(container?.dataset.noteHeadingStyle) ?? storedStyle.headingStyle,
     quoteStyle: parseNoteProseQuoteStyle(container?.dataset.noteQuoteStyle) ?? storedStyle.quoteStyle,
     emphasisStyle: parseNoteProseEmphasisStyle(container?.dataset.noteEmphasisStyle) ?? storedStyle.emphasisStyle,
+    coverTags: readNoteCoverTags(container?.dataset.noteTags),
     showMagazineCover: container?.dataset.noteMagazineCover === "true",
     showChapterNavigation: container?.dataset.noteChapterNavigation === "true",
   };
@@ -1261,7 +1264,9 @@ export const preparePublishArticle = (
   html: string,
   from?: HTMLElement | null,
 ) => {
-  const root = document.createElement("div");
+  // Zhihu treats a wrapping div as one text block, flattening nested headings
+  // and paragraphs. A section retains the shared styles and block semantics.
+  const root = document.createElement("section");
   root.innerHTML = html;
   flattenDetailsForLinearHtml(root);
   const context = readEditorCopyContext(from);

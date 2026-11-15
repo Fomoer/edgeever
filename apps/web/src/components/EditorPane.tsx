@@ -126,6 +126,7 @@ import { AiSidebarErrorBoundary } from "./ai-sidebar/AiSidebarErrorBoundary";
 import { api } from "@/lib/api";
 import { isDesktopResourceRuntime, stageDesktopResource, toDesktopResourceDownloadUrl, toDesktopResourceUrl } from "@/lib/desktop-resources";
 import { contentReferencesStagedResourceUrl, findMatchingMemoResource, repairMemoStagedResourceUrls, repairTiptapStagedResourceUrls } from "@/lib/staged-resource-repair";
+import { noteCoverTagCssVariables } from "@/lib/note-cover-tags";
 import { cn, parseTagsText } from "@/lib/utils";
 import {
   EDITOR_ARTICLE_ROW_GAP_PX,
@@ -281,6 +282,7 @@ import { classifyEditorSaveFailure, shouldLeaveEditorAfterSaveError } from "./ed
 import { useEditorSaveConflictActions } from "./editor/useEditorSaveConflictActions";
 import { useEditorNoteSearchController } from "./editor/useEditorNoteSearchController";
 import { EditorNoteLinkPicker } from "./editor/EditorNoteLinkPicker";
+import { useBrowserImgBedFailure } from "./editor/useBrowserImgBedFailure";
 import { EditorResourceDialogs } from "./editor/EditorResourceDialogs";
 import { EditorNoteSearchBar } from "./editor/EditorNoteSearchBar";
 import { EditorSaveRecoveryBanner } from "./editor/EditorSaveRecoveryBanner";
@@ -319,7 +321,7 @@ import {
   getNoteLinkFromEventTarget,
   getNoteLinkHintPosition,
   getResourceFilesFromDataTransfer,
-  shouldInsertDroppedResourceFiles,
+  handleResourceFileDrop,
   isCreatedMemoEditorFocused,
   isEditorReady,
   releaseEditorMedia,
@@ -508,6 +510,7 @@ const RichEditorPane = ({
   }, [memo?.id]);
   const [editorStateVersion, setEditorStateVersion] = useState(0);
   const [editorContentVersion, setEditorContentVersion] = useState(0);
+  const { chooseFailure: chooseImgBedFailure, failureDialog: imgBedFailureDialog } = useBrowserImgBedFailure(`${localDataScope}:${memo?.id ?? ""}`);
   const [imageUploadState, setImageUploadState] = useState<"idle" | "compressing" | "uploading" | "error">("idle");
   const [imagePreview, setImagePreview] = useState<ImagePreviewRequestDetail | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -1063,7 +1066,9 @@ const RichEditorPane = ({
       const external = await uploadImageWithPicGo(uploadFile, {
         title: t(`${failure}.failedTitle`), message: t(`${failure}.failedMessage`),
         retry: t("settings.picgo.retry"), fallback: t("settings.picgo.fallback"), cancel: t("settings.picgo.cancel"),
-      }, { memoId: targetMemoId });
+      }, { memoId: targetMemoId, chooseFailure: chooseImgBedFailure,
+        isActive: () => memoRef.current?.id === targetMemoId && editorInstanceMemoIdentityRef.current.instanceKey === instanceKey,
+      });
       // PicGo or its failure dialog may outlive the original note/instance.
       if (memoRef.current?.id !== targetMemoId || editorInstanceMemoIdentityRef.current.instanceKey !== instanceKey) {
         throw new Error("The active note changed during image upload");
@@ -1100,7 +1105,7 @@ const RichEditorPane = ({
         url: `edgeever-staged://${staged.id}`,
       };
     }
-  }, [repository, t]);
+  }, [repository, t, chooseImgBedFailure]);
 
   const insertResourceFiles = useCallback((files: File[], dropPosition?: number) => {
     const currentMemo = memoRef.current;
@@ -1476,23 +1481,7 @@ const RichEditorPane = ({
         insertResourceFiles(files);
         return true;
       },
-      handleDrop: (view, event) => {
-        if (!shouldInsertDroppedResourceFiles({
-          dataTransfer: event.dataTransfer,
-          isInternalNodeDrag: Boolean(view.dragging),
-        })) {
-          return false;
-        }
-
-        event.preventDefault();
-        // Use the same coordinate lookup as ProseMirror's external drop cursor.
-        // A drop inserts at a point; it must never replace the old text selection.
-        const dropPosition = view.posAtCoords({ left: event.clientX, top: event.clientY });
-        if (dropPosition) {
-          insertResourceFiles(getResourceFilesFromDataTransfer(event.dataTransfer), dropPosition.pos);
-        }
-        return true;
-      },
+      handleDrop: (view, event) => handleResourceFileDrop(view, event, insertResourceFiles),
     },
   }, [
     // Keep one TipTap view for the pane lifetime. A newly created memo already
@@ -4462,7 +4451,7 @@ const RichEditorPane = ({
               desktopFocusMode={desktopFocusMode}
               onToggleDesktopFocusMode={onToggleDesktopFocusMode}
             />
-            {!readOnly && (!mobileEditingActive || isMemoShared) && (
+            {!readOnly && editorColumnWidth >= 960 && (!mobileEditingActive || isMemoShared) && (
               <IconTooltip label={t(isLocalMemoId(memo.id) ? "sharing.afterSync" : isMemoShared ? "sharing.manage" : "sharing.action")}>
                 <Button
                   className="h-8 w-8 text-slate-500"
@@ -4761,6 +4750,20 @@ const RichEditorPane = ({
       <div className="relative min-h-0 min-w-0 flex-1">
       <div
         ref={setEditorScrollContainerRef}
+        onDragOver={(event) => {
+          if (useMobilePlainTextEditor || useMarkdownSourceEditor || effectiveReadOnly ||
+            !isEditorReady(editor) || !editor.isEditable || editor.view.dragging ||
+            !Array.from(event.dataTransfer.types).includes("Files")) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "copy";
+        }}
+        onDrop={(event) => {
+          if (useMobilePlainTextEditor || useMarkdownSourceEditor || effectiveReadOnly ||
+            !isEditorReady(editor)) return;
+          // Bubble phase preserves node handlers; a handled drop is ignored by
+          // the shared helper so each file is inserted only once.
+          handleResourceFileDrop(editor.view, event.nativeEvent, insertResourceFiles);
+        }}
         data-editor-theme="default"
         data-note-palette={noteProse.palette}
         data-note-heading-style={noteProseStyle.headingStyle}
@@ -4768,8 +4771,10 @@ const RichEditorPane = ({
         data-note-emphasis-style={noteProseStyle.emphasisStyle}
         data-note-magazine-cover={showMagazineCover ? "true" : "false"}
         data-note-chapter-navigation={showChapterNavigation ? "true" : "false"}
+        data-note-tags={JSON.stringify(parseTagsText(tagsText))}
         data-note-title={title || getEditableMemoTitle(memo?.title)}
         style={{
+          ...noteCoverTagCssVariables(parseTagsText(tagsText)),
           ...noteProseCssVariables(noteProse),
           ...noteProseStyleCssVariables(noteProseStyle),
           "--memo-content-divider-spacing": `${MEMO_CONTENT_STYLE.divider.marginVertical}px`,
@@ -4935,8 +4940,7 @@ const RichEditorPane = ({
                     showMagazineCover={showMagazineCover}
                     showChapterNavigation={showChapterNavigation}
                     title={title || getEditableMemoTitle(memo?.title)}
-                    tags={memo?.tags}
-                    notebookName={notebookName}
+                    tags={parseTagsText(tagsText)}
                     updatedAt={memo?.updatedAt}
                     palette={noteProse.palette}
                   />
@@ -4952,7 +4956,8 @@ const RichEditorPane = ({
           {!isMobileViewport && !useMobilePlainTextEditor && !useMarkdownSourceEditor && phonePreviewOpen && (
             <EditorPhonePreview
               editor={editor}
-              title={getEditableMemoTitle(memo?.title)}
+              title={title || getEditableMemoTitle(memo?.title)}
+              tagsKey={tagsText}
               showMagazineCover={showMagazineCover}
               showChapterNavigation={showChapterNavigation}
               scrollContainer={editorScrollContainer}
@@ -5137,6 +5142,7 @@ const RichEditorPane = ({
         />
       )}
 
+      {imgBedFailureDialog}
       <ShareMemoDialog memoId={memo.id} open={shareOpen} onOpenChange={setShareOpen} />
 
       {imageShareSource && (
