@@ -15,6 +15,8 @@ import {
   parseNoteProseQuoteStyle,
   type NoteProsePaletteColors,
   type NoteProseStylePreferences,
+  detectPublishImageMimeType,
+  isPublishImageMimeType,
 } from "@edgeever/shared";
 import katex from "katex";
 import "katex/contrib/mhchem";
@@ -26,8 +28,12 @@ import { renderThemedMermaidSvg } from "@/lib/mermaid-renderer";
 import { normalizeMermaidSvgForViewer } from "@/lib/mermaid-svg";
 import { copyHtmlToClipboard } from "@/lib/clipboard";
 import { parseCustomCssToStyles } from "@/lib/css-sandbox";
+import { deriveChapterCardLabels, splitCoverTitle } from "@/lib/magazine-header";
 import { readNoteCoverTags } from "@/lib/note-cover-tags";
 import { readNoteProseStylePreference } from "@/lib/note-prose-style-preference";
+import { createConfiguredPublishImageUploader, PublishImageError } from "@/lib/publish-image-host";
+import { api, getConfiguredDesktopApiBaseUrl } from "@/lib/api";
+import { toApiResourceUrl } from "@/lib/desktop-resources";
 
 const PUBLISH_FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
 const PUBLISH_MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
@@ -186,7 +192,16 @@ const applyLegacyWeChatStyles = (
   if (proseStyle.showMagazineCover) {
     root.querySelectorAll<HTMLElement>("h1").forEach((heading) => {
       if (heading.querySelector("[data-ee-cover-card]")) return;
-      const titleHtml = heading.innerHTML;
+      const hasInlineMarkup = heading.children.length > 0;
+      const split = hasInlineMarkup ? null : splitCoverTitle(heading.textContent || "");
+      const titleHtml = split
+        ? [
+            `<span data-ee-publish-chrome="true">${escapeHtmlAttribute(split.primary)}</span>`,
+            split.highlight
+              ? `<span data-ee-publish-chrome="true" style="color: ${colors ? accent : "#6b7280"};">${escapeHtmlAttribute(split.highlight)}</span>`
+              : "",
+          ].join("")
+        : heading.innerHTML;
       heading.style.cssText = `margin: 0 0 28px; padding: 0; background: #ffffff; border: 1.5px solid ${divider}; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);`;
       heading.innerHTML = [
         `<section data-ee-publish-chrome="true" data-ee-cover-card="true" style="padding: 28px 24px 22px;">`,
@@ -211,13 +226,11 @@ const applyLegacyWeChatStyles = (
       toc.setAttribute("data-ee-toc-cards", "true");
       toc.style.cssText = "margin: 0 0 28px;";
       const cardsHtml = h2ListForToc.map((heading, index) => {
-        const num = String(index + 1).padStart(2, "0");
-        const rawText = (heading.textContent || "")
-          .replace(/^\s*(?:第[一二三四五六七八九十百\d]+[章节部分篇]\s*[：:·.\s]*|\d+\s*[.、·:：]\s*|[一二三四五六七八九十]+\s*[、.．]\s*)/u, "")
-          .trim();
-        const shortTitle = escapeHtmlAttribute(rawText.slice(0, 6) || `章节 ${num}`);
-        const subTitle = escapeHtmlAttribute(rawText.length > 6 ? rawText.slice(6, 18) : `PART ${num}`);
-        const isHighlighted = index < h2ListForToc.length - 1 || h2ListForToc.length === 2 && index === 0;
+        const labels = deriveChapterCardLabels(heading.textContent || "", index);
+        const num = labels.num;
+        const shortTitle = escapeHtmlAttribute(labels.shortTitle);
+        const subTitle = escapeHtmlAttribute(labels.subTitle);
+        const isHighlighted = index < h2ListForToc.length - 1 || (h2ListForToc.length === 2 && index === 0);
         const useAccentGradient = isHighlighted && Boolean(colors);
         if (useAccentGradient) {
           return [
@@ -331,15 +344,6 @@ const blobToDataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
   reader.readAsDataURL(blob);
 });
 
-const WECHAT_IMAGE_MIME_TYPES = new Set([
-  "image/bmp",
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/gif",
-  "image/webp",
-]);
-
 const canvasToPng = (canvas: HTMLCanvasElement) => new Promise<Blob>((resolve, reject) => {
   canvas.toBlob((png) => {
     if (png) {
@@ -398,11 +402,12 @@ const rasterizeBlob = async (blob: Blob) => {
   }
 };
 
-const convertImageToPng = async (blob: Blob) => {
-  if (WECHAT_IMAGE_MIME_TYPES.has(blob.type.toLocaleLowerCase())) {
-    return blob;
-  }
-
+const preparePublishImage = async (blob: Blob) => {
+  // Preserve raster containers byte-for-byte, including every animation frame.
+  // Sniff headers too: resource endpoints may return a generic content type.
+  const mime = detectPublishImageMimeType(new Uint8Array(await blob.slice(0, 256).arrayBuffer()));
+  if (mime) return blob.type === mime ? blob : new Blob([blob], { type: mime });
+  if (isPublishImageMimeType(blob.type.toLowerCase())) throw new Error("Image bytes do not match their format");
   return rasterizeBlob(blob);
 };
 
@@ -514,7 +519,11 @@ const renderMermaidSvg = (source: string) => renderThemedMermaidSvg(source, {
   padding: 24,
 });
 
-const embedMermaidForWeChat = async (root: HTMLElement, editor?: Editor) => {
+const embedMermaidForWeChat = async (
+  root: HTMLElement,
+  editor?: Editor,
+  uploadImage = createConfiguredPublishImageUploader(),
+) => {
   const codeBlocks = Array.from(root.querySelectorAll<HTMLElement>("pre > code.language-mermaid"));
   if (codeBlocks.length === 0) {
     return;
@@ -523,11 +532,11 @@ const embedMermaidForWeChat = async (root: HTMLElement, editor?: Editor) => {
   const renderedBlocks = editor
     ? Array.from(editor.view.dom.querySelectorAll<HTMLElement>(".edgeever-mermaid-code-block"))
     : [];
-  await Promise.all(codeBlocks.map(async (codeBlock, index) => {
+  for (const [index, codeBlock] of codeBlocks.entries()) {
     const source = codeBlock.textContent?.trim();
     const pre = codeBlock.closest("pre");
     if (!source || !pre) {
-      return;
+      continue;
     }
 
     try {
@@ -537,78 +546,71 @@ const embedMermaidForWeChat = async (root: HTMLElement, editor?: Editor) => {
       } catch {
         svg = renderedBlocks[index]?.querySelector("svg")?.outerHTML || "";
       }
-      if (!svg) return;
+      if (!svg) throw new PublishImageError("render");
 
       const { blob, width, height } = await svgToWeChatImage(svg);
       const paragraph = document.createElement("p");
       paragraph.style.cssText = "text-align: center; margin: 1em 0;";
       const image = document.createElement("img");
-      image.src = await blobToDataUrl(blob);
+      image.src = await uploadImage(blob);
+      image.setAttribute("data-ee-published-image", "true");
       image.width = Math.round(width);
       image.height = Math.round(height);
       image.alt = "Mermaid diagram";
       image.style.cssText = "display: inline-block; max-width: 100%; height: auto;";
       paragraph.appendChild(image);
       pre.replaceWith(paragraph);
-    } catch {
-      // Preserve the Mermaid source as a readable fallback when rendering fails.
+    } catch (error) {
+      if (error instanceof PublishImageError) throw error;
+      throw new PublishImageError("render", { cause: error });
     }
-  }));
-};
-
-const isSameOrigin = (source: string) => {
-  try {
-    return new URL(source, window.location.href).origin === window.location.origin;
-  } catch {
-    return false;
   }
 };
 
 const isContentImage = (image: HTMLImageElement) =>
   Boolean(image.getAttribute("src")?.trim()) && !image.classList.contains("ProseMirror-separator");
 
-const findOriginalImage = (source: string, originals: HTMLImageElement[]) => {
-  const match = originals.find((image) => image.getAttribute("src") === source || image.currentSrc === source);
-  if (match) return match;
-  try {
-    const resolved = new URL(source, window.location.href).href;
-    return originals.find((image) => image.src === resolved) ?? null;
-  } catch {
-    return null;
-  }
+export const loadPublishImage = async (source: string) => {
+  const normalized = toApiResourceUrl(source);
+  const base = getConfiguredDesktopApiBaseUrl() || window.location.origin;
+  const url = new URL(normalized, `${base}/`);
+  const ownOrigin = url.origin === new URL(base).origin || url.origin === window.location.origin;
+  // Relative resource requests use the authenticated client, including desktop
+  // bearer tokens. Never forward instance credentials to an external image host.
+  const response = ownOrigin && /^\/api\/v1\/resources\/[^/]+\/blob$/.test(url.pathname)
+    ? await api.getResourceResponse(`${url.pathname}${url.search}`)
+    : await fetch(url.href, { credentials: "same-origin" });
+  if (!response.ok) throw new Error(`Could not fetch image (${response.status})`);
+  return preparePublishImage(await response.blob());
 };
 
-const embedImagesForWeChat = async (root: HTMLElement, originalImages: HTMLImageElement[] = []) => {
+export const embedImagesForWeChat = async (
+  root: HTMLElement,
+  uploadImage = createConfiguredPublishImageUploader(),
+) => {
   const images = Array.from(root.querySelectorAll<HTMLImageElement>("img")).filter(isContentImage);
-  const originals = originalImages.filter(isContentImage);
-  await Promise.all(images.map(async (image) => {
+  const loaded = new Map<string, Promise<Blob>>();
+  for (const image of images) {
+    // Formula images carry native Zhihu math metadata; retain that editable path.
+    if (image.hasAttribute("data-ee-published-image") || image.matches("img.ztext-math[data-tex]")) continue;
     const source = image.getAttribute("src")?.trim();
-    if (!source || source.startsWith("data:")) {
-      return;
-    }
-
+    if (!source) continue;
     try {
-      const originalImage = findOriginalImage(source, originals);
-      if (originalImage) {
-        image.setAttribute("src", await blobToDataUrl(await rasterizeImageElement(originalImage)));
-        image.removeAttribute("srcset");
-        return;
+      let blob = loaded.get(source);
+      if (!blob) {
+        // Never substitute a canvas snapshot when original bytes are unavailable:
+        // that would silently flatten animations to their first frame.
+        blob = loadPublishImage(source);
+        loaded.set(source, blob);
       }
-
-      const response = await fetch(source, { credentials: "include" });
-      if (!response.ok) {
-        throw new Error(`Could not fetch image (${response.status})`);
-      }
-      image.setAttribute("src", await blobToDataUrl(await convertImageToPng(await response.blob())));
+      image.setAttribute("src", await uploadImage(await blob));
+      image.setAttribute("data-ee-published-image", "true");
       image.removeAttribute("srcset");
-    } catch {
-      // Never put a private same-origin URL into the clipboard: WeChat cannot access it.
-      if (isSameOrigin(source)) {
-        image.removeAttribute("src");
-        image.removeAttribute("srcset");
-      }
+    } catch (error) {
+      if (error instanceof PublishImageError) throw error;
+      throw new PublishImageError("upload", { cause: error });
     }
-  }));
+  }
 };
 
 const convertImageGalleriesForWeChat = (root: HTMLElement) => {
@@ -618,31 +620,17 @@ const convertImageGalleriesForWeChat = (root: HTMLElement) => {
     );
     if (images.length < 2) return;
 
-    const layout = gallery.getAttribute("data-image-gallery-layout");
-    let columns = Math.min(images.length, 3);
-    if (layout === "1") {
-      columns = 1;
-    } else if (layout === "2" || (layout !== "3" && images.length === 4)) {
-      columns = 2;
-    } else if (layout === "3") {
-      columns = 3;
-    }
-    const table = document.createElement("table");
-    table.setAttribute("role", "presentation");
-    table.style.cssText = "width: 100%; margin: 1em 0; border: 0; border-collapse: separate; border-spacing: 6px; table-layout: fixed;";
-    const body = document.createElement("tbody");
-
-    images.forEach((image, index) => {
-      if (index % columns === 0) body.appendChild(document.createElement("tr"));
-      const cell = document.createElement("td");
-      cell.style.cssText = `width: ${100 / columns}%; border: 0; padding: 0; vertical-align: middle;`;
-      image.style.cssText = "display: block; width: 100%; height: auto; max-height: 18em; margin: 0; border-radius: 6px; object-fit: cover;";
-      cell.appendChild(image);
-      body.lastElementChild?.appendChild(cell);
+    // Zhihu imports only the first image from a presentation table. Publish
+    // each original separately so neither images nor animation frames disappear.
+    const fragment = document.createDocumentFragment();
+    images.forEach((image) => {
+      const paragraph = document.createElement("p");
+      paragraph.style.cssText = "margin: 1em 0; text-align: center;";
+      image.style.cssText = "display: inline-block; max-width: 100%; height: auto; margin: 0; border-radius: 6px;";
+      paragraph.appendChild(image);
+      fragment.appendChild(paragraph);
     });
-
-    table.appendChild(body);
-    gallery.replaceWith(table);
+    gallery.replaceWith(fragment);
   });
 };
 
@@ -1152,6 +1140,18 @@ const canvasHasInk = (canvas: HTMLCanvasElement) => {
   return false;
 };
 
+export const createPublishMathImage = (latex: string, png: string) => {
+  const image = document.createElement("img");
+  image.alt = latex.trim();
+  image.src = png;
+  // Zhihu imports ordinary data-URL images as uploads, which fail for formulas.
+  // Its math importer consumes data-tex instead, preserving an editable formula.
+  // Keep the local PNG for publishing editors that do not understand this marker.
+  image.classList.add("ztext-math");
+  image.setAttribute("data-tex", latex.trim());
+  return image;
+};
+
 const rasterizeMathForWeChat = async (root: HTMLElement) => {
   const hosts = Array.from(root.querySelectorAll<HTMLElement>("[data-ee-math]"));
   if (hosts.length === 0) return;
@@ -1177,9 +1177,7 @@ const rasterizeMathForWeChat = async (root: HTMLElement) => {
       if (canvas.width < 2 || canvas.height < 2 || !canvasHasInk(canvas)) continue;
       const cssWidth = Math.max(1, Math.round(canvas.width / 2));
       const cssHeight = Math.max(1, Math.round(canvas.height / 2));
-      const image = document.createElement("img");
-      image.alt = latex.trim();
-      image.src = canvas.toDataURL("image/png");
+      const image = createPublishMathImage(latex, canvas.toDataURL("image/png"));
       if (kind === "block") {
         const width = Math.min(cssWidth, WECHAT_CONTENT_WIDTH);
         const height = Math.max(1, Math.round(cssHeight * (width / cssWidth)));
@@ -1302,11 +1300,11 @@ export const prepareMarkdownPublishArticle = (markdown: string, from?: HTMLEleme
 
 export const buildWeChatClipboardHtml = async (editor: Editor) => {
   const container = preparePublishArticle(editor.getHTML(), editor.view.dom);
+  const uploadImage = createConfiguredPublishImageUploader();
   await rasterizeMathForWeChat(container);
-  await embedMermaidForWeChat(container, editor);
-  const originalImages = Array.from(editor.view.dom.querySelectorAll<HTMLImageElement>("img")).filter(isContentImage);
-  await embedImagesForWeChat(container, originalImages);
+  await embedMermaidForWeChat(container, editor, uploadImage);
   await rasterizePublishOrnamentsForWeChat(container);
+  await embedImagesForWeChat(container, uploadImage);
   return container.outerHTML;
 };
 
@@ -1315,10 +1313,11 @@ export const copyEditorToWeChat = async (editor: Editor) =>
 
 export const buildMarkdownWeChatHtml = async (markdown: string) => {
   const container = prepareMarkdownPublishArticle(markdown);
+  const uploadImage = createConfiguredPublishImageUploader();
   await rasterizeMathForWeChat(container);
-  await embedMermaidForWeChat(container);
-  await embedImagesForWeChat(container);
+  await embedMermaidForWeChat(container, undefined, uploadImage);
   await rasterizePublishOrnamentsForWeChat(container);
+  await embedImagesForWeChat(container, uploadImage);
   return { html: container.outerHTML, text: container.textContent ?? "" };
 };
 

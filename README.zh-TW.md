@@ -83,7 +83,7 @@ EdgeEver 是一款現代化的開源筆記與個人知識庫工作區。它延�
 <a id="features"></a>
 ## 核心功能與場景矩陣
 
-一站式連結「靈感擷取 · 深度創作 · 知識沉澱」的全能工作區（👉 **[查看 19 個實機案例展示與最佳實踐](docs/best-practices.zh-CN.md)**）：
+一站式連結「靈感擷取 · 深度創作 · 知識沉澱」的全能工作區（👉 **[查看 20 個實機案例展示與最佳實踐](docs/best-practices.zh-CN.md)**）：
 
 | 模組 | 基礎功能 | 進階特性 |
 | :--- | :--- | :--- |
@@ -91,7 +91,7 @@ EdgeEver 是一款現代化的開源筆記與個人知識庫工作區。它延�
 | **組織與檢索** | • 無限層級筆記本與目錄樹導覽<br>• 標籤體系（Tags）與筆記拖放排序、批次合併/移動<br>• 毫秒級即時全文搜尋與歷史記錄篩選 | • **獨立知識庫網站發布**：一鍵將整個筆記本公開發布為帶目錄樹導覽的獨立靜態網站（支援密碼保護）<br>• **第三方筆記一鍵遷移**：圖形介面原生匯入 flomo、Evernote、Obsidian、Joplin 完整筆記、層級與附件<br>• 多帳號與工作區多空間資料實體隔離 |
 | **擷取與附件** | • 桌面與行動端全格式附件上傳（PDF、Office、影音等）<br>• 瀏覽器選取網頁文字與圖片精準擷取<br>• 手機系統分享一鍵轉存全網圖片與微信文章 | • **全渠道結構化擷取**：深度適配小紅書、X (Twitter)、知乎、Reddit、GitHub 等 20+ 平台<br>• **微信聊天記錄一鍵歸檔**：整段對話轉筆記，保留時間軸、引用、表情與附件<br>• **端側靜默壓縮**：圖片上傳前壓縮 50%–90%；分塊串流上傳安全支援最大 1 GiB 附件<br>• **OSS 物件儲存與桌面圖床**：實例支援掛載相容 S3 的物件儲存；桌面端支援 PicGo / PicList 與 CloudFlare ImgBed 圖床直傳 |
 | **資料與視覺化** | • 原生表格編輯與 Markdown 表格繪製<br>• 原生 Mermaid 流程圖、循序圖與架構圖繪製 | • **AI 多維表格**：自然語言一句話產生業務資料庫（含標籤、日期等欄位）<br>• **線上公開收集表單**：多維表格一鍵產生免登入外鏈表單，填報資料即時入庫<br>• **AI 智慧資訊圖與導圖**：一鍵產生時間線、對比圖、象限矩陣及心智圖 |
-| **AI 與生態** | • 側邊伴隨式 AI 助手，選取範圍/全文一鍵摘要、翻譯與修飾潤色<br>• BYOK（自備金鑰）：相容 OpenAI、Anthropic、Gemini 等主流協定 | • **原生 Agent 協定互聯**：內建 MCP（外部 Agent 讀寫筆記）與 ACP（桌面端直接喚起 Codex、Claude Code、CodeBuddy 等本機 Agent 協同創作）<br>• **AI 影音語音轉文字**：用戶端提取音軌並自動分段，直連 OpenAI 相容語音模型轉寫並一鍵插入筆記<br>• **開放外掛開發 API 與主題生態**：支援從市場 / GitHub 一鍵安裝並跨端同步；支援讀寫筆記與編輯器互動、擴充自訂面板與指令、呼叫內建 AI 與定時任務，以及無程式碼主題自訂 |
+| **AI 與生態** | • 側邊伴隨式 AI 助手，選取範圍/全文一鍵摘要、翻譯與修飾潤色<br>• BYOK（自備金鑰）：相容 OpenAI、Anthropic、Gemini 等主流協定 | • **原生 Agent 協定互聯**：內建 MCP（外部 Agent 讀寫筆記）與 ACP（桌面端直接喚起 Codex、Claude Code、Antigravity、WorkBuddy 等本機 Agent 協同創作）<br>• **AI 影音語音轉文字**：用戶端提取音軌並自動分段，直連 OpenAI 相容語音模型轉寫並一鍵插入筆記<br>• **開放外掛開發 API 與主題生態**：支援從市場 / GitHub 一鍵安裝並跨端同步；支援讀寫筆記與編輯器互動、擴充自訂面板與指令、呼叫內建 AI 與定時任務，以及無程式碼主題自訂 |
 | **多端同步與底座** | • 電腦、手機全端秒級無感同步，無裝置數量限制<br>• 官方涵蓋 Web / macOS / Windows / Linux / iOS / Android 全平台<br>• 離線優先與同步佇列：斷網流暢寫作，連網自動復原並增量同步<br>• 標準 SQLite 儲存，無損 ZIP 封存與 Markdown 匯出匯入 | • **終身零伺服器成本**：100% 執行於 Cloudflare 免費配額（容量約 15 萬條短筆記與 5 萬張圖片）<br>• **彈性 Docker 自託管**：私有 VPS/NAS 一鍵部署，輕鬆承載百萬級筆記與瞬時同步<br>• **桌面端自動災備**：支援本機定時自動備份（多快照保留、可選密碼加密），並可自動同步 WebDAV 異地副本<br>• 伺服端防暴力破解限流、TOTP 兩步驗證（2FA）與登入裝置工作階段管理，保障帳號與資料隔離安全 |
 
 ## 部署
@@ -224,7 +224,7 @@ bun run dev
 
 - Bun workspace monorepo，包含 Web、API、官網與共享型別套件。
 - 前端：Vite、React、React Router、TanStack Query，UI 基於 Tailwind CSS、shadcn/ui、Radix UI。
-- 编辑器：TipTap / ProseMirror，支援 Markdown；PWA 使用 vite-plugin-pwa、Workbox、Dexie。
+- 编辑器：TipTap / ProseMirror，支援 Markdown。
 - Android App：`apps/mobile` 中的 Expo + React Native，採用 SQLite 本機儲存與增量同步。
 - iOS App：`apps/ios` 中的原生 SwiftUI（iOS 17+），內建 TipTap EditorBundle、GRDB 本機鏡像／outbox，介面與 Android 殼層對齊。
 - 原生桌面版：Electron + Rust sidecar，兼顧跨平台一致體驗與高效能本機資料服務；基於 SQLite 支援離線編輯、連網後增量同步與本機備份。
@@ -238,7 +238,7 @@ bun run dev
 <summary>📁 展開查看：Monorepo 專案目錄結構</summary>
 
 ```text
-apps/web          Vite + React 前端、PWA、離線草稿與同步佇列
+apps/web          Vite + React 前端、離線草稿與同步佇列
 apps/extension    Chrome/Edge/Firefox Manifest V3 網頁擷取擴充功能
 apps/api          Cloudflare Worker + Hono API、MCP endpoint
 apps/mobile       Expo + React Native Android App
@@ -271,7 +271,7 @@ content_text      全文搜尋、摘要與快速索引使用
 ### 核心機制與設計決策
 
 - **端側靜默壓縮**：為避免在 Serverless（如 Cloudflare Worker）上執行圖片轉碼消耗寶貴的運算額度，圖片壓縮全部放在 Web 用戶端上傳前完成（PNG/JPEG/WebP/AVIF 轉 WebP，最大邊限制 2560px；不減小體積則保留原圖）。伺服端 REST API 與 MCP 介面直接入庫用戶端傳輸的原始內容。
-- **離線優先與同步時序**：Web、PWA 與桌面版會在使用者停止編輯 30 秒後自動上傳增量，並在前景頁面可見時每 5 分鐘拉取一次雲端變更；視窗重新聚焦或手動重新整理時立即同步。開發者可在 [`apps/web/src/lib/workspace-refresh.ts`](apps/web/src/lib/workspace-refresh.ts) 中調整相關時序常數（`DEFERRED_MEMO_SYNC_DELAY_MS` 與 `BACKGROUND_WORKSPACE_REFRESH_INTERVAL_MS`）。
+- **離線優先與同步時序**：Web 與桌面版會在使用者停止編輯 30 秒後自動上傳增量，並在前景頁面可見時每 5 分鐘拉取一次雲端變更；視窗重新聚焦或手動重新整理時立即同步。開發者可在 [`apps/web/src/lib/workspace-refresh.ts`](apps/web/src/lib/workspace-refresh.ts) 中調整相關時序常數（`DEFERRED_MEMO_SYNC_DELAY_MS` 與 `BACKGROUND_WORKSPACE_REFRESH_INTERVAL_MS`）。
 
 ### 參與程式碼貢獻
 

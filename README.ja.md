@@ -83,7 +83,7 @@ EdgeEver は、オープンソースのノートと知識ベースの作業領�
 <a id="features"></a>
 ## 機能とワークフローマトリクス
 
-「インスピレーションの収集 · 深い創作 · 知識の蓄積」をシームレスにつなぐオールインワンワークスペース（👉 **[全 19 の実機スクリーンショットと活用ガイドを見る](docs/best-practices.md)**）：
+「インスピレーションの収集 · 深い創作 · 知識の蓄積」をシームレスにつなぐオールインワンワークスペース（👉 **[全 20 の実機スクリーンショットと活用ガイドを見る](docs/best-practices.md)**）：
 
 | モジュール | 基本機能 | 高度な機能 |
 | :--- | :--- | :--- |
@@ -91,7 +91,7 @@ EdgeEver は、オープンソースのノートと知識ベースの作業領�
 | **整理と検索** | • 無制限階層のノートブックとフォルダツリー<br>• タグシステム、ドラッグ＆ドロップ並べ替え、一括結合・移動<br>• ミリ秒単位のインクリメンタル全文検索とフィルタ | • **独立した知識ベースサイト公開**：ノートブック全体をツリーナビゲーション付きの静的 Web サイトとしてワンクリック公開（パスワード保護対応）<br>• **サードパーティからのワンクリック移行**：GUI から flomo、Evernote、Obsidian、Joplin のノート・階層・添付ファイルを一括インポート<br>• マルチアカウント・複数ワークスペースの物理分離 |
 | **収集とメディア** | • デスクトップ・モバイルでの各種添付ファイル（PDF、Office、音声・動画など）保存<br>• ブラウザ拡張によるテキスト・画像の選択クリップ<br>• スマホの共有メニューから画像や Web 記事を即時保存 | • **高度な構造化クリッピング**：小紅書、X (Twitter)、知乎、Reddit、GitHub、YouTube、Bilibili など 20 以上の主要サービスに対応<br>• **微信チャット履歴の取り込み**：タイムライン、発言者、引用、スタンプ、メディアを完全保持<br>• **クライアント側自動圧縮**：画像アップロード時に 50%〜90% 自動軽量化；最大 1 GiB の分割ストリーミングアップロード対応<br>• **OSS オブジェクトストレージ＆デスクトップ画像ホスティング**：インスタンス単位で S3 互換ストレージに対応；デスクトップでは PicGo / PicList や CloudFlare ImgBed への直接アップロードに対応 |
 | **データと可視化** | • ネイティブ表編集と Markdown テーブル描画<br>• Mermaid 記法によるフローチャート・シーケンス図・構成図の直接描画 | • **AI 多次元テーブル**：プロンプトからタグや日付などの列型を備えた業務テーブルを自動生成<br>• **一般公開集計フォーム**：ログイン不要の Web フォームを発行し、回答をリアルタイムでテーブルへ集約<br>• **AI インフォグラフィック生成**：タイムライン、比較図、マトリクス、マインドマップを自動生成 |
-| **AI とエコシステム** | • サイドバーの伴走型 AI アシスタント（要約、校正、翻訳、推敲）<br>• BYOK（独自 API キー）：OpenAI、Anthropic、Gemini 互換プロトコル対応 | • **ネイティブ Agent プロトコル連携**：外部 Agent が読み書きできる MCP、Codex、Claude Code、CodeBuddy などのローカル Agent を直接呼び出す ACP を標準搭載<br>• **AI 音声・動画文字起こし**：クライアント側で音声トラックを抽出・分割し、OpenAI 互換音声モデルに直接接続してテキスト化しノートへ挿入<br>• **オープンなプラグイン API とテーマエコシステム**：マーケットや GitHub からワンクリック導入・端末間同期に対応；ノートの読み書きやエディタ連携、独自パネル・コマンド拡張、AI 呼び出し、デスクトップ定期実行、ノーコードテーマ設定が可能 |
+| **AI とエコシステム** | • サイドバーの伴走型 AI アシスタント（要約、校正、翻訳、推敲）<br>• BYOK（独自 API キー）：OpenAI、Anthropic、Gemini 互換プロトコル対応 | • **ネイティブ Agent プロトコル連携**：外部 Agent が読み書きできる MCP、Codex、Claude Code、Antigravity、WorkBuddy などのローカル Agent を直接呼び出す ACP を標準搭載<br>• **AI 音声・動画文字起こし**：クライアント側で音声トラックを抽出・分割し、OpenAI 互換音声モデルに直接接続してテキスト化しノートへ挿入<br>• **オープンなプラグイン API とテーマエコシステム**：マーケットや GitHub からワンクリック導入・端末間同期に対応；ノートの読み書きやエディタ連携、独自パネル・コマンド拡張、AI 呼び出し、デスクトップ定期実行、ノーコードテーマ設定が可能 |
 | **マルチ端末同期と基盤** | • PC・スマホ・タブレット間で低遅延・シームレスに同期、接続端末数無制限<br>• Web、macOS、Windows、Linux、iOS、Android の全プラットフォーム公式対応<br>• オフラインファーストと自動同期キュー：オフラインでも軽快に執筆、再接続時に自動増分同期<br>• 標準 SQLite、可逆 ZIP アーカイブ・Markdown の入出力に対応 | • **生涯サーバー代ゼロ**：Cloudflare の無料枠で 100% 稼働（短文約 15 万件＋画像約 5 万枚）<br>• **自由な Docker セルフホスト**：自宅サーバー・VPS・NAS にワンクリック配置、数百万件規模の高速同期に対応<br>• **デスクトップ自動バックアップ**：定期ローカル自動バックアップ（複数世代保持・任意パスワード暗号化）と WebDAV への自動オフサイト複製に対応<br>• サーバー側ブルートフォース保護、TOTP 二段階認証（2FA）、ログイン端末セッション管理、データ隔離による強固なセキュリティ |
 
 ## 導入
@@ -223,7 +223,7 @@ bun run dev
 
 - Bun workspace の monorepo。Web、API、公式サイト、共有型パッケージ。
 - フロントエンド: Vite、React、React Router、TanStack Query、Tailwind CSS、shadcn/ui、Radix UI。
-- エディタ: TipTap / ProseMirror と Markdown。PWA は vite-plugin-pwa、Workbox、Dexie。
+- エディタ: TipTap / ProseMirror と Markdown。
 - Android アプリ: `apps/mobile` の Expo + React Native。SQLite のローカル保存と差分同期。
 - iOS アプリ: `apps/ios` のネイティブ SwiftUI（iOS 17+）。同梱の TipTap EditorBundle、GRDB のローカルミラー / outbox、Android に揃えたシェル。
 - ネイティブデスクトップ: Electron + Rust sidecar。横断プラットフォームの操作感と、速いローカルデータ。SQLite でオフライン編集、復帰後の差分同期、ローカルバックアップ。
@@ -237,7 +237,7 @@ bun run dev
 <summary>📁 展開して確認：Monorepo リポジトリ構成</summary>
 
 ```text
-apps/web          Vite + React フロントエンド、PWA、オフライン下書き、同期キュー
+apps/web          Vite + React フロントエンド、オフライン下書き、同期キュー
 apps/extension    Chrome/Edge/Firefox Manifest V3 Web Clipper
 apps/api          Cloudflare Worker + Hono API、MCP
 apps/mobile       Expo + React Native の Android アプリ
@@ -270,7 +270,7 @@ content_text      全文検索、要約生成、索引
 ### コアメカニズムと設計上の決定
 
 - **クライアント側での静默圧縮**：Cloudflare Workers などの Serverless ランタイムで画像トランスコードを行い計算枠を消費するのを防ぐため、画像圧縮は Web クライアント側のアップロード前に完結させます（PNG/JPEG/WebP/AVIF を WebP に変換、長辺 2560px 制限；サイズが小さくならなければ原画像を維持）。サーバー側の REST API や MCP アップロードはクライアントから受け取った内容をそのまま格納します。
-- **オフライン優先と同期のタイミング**：Web、PWA、デスクトップは、ユーザーの編集が 30 秒間止まった段階で増分を自動アップロードし、フォアグラウンド表示中は 5 分ごとにクラウドの変更を確認します。ウィンドウへのフォーカス復帰や手動更新時は即座に同期されます。開発者は [`apps/web/src/lib/workspace-refresh.ts`](apps/web/src/lib/workspace-refresh.ts) 内の定数（`DEFERRED_MEMO_SYNC_DELAY_MS` および `BACKGROUND_WORKSPACE_REFRESH_INTERVAL_MS`）で調整できます。
+- **オフライン優先と同期のタイミング**：Web、デスクトップは、ユーザーの編集が 30 秒間止まった段階で増分を自動アップロードし、フォアグラウンド表示中は 5 分ごとにクラウドの変更を確認します。ウィンドウへのフォーカス復帰や手動更新時は即座に同期されます。開発者は [`apps/web/src/lib/workspace-refresh.ts`](apps/web/src/lib/workspace-refresh.ts) 内の定数（`DEFERRED_MEMO_SYNC_DELAY_MS` および `BACKGROUND_WORKSPACE_REFRESH_INTERVAL_MS`）で調整できます。
 
 ### コードへの貢献
 
