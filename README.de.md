@@ -3,7 +3,7 @@
     <img src="assets/brand/edgeever-icon.svg" alt="EdgeEver Logo" width="48" align="absmiddle" /> EdgeEver
   </h1>
   <p>
-    <b>KI-native Wissensdatenbank & Evernote/Obsidian-Alternative. Sofortige plattformübergreifende Synchronisierung, vielfältige Notizen (Tabellen, Mindmaps, Diagramme, Poster), Web Clipper & MCP. 100% kostenlos auf Cloudflare oder via Docker.</b>
+    <b>KI-native Notiz-App & Evernote/Obsidian-Alternative. Sofortige plattformübergreifende Synchronisierung, vielfältige Notizen (Tabellen, Mindmaps, Diagramme, Poster), Web Clipper & MCP. 100% kostenlos auf Cloudflare oder via Docker.</b>
   </p>
   <p>
     <a href="https://github.com/tianma-if/edgeever/stargazers"><img src="https://img.shields.io/github/stars/tianma-if/edgeever?style=social" alt="GitHub Stars" /></a>
@@ -42,7 +42,7 @@ EdgeEver ist ein moderner, quelloffener Arbeitsbereich für Notizen und persönl
 Viele Nutzer von **Notiz-Apps und persönlichen Wissensdatenbanken** suchen schlicht nach einer **zuverlässigen, offenen und schnellen** Wissensbasis. Die gängigen Lösungen bringen jedoch alle Kompromisse mit sich:
 
 * **Evernote**: Bietet die reibungsloseste und nahtloseste geräteübergreifende Cloud-Synchronisierung. Mit der Entwicklung zu einer vollumfänglichen kommerziellen Suite nahmen jedoch Werbung und Zusatzmodule zu, während die Systemauslastung stieg. Zudem wurden die Kontingente des kostenlosen Tarifs drastisch gekürzt, Premium-KI-Abonnements wurden teuer und die Einbindung in moderne, selbst gehostete und private KI-Workflows bleibt schwierig.
-* **Obsidian**: Offene Dateien, aber proprietärer Kern. Die offizielle Synchronisierung ist kostenpflichtig und Drittanbieter-Synchronisierungen sind mühsam. Das vollständige Vertrauen auf das Scannen lokaler flacher Dateien führt bei tausenden Notizen oder vielen Plugins zu spürbaren Verzögerungen beim Kaltstart und bei der Suche. Werden Bilder und Anhänge im Notiz-Tresor gespeichert, bläht sich dieser schnell auf, was die mobile Synchronisierung verlangsamt und verwaiste Dateien hinterlässt. Für schnelles, unkompliziertes Festhalten von Gedanken von unterwegs ist es oft zu schwerfällig.
+* **Obsidian**: Offene Markdown-Dateien, aber proprietärer Kern. Die offizielle Synchronisierung erfordert ein laufendes Abo nach Speicherplatz und Vault-Anzahl, während Drittanbieter-Lösungen (iCloud, WebDAV, Git usw.) mühsam und konfliktanfällig sind; durch die Synchronisierung lokaler Dateiverzeichnisse und mobile Hintergrundbeschränkungen erreicht sie kaum das nahtlose, unbemerkbare Sync-Erlebnis cloud-nativer Notiz-Apps (und ein vollständiger Web-Arbeitsbereich fehlt). Das lokale Scannen führt bei tausenden Notizen oder vielen Plugins zu spürbarer Verzögerung bei Kaltstart und Suche; im Vault gespeicherte Anhänge blähen diesen auf, bremsen den mobilen Abgleich aus und hinterlassen verwaiste Dateien. Zudem sorgen die IDE-ähnliche Oberfläche und das Plugin-Ökosystem für eine höhere Einstiegshürde – zu schwerfällig für Nutzer klassischer Cloud-Notizen, die sofort und überall losschreiben wollen.
 * **Joplin**: Eine bewährte Open-Source-Notiz-App mit Drei-Spalten-Ansicht, doch Benutzeroberfläche und Editor wirken wie aus dem vergangenen Jahrzehnt – es fehlt an modernem Schliff und Leichtigkeit. Eine schnelle offizielle Synchronisierung (Joplin Cloud) erfordert ein kostenpflichtiges Abonnement. Die kostenlose Synchronisierung über WebDAV oder Cloud-Speicher fragt Dateien einzeln nacheinander ab, was auf Mobilgeräten mit wachsender Notiz- und Anhangsanzahl träge wird. Ein eigener Joplin Server erfordert zudem die Wartung eines eigenen Servers ohne kostenlose Serverless-Alternative. Zudem fehlen ein vollwertiger Web-Arbeitsbereich im Browser und native KI-Agenten-Funktionen (MCP/ACP).
 * **Memos & Stream-Notizen**: Minimalistisch und übersichtlich, aber das Layout im Social-Media-Timeline-Stil unterscheidet sich grundlegend von der strukturierten Produktivität des klassischen Drei-Spalten-Workflows.
 * **SiYuan & blockbasierte PKMs**: Leistungsstark und selbst hostbar, doch ihre granulare Block-Architektur erfordert beim schnellen täglichen Erfassen und flüssigen Schreiben längerer Texte eine spürbare kognitive Belastung. Zudem fehlt ihnen eine echte, kostenlose Serverless-Bereitstellungsoption, und die geräteübergreifende Synchronisierung erfordert entweder offizielle kostenpflichtige Abonnements oder einen Aufpreis zur Freischaltung von S3/WebDAV-Synchronisierungsfunktionen mit eigenem Speicher.
@@ -103,7 +103,7 @@ Wähle für Cloudflare eine der beiden folgenden Online-Bereitstellungsoptionen:
 
 ### Option A: Bereitstellung mit einem KI-Agenten (empfohlen)
 
-Kopiere den folgenden Prompt direkt in einen KI-Agenten (z. B. Codex, Claude, Cursor, WorkBuddy, Antigravity, OpenClaw, Hermes Agent usw.). Falls während der Ausführung Zugriff auf GitHub oder Cloudflare erforderlich ist, überprüfe die angeforderten Berechtigungen und folge den Anweisungen zur Autorisierung.
+Kopiere den folgenden Prompt direkt in einen KI-Agenten (z. B. Codex, Claude Code, DeepSeek Harness, WorkBuddy, Antigravity usw.). Falls während der Ausführung Zugriff auf GitHub oder Cloudflare erforderlich ist, überprüfe die angeforderten Berechtigungen und folge den Anweisungen zur Autorisierung.
 
 ```text
 Stelle EdgeEver vollständig über GitHub und Cloudflare bereit:
@@ -180,7 +180,7 @@ Ob für regelmäßige Datensicherungen, die nahtlose Migration zwischen Instanze
 
 ### KI- & MCP-Protokoll-Integration
 
-Erstelle ein API-Token unter **Profil** -> **API / MCP** und kopiere die Remote-MCP-Konfiguration mit einem Klick, damit KI-Agenten wie Claude Code, Cursor, Antigravity und OpenClaw deine Wissensbasis innerhalb der Kontoberechtigungen sicher verwalten können. EdgeEver unterstützt vollständige CRUD-Operationen für Textnotizen, visuelle Diagramm-Notizen (Mindmaps, Flussdiagramme und Architekturdiagramme), strukturierte Tabellennotizen und native Plakat-Notizen. Agenten können zudem Notizbuch-Hierarchien, Tags, Anhänge, die Versionshistorie, Notizvorlagen und KI-Instruktionen verwalten.
+Erstelle ein API-Token unter **Profil** -> **API / MCP** und kopiere die Remote-MCP-Konfiguration mit einem Klick, damit KI-Agenten wie Claude Code, Codex, DeepSeek Harness und Antigravity deine Wissensbasis innerhalb der Kontoberechtigungen sicher verwalten können. EdgeEver unterstützt vollständige CRUD-Operationen für Textnotizen, visuelle Diagramm-Notizen (Mindmaps, Flussdiagramme und Architekturdiagramme), strukturierte Tabellennotizen und native Plakat-Notizen. Agenten können zudem Notizbuch-Hierarchien, Tags, Anhänge, die Versionshistorie, Notizvorlagen und KI-Instruktionen verwalten.
 
 Einrichtung der Clients, Zugriffsstufen der Tokens, Fehlerbehebung und empfohlene Regeln für Agenten beschreibt [Using EdgeEver with MCP clients](docs/mcp-guide.md) (auf Englisch).
 

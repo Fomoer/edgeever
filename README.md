@@ -3,7 +3,7 @@
     <img src="assets/brand/edgeever-icon.svg" alt="EdgeEver logo" width="48" align="absmiddle" /> EdgeEver
   </h1>
   <p>
-    <b>AI-native knowledge base & Evernote/Obsidian alternative. Instant all-platform sync, rich notes (tables, mind maps, diagrams, posters), web clipper & MCP. 100% free on Cloudflare or Docker.</b>
+    <b>AI-native note-taking app & Evernote/Obsidian alternative. Instant all-platform sync, rich notes (tables, mind maps, diagrams, posters), web clipper & MCP. 100% free on Cloudflare or Docker.</b>
   </p>
   <p>
     <a href="https://github.com/tianma-if/edgeever/stargazers"><img src="https://img.shields.io/github/stars/tianma-if/edgeever?style=social" alt="GitHub Stars" /></a>
@@ -42,7 +42,7 @@ EdgeEver is a modern, open-source notes and knowledge base workspace. It preserv
 Many users of **note-taking apps and personal knowledge bases** simply want a **reliable, open, and fast** personal knowledge base. However, existing mainstream solutions all present tradeoffs:
 
 * **Evernote**: Offers the smoothest, most seamless multi-device cloud sync experience. Yet as it evolved into a full-featured commercial suite, ads and add-ons multiplied while system overhead climbed. Meanwhile, free-tier quotas tightened, premium AI subscriptions grew expensive, and it remains difficult to integrate into modern self-hosted and private AI workflows.
-* **Obsidian**: Open files, closed-source core. Official Sync is paid and third-party sync is tedious; relying entirely on flat local file scanning causes noticeable cold-start and search lag once notes reach thousands or heavy plugins are loaded; storing images and attachments alongside notes quickly bloats vaults, making mobile sync sluggish and leaving orphaned files behind; and it is overly heavy for lightweight, capture-anywhere use.
+* **Obsidian**: Open Markdown files, closed-source core. Official Sync requires an ongoing subscription tiered by storage and vault count, while third-party sync (iCloud, WebDAV, Git, etc.) is tedious and conflict-prone; constrained by local-directory file sync and mobile background limits, it struggles to match the seamless, invisible sync of cloud-native note apps (and lacks a full web workspace). Relying on local file scanning causes noticeable cold-start and search lag once notes reach the thousands or plugins pile up; storing attachments alongside notes bloats vaults, slows mobile sync, and leaves orphaned files behind. Combined with an IDE-like UI and plugin-tinkering learning curve, it feels overly heavy for users used to out-of-the-box, capture-anywhere cloud note apps.
 * **Joplin**: A veteran open-source three-pane note app, yet its UI design and editing experience feel stuck more than a decade in the past, lacking modern polish and fluidity. Fast official sync (Joplin Cloud) requires a paid subscription; free sync via WebDAV or cloud drives relies on file-by-file polling that becomes sluggish on mobile as notes and attachments grow, while self-hosting Joplin Server requires maintaining your own server with no zero-cost serverless option. It also lacks a full browser-based web workspace and native AI Agent capabilities (MCP/ACP).
 * **Memos & Stream Notes**: Clean and simple, but their social-timeline layouts differ fundamentally from the structured productivity of a classic three-pane workflow.
 * **SiYuan & Block-based PKMs**: Powerful with self-hosting support, but their granular "block-level" architecture imposes noticeable cognitive overhead for quick daily capture and continuous prose writing. Furthermore, they lack a true zero-cost serverless deployment tier, and multi-device sync relies on paid official subscriptions or paying extra to unlock S3/WebDAV sync features with your own storage.
@@ -102,7 +102,7 @@ For Cloudflare, choose either of the following online deployment options:
 
 ### Option A: Deploy with an AI Agent (Recommended)
 
-Copy the prompt below directly into an AI Agent (such as Codex, Claude, Cursor, WorkBuddy, Antigravity, OpenClaw, Hermes Agent, etc.). During execution, if access to GitHub or Cloudflare is required, review the requested permissions and follow the prompts to authorize access.
+Copy the prompt below directly into an AI Agent (such as Codex, Claude Code, DeepSeek Harness, WorkBuddy, Antigravity, etc.). During execution, if access to GitHub or Cloudflare is required, review the requested permissions and follow the prompts to authorize access.
 
 ```text
 Deploy EdgeEver entirely through GitHub and Cloudflare:
@@ -180,7 +180,7 @@ Whether for routine data backups, seamless cross-instance migration, or switchin
 
 ### AI & MCP Protocol Integration
 
-Create an API token in **Profile** -> **API / MCP** and copy the Remote MCP configuration in one click to let AI Agents such as Claude Code, Cursor, Antigravity, and OpenClaw securely manage your knowledge base within account permissions. EdgeEver supports full CRUD for text notes, visual diagram notes (mind maps, flowcharts, and architecture diagrams), structured table notes, and native poster notes. Agents can also manage notebook hierarchies, tags, attachments, revision history, note templates, and AI instructions.
+Create an API token in **Profile** -> **API / MCP** and copy the Remote MCP configuration in one click to let AI Agents such as Claude Code, Codex, DeepSeek Harness, and Antigravity securely manage your knowledge base within account permissions. EdgeEver supports full CRUD for text notes, visual diagram notes (mind maps, flowcharts, and architecture diagrams), structured table notes, and native poster notes. Agents can also manage notebook hierarchies, tags, attachments, revision history, note templates, and AI instructions.
 
 For client setup, token access levels, troubleshooting and suggested rules for agents, see [Using EdgeEver with MCP clients](docs/mcp-guide.md).
 

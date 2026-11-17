@@ -3,7 +3,7 @@
     <img src="assets/brand/edgeever-icon.svg" alt="Logo de EdgeEver" width="48" align="absmiddle" /> EdgeEver
   </h1>
   <p>
-    <b>Base de conocimiento nativa de IA y alternativa a Evernote/Obsidian. Sincronización instantánea en todas las plataformas, notas enriquecidas (tablas, mapas mentales, diagramas, pósteres), web clipper y MCP. 100% gratis en Cloudflare o con Docker.</b>
+    <b>Aplicación de notas nativa de IA y alternativa a Evernote/Obsidian. Sincronización instantánea en todas las plataformas, notas enriquecidas (tablas, mapas mentales, diagramas, pósteres), web clipper y MCP. 100% gratis en Cloudflare o con Docker.</b>
   </p>
   <p>
     <a href="https://github.com/tianma-if/edgeever/stargazers"><img src="https://img.shields.io/github/stars/tianma-if/edgeever?style=social" alt="Estrellas en GitHub" /></a>
@@ -42,7 +42,7 @@ EdgeEver es un espacio de trabajo moderno y de código abierto para notas y base
 Muchos usuarios de **aplicaciones de notas y bases de conocimiento personales** solo buscan una base de conocimiento **fiable, abierta y rápida**. Sin embargo, las soluciones convencionales actuales presentan inconvenientes:
 
 * **Evernote**: Ofrece la experiencia de sincronización en la nube multidispositivo más fluida y transparente. Sin embargo, a medida que evolucionó hacia una suite comercial repleta de funciones, los anuncios y complementos se multiplicaron mientras aumentaba el consumo de recursos. Mientras tanto, las cuotas del plan gratuito se redujeron, las suscripciones premium de IA se encarecieron y sigue siendo difícil de integrar en flujos de trabajo de IA privados y autoalojados modernos.
-* **Obsidian**: Archivos abiertos, núcleo de código cerrado. La sincronización oficial es de pago y la de terceros resulta tediosa; depender exclusivamente del escaneo de archivos locales planos provoca retrasos notables en el arranque en frío y en las búsquedas cuando las notas alcanzan miles o se cargan plugins pesados; almacenar imágenes y adjuntos junto con las notas infla rápidamente las bóvedas, ralentizando la sincronización móvil y dejando archivos huérfanos; además, es demasiado pesado para capturar notas rápidas en cualquier momento.
+* **Obsidian**: Archivos Markdown abiertos, núcleo de código cerrado. La sincronización oficial requiere una suscripción continua por capacidad y número de bóvedas, y la de terceros (iCloud, WebDAV, Git, etc.) es tediosa y propensa a conflictos; limitada por la sincronización basada en directorios locales y las restricciones en segundo plano de móviles, difícilmente logra la experiencia fluida y transparente de las notas nativas en la nube (además de carecer de un espacio web completo). Depender del escaneo local provoca retrasos notables en el arranque en frío y en las búsquedas al superar miles de notas o añadir plugins; mezclar adjuntos con notas infla las bóvedas, ralentiza la sincronización móvil y deja archivos huérfanos. Sumado a una interfaz tipo IDE y una curva de aprendizaje centrada en configurar plugins, resulta demasiado pesado para quienes buscan una app lista para usar y capturar ideas en cualquier momento.
 * **Joplin**: Una veterana aplicación de notas de código abierto con tres paneles, pero su diseño visual y su experiencia de edición parecen haberse quedado estancados hace más de una década, careciendo de fluidez y acabado moderno. La sincronización oficial rápida (Joplin Cloud) requiere suscripción de pago; la sincronización gratuita mediante WebDAV o discos en la nube se basa en sondeos archivo por archivo que se vuelven lentos en dispositivos móviles a medida que crecen las notas y los adjuntos, mientras que autoalojar Joplin Server requiere mantener tu propio servidor sin opción serverless de coste cero. También carece de un espacio de trabajo web completo en el navegador y de capacidades nativas para agentes de IA (MCP/ACP).
 * **Memos y notas cronológicas (flomo)**: Limpias y sencillas, pero sus diseños de línea de tiempo difieren fundamentalmente de la productividad estructurada de un flujo de trabajo clásico de tres paneles.
 * **SiYuan y herramientas PKM basadas en bloques**: Potentes y con soporte para autoalojamiento, pero su arquitectura granular a nivel de bloques impone una carga cognitiva notable para capturas diarias rápidas y redacción de texto continuo. Además, carecen de un nivel de despliegue serverless verdaderamente gratuito, y la sincronización multidispositivo depende de suscripciones oficiales de pago o de pagar extra para desbloquear las funciones de sincronización S3/WebDAV con tu propio almacenamiento.
@@ -104,7 +104,7 @@ Para Cloudflare, elige cualquiera de las siguientes opciones de despliegue en l�
 
 ### Opción A: Despliegue con un agente de IA (Recomendado)
 
-Copia el siguiente prompt directamente en un agente de IA (como Codex, Claude, Cursor, WorkBuddy, Antigravity, OpenClaw, Hermes Agent, etc.). Durante la ejecución, si se requiere acceso a GitHub o Cloudflare, revisa los permisos solicitados y sigue las indicaciones para autorizar el acceso.
+Copia el siguiente prompt directamente en un agente de IA (como Codex, Claude Code, DeepSeek Harness, WorkBuddy, Antigravity, etc.). Durante la ejecución, si se requiere acceso a GitHub o Cloudflare, revisa los permisos solicitados y sigue las indicaciones para autorizar el acceso.
 
 ```text
 Despliega EdgeEver íntegramente a través de GitHub y Cloudflare:
@@ -181,7 +181,7 @@ Ya sea para copias de seguridad rutinarias, migraciones fluidas entre instancias
 
 ### Integración con IA y el protocolo MCP
 
-Crea un token de API en **Perfil** -> **API / MCP** y copia la configuración de Remote MCP con un solo clic para permitir que agentes de IA como Claude Code, Cursor, Antigravity y OpenClaw gestionen de forma segura tu base de conocimiento dentro de los permisos de tu cuenta. EdgeEver admite CRUD completo para notas de texto, notas de diagramas visuales (mapas mentales, diagramas de flujo y esquemas de arquitectura), notas de tablas estructuradas y notas tipo póster nativas. Los agentes también pueden gestionar la jerarquía de cuadernos, etiquetas, archivos adjuntos, historial de versiones, plantillas de notas e instrucciones de IA.
+Crea un token de API en **Perfil** -> **API / MCP** y copia la configuración de Remote MCP con un solo clic para permitir que agentes de IA como Claude Code, Codex, DeepSeek Harness y Antigravity gestionen de forma segura tu base de conocimiento dentro de los permisos de tu cuenta. EdgeEver admite CRUD completo para notas de texto, notas de diagramas visuales (mapas mentales, diagramas de flujo y esquemas de arquitectura), notas de tablas estructuradas y notas tipo póster nativas. Los agentes también pueden gestionar la jerarquía de cuadernos, etiquetas, archivos adjuntos, historial de versiones, plantillas de notas e instrucciones de IA.
 
 Para la configuración de clientes, los niveles de acceso de los tokens, la resolución de problemas y reglas sugeridas para agentes, consulta [Using EdgeEver with MCP clients](docs/mcp-guide.md) (en inglés).
 
