@@ -670,6 +670,10 @@ html[data-edgeever-extension-theme] kbd {
   container-type: inline-size;
 }
 
+.edgeever-create-memo-icon {
+  background-image: linear-gradient(135deg, #36d98e, #12c578);
+}
+
 .edgeever-create-memo-split__more-label {
   display: inline;
 }
@@ -1991,14 +1995,19 @@ html[data-edgeever-extension-theme] .edgeever-memo-divider {
   border-top: 1px solid var(--memo-content-divider-color);
 }
 
-/* Semantic merge boundaries — stronger than decorative theme hairlines. */
+/* Semantic merge boundaries — soft faded hairline to avoid visual clutter. */
 .ProseMirror hr.edgeever-merge-divider,
 .ProseMirror hr[data-edgeever-merge-divider] {
   margin: var(--memo-content-divider-spacing) 0;
-  height: 0;
+  height: 1px;
   border: 0;
-  border-top: 2px solid var(--memo-content-divider-color);
-  background: transparent;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, currentColor 20%, transparent) 16%,
+    color-mix(in srgb, currentColor 20%, transparent) 84%,
+    transparent
+  );
 }
 
 .ProseMirror img:not(.ProseMirror-separator),

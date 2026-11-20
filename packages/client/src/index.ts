@@ -20,6 +20,8 @@ import type {
   CompanionEvent,
   CompanionToolExecuteResult,
   ApiToken,
+  TokenNotebookAccess,
+  TokenNotebookAccessLevel,
   AuthSession,
   LoginInput,
   LoginMfaInput,
@@ -135,6 +137,7 @@ export type MultipartResourceUploadSource = {
 
 export type InstanceHealth = {
   ok: true;
+  tableSchemaVersion?: number;
   name: string;
   runtime?: string | null;
   containerImageSource?: "official-ghcr" | "official-cn-mirror" | "custom" | "unknown" | string | null;
@@ -188,6 +191,10 @@ export type ListTagsResponse = {
 export type ListApiTokensResponse = {
   apiTokens: ApiToken[];
   availableScopes: string[];
+};
+
+export type ApiTokenUpdateResponse = {
+  apiToken: ApiToken;
 };
 
 export type InstanceStorageUsageResponse = {
@@ -1371,9 +1378,15 @@ export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
 
     listApiTokens: () => request<ListApiTokensResponse>("/api/v1/api-tokens"),
 
-    createApiToken: (payload: { name: string; scopes: string[]; expiresAt?: string | null }) =>
+    createApiToken: (payload: { name: string; scopes: string[]; expiresAt?: string | null; notebookAccess?: TokenNotebookAccess[] | null; notebookAccessLevel?: TokenNotebookAccessLevel }) =>
       request<CreatedApiToken>("/api/v1/api-tokens", {
         method: "POST",
+        body: JSON.stringify(payload),
+      }),
+
+    updateApiToken: (tokenId: string, payload: { name?: string; scopes?: string[]; expiresAt?: string | null; notebookAccess?: TokenNotebookAccess[] | null; notebookAccessLevel?: TokenNotebookAccessLevel }) =>
+      request<ApiTokenUpdateResponse>(`/api/v1/api-tokens/${encodeURIComponent(tokenId)}`, {
+        method: "PATCH",
         body: JSON.stringify(payload),
       }),
 
