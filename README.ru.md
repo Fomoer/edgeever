@@ -110,7 +110,8 @@ Cloudflare — это рекомендуемый вариант бессерве
 Разверни EdgeEver полностью через GitHub и Cloudflare:
 1. Создай форк https://github.com/tianma-if/edgeever.
 2. Создай базу данных D1 `edgeever` и хранилище R2 `edgeever-resources` в Cloudflare.
-3. В Workers & Pages выбери «Start with Hello World!» и создай Worker с именем `edgeever`.
+3. В Workers & Pages выбери «Start with Hello World!», чтобы создать и развернуть временный
+   Worker с именем `edgeever`. Пока не подключай Git-репозиторий.
 4. Добавь выбранный пользователем пароль в виде секрета среды выполнения `EDGE_EVER_AUTH_PASSWORD`
    в разделе Settings → Variables and Secrets и выполни Deploy для секрета (рекомендуется
    не менее 32 символов). Имя пользователя по умолчанию — `admin`.
@@ -133,7 +134,7 @@ Cloudflare — это рекомендуемый вариант бессерве
 
 1. **Создайте форк репозитория**: Нажмите **Fork** в правом верхнем углу страницы репозитория на GitHub, чтобы создать копию EdgeEver в своем аккаунте.
 2. **Создайте ресурсы в Cloudflare**: Создайте базу данных D1 `edgeever` и бакет R2 `edgeever-resources`.
-3. **Создайте Worker**: В разделе Cloudflare Workers & Pages выберите Create application → Start with Hello World!, назовите Worker `edgeever` и разверните его. Это создаст заглушку; сам EdgeEver будет развернут на шаге 7.
+3. **Создайте Worker**: В разделе Cloudflare Workers & Pages выберите Create application → Start with Hello World!, чтобы создать и развернуть временный Worker с именем `edgeever`. Пока не подключайте Git-репозиторий.
 4. **Установите пароль администратора**: В настройках Worker в разделе Settings → Variables and Secrets добавьте переменную `EDGE_EVER_AUTH_PASSWORD` с типом Secret и нажмите Deploy. Ее значение — ваш пароль для входа, желательно длиной не менее 32 символов. Выполните это действие до подключения форка.
 5. **Подключите форк**: В настройках существующего Worker в разделе Settings → Builds → Connect выберите ваш форк и рабочую ветку `main`.
 6. **Настройте права развертывания**: В разделе Settings → Builds → API token этого Worker выберите или создайте API-токен Cloudflare для развертывания с правами чтения и редактирования D1 для целевой учетной записи.
@@ -335,15 +336,20 @@ EdgeEver является программным обеспечением для
   <a href="https://github.com/alyyasser"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/16476111?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@alyyasser" /></a>
   <a href="https://github.com/MadlyFX"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/4896705?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@MadlyFX" /></a>
   <a href="https://github.com/claude"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/81847?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@claude" /></a>
-  <a href="https://github.com/Crowszzz"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/75199133?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Crowszzz" /></a>
   <a href="https://github.com/CottonChou"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/17818375?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@CottonChou" /></a>
   <a href="https://github.com/Z-DDV"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/122068983?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Z-DDV" /></a>
+  <a href="https://github.com/DavidPivert"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/61420909?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@DavidPivert" /></a>
   <a href="https://github.com/0xfelixli"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/81979996?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@0xfelixli" /></a>
+  <a href="https://github.com/jayhemnani9910"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/193022578?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@jayhemnani9910" /></a>
+  <a href="https://github.com/anhnt256"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/19179293?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@anhnt256" /></a>
   <a href="https://github.com/Sergmay911"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/304439776?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Sergmay911" /></a>
   <a href="https://github.com/X77seven"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/171017641?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@X77seven" /></a>
   <a href="https://github.com/imgdown"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/348032096?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@imgdown" /></a>
+  <a href="https://github.com/xinyang920"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/43229479?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@xinyang920" /></a>
   <a href="https://github.com/mookim-eth"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/97934198?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@mookim-eth" /></a>
   <a href="https://github.com/nzhdotme"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/9588882?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@nzhdotme" /></a>
+  <a href="https://github.com/tankle0"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/63094764?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@tankle0" /></a>
   <a href="https://github.com/Shunamxiao"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/92215296?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Shunamxiao" /></a>
+  <a href="https://github.com/Crowszzz"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/75199133?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Crowszzz" /></a>
 </p>
 <!-- readme-contributors:end -->

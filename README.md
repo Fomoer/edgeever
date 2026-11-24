@@ -109,7 +109,8 @@ Copy the prompt below directly into an AI Agent (such as Codex, Claude Code, Dee
 Deploy EdgeEver entirely through GitHub and Cloudflare:
 1. Fork https://github.com/tianma-if/edgeever.
 2. Create D1 `edgeever` and R2 `edgeever-resources` in Cloudflare.
-3. In Workers & Pages, select "Start with Hello World!" and create a Worker named `edgeever`.
+3. In Workers & Pages, select "Start with Hello World!" to create and deploy a placeholder Worker
+   named `edgeever`. Do not connect a Git repository yet.
 4. Add the user's chosen password as the runtime Secret `EDGE_EVER_AUTH_PASSWORD`
    under Settings → Variables and Secrets, and deploy the Secret (preferably at least
    32 characters). The username defaults to `admin`.
@@ -132,7 +133,7 @@ Complete the following 7 web steps strictly in order:
 
 1. **Fork the Repository**: Click **Fork** at the top right of GitHub to fork EdgeEver into your personal account.
 2. **Create Cloudflare Resources**: Create D1 `edgeever` and R2 `edgeever-resources`.
-3. **Create the Worker**: In Cloudflare Workers & Pages, select Create application → Start with Hello World!, name the Worker `edgeever`, and deploy it. This creates a placeholder; EdgeEver is deployed in Step 7.
+3. **Create the Worker**: In Cloudflare Workers & Pages, select Create application → Start with Hello World! to create and deploy a placeholder Worker named `edgeever`. Do not connect a Git repository yet.
 4. **Set the Administrator Password**: Under the Worker’s Settings → Variables and Secrets, add `EDGE_EVER_AUTH_PASSWORD` as type Secret and click Deploy. Its value is your chosen login password, preferably at least 32 characters. Complete this before connecting the Fork.
 5. **Connect the Fork**: In the existing Worker’s Settings → Builds → Connect, select the Fork and production branch `main`.
 6. **Configure Deployment Permissions**: In this Worker's Settings → Builds → API token, select or create the Cloudflare API token used for deployment, with D1 read/edit permission for the target account.
@@ -338,6 +339,7 @@ EdgeEver is self-hosted software. Except for official demo instances, project ma
   <a href="https://github.com/DavidPivert"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/61420909?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@DavidPivert" /></a>
   <a href="https://github.com/0xfelixli"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/81979996?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@0xfelixli" /></a>
   <a href="https://github.com/jayhemnani9910"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/193022578?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@jayhemnani9910" /></a>
+  <a href="https://github.com/anhnt256"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/19179293?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@anhnt256" /></a>
   <a href="https://github.com/Sergmay911"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/304439776?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Sergmay911" /></a>
   <a href="https://github.com/X77seven"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/171017641?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@X77seven" /></a>
   <a href="https://github.com/imgdown"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/348032096?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@imgdown" /></a>

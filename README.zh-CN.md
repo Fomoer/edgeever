@@ -109,7 +109,8 @@ Cloudflare 在线部署可以选择以下两种方式之一：
 请全程通过 GitHub 和 Cloudflare 在线部署 EdgeEver：
 1. Fork https://github.com/tianma-if/edgeever。
 2. 在 Cloudflare 中创建 D1 `edgeever` 与 R2 `edgeever-resources`。
-3. 在 Workers & Pages 中选择「Start with Hello World!」，创建名为 `edgeever` 的 Worker。
+3. 在 Workers & Pages 中选择「Start with Hello World!」，创建并部署名为 `edgeever` 的占位 Worker。
+   此时暂不连接 Git 仓库。
 4. 在该 Worker 的 Settings → Variables and Secrets 中添加运行时 Secret
    `EDGE_EVER_AUTH_PASSWORD`，值为用户指定的登录密码（建议至少 32 个字符），并点击 Deploy。
    管理员用户名默认为 `admin`。
@@ -134,7 +135,7 @@ Cloudflare 在线部署可以选择以下两种方式之一：
 
 1. **Fork 仓库**：在 GitHub 点击右上角 **Fork**，将项目 Fork 到您的个人账户下。
 2. **创建 Cloudflare 资源**：创建 D1 `edgeever` 与 R2 `edgeever-resources`。
-3. **创建 Worker**：在 Cloudflare Workers & Pages 中选择 Create application → Start with Hello World!，命名为 `edgeever` 并部署。此时是占位服务，第 7 步才部署 EdgeEver。
+3. **创建 Worker**：在 Cloudflare Workers & Pages 中打开 Create application，选择「Start with Hello World!」，创建并部署名为 `edgeever` 的占位 Worker。此时暂不连接 Git 仓库。
 4. **设置管理员密码**：在该 Worker 的 Settings → Variables and Secrets 中，选择 Secret 类型，添加 `EDGE_EVER_AUTH_PASSWORD` 并点击 Deploy。值为您指定的登录密码，建议至少 32 个字符。完成后再连接 Fork。
 5. **连接 Fork**：在已有 Worker 的 Settings → Builds → Connect 中选择 Fork 和生产分支 `main`。
 6. **配置部署权限**：在该 Worker 的 Settings → Builds → API token 中选择或创建用于部署的 Cloudflare API Token，并确保它具备目标账户的 D1 读取和编辑权限。
@@ -346,6 +347,7 @@ EdgeEver 是自托管软件。除官方演示实例外，项目维护者不托�
   <a href="https://github.com/DavidPivert"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/61420909?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@DavidPivert" /></a>
   <a href="https://github.com/0xfelixli"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/81979996?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@0xfelixli" /></a>
   <a href="https://github.com/jayhemnani9910"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/193022578?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@jayhemnani9910" /></a>
+  <a href="https://github.com/anhnt256"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/19179293?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@anhnt256" /></a>
   <a href="https://github.com/Sergmay911"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/304439776?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Sergmay911" /></a>
   <a href="https://github.com/X77seven"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/171017641?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@X77seven" /></a>
   <a href="https://github.com/imgdown"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/348032096?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@imgdown" /></a>

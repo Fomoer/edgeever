@@ -109,7 +109,8 @@ Skopiuj poniższe polecenie do agenta AI, na przykład Codex, Claude Code, DeepS
 Wdróż EdgeEver przez GitHub i Cloudflare:
 1. Utwórz Fork repozytorium https://github.com/tianma-if/edgeever.
 2. Utwórz bazę D1 `edgeever` i zasobnik R2 `edgeever-resources` w Cloudflare.
-3. W Workers & Pages wybierz „Start with Hello World!” i utwórz Worker o nazwie `edgeever`.
+3. W Workers & Pages wybierz „Start with Hello World!”, aby utworzyć i wdrożyć tymczasowego
+   Workera o nazwie `edgeever`. Na tym etapie nie podłączaj jeszcze repozytorium Git.
 4. W Settings → Variables and Secrets dodaj wybrane hasło jako sekret środowiska
    uruchomieniowego `EDGE_EVER_AUTH_PASSWORD` i kliknij Deploy (zalecane co najmniej
    32 znaki). Domyślna nazwa użytkownika to `admin`.
@@ -133,7 +134,7 @@ Wykonaj poniższe siedem kroków w przeglądarce ściśle w podanej kolejności:
 
 1. **Utwórz Fork repozytorium**: Kliknij **Fork** w prawym górnym rogu strony GitHub, aby utworzyć kopię EdgeEver na swoim koncie.
 2. **Utwórz zasoby Cloudflare**: Utwórz bazę D1 `edgeever` i zasobnik R2 `edgeever-resources`.
-3. **Utwórz Workera**: W Cloudflare Workers & Pages wybierz Create application → Start with Hello World!, nazwij Workera `edgeever` i wdróż go. To usługa tymczasowa; EdgeEver zostanie wdrożony w kroku 7.
+3. **Utwórz Workera**: W Cloudflare Workers & Pages wybierz Create application → Start with Hello World!, aby utworzyć i wdrożyć tymczasowego Workera o nazwie `edgeever`. Na tym etapie nie podłączaj jeszcze repozytorium Git.
 4. **Ustaw hasło administratora**: W Settings → Variables and Secrets Workera dodaj `EDGE_EVER_AUTH_PASSWORD` jako typ Secret i kliknij Deploy. Wartością jest wybrane hasło logowania, najlepiej co najmniej 32 znaki. Zrób to przed podłączeniem Forka.
 5. **Podłącz Fork**: W Settings → Builds → Connect istniejącego Workera wybierz Fork i gałąź produkcyjną `main`.
 6. **Skonfiguruj uprawnienia wdrożenia**: W Settings → Builds → API token tego Workera wybierz lub utwórz token API Cloudflare do wdrażania, z uprawnieniami do odczytu i edycji D1 na koncie docelowym.
@@ -339,6 +340,7 @@ EdgeEver jest oprogramowaniem do samodzielnego hostingu. Poza oficjalnymi instan
   <a href="https://github.com/DavidPivert"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/61420909?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@DavidPivert" /></a>
   <a href="https://github.com/0xfelixli"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/81979996?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@0xfelixli" /></a>
   <a href="https://github.com/jayhemnani9910"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/193022578?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@jayhemnani9910" /></a>
+  <a href="https://github.com/anhnt256"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/19179293?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@anhnt256" /></a>
   <a href="https://github.com/Sergmay911"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/304439776?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@Sergmay911" /></a>
   <a href="https://github.com/X77seven"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/171017641?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@X77seven" /></a>
   <a href="https://github.com/imgdown"><img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/348032096?v=4&h=96&w=96&fit=cover&mask=circle&maxage=7d" width="48" height="48" alt="@imgdown" /></a>
